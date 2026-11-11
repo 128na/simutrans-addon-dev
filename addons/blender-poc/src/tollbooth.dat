@@ -1,0 +1,20 @@
+# Blender 検証用の料金所風の建物（屋根がタイルからはみ出す）
+obj=building
+name=bpoc_tollbooth
+copyright=blender-poc
+intro_year=1900
+intro_month=1
+retire_year=2999
+retire_month=1
+type=extension
+waytype=road
+level=1
+enables_pax=1
+dims=1,1,4
+needs_ground=1
+icon=> tollbooth.0.4
+cursor=tollbooth.0.5,-64,-96
+backimage[0][0][0][0][0][0]=tollbooth.0.0,-64,-96
+backimage[1][0][0][0][0][0]=tollbooth.0.1,-64,-96
+backimage[2][0][0][0][0][0]=tollbooth.0.2,-64,-96
+backimage[3][0][0][0][0][0]=tollbooth.0.3,-64,-96
