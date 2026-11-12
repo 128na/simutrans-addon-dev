@@ -110,7 +110,12 @@ def main():
     gx = 192 + ((ref[0] - cx) - (ref[1] - cy)) * 64
     gy = 256 + ((ref[0] - cx) + (ref[1] - cy)) * 32 - ref[2] * 16
     # 曲がりはカーブと斜めのどちらの絵か分からないので、両方で探して合うほう
-    d, X, Y = min(locate(game, cell(sheet, img, k), (gx, gy), rng=40) for k in ref[5])
+    if os.environ.get("INGAME_LOCATE"):
+        # 位置を直接与える（線路のように模様がくり返すと、道に沿ってずれた所で合ってしまうことがある）
+        X, Y = (int(v) for v in os.environ["INGAME_LOCATE"].split(","))
+        d = 0.0
+    else:
+        d, X, Y = min(locate(game, cell(sheet, img, k), (gx, gy), rng=40) for k in ref[5])
     print(f"[locate] ref {ref[:2]} {ref[5][0]} at {X},{Y} (err {d:.1f})")
 
     def pos(t):

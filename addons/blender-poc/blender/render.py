@@ -276,7 +276,9 @@ RAIL_IN, RAIL_OUT, RAIL_Z0, RAIL_Z1 = 0.417, 0.517, 0.19, 0.30
 # 斜めのタイルの横幅の倍率。3D のまま描くと、斜めは横幅が縮まずに映って直線の約1.6倍太く見える。
 # 画面上で直線と同じ太さに見える比率 2/√10 にする（pak128 標準も斜めはレール間隔を細く描く）
 DIAG_RAIL = 2 / math.sqrt(10)
-DIAG_BALLAST = 0.8
+# 道床は、直線とのつなぎ目（タイルの辺）で直線と同じ幅になる 1/√2（斜めは辺を 45° で横切る）。
+# 以前の 0.8 は辺で直線より約 1.8px 広く、つなぎ目の角に段と草の尖りが出た
+DIAG_BALLAST = 1 / math.sqrt(2)
 
 
 def build_track(paths, slope=None, clip=True, rail_scale=1.0, ballast_scale=1.0):
@@ -945,7 +947,10 @@ def track_sheet(profile="new"):
         (3, 8): ("sew", [straight(W, E), arc_sw, arc_se], None),
         (3, 9): ("nsew", [straight(S, N), straight(W, E), arc_sw, arc_nw, arc_ne, arc_se], None),
     }
-    set_anchor(128 + prof["dy"])  # dat オフセット -64,-32 と対応
+    # dat オフセット -64,-32 と対応。持ち分は地面の菱形のまま（新描画位置は絵が 4px 下だが、持ち分を 4 行下げると、
+    # 手前のタイルへはみ出した 2〜4 行目を手前の地面が消し、どのつなぎ目にも草の線が出た）
+    cy = GROUND_CY
+    set_anchor(128 + prof["dy"])
     cells = {}
     for pos, (name, paths, slope) in jobs.items():
         clear_models()
@@ -953,7 +958,7 @@ def track_sheet(profile="new"):
             build_track(paths, slope, rail_scale=DIAG_RAIL, ballast_scale=DIAG_BALLAST)
         else:
             build_track(paths, slope)
-        cells[pos] = render_cell(f"{prof['sheet']}_{name}", exits_of(name), slope=slope)
+        cells[pos] = render_cell(f"{prof['sheet']}_{name}", exits_of(name), slope=slope, cy=cy)
 
     # 確認用: タイル菱形そのもの（基準位置の検証に使う。シートには入れない）
     set_anchor(128)
