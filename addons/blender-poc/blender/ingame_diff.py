@@ -211,4 +211,5 @@ def main():
         print("[diff] tiles:", sorted(hits.items(), key=lambda kv: -kv[1])[:12])
 
 
-main()
+if __name__ == "__main__":
+    main()
