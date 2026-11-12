@@ -33,16 +33,34 @@ H = 16 / (PX_PER_UNIT * math.sin(math.radians(60)))
 
 TRANSPARENT = (231, 255, 255)   # #E7FFFF
 ALPHA_THRESHOLD = 25            # iss と同じ: これ未満は透過色にする
-SPECIAL_COLORS = {
-    (107, 107, 107), (155, 155, 155), (179, 179, 179), (201, 201, 201),
-    (223, 223, 223), (87, 101, 111), (127, 155, 241), (255, 255, 83),
-    (255, 33, 29), (1, 221, 1), (227, 227, 255), (193, 177, 209),
-    (77, 77, 77), (255, 1, 127), (1, 1, 255), (36, 75, 103), (57, 94, 124),
-    (76, 113, 145), (96, 132, 167), (116, 151, 189), (136, 171, 211),
-    (156, 190, 233), (176, 210, 255), (123, 88, 3), (142, 111, 4),
-    (161, 134, 5), (180, 157, 7), (198, 180, 8), (217, 203, 10),
-    (236, 226, 11), (255, 249, 13),
+# 特殊色（Simutrans 本体 descriptor/image.cc の rgbtab と同じ順）。makeobj は RGB が完全に一致した画素だけを特殊色にする
+def _hex(*v):
+    return [((x >> 16) & 255, (x >> 8) & 255, x & 255) for x in v]
+
+
+SPECIAL = {
+    # プレーヤーカラー（会社の色に置き換わる）。8段階の明るさ
+    "player1": _hex(0x244B67, 0x395E7C, 0x4C7191, 0x6084A7, 0x7497BD, 0x88ABD3, 0x9CBEE9, 0xB0D2FF),
+    "player2": _hex(0x7B5803, 0x8E6F04, 0xA18605, 0xB49D07, 0xC6B408, 0xD9CB0A, 0xECE20B, 0xFFF90D),
+    # 夜に光る色
+    "window_dark": _hex(0x57656F),    # 暗い窓。夜は黄色っぽく光る
+    "window_light": _hex(0x7F9BF1),   # 明るい窓。夜は青っぽく光る
+    "light_yellow": _hex(0xFFFF53),
+    "light_red": _hex(0xFF211D),
+    "light_green": _hex(0x01DD01),
+    "grey1": _hex(0x6B6B6B),          # 夜も暗くならない灰色（メニュー用）
+    "grey2": _hex(0x9B9B9B),
+    "grey3": _hex(0xB3B3B3),
+    "grey4": _hex(0xC9C9C9),
+    "grey5": _hex(0xDFDFDF),
+    "light_white": _hex(0xE3E3FF),    # 昼はほぼ白、夜は黄色っぽく光る
+    "window_lit1": _hex(0xC1B1D1),    # 窓。夜は黄色く光る
+    "window_lit2": _hex(0x4D4D4D),    # 窓。夜は黄色く光る
+    "light_purple": _hex(0xFF017F),
+    "light_blue": _hex(0x0101FF),
 }
+SPECIAL_COLORS = {c for colors in SPECIAL.values() for c in colors}
+assert len(SPECIAL_COLORS) == 31
 
 
 # ---------------------------------------------------------------- シーン設定
@@ -122,10 +140,15 @@ def noisy_material(name, rgb_a, rgb_b, scale=40.0, rough=0.8, emit=0.0, spec=Non
     return m
 
 
-def material(name, rgb, rough=0.8, metal=0.0, emit=0.0):
+def material(name, rgb, rough=0.8, metal=0.0, emit=0.0, special=None):
+    """special に SPECIAL の名前を渡すと、その材質が見えている画素を特殊色にする（render_cell と make_sheet で処理）。
+    プレーヤーカラーは光の当たり方で8段階のどれかを選ぶので、rgb は灰色にしておくと明暗がそのまま段階になる。"""
     if name in bpy.data.materials:
         return bpy.data.materials[name]
     m = bpy.data.materials.new(name)
+    if special:
+        assert special in SPECIAL, special
+        m["special"] = special
     m.use_nodes = True
     bsdf = m.node_tree.nodes["Principled BSDF"]
     bsdf.inputs["Base Color"].default_value = (*rgb, 1)
@@ -555,10 +578,14 @@ def build_tollbooth(rot_deg):
     """料金所風の建物。屋根は 13x6.5 でタイル(10x10)からはみ出す。"""
     m_conc = material("concrete", (0.66, 0.65, 0.62))
     m_white = material("booth", (0.86, 0.87, 0.88), rough=0.5)
-    m_glass = material("glass", (0.25, 0.38, 0.48), rough=0.15)
+    # 特殊色: 屋根の帯はプレーヤーカラー、窓は夜に光る窓、屋根の下に照明、ブースの上に赤と緑のランプ
+    m_glass = material("glass", (0.25, 0.38, 0.48), rough=0.15, special="window_dark")
     m_roof = material("roof", (0.80, 0.81, 0.83), rough=0.6)
-    m_band = material("band", (0.12, 0.42, 0.24))
+    m_band = material("band", (0.35, 0.35, 0.35), special="player1")
     m_road = material("asphalt", (0.28, 0.28, 0.30))
+    m_lamp = material("lamp", (1.0, 1.0, 0.6), emit=1.0, special="light_yellow")
+    m_red = material("lamp_red", (1.0, 0.1, 0.1), emit=1.0, special="light_red")
+    m_green = material("lamp_green", (0.0, 0.8, 0.0), emit=1.0, special="light_green")
 
     parts = {
         "road": (m_road, [box(0, 0, 0.05, 10, 10, 0.1)]),
@@ -568,6 +595,12 @@ def build_tollbooth(rot_deg):
         "pillars": (m_white, [box(0, -2.4, 3.0, 0.5, 0.5, 5.0), box(0, 3.4, 3.0, 0.5, 0.5, 5.0)]),
         "roof": (m_roof, [box(0, 0.5, 5.75, 13.0, 6.5, 0.7)]),
         "band": (m_band, [box(0, 0.5, 5.75, 13.06, 6.56, 0.28)]),
+        # 安全島の両端に照明灯（柱と光る頭）
+        "lamp_posts": (m_white, [box(0, y, 1.2, 0.15, 0.15, 1.8) for y in (-3.7, 3.7)]),
+        "lamps": (m_lamp, [box(0, y, 2.25, 0.4, 0.4, 0.3) for y in (-3.7, 3.7)]),
+        # 左の車線は赤（閉鎖）、右の車線は緑（開放）。ブース上の柱の両脇に向ける
+        "lamp_red": (m_red, [box(-0.6, -2.4, 4.6, 0.2, 0.5, 0.5)]),
+        "lamp_green": (m_green, [box(0.6, -2.4, 4.6, 0.2, 0.5, 0.5)]),
     }
     obs = [mesh_object(name, *merge(geo), mat) for name, (mat, geo) in parts.items()]
     for ob in obs:
@@ -577,11 +610,94 @@ def build_tollbooth(rot_deg):
 
 # ---------------------------------------------------------------- 描画と合成
 
+SPECIAL_NAMES = list(SPECIAL)
+
+
+def _code(k):
+    """マスク描画で k 番目の特殊色を表す赤の値（0-255）。"""
+    return (k + 1) * 12
+
+
+def _srgb_to_linear(v):
+    return v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4
+
+
+def _mask_materials():
+    """特殊色の材質ごとの発光マスク材質と、それ以外を隠す holdout 材質。"""
+    out = {}
+    for k, name in enumerate(SPECIAL_NAMES):
+        mname = "mask_" + name
+        m = bpy.data.materials.get(mname)
+        if m is None:
+            m = bpy.data.materials.new(mname)
+            m.use_nodes = True
+            nt = m.node_tree
+            nt.nodes.clear()
+            em = nt.nodes.new("ShaderNodeEmission")
+            em.inputs["Color"].default_value = (_srgb_to_linear(_code(k) / 255), 0, 0, 1)
+            em.inputs["Strength"].default_value = 1.0
+            o = nt.nodes.new("ShaderNodeOutputMaterial")
+            nt.links.new(em.outputs[0], o.inputs["Surface"])
+        out[name] = m
+    hold = bpy.data.materials.get("mask_holdout")
+    if hold is None:
+        hold = bpy.data.materials.new("mask_holdout")
+        hold.use_nodes = True
+        nt = hold.node_tree
+        nt.nodes.clear()
+        ho = nt.nodes.new("ShaderNodeHoldout")
+        o = nt.nodes.new("ShaderNodeOutputMaterial")
+        nt.links.new(ho.outputs[0], o.inputs["Surface"])
+    out[None] = hold
+    return out
+
+
 def render_cell(name):
+    """通常の描画に加えて、特殊色の材質があれば name_mask.png も描く（どの画素にどの特殊色を入れるか）。"""
     path = os.path.join(WORK, name + ".png")
-    bpy.context.scene.render.filepath = path
+    mask_path = os.path.join(WORK, name + "_mask.png")
+    scene = bpy.context.scene
+    scene.render.filepath = path
     bpy.ops.render.render(write_still=True)
+    if os.path.exists(mask_path):
+        os.remove(mask_path)
+    meshes = [ob for ob in scene.objects if ob.type == "MESH"]
+    if not any(s.material and s.material.get("special") for ob in meshes for s in ob.material_slots):
+        return path
+    masks = _mask_materials()
+    saved = []
+    for ob in meshes:
+        for s in ob.material_slots:
+            saved.append((s, s.material))
+            s.material = masks[s.material.get("special") if s.material else None]
+    scene.render.filepath = mask_path
+    bpy.ops.render.render(write_still=True)
+    for s, m in saved:
+        s.material = m
     return path
+
+
+def apply_special(rgb, render, mask):
+    """マスクで覆われた画素（半分以上覆われたものだけ。縁は普通の色のまま）を特殊色にする。"""
+    covered = mask[..., 3] >= 128
+    codes = np.array([_code(k) for k in range(len(SPECIAL_NAMES))])
+    # PNG は乗算済みでないアルファで保存されるので、赤の値がそのまま番号になる
+    k_of = np.abs(mask[..., 0].astype(np.int32)[..., None] - codes).argmin(axis=-1)
+    lum = render[..., :3].astype(np.float32) @ np.array([0.299, 0.587, 0.114])
+    n = 0
+    for k, name in enumerate(SPECIAL_NAMES):
+        sel = covered & (k_of == k)
+        if not sel.any():
+            continue
+        palette = np.array(SPECIAL[name])
+        if len(palette) == 1:
+            rgb[sel] = palette[0]
+        else:
+            # 明るさがいちばん近い段階を選ぶ
+            pl = palette.astype(np.float32) @ np.array([0.299, 0.587, 0.114])
+            rgb[sel] = palette[np.abs(lum[sel][:, None] - pl).argmin(axis=1)]
+        n += int(sel.sum())
+    return n
 
 
 def load_rgba8(path):
@@ -596,7 +712,8 @@ def load_rgba8(path):
 
 def finalize(sheet):
     """iss と同じ後処理: 特殊色を1ずらし、ほぼ透明な画素を #E7FFFF にする。"""
-    rgb = sheet[..., :3].astype(np.int16)
+    # int32 で計算する（int16 だと R*65536 が桁あふれして、特殊色を見逃したり関係ない色をずらしたりする）
+    rgb = sheet[..., :3].astype(np.int32)
     keys = rgb[..., 0] * 65536 + rgb[..., 1] * 256 + rgb[..., 2]
     special = np.isin(keys, [r * 65536 + g * 256 + b for r, g, b in SPECIAL_COLORS])
     rgb[special] = np.minimum(rgb[special] + 1, 255)
@@ -618,11 +735,18 @@ def save_rgb(path, rgb):
 
 def make_sheet(cells, rows, cols, out):
     sheet = np.zeros((rows * CELL, cols * CELL, 4), np.uint8)
+    masked = []
     for (r, c), path in cells.items():
-        sheet[r * CELL:(r + 1) * CELL, c * CELL:(c + 1) * CELL] = load_rgba8(path)
-    rgb, n_special = finalize(sheet)
+        sl = (slice(r * CELL, (r + 1) * CELL), slice(c * CELL, (c + 1) * CELL))
+        sheet[sl] = load_rgba8(path)
+        mask_path = path[:-4] + "_mask.png"
+        if os.path.exists(mask_path):
+            masked.append((sl, load_rgba8(mask_path)))
+    # 1) 描画で偶然できた特殊色を1ずらして消す 2) 材質で指定した特殊色を入れる（この順で）
+    rgb, n_shift = finalize(sheet)
+    n_set = sum(apply_special(rgb[sl], sheet[sl], mask) for sl, mask in masked)
     save_rgb(out, rgb)
-    print(f"[sheet] {out} special-color pixels shifted: {n_special}")
+    print(f"[sheet] {out} special colors: shifted {n_shift}, set {n_set}")
 
 
 # ---------------------------------------------------------------- 各アドオン

@@ -12,6 +12,8 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 | `blender/render.py` | Blender をコマンドで動かし、形状をスクリプトで組み立てて描画し、シート画像を作る |
 | `blender/check.py` | 描画位置の検証。タイル菱形の位置と、iss の既存画像との描画範囲を比べる |
 | `blender/preview.py` | 確認用の拡大画像 `work/preview.png` を作る |
+| `blender/special.py` | 特殊色の検査。シートに特殊色が何 px、どのセルにあるかを数える |
+| `blender/special_preview.py` | 特殊色の見え方の再現（昼・会社の色を変えたとき・夜）|
 | `src/track.dat` | 線路・新描画位置（道床が低い。今の pak128・iss）。セル配置は iss の線路と同じ |
 | `src/track_old.dat` | 線路・旧描画位置（道床が高い。古い pak128・SIS）。形は `track.dat` と同じで、名前は `bpoc_track_old` |
 | `src/road.dat` | 道路（歩道付き、50km/h）。幅・白線・縁石の位置は SIS の一般道 `SIS_L_RG1-1_01S` に合わせる。セル配置は線路と同じ |
@@ -55,7 +57,8 @@ D:\bin\blender\blender.exe -b --factory-startup --python blender/check.py -- ..\
   iss と SIS のレールの位置を比べると、直線・斜め・坂のどの方位でも、画面上で 4〜4.5px 上下にずれているだけだった
 - 斜めのタイルはレール・まくらぎの横幅を 2/√10（≈0.63）倍、道床を 0.8 倍にする。
   3D のまま描くと斜めは横幅が縮まずに映り、直線の約1.6倍太く見えるため（pak128 標準も斜めはレール間隔を細く描く）
-- 後処理は iss と同じ: 特殊色にたまたま一致した画素は +1 ずらす。アルファ25未満は `#E7FFFF`、それ以外は不透明にする
+- 後処理は iss と同じ: 特殊色にたまたま一致した画素は +1 ずらす。アルファ25未満は `#E7FFFF`、それ以外は不透明にする。
+  そのあとで、材質に指定した特殊色を入れる（下の「特殊色」）
 
 ## 検証結果（2026-11-12）
 
@@ -128,6 +131,43 @@ SIS の道路8種（一般道 50/70/80km/h、高速 80/100/120/999km/h）の直�
 - ゲーム内のつなぎ目（`ingame/road_seam.nut` の y=160〜）: 直線・斜め・坂・分岐で白線が段差なくつながった（`docs/expressway_seam.png`）
 - SIS と違うところ: 分岐・十字のタイルの左右の角にある小さな透明の三角、行き止まりの白線の模様（SIS は市松模様）
 
+## 特殊色（プレーヤーカラー・夜に光る色）
+
+Simutrans の特殊色は 31 色（本体 `descriptor/image.cc` の `rgbtab`）。makeobj は RGB が完全に一致した画素だけを特殊色にする
+（`descriptor/writer/image_writer.cc`）。一覧は `render.py` の `SPECIAL`。
+
+### 意図しない特殊色を消す
+
+- 描画結果の画素が偶然特殊色と一致したら、RGB を 1 ずつ上げてずらす（`finalize`。iss の `handleReplaceSpecialColor` と同じ）
+- ずらした先がまた特殊色になる色は無い（`blender/special.py` で確認）
+- 不具合を1つ直した: 色を `R*65536+G*256+B` の整数にするとき int16 で計算していて桁あふれし、見逃しと誤検出が起きていた。
+  int32 に直す前は `road.png` に灰色の特殊色が 14px 残っていた（灰 2 が 10px、灰 3 が 4px。夜も暗くならない灰色として表示される）。直したあとは全シートで 0px
+- 確認: `D:\bin\blender\blender.exe -b --factory-startup --python blender/special.py -- src/track.png src/road.png ...`
+  （シートごと・特殊色の種類ごと・セルごとの画素数を出す）
+
+### 意図して特殊色を入れる
+
+- 材質に `special="<SPECIAL の名前>"` を付ける（例: `material("band", (0.35, 0.35, 0.35), special="player1")`）
+- `render_cell` は特殊色の材質がある場面だけ、もう1枚「マスク」を描く（`work/<名前>_mask.png`）。
+  特殊色の材質は種類ごとの番号の赤で発光させ、それ以外の材質は holdout にする。手前の物に隠れた所はマスクに出ない
+- `make_sheet` は 1) 偶然の特殊色をずらす 2) マスクで半分以上覆われた画素を特殊色にする、の順に行う。
+  縁の半端な画素は普通の色のまま残す（縁が特殊色だと会社の色を変えたときに輪郭がにじむため）
+- 光る色（窓・照明・ランプ）は1色なのでそのまま入れる。プレーヤーカラーは 8 段階の明るさがあるので、
+  描画結果の明るさがいちばん近い段階を選ぶ。材質を灰色にしておくと、日なたと日陰で段階が分かれる
+- 料金所に入れた: 屋根の帯 = プレーヤーカラー1、ブースの窓 = 暗い窓（夜は黄色く光る）、
+  安全島の両端の照明灯 = 黄色の光、ブースの上のランプ = 赤と緑の光
+- 確認画像: `docs/special_tollbooth.png`（上: シート、下: 特殊色の画素。紫 = プレーヤーカラー、黒 = 光る色）
+- 見え方の再現: `docs/special_preview.png`（上から 昼 / 会社の色を赤橙に変えたとき / 夜）。
+  本体 `display/simgraph16.cc` の `calc_base_pal_from_night_shift` と同じ式で色を置き換えた（`blender/special_preview.py`）
+
+### 確かめたこと・残り
+
+- 料金所だけで作った pak の画像データに、特殊色の符号（`0x8000+番号`）が使った種類だけ入っていた:
+  プレーヤーカラー1 の 1〜5 段、暗い窓(16)、黄(18)、赤(19)、緑(20)。道路だけの pak には入っていない
+- ゲーム内（OTRP 版、`ingame/special.nut`）で会社ごとに料金所を置き、昼の表示が描画どおりなのを確認した（`docs/special_ingame.png`）
+- 未確認: ゲーム内で会社の色を変えたときと夜の表示。検証に使った環境では昼夜の切り替え（`env_t::night_shift`。表示設定で切り替える）が切れていて、
+  会社の色の変更も画面操作が要るため。プレーヤー0 と公共事業はどちらも青系で、置いた2つでは見分けられなかった
+
 ## ゲーム内での確認
 
 `addons/pak128/` に pak を置き、MCP 対応の OTRP 版をセーブ読み込みで起動して、`ingame/place.nut` を実行する。
@@ -148,5 +188,5 @@ python <simutrans>\.agents\skills\simutrans-mcp-gui-debug\scripts\mcp_client.py 
 - iss の奥／手前／中央／単線の作り分け（マスクで作っていたもの）。経路の横ずらしや切り抜き範囲の変更で作れる見込みだが未確認
 - ポイントの向き別画像 `nse1`/`nse2` など（iss の4〜5行目）。OTRP は隣の線路の形を見て使い分ける（`weg_t::select_switch_image`）。
   無くても基本の分岐画像で表示される
-- 雪景色、夜間の発光色、建物の前面画像（frontimage）
+- 雪景色、建物の前面画像（frontimage）
 - 建物の向き0〜3と Simutrans の回転の対応
