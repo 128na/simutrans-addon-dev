@@ -1,6 +1,7 @@
 // 道路のつなぎ目の確認: SIS → 検証用 → SIS の順に1本につなげて敷く。
 //   y=140〜: 一般道 SIS_L_RG1-1_01S と bpoc_road
 //   y=160〜: 高速道路 SIS_E_RG1-1_01S と bpoc_expressway
+//   y=180〜: pak128 標準の道路 Road_050 と bpoc_road
 // 直線（東西・南北）、斜め、坂、分岐（SIS の直線から検証用の道路が分かれる）を1組ずつ。flat.sve で使う。
 // SIS は way.SIS_LocalStreet_CityRoad_ds.pak と way.SIS_ExpressWay_1-1lane_01_ds.pak を addons/pak128 に入れておく。
 function r(name, v) { return name + "=" + (v == null ? "ok" : "[" + v + "]") + "\n"; }
@@ -38,5 +39,6 @@ function set(label, ref_name, mine_name, y0) {
 
 local out = set("road", "SIS_L_RG1-1_01S", "bpoc_road", 140);
 out += set("expwy", "SIS_E_RG1-1_01S", "bpoc_expressway", 160);
+out += set("def", "Road_050", "bpoc_road", 180);
 gui.close_all_windows();
 return out;

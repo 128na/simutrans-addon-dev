@@ -605,15 +605,13 @@ def road_sheet(style="street"):
         (2, 2): ("diag_ne", straight(N, E, ext=DIAG_EXT)),
         (2, 3): ("diag_se", straight(S, E, ext=DIAG_EXT)),
     }
-    # 道路は地面の菱形と同じ位置に描く（GROUND_CY と同じ 127）。以前は SIS の道路に合わせて 1px 下（128）だったが、
-    # 絵の辺（形が曲がる所）と持ち分の辺（地面の菱形）が縦に 1px、辺に沿って 2px ずれ、
-    # 直線↔斜めのつなぎ目で白線が切れ、縁石が段になった（直線の絵は隣が斜めか直線か知らないので、ずれた所を描けない）
-    set_anchor(GROUND_CY)
+    # 道路は SIS・pak128 標準と同じく、地面の菱形より 1px 下に描く（ROAD_CY）。持ち分も同じだけ下げる（下の _ground_mask）
+    set_anchor(ROAD_CY)
     cells = {}
     for pos, (name, paths, lines, slope, *rest) in jobs.items():
         clear_models()
         build_road(paths, lines, slope, corners=rest[0] if rest else (), sidewalk=not expwy)
-        cells[pos] = render_cell(prefix + name, exits_of(name), slope=slope)
+        cells[pos] = render_cell(prefix + name, exits_of(name), slope=slope, cy=ROAD_CY)
     k = DIAG_EDGE / ROAD_DIAG  # 経路からの距離の倍率（scale=ROAD_DIAG を掛けると直線の 1/√2）
     for pos, (name, path) in diag.items():
         clear_models()
@@ -627,7 +625,7 @@ def road_sheet(style="street"):
             e = (math.floor(EDGE_LINE * DIAG_EDGE * DIAG_PX) + 0.5) / DIAG_PX / ROAD_DIAG
         build_road([path], [(path, -e), (path, c), (path, e)], scale=ROAD_DIAG,
                    half=path, hw=ROAD_HW * k, sidewalk=not expwy, curb_w=CURB_W * DIAG_EDGE)
-        cells[pos] = render_cell(prefix + name, exits_of(name), side=DIAG_HALF[name])
+        cells[pos] = render_cell(prefix + name, exits_of(name), side=DIAG_HALF[name], cy=ROAD_CY)
 
     # アイコン: 道路を大きく斜めに通し、左上に最高速度を書く
     clear_models()
@@ -737,35 +735,53 @@ def exits_of(name):
 # 線路の描画位置（TRACK_PROFILES の dy）には関係しない。ゲーム画面との比較（blender/ingame_diff.py）で合わせた
 GROUND_CY = 127
 
+# 道路を描く位置。SIS・pak128 標準の道路は、菱形を地面より 1px 下にずらした絵で、自分の菱形の上の1行は描かず、
+# 奥のタイルの絵が下へ1行はみ出して埋める（平らな地面は先にまとめて描かれ、はみ出しは消えない）。
+# 同じ決まりにしないと、標準の道路とのつなぎ目に草の線（手前が標準）や 1px の段（奥が標準）が出る。
+# 持ち分も絵と同じだけ下げるので、形が曲がる所と持ち分の境がそろい、自分どうしのつなぎ目は地面の位置で描いたときと同じになる
+ROAD_CY = 128
 
-def _ground_mask(slope, side=None):
+
+def _ground_mask(slope, side=None, cy=GROUND_CY):
     """タイルの地面（四隅の高さは slope、無ければ平ら）が画面で占める画素。画素の中心が四角形の中なら 255。
     side（top/bottom/left/right）を渡すと、菱形のうち中心を通る横・縦の線のその側だけにする（斜めのタイル）。
-    線は隣の菱形の頂点と同じ位置なので、隣の直線・斜めのタイルの縁と同じ行・列で切れる"""
+    線は隣の菱形の頂点と同じ位置なので、隣の直線・斜めのタイルの縁と同じ行・列で切れる。
+    cy は菱形の中心の行（絵を地面より下に描くときは、持ち分も下げる）。坂は本体が地面を物と一緒に後から描き、
+    奥のタイルのはみ出しを消すので、地面の位置（GROUND_CY）の菱形も足す"""
+    m = _ground_mask_at(slope, side, cy)
+    if cy != GROUND_CY:
+        # 手前の縁を半行広げる（標準の道路は上の縁を半行ずれた並びで空けるので、1画素おきに草が見えた）
+        m |= _ground_mask_at(slope, side, cy + 0.5)
+        if slope:
+            m |= _ground_mask_at(slope, side, GROUND_CY)
+    return m
+
+
+def _ground_mask_at(slope, side, cy):
     half = TILE / 2
     up = PX_PER_UNIT * math.sin(math.radians(60))  # 高さ 1 → 画面で上へ何px（H で 16px）
     pts = []
     for x, y in ((-half, -half), (half, -half), (half, half), (-half, half)):
         z = slope(x, y) if slope else 0.0
-        pts.append((CELL / 2 + (x + y) * 64 / TILE, GROUND_CY + (x - y) * 32 / TILE - z * up))
+        pts.append((CELL / 2 + (x + y) * 64 / TILE, cy + (x - y) * 32 / TILE - z * up))
     yy, xx = np.mgrid[0:CELL, 0:CELL] + 0.5
     inside = np.ones((CELL, CELL), bool)
     for (x0, y0), (x1, y1) in zip(pts, pts[1:] + pts[:1]):
         # 並びは 左→下→右→上 の角。内側は辺に対して外積が負の側
         inside &= (x1 - x0) * (yy - y0) - (y1 - y0) * (xx - x0) < 0
     if side is not None:
-        inside &= {"top": yy < GROUND_CY, "bottom": yy > GROUND_CY,
+        inside &= {"top": yy < cy, "bottom": yy > cy,
                    "left": xx < CELL / 2, "right": xx > CELL / 2}[side]
     return inside
 
 
-def _render_ground(slope, path, side=None):
+def _render_ground(slope, path, side=None, cy=GROUND_CY):
     """持ち分マスク（地面の範囲）を PNG に書く。"""
-    m = _ground_mask(slope, side).astype(np.uint8) * 255
+    m = _ground_mask(slope, side, cy).astype(np.uint8) * 255
     save_rgba(path, np.dstack([m, m, m, np.full_like(m, 255)]))
 
 
-def render_cell(name, exits=None, slope=None, side=None):
+def render_cell(name, exits=None, slope=None, side=None, cy=GROUND_CY):
     """通常の描画に加えて、
     - exits を渡したタイル（線路・道路）は name_own.png（持ち分マスク = 地面の範囲）を描く。
       画素の中心が地面の菱形の中なら残す。slope は坂の高さ slope(x, y)
@@ -780,7 +796,7 @@ def render_cell(name, exits=None, slope=None, side=None):
         if os.path.exists(p):
             os.remove(p)
     if exits is not None:
-        _render_ground(slope, own_path, side)
+        _render_ground(slope, own_path, side, cy)
     meshes = [ob for ob in scene.objects if ob.type == "MESH"]
     if not any(s.material and s.material.get("special") for ob in meshes for s in ob.material_slots):
         return path
