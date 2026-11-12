@@ -281,10 +281,12 @@ DIAG_RAIL = 2 / math.sqrt(10)
 DIAG_BALLAST = 1 / math.sqrt(2)
 
 
-def build_track(paths, slope=None, clip=True, rail_scale=1.0, ballast_scale=1.0, rail_drop=0, ballast_drop=0):
+def build_track(paths, slope=None, clip=True, rail_scale=1.0, ballast_scale=1.0, rail_drop=0, ballast_drop=0,
+                ground_shift=0):
     """paths の線路を作り、タイルの外を切り落とし、slope(x,y)->z で傾ける。
     rail_scale / ballast_scale はレール・まくらぎ／道床の横幅の倍率。
-    rail_drop はレールとまくらぎを、ballast_drop は道床を、画面で何 px 下に描くか。"""
+    rail_drop はレールとまくらぎを、ballast_drop は道床を、平地の画面で何 px 下に描くか。
+    ground_shift は、その下げ幅のうち「地面の上での位置のずれ」にあたる px（残りは、形の高さや基準位置を打ち消す分）。"""
     m_ballast = material("ballast", (0.42, 0.40, 0.37))
     m_sleeper = material("sleeper", (0.62, 0.61, 0.58))
     m_rail = material("rail", (0.50, 0.36, 0.30), rough=0.35, metal=0.6)
@@ -304,25 +306,30 @@ def build_track(paths, slope=None, clip=True, rail_scale=1.0, ballast_scale=1.0,
         obs.append(mesh_object(f"railL{i}", *sweep(path, rail_l), m_rail))
         obs.append(mesh_object(f"railR{i}", *sweep(path, rail_r), m_rail))
 
-    # 画面で rail_drop px 下 = 地面の上で手前（カメラ側）へ水平に動かす。高さは変えない（変えると道床に埋もれる）
+    # 画面で n px 下 = 地面の上で手前（カメラ側）へ動かしてから坂の高さを当てる（面に沿って動かす）。
+    # レールと道床を同じやり方で動かすので、坂でもレール・まくらぎは道床の上に乗ったまま（高さを変えずに動かすと埋もれる）。
+    # 坂では手前へ動くと高さも変わり、同じ量を動かしても画面の下げ幅が平地の c 倍になる（c: 手前上がりの坂は 1 より小さい）。
+    # 下げ幅 n のうち
+    #   ground_shift（地面の上での位置のずれ）: 平地と同じ量を動かす。画面の下げ幅は c 倍になるが、
+    #     マップの上で同じ位置なので、タイルの辺で平らな隣の絵と同じ点を通る
+    #   残り（形の高さ・基準位置を打ち消す分。高さは坂でも画面の縦に同じだけ見える）: 画面でちょうどその px になるよう c で割り戻す
+    # 全部を割り戻すと、どの坂でもレールは道床の中ほどに来るが、帯全体が辺で 0.5px（急坂）ずれ、急坂と十字の継ぎ目で道床の縁に 1px の段が出た
     cam = bpy.context.scene.camera
     rot = cam.rotation_euler.to_matrix()  # matrix_world は作った直後だと更新されていない
     up, fwd = rot @ Vector((0, 1, 0)), rot @ Vector((0, 0, -1))
     toward = -Vector((fwd.x, fwd.y, 0)).normalized()
-    px = toward * (cam.data.ortho_scale / CELL) / -toward.dot(up)
-    # 動かすのは坂を当てて切り抜く前（坂ではレールが面に沿う。切り抜きの余白より動く量が大きいので後だと端が欠ける）
-    # 道床は坂を当てた後に動かす（先に動かすと、坂では動いた先の高さが変わって下げ幅が大きく出る。坂の継ぎ目に草が出た）。
-    # 高さを変えずに水平に動かすので、どのタイルでも画面でちょうど ballast_drop px 下がり、平らな隣と辺の高さもそろう
+    g = (slope(toward.x, toward.y) - slope(0, 0)) if slope else 0.0  # 手前へ 1 動いたときの高さの変化
+    c = (toward.dot(up) + g * up.z) / toward.dot(up)
+    px = toward * (cam.data.ortho_scale / CELL) / -toward.dot(up)  # 平地で画面の 1px 下にあたる動き
+    # 動かすのは坂を当てて切り抜く前（切り抜きの余白より動く量が大きいので、後だと端が欠ける）
     for ob in obs:
-        is_ballast = ob.name.startswith("ballast")
-        if rail_drop and not is_ballast:
+        d = ballast_drop if ob.name.startswith("ballast") else rail_drop
+        if d:
+            move = px * ((d - ground_shift) / c + ground_shift)
             for v in ob.data.vertices:
-                v.co += px * rail_drop
+                v.co += move
         if slope:
             apply_slope(ob, slope)
-        if ballast_drop and is_ballast:
-            for v in ob.data.vertices:
-                v.co += px * ballast_drop
         if clip:
             clip_to_tile(ob)
 
@@ -920,9 +927,12 @@ def make_sheet(cells, rows, cols, out):
 #   old: 旧描画位置（レールが高い。古い pak128・SIS）
 # iss と SIS を比べると、どの方位でもレールが画面上で 4〜4.5px 違うだけだった
 TRACK_PROFILES = {
-    "new": {"sheet": "track", "dy": 3, "spill": 1, "ballast_drop": 2},
-    "old": {"sheet": "track_old", "dy": -1, "spill": 0, "ballast_drop": 0},
+    "new": {"sheet": "track", "dy": 3, "spill": 1, "ballast_drop": 2, "ground_shift": 1},
+    "old": {"sheet": "track_old", "dy": -1, "spill": 0, "ballast_drop": 0, "ground_shift": 0},
 }
+# ground_shift: 下げ幅のうち、地面の上での位置のずれにあたる px（build_track）。新は道床の輪郭が地面の菱形の中心線より 1px 下
+# （道床を 2px 下げ、基準位置 BALLAST_DY が 1px 上）。レールも同じ 1px（4px 下げ、うち 3px はレールの高さと基準位置の分）。
+# 坂のタイルだけに効く（平地は c = 1 で、下げ幅はそのまま）
 # spill: 持ち分を手前の2辺へ何行はみ出させるか（_ground_mask）。新は pak128 標準の Rail_100 と同じく 1 行。
 # Rail_100 は自分の菱形の上の1行を描かないので、はみ出さないと、こちらが奥・Rail_100 が手前の継ぎ目に草の線が出た
 # 道床の基準は両方とも旧の位置（地面の菱形と同じ）で、新はレールとまくらぎを 4px、道床を ballast_drop（2px）下げる。
@@ -991,7 +1001,7 @@ def track_sheet(profile="new"):
         if name.startswith("diag_"):
             build_track(paths, slope, rail_scale=DIAG_RAIL, ballast_scale=DIAG_BALLAST, rail_drop=d, ballast_drop=bd)
         else:
-            build_track(paths, slope, rail_drop=d, ballast_drop=bd)
+            build_track(paths, slope, rail_drop=d, ballast_drop=bd, ground_shift=prof["ground_shift"])
         cells[pos] = render_cell(f"{prof['sheet']}_{name}", exits_of(name), slope=slope, cy=cy, spill=prof["spill"])
 
     # 確認用: タイル菱形そのもの（基準位置の検証に使う。シートには入れない）

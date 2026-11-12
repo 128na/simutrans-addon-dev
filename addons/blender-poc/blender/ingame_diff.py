@@ -7,6 +7,7 @@
 予想図は画面の地面の上にセルを貼ったもの。セルの透明な画素は画面のまま残す。
 - 位置合わせ: 中心に近いカーブ・行き止まり・分岐のタイルを画面の中から探し、ほかのタイルは Simutrans と同じ式で並べる
 - 曲がり（向きが隣り合う2方向）は、カーブの絵と斜めの絵のうち合うほうを使う（どちらになるかは本体が決める）
+- 位置合わせの見当は INGAME_OFFSET=dx,dy でずらせる（急坂の見本。ingame/steep_check.sh が使う）。INGAME_LOCATE=x,y は位置を直接与える
 出力は 左 画面、中 予想図、右 違う画素（明るさの差の合計が THRESH 以上）を紫にしたもの。違う画素の数も出す。
 """
 import os
@@ -22,8 +23,8 @@ from render import CELL, TRANSPARENT  # noqa: E402
 THRESH = 40
 BITS = {"n": 1, "e": 2, "s": 4, "w": 8}
 ORDER = "nsew"
-# 坂の番号（pak の1段の坂）→ セル。坂の上る向きは compose.slope_cross と同じ
-SLOPE_KEY = {4: "up3", 36: "up12", 12: "up6", 28: "up9"}
+# 坂の番号（pak の1段の坂と、その2倍の急坂）→ セル。坂の上る向きは compose.slope_cross と同じ
+SLOPE_KEY = {4: "up3", 36: "up12", 12: "up6", 28: "up9", 8: "up2_3", 72: "up2_12", 24: "up2_6", 56: "up2_9"}
 CURVES = {"sw", "nw", "ne", "se"}
 
 
@@ -115,7 +116,10 @@ def main():
         X, Y = (int(v) for v in os.environ["INGAME_LOCATE"].split(","))
         d = 0.0
     else:
-        d, X, Y = min(locate(game, cell(sheet, img, k), (gx, gy), rng=40) for k in ref[5])
+        # 急坂のある所へ jump すると、画面の縦の位置が見当から大きくずれる。INGAME_OFFSET=dx,dy で見当を直す
+        # （blender/slope_measure.py の [locate] が出すずれ）
+        ox, oy = (int(v) for v in os.environ.get("INGAME_OFFSET", "0,0").split(","))
+        d, X, Y = min(locate(game, cell(sheet, img, k), (gx + ox, gy + oy), rng=40) for k in ref[5])
     print(f"[locate] ref {ref[:2]} {ref[5][0]} at {X},{Y} (err {d:.1f})")
 
     def pos(t):
