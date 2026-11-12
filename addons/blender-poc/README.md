@@ -14,6 +14,8 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 | `blender/preview.py` | 確認用の拡大画像 `work/preview.png` を作る |
 | `blender/compose.py` | つなぎ目の確認。シートのセルをゲームと同じ位置・順番で並べた画像を作る |
 | `blender/ingame_diff.py` | ゲームの画面と、シートのセルを同じ順に貼った予想図を画素単位で比べる |
+| `blender/ref_measure.py` | 手本の画像（pak128 のソース・iss の元絵・このアドオンのシート）で、直線・斜めが理想の位置から何 px ずれているかと、直線のレールの行を測る |
+| `blender/zoom.py` | 画像の指定した座標の周りを拡大して並べる（ツールが出した候補を目で確かめる） |
 | `ingame/sis_check.sh` | SIS・pak128 標準の道路とのつなぎ目を MCP で撮る（`ingame/road_seam.nut` を敷いた後） |
 | `ingame/capture_check.sh` | 4種類 × 6か所を MCP で撮り、`ingame_diff.py` で比べる（ゲームを MCP ポート付きで起動しておく） |
 | `blender/special.py` | 特殊色の検査。シートに特殊色が何 px、どのセルにあるかを数える |
