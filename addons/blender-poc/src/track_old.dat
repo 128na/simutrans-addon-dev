@@ -1,4 +1,4 @@
-# Blender 検証用の線路・旧描画位置（道床が高い。古い pak128・SIS に合わせる）。形は track.dat と同じ
+# Blender 検証用の線路・旧描画位置（レールが高い。古い pak128・SIS に合わせる）。形は track.dat と同じ
 obj=way
 name=bpoc_track_old
 copyright=blender-poc

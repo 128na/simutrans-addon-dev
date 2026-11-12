@@ -281,9 +281,10 @@ DIAG_RAIL = 2 / math.sqrt(10)
 DIAG_BALLAST = 1 / math.sqrt(2)
 
 
-def build_track(paths, slope=None, clip=True, rail_scale=1.0, ballast_scale=1.0):
+def build_track(paths, slope=None, clip=True, rail_scale=1.0, ballast_scale=1.0, rail_drop=0):
     """paths の線路を作り、タイルの外を切り落とし、slope(x,y)->z で傾ける。
-    rail_scale / ballast_scale はレール・まくらぎ／道床の横幅の倍率。"""
+    rail_scale / ballast_scale はレール・まくらぎ／道床の横幅の倍率。
+    rail_drop はレールとまくらぎだけを画面で何 px 下に描くか（道床は動かさない）。"""
     m_ballast = material("ballast", (0.42, 0.40, 0.37))
     m_sleeper = material("sleeper", (0.62, 0.61, 0.58))
     m_rail = material("rail", (0.50, 0.36, 0.30), rough=0.35, metal=0.6)
@@ -303,7 +304,17 @@ def build_track(paths, slope=None, clip=True, rail_scale=1.0, ballast_scale=1.0)
         obs.append(mesh_object(f"railL{i}", *sweep(path, rail_l), m_rail))
         obs.append(mesh_object(f"railR{i}", *sweep(path, rail_r), m_rail))
 
+    # 画面で rail_drop px 下 = 地面の上で手前（カメラ側）へ水平に動かす。高さは変えない（変えると道床に埋もれる）
+    cam = bpy.context.scene.camera
+    rot = cam.rotation_euler.to_matrix()  # matrix_world は作った直後だと更新されていない
+    up, fwd = rot @ Vector((0, 1, 0)), rot @ Vector((0, 0, -1))
+    toward = -Vector((fwd.x, fwd.y, 0)).normalized()
+    drop = toward * (rail_drop * cam.data.ortho_scale / CELL) / -toward.dot(up)
+    # 動かすのは坂を当てて切り抜く前（坂ではレールが面に沿う。切り抜きの余白より動く量が大きいので後だと端が欠ける）
     for ob in obs:
+        if rail_drop and not ob.name.startswith("ballast"):
+            for v in ob.data.vertices:
+                v.co += drop
         if slope:
             apply_slope(ob, slope)
         if clip:
@@ -895,13 +906,17 @@ def make_sheet(cells, rows, cols, out):
 # ---------------------------------------------------------------- 各アドオン
 
 # 線路の描画位置。形状は同じで、画面上の上下位置だけを整数 px ずらす（正: 下へ）
-#   new: 新描画位置（道床が低い。今の pak128・iss）
-#   old: 旧描画位置（道床が高い。古い pak128・SIS）
+#   new: 新描画位置（レールが低い。今の pak128・iss）
+#   old: 旧描画位置（レールが高い。古い pak128・SIS）
 # iss と SIS を比べると、どの方位でもレールが画面上で 4〜4.5px 違うだけだった
 TRACK_PROFILES = {
     "new": {"sheet": "track", "dy": 3},
     "old": {"sheet": "track_old", "dy": -1},
 }
+# 道床は両方とも旧の位置（地面の菱形と同じ）に描き、新はレールとまくらぎだけを下げる。
+# pak128 標準の Rail_100 も iss も、レールは新の位置だが道床は地面の位置にあり、斜めの絵もタイルの中心のまま。
+# 道床まで下げると、画面で縦向きの斜め（sw・ne）は辺で直線と同じ点を通る位置が無く、道床の角に段が出た
+BALLAST_DY = -1
 
 
 def track_sheet(profile="new"):
@@ -950,18 +965,19 @@ def track_sheet(profile="new"):
     # dat オフセット -64,-32 と対応。持ち分は地面の菱形のまま（新描画位置は絵が 4px 下だが、持ち分を 4 行下げると、
     # 手前のタイルへはみ出した 2〜4 行目を手前の地面が消し、どのつなぎ目にも草の線が出た）
     cy = GROUND_CY
-    set_anchor(128 + prof["dy"])
+    set_anchor(128 + BALLAST_DY)
+    drop = prof["dy"] - BALLAST_DY
     cells = {}
     for pos, (name, paths, slope) in jobs.items():
         clear_models()
-        if name.startswith("diag_"):
-            build_track(paths, slope, rail_scale=DIAG_RAIL, ballast_scale=DIAG_BALLAST)
-        else:
-            build_track(paths, slope)
-        # 画面で横向きの斜め（nw・se）は、絵のずれ（地面から 128+dy-GROUND_CY px）の半分だけ下げる。
+        # 画面で横向きの斜め（nw・se）のレールは、直線のレールの下げ幅の半分だけ下げる。
         # 絵を下げることはマップ上で南東へずらすことと同じで、直線は辺を横切る点が辺に沿ってずれる。
-        # 横向きの斜めは半分だけずらすと、両端で直線と同じ点を通る（縦向きの斜めにはそういう位置が無い）
-        set_anchor(GROUND_CY + (128 + prof["dy"] - GROUND_CY) // 2 if name in ("diag_nw", "diag_se") else 128 + prof["dy"])
+        # 横向きの斜めは半分だけずらすと、両端で直線と同じ点を通る（縦向きの斜めはずらしても線が動かない）
+        d = drop // 2 if name in ("diag_nw", "diag_se") else drop
+        if name.startswith("diag_"):
+            build_track(paths, slope, rail_scale=DIAG_RAIL, ballast_scale=DIAG_BALLAST, rail_drop=d)
+        else:
+            build_track(paths, slope, rail_drop=d)
         cells[pos] = render_cell(f"{prof['sheet']}_{name}", exits_of(name), slope=slope, cy=cy)
 
     # 確認用: タイル菱形そのもの（基準位置の検証に使う。シートには入れない）
