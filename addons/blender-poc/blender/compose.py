@@ -1,7 +1,7 @@
 """つなぎ目の確認: シートのセルを、ゲームと同じ位置・順番でタイルに並べて重ねる（ゲームを起動せずにバリを見る）。
 
 使い方（アドオンのディレクトリで）:
-    blender -b --factory-startup --python blender/compose.py -- road work/compose_road.png [倍率]
+    blender -b --factory-startup --python blender/compose.py -- road work/compose_road.png [倍率] [all|diag|slope|loop]
 
 並べ方は Simutrans と同じ: マップ (i, j)（i が東、j が南）、高さ z のタイルを画面 ((i-j)*64, (i+j)*32 - z*16) に置き、
 奥（i+j が小さい）から順に描く。#E7FFFF は透明。背景は草の色にして、透けた画素が緑で見えるようにする。
@@ -25,6 +25,8 @@ IMG = {
     "sw": (2, 5), "nw": (2, 6), "ne": (2, 7), "se": (2, 8),
     "nse": (3, 5), "new": (3, 6), "nsw": (3, 7), "sew": (3, 8), "nsew": (3, 9),
 }
+# 高速道路のカーブは斜めの絵を使う（expressway.dat の image[sw] など）
+IMG_EXPWY = dict(IMG, sw=(2, 0), nw=(2, 1), ne=(2, 2), se=(2, 3))
 
 
 def staircase(i0, j0, n, dj):
@@ -38,6 +40,8 @@ def staircase(i0, j0, n, dj):
         else:  # 南/北から来て、東へ出る
             tiles.append((i, j, 0, "dse" if dj < 0 else "dne"))
             i += 1
+    # 抜けた先も直線（n が偶数なら東へ、奇数なら北/南へ出る）
+    tiles.append((i, j, 0, "ew" if n % 2 == 0 else "ns"))
     return tiles
 
 
@@ -50,7 +54,20 @@ def slope_cross(i0, j0):
     return t
 
 
-LAYOUT = staircase(0, 0, 8, -1) + staircase(0, 6, 8, +1) + slope_cross(9, 3)
+def loop(i0, j0, n=4):
+    """四角い輪: カーブ4方向と直線のつなぎ目（ingame/all_dirs.nut の loop と同じ形）。"""
+    t = [(i0, j0, 0, "se"), (i0 + n, j0, 0, "sw"), (i0 + n, j0 + n, 0, "nw"), (i0, j0 + n, 0, "ne")]
+    for k in range(1, n):
+        t += [(i0 + k, j0, 0, "ew"), (i0 + k, j0 + n, 0, "ew"), (i0, j0 + k, 0, "ns"), (i0 + n, j0 + k, 0, "ns")]
+    return t
+
+
+LAYOUTS = {
+    "all": staircase(0, 0, 8, -1) + staircase(0, 6, 8, +1) + slope_cross(9, 3) + loop(14, -6),
+    "diag": staircase(0, 0, 8, -1) + staircase(0, 6, 8, +1),
+    "slope": slope_cross(0, 0),
+    "loop": loop(0, 0),
+}
 
 
 def load(path):
@@ -62,7 +79,7 @@ def load(path):
     return (np.flipud(px.reshape(h, w, 4))[..., :3] * 255 + 0.5).astype(np.uint8)
 
 
-def compose(sheet, layout):
+def compose(sheet, layout, img=IMG):
     xs = [(i - j) * 64 for i, j, _, _ in layout]
     ys = [(i + j) * 32 - z * 16 for i, j, z, _ in layout]
     x0, y0 = min(xs) - CELL, min(ys) - CELL
@@ -70,7 +87,7 @@ def compose(sheet, layout):
     out = np.empty((H, W, 3), np.uint8)
     out[...] = GRASS
     for i, j, z, key in sorted(layout, key=lambda t: (t[0] + t[1], t[2])):
-        r, c = IMG[key]
+        r, c = img[key]
         cell = sheet[r * CELL:(r + 1) * CELL, c * CELL:(c + 1) * CELL]
         mask = np.any(cell != TRANSPARENT, axis=-1)
         x, y = (i - j) * 64 - x0 - CELL // 2, (i + j) * 32 - z * 16 - y0 - CELL // 2
@@ -86,7 +103,8 @@ if __name__ == "__main__":
     args = sys.argv[sys.argv.index("--") + 1:]
     name, out_path = args[0], args[1]
     scale = int(args[2]) if len(args) > 2 else 1
-    img = compose(load(os.path.join(SRC, name + ".png")), LAYOUT)
+    layout = LAYOUTS[args[3] if len(args) > 3 else "all"]
+    img = compose(load(os.path.join(SRC, name + ".png")), layout, IMG_EXPWY if name == "expressway" else IMG)
     img = img.repeat(scale, 0).repeat(scale, 1)
     h, w, _ = img.shape
     o = bpy.data.images.new("o", w, h)

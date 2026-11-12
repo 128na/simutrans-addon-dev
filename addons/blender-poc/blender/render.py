@@ -242,21 +242,28 @@ def along(path, step, offset):
     return out
 
 
-def straight(a, b, ext=0.6):
+# 経路をタイルの辺からどれだけ外へ延ばすか。形を切り抜く幅（CLIP_PAD）より十分長くする。
+# 同じ長さだと、車道を抜く型の端が切り抜きの縁と重なる。カーブでは型の端がわずかに斜めなので、
+# 縁石が細いくさびの形で残り、直線とのつなぎ目に灰色の点線が出た
+PATH_EXT = 1.5
+
+
+def straight(a, b, ext=PATH_EXT):
     a, b = Vector(a), Vector(b)
     d = (b - a).normalized()
     return [a - d * ext, b + d * ext]
 
 
-def arc(center, start_deg, end_deg, radius=TILE / 2, n=24, ext=0.6):
+def arc(center, start_deg, end_deg, radius=TILE / 2, n=24, ext=PATH_EXT):
     c = Vector(center)
     pts = []
     for i in range(n + 1):
         t = math.radians(start_deg + (end_deg - start_deg) * i / n)
         pts.append(c + Vector((math.cos(t), math.sin(t))) * radius)
-    d0 = (pts[0] - pts[1]).normalized()
-    d1 = (pts[-1] - pts[-2]).normalized()
-    return [pts[0] + d0 * ext] + pts + [pts[-1] + d1 * ext]
+    # 端は円の接線の向きに延ばす（多角形の最後の辺の向きだと、辺に対して少し斜めになる）
+    sgn = 1 if end_deg > start_deg else -1
+    tan = lambda deg: Vector((-math.sin(math.radians(deg)), math.cos(math.radians(deg)))) * sgn
+    return [pts[0] - tan(start_deg) * ext] + pts + [pts[-1] + tan(end_deg) * ext]
 
 
 # pak128 標準に合わせて低くする: 道床の厚み0.12（画面で約1px）、レール上面0.30（約2px）
@@ -566,17 +573,17 @@ def road_sheet(style="street"):
     for pos, (name, paths, lines, slope, *rest) in jobs.items():
         clear_models()
         build_road(paths, lines, slope, corners=rest[0] if rest else (), sidewalk=not expwy)
-        cells[pos] = render_cell(prefix + name, exits_of(name))
+        cells[pos] = render_cell(prefix + name, exits_of(name), slope=slope is not None)
     k = EXPWY_DIAG_LINE if expwy else 1.0
     for pos, (name, path) in diag.items():
         clear_models()
         build_road([path], [(path, -EDGE_LINE * k), (path, 0.0), (path, EDGE_LINE * k)], scale=ROAD_DIAG,
                    half=path, hw=ROAD_DIAG_HW / ROAD_DIAG, sidewalk=not expwy)
-        cells[pos] = render_cell(prefix + name, exits_of(name), diag=True)
+        cells[pos] = render_cell(prefix + name, exits_of(name), diag=True, wide=DIAG_WIDE_ROAD)
 
     # アイコン: 道路を大きく斜めに通し、左上に最高速度を書く
     clear_models()
-    long = straight((0, -12), (0, 12))
+    long = straight((0, -12), (0, 12), ext=0.6)
     build_road([long], both(long), clip=False, size=(TILE, 26), sidewalk=not expwy)
     cells[(0, 0)] = render_icon(prefix + "icon", 0.5, shift=(-0.14, 0.2), label="120" if expwy else "50")
     cells[(0, 1)] = cells[(0, 2)]
@@ -661,9 +668,20 @@ def _mask_materials():
     return out
 
 
-# 持ち分マスク: つながる向きの辺では、タイルの外へこれだけ広く持つ（画面で約3px）。
-# 隣のタイルと少し重ねて描き、坂のタイルの地面が後から描かれて隣の端を上書きしても隙間が出ないようにする
-OWN_MARGIN = 0.5
+# 持ち分マスク: つながる向きの辺では、タイルの外へ少し広く持ち、隣と重ねて描く。
+# 後から描くタイルの地面が境の画素を上書きするので、重ねないと境に緑の線が出る（斜め同士で目立つ）。
+# 坂のタイルは地面が隣の端をもっと広く上書きするので約3px、平らなタイルは約1px。
+# 斜めのタイルは、辺の中点から wide より外（道床・歩道の縁）だけ約3px にする。1px だと斜め同士の境で
+# 道床の縁に緑の点が残る。中央まで 3px にすると、直線のほうが先に描かれたとき、
+# 斜めの車道が直線の白線の端を覆い、角で白線が切れて見える。
+# 平らなタイルを広くすると、隣が斜めのタイル（半分しか描かない）のときに、
+# 直線の道床や白線が斜めの側へはみ出して段差に見える
+OWN_MARGIN = 0.2
+OWN_MARGIN_SLOPE = 0.5
+# 斜めのタイルで重ねを広くする、辺の中点からの距離。白線・レールより外側にする
+# （道路の外側の白線は辺の中点から約 3.3、線路のレールは約 0.7）
+DIAG_WIDE_ROAD = 3.6
+DIAG_WIDE_TRACK = 1.2
 
 
 def exits_of(name):
@@ -676,11 +694,11 @@ def exits_of(name):
     return name.split("_")[-1]
 
 
-def _own_material(exits, diag=False):
+def _own_material(exits, diag=False, margin=0.0, wide=None):
     """面の位置（ワールド座標の x, y）がタイルの持ち分に入っていれば白、外なら黒で光る材質。
     diag は斜めのタイル: 重ねて持つ範囲を、残す角の頂点を通る線の手前までにする
     （その先は隣の斜めのタイルも描かない所なので、はみ出すと歩道が草地へ出っ張る）。"""
-    mname = "own_" + (exits or "none") + ("_diag" if diag else "")
+    mname = "own_" + (exits or "none") + ("_diag" if diag else "") + (f"_m{margin}" if margin else "") +         (f"_w{wide}" if wide else "")
     m = bpy.data.materials.get(mname)
     if m is not None:
         return m
@@ -692,15 +710,39 @@ def _own_material(exits, diag=False):
     sep = nt.nodes.new("ShaderNodeSeparateXYZ")
     nt.links.new(geo.outputs["Position"], sep.inputs[0])
     half = TILE / 2
-    pad = lambda d: half + (OWN_MARGIN if d in exits else 0.0)
-    tests = [("X", "GREATER_THAN", -pad("w")), ("X", "LESS_THAN", pad("e")),
-             ("Y", "GREATER_THAN", -pad("s")), ("Y", "LESS_THAN", pad("n"))]
+    def mnode(op, a, b):
+        n = nt.nodes.new("ShaderNodeMath")
+        n.operation = op
+        for k, v in enumerate((a, b)):
+            if isinstance(v, (int, float)):
+                n.inputs[k].default_value = v
+            else:
+                nt.links.new(v, n.inputs[k])
+        return n.outputs[0]
+
+    def pad(d, along):
+        """辺 d の外側の境（タイル中心からの距離）。wide があれば、辺に沿った位置 along で幅を変える。"""
+        if d not in exits:
+            return half
+        if wide is None:
+            return half + margin
+        width, m_out = wide
+        outer = mnode("GREATER_THAN", mnode("ABSOLUTE", along, 0.0), width)
+        return mnode("ADD", mnode("MULTIPLY", outer, m_out - margin), half + margin)
+
+    X, Y = sep.outputs["X"], sep.outputs["Y"]
+    neg = lambda v: v * -1 if isinstance(v, float) else mnode("MULTIPLY", v, -1.0)
+    tests = [(X, "GREATER_THAN", neg(pad("w", Y))), (X, "LESS_THAN", pad("e", Y)),
+             (Y, "GREATER_THAN", neg(pad("s", X))), (Y, "LESS_THAN", pad("n", X))]
     acc = None
     for axis, op, v in tests:
         t = nt.nodes.new("ShaderNodeMath")
         t.operation = op
-        t.inputs[1].default_value = v
-        nt.links.new(sep.outputs[axis], t.inputs[0])
+        nt.links.new(axis, t.inputs[0])
+        if isinstance(v, float):
+            t.inputs[1].default_value = v
+        else:
+            nt.links.new(v, t.inputs[1])
         if acc is None:
             acc = t
         else:
@@ -745,7 +787,7 @@ def _render_with(materials_for, path):
         slot.material = mat
 
 
-def render_cell(name, exits=None, diag=False):
+def render_cell(name, exits=None, diag=False, slope=False, wide=None):
     """通常の描画に加えて、
     - exits を渡したタイル（線路・道路）は name_own.png（持ち分マスク）を描く。画素の半分以上が持ち分の面なら残す
     - 特殊色の材質があれば name_mask.png も描く（どの画素にどの特殊色を入れるか）"""
@@ -759,7 +801,8 @@ def render_cell(name, exits=None, diag=False):
         if os.path.exists(p):
             os.remove(p)
     if exits is not None:
-        own = _own_material(exits, diag)
+        own = _own_material(exits, diag, OWN_MARGIN_SLOPE if slope else OWN_MARGIN,
+                            (wide, OWN_MARGIN_SLOPE) if diag and wide else None)
         _render_with(lambda m: own, own_path)
     meshes = [ob for ob in scene.objects if ob.type == "MESH"]
     if not any(s.material and s.material.get("special") for ob in meshes for s in ob.material_slots):
@@ -880,10 +923,10 @@ def track_sheet(profile="new"):
         # セル位置は iss の線路 dat と同じ（行, 列）
         (0, 2): ("ns", [straight(S, N)], None),
         (0, 3): ("ew", [straight(W, E)], None),
-        (0, 5): ("s", [[Vector(O), Vector(S) + Vector((0, -0.6))]], None),
-        (0, 6): ("w", [[Vector(O), Vector(W) + Vector((-0.6, 0))]], None),
-        (0, 7): ("n", [[Vector(O), Vector(N) + Vector((0, 0.6))]], None),
-        (0, 8): ("e", [[Vector(O), Vector(E) + Vector((0.6, 0))]], None),
+        (0, 5): ("s", [[Vector(O), Vector(S) + Vector((0, -PATH_EXT))]], None),
+        (0, 6): ("w", [[Vector(O), Vector(W) + Vector((-PATH_EXT, 0))]], None),
+        (0, 7): ("n", [[Vector(O), Vector(N) + Vector((0, PATH_EXT))]], None),
+        (0, 8): ("e", [[Vector(O), Vector(E) + Vector((PATH_EXT, 0))]], None),
         (0, 9): ("single", [[Vector((0, -1.8)), Vector((0, 1.8))]], None),
         (1, 0): ("up12", [straight(S, N)], up(lambda x, y: H * (y + half) / TILE)),
         (1, 1): ("up9", [straight(W, E)], up(lambda x, y: H * (half - x) / TILE)),
@@ -917,7 +960,8 @@ def track_sheet(profile="new"):
             build_track(paths, slope, rail_scale=DIAG_RAIL, ballast_scale=DIAG_BALLAST)
         else:
             build_track(paths, slope)
-        cells[pos] = render_cell(f"{prof['sheet']}_{name}", exits_of(name), diag=name.startswith("diag_"))
+        cells[pos] = render_cell(f"{prof['sheet']}_{name}", exits_of(name), diag=name.startswith("diag_"),
+                                 slope=slope is not None, wide=DIAG_WIDE_TRACK)
 
     # 確認用: タイル菱形そのもの（基準位置の検証に使う。シートには入れない）
     set_anchor(128)
@@ -933,7 +977,7 @@ def track_sheet(profile="new"):
 
     # アイコン: 線路を大きく斜めに通し、左上に最高速度を書く
     clear_models()
-    build_track([straight((0, -12), (0, 12))], clip=False)
+    build_track([straight((0, -12), (0, 12), ext=0.6)], clip=False)
     cells[(0, 0)] = render_icon("track_icon", 0.5, shift=(-0.14, 0.2), label="100")
     cells[(0, 1)] = cells[(0, 2)]  # カーソルは ns と同じ絵
 
