@@ -305,11 +305,16 @@ def build_track(paths, slope=None, clip=True, rail_scale=1.0, ballast_scale=1.0)
 _clipper = None
 
 
+# 形はタイルより少し大きく切り抜いておく（タイルの端の画素も、隣とつながった形で描くため）。
+# どの画素を残すかは render_cell の「持ち分マスク」で決める
+CLIP_PAD = 0.6
+
+
 def clip_to_tile(ob):
-    """タイルの範囲（xy: ±TILE/2）で切り抜く。隣のタイルとの継ぎ目をそろえるため。"""
+    """タイルの範囲（xy: ±TILE/2）より CLIP_PAD だけ大きく切り抜く。"""
     global _clipper
     if _clipper is None or _clipper.name not in bpy.data.objects:
-        v, f = box(0, 0, 0, TILE, TILE, 60)
+        v, f = box(0, 0, 0, TILE + 2 * CLIP_PAD, TILE + 2 * CLIP_PAD, 60)
         me = bpy.data.meshes.new("clip")
         me.from_pydata([tuple(x) for x in v], [], f)
         _clipper = bpy.data.objects.new("clip", me)
@@ -480,6 +485,8 @@ def finish_road(obs, slope, clip, half, m_curb):
 # 高速道路（SIS_E_RG1-1_01S に合わせる）: 白線の位置は一般道と同じで、歩道が無くタイル全面がアスファルト。
 # 斜めだけ白線が一般道より約 1.08 倍外にある
 EXPWY_DIAG_LINE = 1.08
+# 斜めの道路の経路をタイルの辺の中点からどれだけ外へ延ばすか（車道・縁石の型と白線）
+DIAG_EXT = 8.0
 
 
 def road_sheet(style="street"):
@@ -546,24 +553,26 @@ def road_sheet(style="street"):
         })
         for pos in ((2, 5), (2, 6), (2, 7), (2, 8)):
             del jobs[pos]
+    # 斜めの経路はタイルの外まで十分に延ばす。45° の向きでは型の端の角が内側に入り込み、
+    # 延長が短い（2.5）とタイルの端の近くで縁石が削り残されて、つなぎ目に切り欠きが出た
     diag = {
-        (2, 0): ("diag_sw", straight(S, W, ext=2.5)),
-        (2, 1): ("diag_nw", straight(N, W, ext=2.5)),
-        (2, 2): ("diag_ne", straight(N, E, ext=2.5)),
-        (2, 3): ("diag_se", straight(S, E, ext=2.5)),
+        (2, 0): ("diag_sw", straight(S, W, ext=DIAG_EXT)),
+        (2, 1): ("diag_nw", straight(N, W, ext=DIAG_EXT)),
+        (2, 2): ("diag_ne", straight(N, E, ext=DIAG_EXT)),
+        (2, 3): ("diag_se", straight(S, E, ext=DIAG_EXT)),
     }
     set_anchor(128)
     cells = {}
     for pos, (name, paths, lines, slope, *rest) in jobs.items():
         clear_models()
         build_road(paths, lines, slope, corners=rest[0] if rest else (), sidewalk=not expwy)
-        cells[pos] = render_cell(prefix + name)
+        cells[pos] = render_cell(prefix + name, exits_of(name))
     k = EXPWY_DIAG_LINE if expwy else 1.0
     for pos, (name, path) in diag.items():
         clear_models()
         build_road([path], [(path, -EDGE_LINE * k), (path, 0.0), (path, EDGE_LINE * k)], scale=ROAD_DIAG,
                    half=path, hw=ROAD_DIAG_HW / ROAD_DIAG, sidewalk=not expwy)
-        cells[pos] = render_cell(prefix + name)
+        cells[pos] = render_cell(prefix + name, exits_of(name), diag=True)
 
     # アイコン: 道路を大きく斜めに通し、左上に最高速度を書く
     clear_models()
@@ -652,15 +661,106 @@ def _mask_materials():
     return out
 
 
-def render_cell(name):
-    """通常の描画に加えて、特殊色の材質があれば name_mask.png も描く（どの画素にどの特殊色を入れるか）。"""
+# 持ち分マスク: つながる向きの辺では、タイルの外へこれだけ広く持つ（画面で約3px）。
+# 隣のタイルと少し重ねて描き、坂のタイルの地面が後から描かれて隣の端を上書きしても隙間が出ないようにする
+OWN_MARGIN = 0.5
+
+
+def exits_of(name):
+    """セルの名前（ns, up12, diag_sw, curve_ne, nse など）から、つながる辺（n/s/e/w の文字列）を返す。"""
+    if name.startswith("up"):
+        code = int(name.split("_")[-1]) if "_" in name else int(name[2:])
+        return "ns" if code in (12, 3) else "ew"
+    if name == "single":
+        return ""
+    return name.split("_")[-1]
+
+
+def _own_material(exits, diag=False):
+    """面の位置（ワールド座標の x, y）がタイルの持ち分に入っていれば白、外なら黒で光る材質。
+    diag は斜めのタイル: 重ねて持つ範囲を、残す角の頂点を通る線の手前までにする
+    （その先は隣の斜めのタイルも描かない所なので、はみ出すと歩道が草地へ出っ張る）。"""
+    mname = "own_" + (exits or "none") + ("_diag" if diag else "")
+    m = bpy.data.materials.get(mname)
+    if m is not None:
+        return m
+    m = bpy.data.materials.new(mname)
+    m.use_nodes = True
+    nt = m.node_tree
+    nt.nodes.clear()
+    geo = nt.nodes.new("ShaderNodeNewGeometry")
+    sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+    nt.links.new(geo.outputs["Position"], sep.inputs[0])
+    half = TILE / 2
+    pad = lambda d: half + (OWN_MARGIN if d in exits else 0.0)
+    tests = [("X", "GREATER_THAN", -pad("w")), ("X", "LESS_THAN", pad("e")),
+             ("Y", "GREATER_THAN", -pad("s")), ("Y", "LESS_THAN", pad("n"))]
+    acc = None
+    for axis, op, v in tests:
+        t = nt.nodes.new("ShaderNodeMath")
+        t.operation = op
+        t.inputs[1].default_value = v
+        nt.links.new(sep.outputs[axis], t.inputs[0])
+        if acc is None:
+            acc = t
+        else:
+            mul = nt.nodes.new("ShaderNodeMath")
+            mul.operation = "MULTIPLY"
+            nt.links.new(acc.outputs[0], mul.inputs[0])
+            nt.links.new(t.outputs[0], mul.inputs[1])
+            acc = mul
+    if diag:
+        u = Vector(((1 if "e" in exits else -1), (1 if "n" in exits else -1), 0)).normalized()
+        dot = nt.nodes.new("ShaderNodeVectorMath")
+        dot.operation = "DOT_PRODUCT"
+        dot.inputs[1].default_value = u
+        nt.links.new(geo.outputs["Position"], dot.inputs[0])
+        t = nt.nodes.new("ShaderNodeMath")
+        t.operation = "LESS_THAN"
+        t.inputs[1].default_value = half * math.sqrt(2)
+        nt.links.new(dot.outputs["Value"], t.inputs[0])
+        mul = nt.nodes.new("ShaderNodeMath")
+        mul.operation = "MULTIPLY"
+        nt.links.new(acc.outputs[0], mul.inputs[0])
+        nt.links.new(t.outputs[0], mul.inputs[1])
+        acc = mul
+    em = nt.nodes.new("ShaderNodeEmission")
+    nt.links.new(acc.outputs[0], em.inputs["Color"])
+    out = nt.nodes.new("ShaderNodeOutputMaterial")
+    nt.links.new(em.outputs[0], out.inputs["Surface"])
+    return m
+
+
+def _render_with(materials_for, path):
+    """全ての形の材質を一時的に差し替えて描く。"""
+    scene = bpy.context.scene
+    saved = []
+    for ob in [ob for ob in scene.objects if ob.type == "MESH"]:
+        for slot in ob.material_slots:
+            saved.append((slot, slot.material))
+            slot.material = materials_for(slot.material)
+    scene.render.filepath = path
+    bpy.ops.render.render(write_still=True)
+    for slot, mat in saved:
+        slot.material = mat
+
+
+def render_cell(name, exits=None, diag=False):
+    """通常の描画に加えて、
+    - exits を渡したタイル（線路・道路）は name_own.png（持ち分マスク）を描く。画素の半分以上が持ち分の面なら残す
+    - 特殊色の材質があれば name_mask.png も描く（どの画素にどの特殊色を入れるか）"""
     path = os.path.join(WORK, name + ".png")
     mask_path = os.path.join(WORK, name + "_mask.png")
+    own_path = os.path.join(WORK, name + "_own.png")
     scene = bpy.context.scene
     scene.render.filepath = path
     bpy.ops.render.render(write_still=True)
-    if os.path.exists(mask_path):
-        os.remove(mask_path)
+    for p in (mask_path, own_path):
+        if os.path.exists(p):
+            os.remove(p)
+    if exits is not None:
+        own = _own_material(exits, diag)
+        _render_with(lambda m: own, own_path)
     meshes = [ob for ob in scene.objects if ob.type == "MESH"]
     if not any(s.material and s.material.get("special") for ob in meshes for s in ob.material_slots):
         return path
@@ -739,6 +839,11 @@ def make_sheet(cells, rows, cols, out):
     for (r, c), path in cells.items():
         sl = (slice(r * CELL, (r + 1) * CELL), slice(c * CELL, (c + 1) * CELL))
         sheet[sl] = load_rgba8(path)
+        own_path = path[:-4] + "_own.png"
+        if os.path.exists(own_path):
+            # 持ち分でない画素は透明にする（隣のタイルが描く）
+            own = load_rgba8(own_path)
+            sheet[sl][..., 3] = np.where(own[..., 0] >= 128, sheet[sl][..., 3], 0)
         mask_path = path[:-4] + "_mask.png"
         if os.path.exists(mask_path):
             masked.append((sl, load_rgba8(mask_path)))
@@ -812,7 +917,7 @@ def track_sheet(profile="new"):
             build_track(paths, slope, rail_scale=DIAG_RAIL, ballast_scale=DIAG_BALLAST)
         else:
             build_track(paths, slope)
-        cells[pos] = render_cell(f"{prof['sheet']}_{name}")
+        cells[pos] = render_cell(f"{prof['sheet']}_{name}", exits_of(name), diag=name.startswith("diag_"))
 
     # 確認用: タイル菱形そのもの（基準位置の検証に使う。シートには入れない）
     set_anchor(128)
