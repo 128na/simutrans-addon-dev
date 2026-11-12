@@ -362,8 +362,10 @@ SIDEWALK_H = 0.25      # 歩道の高さ（縁石の立ち上がり 約2px）
 LINE_W = 0.15          # 白線の幅（約1px）
 EDGE_LINE = 3.37       # 路側の白線の中心
 ROAD_DIAG = 2 / math.sqrt(10)  # 斜めの横幅の倍率（SIS も線路と同じく縮めている）
-# 斜めの車道の半幅（縮めた後）。SIS は斜めで白線の外側に余白があり、縁石は中心線から約 2.7 の位置
-ROAD_DIAG_HW = 2.7
+# 斜めのタイルの車道・縁石・白線は、直線とのつなぎ目（タイルの辺）で直線と同じ点を通るようにする。
+# 斜めは辺を 45° で横切るので、経路からの距離は直線の 1/√2。SIS の斜め（車道 2.7、白線は直線の 0.632〜0.68 倍）は
+# これより少し外・内にずれていて、つなぎ目で白線が1px 切れ、縁石が1〜2px 段になっていた
+DIAG_EDGE = 1 / math.sqrt(2)
 
 
 def boolean(ob, cutter, op="DIFFERENCE", transfer=False):
@@ -407,24 +409,23 @@ def corner_piece(corner, r, n=12):
 # 斜めのタイルで残す範囲: 中心を通る線と、残す角の頂点を通る線（どちらも経路に平行）の間の帯。
 # 隣の斜めのタイルは、この帯の続きを描く。角の線で切るのは、その先（隣の草地のタイル）にある歩道が、
 # 高さがあるので画面では上へずれて、この菱形の角に入り込むため。
-# 画面で横向きの斜め（se・nw）は、帯の両側の縁を DIAG_CUT_INSET（画面で約1.4px）内側へ寄せる。
-# 帯の縁は菱形の頂点を通るので、縁の画素が頂点の近くで上・下の草地のタイルにかかり、1タイルおきに欠けた:
-# - 下側: 道路の絵はゲームの地面の菱形より1px 下に描く（SIS の道路とつながる位置）。縁と、その外にできる
-#   薄い縁取りの1行（アルファ25以上は不透明になる）が、下の菱形に入る
-# - 上側: 歩道の上面は高さがあるので画面で約2px 上へずれ、上の菱形に入る
-# 縦向きの斜め（sw・ne）は縁が画面で縦なので、どちらにもかからない
-DIAG_CUT_INSET = 0.3
+# 帯の縁は、画面では菱形の頂点を通る横（se・nw）か縦（sw・ne）の線になる。この線で正確に切るのは
+# 持ち分マスク（_ground_mask の side）の側で行い、形のほうは帯より DIAG_OVERFILL だけ広く残しておく。
+# 形の側で切ると、道路の絵は地面より1px 下に描き、歩道の上面は高さの分だけ上へずれるので、縁が頂点の行から
+# 1〜2px ずれる。縁の内側に寄せる（以前の DIAG_CUT_INSET）と、今度は直線の舗装の角（頂点の行まである）と段になった
+DIAG_OVERFILL = 0.6
+
+# 斜めのタイルで残す画面の半分（帯の範囲）。nw は上、se は下、sw は左、ne は右
+DIAG_HALF = {"diag_nw": "top", "diag_se": "bottom", "diag_sw": "left", "diag_ne": "right"}
 
 
 def half_tile(path):
-    """斜めのタイルで残す範囲（経路が切り取る角の側の帯）。Simutrans は残りを隣のタイルに描く。"""
+    """斜めのタイルで残す範囲（経路が切り取る角の側の帯）を、少し広げた箱。Simutrans は残りを隣のタイルに描く。"""
     mid = (path[0] + path[-1]) / 2
     u = Vector((mid.x, mid.y)).normalized()
     ang = math.atan2(u.y, u.x)
     far = TILE / 2 * math.sqrt(2)  # 中心から角の頂点を通る線まで
-    # 画面で横向きの斜めは、u が南東 (1,-1) か北西 (-1,1) の向き
-    inset = DIAG_CUT_INSET if abs(u.x - u.y) > 1 else 0.0
-    lo, hi = inset, far - inset
+    lo, hi = -DIAG_OVERFILL, far + DIAG_OVERFILL
     c = (lo + hi) / 2
     return box(u.x * c, u.y * c, 0, hi - lo, 60, 80, rot=ang)
 
@@ -449,7 +450,7 @@ def dashes(path, dash=0.6, period=1.6):
 
 
 def build_road(paths, lines, slope=None, scale=1.0, clip=True, size=TILE + 4, corners=(), half=None, hw=ROAD_HW,
-               sidewalk=True):
+               sidewalk=True, curb_w=CURB_W):
     """道路を作る。paths は車道の中心線（複数で分岐・十字）、lines は (path, u) か (path, u, "dash") の白線。
     歩道は全面の板から車道を抜いて作るので、分岐の口やカーブの外側も自然に埋まる。
     corners は歩道の角を丸くするタイルの角、half は斜めのタイルで残す半分を決める経路。
@@ -479,7 +480,7 @@ def build_road(paths, lines, slope=None, scale=1.0, clip=True, size=TILE + 4, co
     asphalt = mesh_object("asphalt", *box(0, 0, -0.02, bx, by, 0.04), m_asphalt)
     obs = [asphalt]
     if sidewalk:
-        obs += build_sidewalk(bx, by, scale, hw, cutter, m_curb, m_paving)
+        obs += build_sidewalk(bx, by, scale, hw, curb_w, cutter, m_curb, m_paving)
     line_paths = []
     for path, u, *kind in lines:
         if kind and kind[0] == "dash":
@@ -495,12 +496,12 @@ def build_road(paths, lines, slope=None, scale=1.0, clip=True, size=TILE + 4, co
     finish_road(obs, slope, clip, half, m_curb)
 
 
-def build_sidewalk(bx, by, scale, hw, cutter, m_curb, m_paving):
+def build_sidewalk(bx, by, scale, hw, curb_w, cutter, m_curb, m_paving):
     """全面の板から車道を抜いて、縁石と歩道を作る。"""
     curb = mesh_object("curb", *box(0, 0, SIDEWALK_H / 2, bx, by, SIDEWALK_H), m_curb)
     paving = mesh_object("paving", *box(0, 0, SIDEWALK_H + 0.01, bx, by, 0.02), m_paving)
     cut_road = cutter("cut_road", hw)
-    cut_curb = cutter("cut_curb", hw + CURB_W / scale)
+    cut_curb = cutter("cut_curb", hw + curb_w / scale)
     # 車道の切り口（縁石の立ち上がり）は縁石の色にする
     boolean(curb, cut_road, transfer=True)
     boolean(paving, cut_curb)
@@ -523,11 +524,11 @@ def finish_road(obs, slope, clip, half, m_curb):
         bpy.data.objects.remove(keeper, do_unlink=True)
 
 
-# 高速道路（SIS_E_RG1-1_01S に合わせる）: 白線の位置は一般道と同じで、歩道が無くタイル全面がアスファルト。
-# 斜めだけ白線が一般道より約 1.08 倍外にある
-EXPWY_DIAG_LINE = 1.08
-# 画面で横向きになる斜めの中央線を、半画素（0.5px）ずらす量。斜めに直交する向きの 1 は画面の縦で 64/√2/10 ≈ 4.5px
-DIAG_CENTER_SHIFT = 0.5 / (64 / math.sqrt(2) / 10)
+# 高速道路（SIS_E_RG1-1_01S に合わせる）: 白線の位置は一般道と同じで、歩道が無くタイル全面がアスファルト
+# 画面で横向きになる斜めに直交する向きの 1 が、画面の縦で何px か（64/√2/10 ≈ 4.5px）
+DIAG_PX = 64 / math.sqrt(2) / TILE
+# 画面で横向きになる斜めの中央線を、半画素（0.5px）ずらす量
+DIAG_CENTER_SHIFT = 0.5 / DIAG_PX
 # 斜めの道路の経路をタイルの辺の中点からどれだけ外へ延ばすか（車道・縁石の型と白線）
 DIAG_EXT = 8.0
 
@@ -604,21 +605,29 @@ def road_sheet(style="street"):
         (2, 2): ("diag_ne", straight(N, E, ext=DIAG_EXT)),
         (2, 3): ("diag_se", straight(S, E, ext=DIAG_EXT)),
     }
-    set_anchor(128)
+    # 道路は地面の菱形と同じ位置に描く（GROUND_CY と同じ 127）。以前は SIS の道路に合わせて 1px 下（128）だったが、
+    # 絵の辺（形が曲がる所）と持ち分の辺（地面の菱形）が縦に 1px、辺に沿って 2px ずれ、
+    # 直線↔斜めのつなぎ目で白線が切れ、縁石が段になった（直線の絵は隣が斜めか直線か知らないので、ずれた所を描けない）
+    set_anchor(GROUND_CY)
     cells = {}
     for pos, (name, paths, lines, slope, *rest) in jobs.items():
         clear_models()
         build_road(paths, lines, slope, corners=rest[0] if rest else (), sidewalk=not expwy)
         cells[pos] = render_cell(prefix + name, exits_of(name), slope=slope)
-    k = EXPWY_DIAG_LINE if expwy else 1.0
+    k = DIAG_EDGE / ROAD_DIAG  # 経路からの距離の倍率（scale=ROAD_DIAG を掛けると直線の 1/√2）
     for pos, (name, path) in diag.items():
         clear_models()
         # 画面で横向きになる斜め（se・nw）は、中央線がちょうど画素の行の境に乗り、2行に分かれて灰色に見える。
         # 半画素ずらして1行に収める（どちらも南東の側へ。sweep の +u は se で南東、nw で北西）
         c = {"diag_se": DIAG_CENTER_SHIFT, "diag_nw": -DIAG_CENTER_SHIFT}.get(name, 0.0) / ROAD_DIAG
-        build_road([path], [(path, -EDGE_LINE * k), (path, c), (path, EDGE_LINE * k)], scale=ROAD_DIAG,
-                   half=path, hw=ROAD_DIAG_HW / ROAD_DIAG, sidewalk=not expwy)
-        cells[pos] = render_cell(prefix + name, exits_of(name))
+        e = EDGE_LINE * k
+        if name in ("diag_se", "diag_nw"):
+            # 路側の白線も、経路（画素の行の境）からの距離を「整数 + 0.5」px に丸めて1行に収める（約 0.3px 内へ）。
+            # 縦向きの斜め（sw・ne）はそのままで列に収まる。両方を同時に収める EDGE_LINE は無い
+            e = (math.floor(EDGE_LINE * DIAG_EDGE * DIAG_PX) + 0.5) / DIAG_PX / ROAD_DIAG
+        build_road([path], [(path, -e), (path, c), (path, e)], scale=ROAD_DIAG,
+                   half=path, hw=ROAD_HW * k, sidewalk=not expwy, curb_w=CURB_W * DIAG_EDGE)
+        cells[pos] = render_cell(prefix + name, exits_of(name), side=DIAG_HALF[name])
 
     # アイコン: 道路を大きく斜めに通し、左上に最高速度を書く
     clear_models()
@@ -729,8 +738,10 @@ def exits_of(name):
 GROUND_CY = 127
 
 
-def _ground_mask(slope):
-    """タイルの地面（四隅の高さは slope、無ければ平ら）が画面で占める画素。画素の中心が四角形の中なら 255。"""
+def _ground_mask(slope, side=None):
+    """タイルの地面（四隅の高さは slope、無ければ平ら）が画面で占める画素。画素の中心が四角形の中なら 255。
+    side（top/bottom/left/right）を渡すと、菱形のうち中心を通る横・縦の線のその側だけにする（斜めのタイル）。
+    線は隣の菱形の頂点と同じ位置なので、隣の直線・斜めのタイルの縁と同じ行・列で切れる"""
     half = TILE / 2
     up = PX_PER_UNIT * math.sin(math.radians(60))  # 高さ 1 → 画面で上へ何px（H で 16px）
     pts = []
@@ -742,16 +753,19 @@ def _ground_mask(slope):
     for (x0, y0), (x1, y1) in zip(pts, pts[1:] + pts[:1]):
         # 並びは 左→下→右→上 の角。内側は辺に対して外積が負の側
         inside &= (x1 - x0) * (yy - y0) - (y1 - y0) * (xx - x0) < 0
+    if side is not None:
+        inside &= {"top": yy < GROUND_CY, "bottom": yy > GROUND_CY,
+                   "left": xx < CELL / 2, "right": xx > CELL / 2}[side]
     return inside
 
 
-def _render_ground(slope, path):
+def _render_ground(slope, path, side=None):
     """持ち分マスク（地面の範囲）を PNG に書く。"""
-    m = _ground_mask(slope).astype(np.uint8) * 255
+    m = _ground_mask(slope, side).astype(np.uint8) * 255
     save_rgba(path, np.dstack([m, m, m, np.full_like(m, 255)]))
 
 
-def render_cell(name, exits=None, slope=None):
+def render_cell(name, exits=None, slope=None, side=None):
     """通常の描画に加えて、
     - exits を渡したタイル（線路・道路）は name_own.png（持ち分マスク = 地面の範囲）を描く。
       画素の中心が地面の菱形の中なら残す。slope は坂の高さ slope(x, y)
@@ -766,7 +780,7 @@ def render_cell(name, exits=None, slope=None):
         if os.path.exists(p):
             os.remove(p)
     if exits is not None:
-        _render_ground(slope, own_path)
+        _render_ground(slope, own_path, side)
     meshes = [ob for ob in scene.objects if ob.type == "MESH"]
     if not any(s.material and s.material.get("special") for ob in meshes for s in ob.material_slots):
         return path
