@@ -303,10 +303,28 @@ def build_track(paths, slope=None, clip=True, rail_scale=1.0, ballast_scale=1.0)
 
     for ob in obs:
         if slope:
-            for v in ob.data.vertices:
-                v.co.z += slope(v.co.x, v.co.y)
+            apply_slope(ob, slope)
         if clip:
             clip_to_tile(ob)
+
+
+def apply_slope(ob, slope):
+    """坂の高さ slope(x, y) を形に当てる。タイルの外（隣と重ねて描く部分）は、辺の高さのまま平らに延ばす。
+    傾きの式をそのまま外へ延ばすと、重ねた部分が隣の平らな面より下（上）にずれて、
+    付け根で白線・縁石・道床に段差が出る。辺の上で折れるように、先に辺の位置で面を切っておく。"""
+    half = TILE / 2
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    for co, no in (((half, 0, 0), (1, 0, 0)), ((-half, 0, 0), (1, 0, 0)),
+                   ((0, half, 0), (0, 1, 0)), ((0, -half, 0), (0, 1, 0))):
+        geom = bm.verts[:] + bm.edges[:] + bm.faces[:]
+        bmesh.ops.bisect_plane(bm, geom=geom, plane_co=co, plane_no=no)
+    clamp = lambda t: max(-half, min(half, t))
+    for v in bm.verts:
+        v.co.z += slope(clamp(v.co.x), clamp(v.co.y))
+    bm.to_mesh(ob.data)
+    bm.free()
+    ob.data.update()
 
 
 _clipper = None
@@ -386,12 +404,29 @@ def corner_piece(corner, r, n=12):
     return prism(pts)
 
 
+# 斜めのタイルで残す範囲: 中心を通る線と、残す角の頂点を通る線（どちらも経路に平行）の間の帯。
+# 隣の斜めのタイルは、この帯の続きを描く。角の線で切るのは、その先（隣の草地のタイル）にある歩道が、
+# 高さがあるので画面では上へずれて、この菱形の角に入り込むため。
+# 画面で横向きの斜め（se・nw）は、帯の両側の縁を DIAG_CUT_INSET（画面で約1.4px）内側へ寄せる。
+# 帯の縁は菱形の頂点を通るので、縁の画素が頂点の近くで上・下の草地のタイルにかかり、1タイルおきに欠けた:
+# - 下側: 道路の絵はゲームの地面の菱形より1px 下に描く（SIS の道路とつながる位置）。縁と、その外にできる
+#   薄い縁取りの1行（アルファ25以上は不透明になる）が、下の菱形に入る
+# - 上側: 歩道の上面は高さがあるので画面で約2px 上へずれ、上の菱形に入る
+# 縦向きの斜め（sw・ne）は縁が画面で縦なので、どちらにもかからない
+DIAG_CUT_INSET = 0.3
+
+
 def half_tile(path):
-    """斜めのタイルで残す半分（経路が切り取る角の側）。Simutrans は残り半分を隣のタイルに描く。"""
+    """斜めのタイルで残す範囲（経路が切り取る角の側の帯）。Simutrans は残りを隣のタイルに描く。"""
     mid = (path[0] + path[-1]) / 2
     u = Vector((mid.x, mid.y)).normalized()
     ang = math.atan2(u.y, u.x)
-    return box(u.x * 15, u.y * 15, 0, 30, 60, 80, rot=ang)
+    far = TILE / 2 * math.sqrt(2)  # 中心から角の頂点を通る線まで
+    # 画面で横向きの斜めは、u が南東 (1,-1) か北西 (-1,1) の向き
+    inset = DIAG_CUT_INSET if abs(u.x - u.y) > 1 else 0.0
+    lo, hi = inset, far - inset
+    c = (lo + hi) / 2
+    return box(u.x * c, u.y * c, 0, hi - lo, 60, 80, rot=ang)
 
 
 def recalc_normals(ob):
@@ -477,8 +512,7 @@ def build_sidewalk(bx, by, scale, hw, cutter, m_curb, m_paving):
 def finish_road(obs, slope, clip, half, m_curb):
     for ob in obs:
         if slope:
-            for v in ob.data.vertices:
-                v.co.z += slope(v.co.x, v.co.y)
+            apply_slope(ob, slope)
         if clip:
             clip_to_tile(ob)
     if half is not None:
@@ -492,6 +526,8 @@ def finish_road(obs, slope, clip, half, m_curb):
 # 高速道路（SIS_E_RG1-1_01S に合わせる）: 白線の位置は一般道と同じで、歩道が無くタイル全面がアスファルト。
 # 斜めだけ白線が一般道より約 1.08 倍外にある
 EXPWY_DIAG_LINE = 1.08
+# 画面で横向きになる斜めの中央線を、半画素（0.5px）ずらす量。斜めに直交する向きの 1 は画面の縦で 64/√2/10 ≈ 4.5px
+DIAG_CENTER_SHIFT = 0.5 / (64 / math.sqrt(2) / 10)
 # 斜めの道路の経路をタイルの辺の中点からどれだけ外へ延ばすか（車道・縁石の型と白線）
 DIAG_EXT = 8.0
 
@@ -573,13 +609,16 @@ def road_sheet(style="street"):
     for pos, (name, paths, lines, slope, *rest) in jobs.items():
         clear_models()
         build_road(paths, lines, slope, corners=rest[0] if rest else (), sidewalk=not expwy)
-        cells[pos] = render_cell(prefix + name, exits_of(name), slope=slope is not None)
+        cells[pos] = render_cell(prefix + name, exits_of(name), slope=slope)
     k = EXPWY_DIAG_LINE if expwy else 1.0
     for pos, (name, path) in diag.items():
         clear_models()
-        build_road([path], [(path, -EDGE_LINE * k), (path, 0.0), (path, EDGE_LINE * k)], scale=ROAD_DIAG,
+        # 画面で横向きになる斜め（se・nw）は、中央線がちょうど画素の行の境に乗り、2行に分かれて灰色に見える。
+        # 半画素ずらして1行に収める（どちらも南東の側へ。sweep の +u は se で南東、nw で北西）
+        c = {"diag_se": DIAG_CENTER_SHIFT, "diag_nw": -DIAG_CENTER_SHIFT}.get(name, 0.0) / ROAD_DIAG
+        build_road([path], [(path, -EDGE_LINE * k), (path, c), (path, EDGE_LINE * k)], scale=ROAD_DIAG,
                    half=path, hw=ROAD_DIAG_HW / ROAD_DIAG, sidewalk=not expwy)
-        cells[pos] = render_cell(prefix + name, exits_of(name), diag=True, wide=DIAG_WIDE_ROAD)
+        cells[pos] = render_cell(prefix + name, exits_of(name))
 
     # アイコン: 道路を大きく斜めに通し、左上に最高速度を書く
     clear_models()
@@ -668,20 +707,11 @@ def _mask_materials():
     return out
 
 
-# 持ち分マスク: つながる向きの辺では、タイルの外へ少し広く持ち、隣と重ねて描く。
-# 後から描くタイルの地面が境の画素を上書きするので、重ねないと境に緑の線が出る（斜め同士で目立つ）。
-# 坂のタイルは地面が隣の端をもっと広く上書きするので約3px、平らなタイルは約1px。
-# 斜めのタイルは、辺の中点から wide より外（道床・歩道の縁）だけ約3px にする。1px だと斜め同士の境で
-# 道床の縁に緑の点が残る。中央まで 3px にすると、直線のほうが先に描かれたとき、
-# 斜めの車道が直線の白線の端を覆い、角で白線が切れて見える。
-# 平らなタイルを広くすると、隣が斜めのタイル（半分しか描かない）のときに、
-# 直線の道床や白線が斜めの側へはみ出して段差に見える
-OWN_MARGIN = 0.2
-OWN_MARGIN_SLOPE = 0.5
-# 斜めのタイルで重ねを広くする、辺の中点からの距離。白線・レールより外側にする
-# （道路の外側の白線は辺の中点から約 3.3、線路のレールは約 0.7）
-DIAG_WIDE_ROAD = 3.6
-DIAG_WIDE_TRACK = 1.2
+# 持ち分マスク: タイルの地面が画面で占める画素（平らなら菱形、坂なら傾いた四角形）。
+# OTRP はタイルごとに「地面 → その上の道」の順に描くので、奥のタイルが手前のタイルの地面の範囲へ描いた画素は、
+# 手前の地面で上書きされる。だから、地面の範囲の画素は必ずそのタイル自身が描き、範囲の外は描かない。
+# （以前は「見えている面のワールド座標がタイルの中か」で決めていた。少し高さのある道床の側面などは
+# 画面では隣の菱形に入るので、隣の地面に上書きされて草の点が出たり、重ねる幅の調整が必要になったりした）
 
 
 def exits_of(name):
@@ -694,102 +724,37 @@ def exits_of(name):
     return name.split("_")[-1]
 
 
-def _own_material(exits, diag=False, margin=0.0, wide=None):
-    """面の位置（ワールド座標の x, y）がタイルの持ち分に入っていれば白、外なら黒で光る材質。
-    diag は斜めのタイル: 重ねて持つ範囲を、残す角の頂点を通る線の手前までにする
-    （その先は隣の斜めのタイルも描かない所なので、はみ出すと歩道が草地へ出っ張る）。"""
-    mname = "own_" + (exits or "none") + ("_diag" if diag else "") + (f"_m{margin}" if margin else "") +         (f"_w{wide}" if wide else "")
-    m = bpy.data.materials.get(mname)
-    if m is not None:
-        return m
-    m = bpy.data.materials.new(mname)
-    m.use_nodes = True
-    nt = m.node_tree
-    nt.nodes.clear()
-    geo = nt.nodes.new("ShaderNodeNewGeometry")
-    sep = nt.nodes.new("ShaderNodeSeparateXYZ")
-    nt.links.new(geo.outputs["Position"], sep.inputs[0])
+# ゲームが地面の菱形を塗る位置（セルの中で、タイル中心が何px目か）。dat のオフセット -64,-32 と対応し、
+# 線路の描画位置（TRACK_PROFILES の dy）には関係しない。ゲーム画面との比較（blender/ingame_diff.py）で合わせた
+GROUND_CY = 127
+
+
+def _ground_mask(slope):
+    """タイルの地面（四隅の高さは slope、無ければ平ら）が画面で占める画素。画素の中心が四角形の中なら 255。"""
     half = TILE / 2
-    def mnode(op, a, b):
-        n = nt.nodes.new("ShaderNodeMath")
-        n.operation = op
-        for k, v in enumerate((a, b)):
-            if isinstance(v, (int, float)):
-                n.inputs[k].default_value = v
-            else:
-                nt.links.new(v, n.inputs[k])
-        return n.outputs[0]
-
-    def pad(d, along):
-        """辺 d の外側の境（タイル中心からの距離）。wide があれば、辺に沿った位置 along で幅を変える。"""
-        if d not in exits:
-            return half
-        if wide is None:
-            return half + margin
-        width, m_out = wide
-        outer = mnode("GREATER_THAN", mnode("ABSOLUTE", along, 0.0), width)
-        return mnode("ADD", mnode("MULTIPLY", outer, m_out - margin), half + margin)
-
-    X, Y = sep.outputs["X"], sep.outputs["Y"]
-    neg = lambda v: v * -1 if isinstance(v, float) else mnode("MULTIPLY", v, -1.0)
-    tests = [(X, "GREATER_THAN", neg(pad("w", Y))), (X, "LESS_THAN", pad("e", Y)),
-             (Y, "GREATER_THAN", neg(pad("s", X))), (Y, "LESS_THAN", pad("n", X))]
-    acc = None
-    for axis, op, v in tests:
-        t = nt.nodes.new("ShaderNodeMath")
-        t.operation = op
-        nt.links.new(axis, t.inputs[0])
-        if isinstance(v, float):
-            t.inputs[1].default_value = v
-        else:
-            nt.links.new(v, t.inputs[1])
-        if acc is None:
-            acc = t
-        else:
-            mul = nt.nodes.new("ShaderNodeMath")
-            mul.operation = "MULTIPLY"
-            nt.links.new(acc.outputs[0], mul.inputs[0])
-            nt.links.new(t.outputs[0], mul.inputs[1])
-            acc = mul
-    if diag:
-        u = Vector(((1 if "e" in exits else -1), (1 if "n" in exits else -1), 0)).normalized()
-        dot = nt.nodes.new("ShaderNodeVectorMath")
-        dot.operation = "DOT_PRODUCT"
-        dot.inputs[1].default_value = u
-        nt.links.new(geo.outputs["Position"], dot.inputs[0])
-        t = nt.nodes.new("ShaderNodeMath")
-        t.operation = "LESS_THAN"
-        t.inputs[1].default_value = half * math.sqrt(2)
-        nt.links.new(dot.outputs["Value"], t.inputs[0])
-        mul = nt.nodes.new("ShaderNodeMath")
-        mul.operation = "MULTIPLY"
-        nt.links.new(acc.outputs[0], mul.inputs[0])
-        nt.links.new(t.outputs[0], mul.inputs[1])
-        acc = mul
-    em = nt.nodes.new("ShaderNodeEmission")
-    nt.links.new(acc.outputs[0], em.inputs["Color"])
-    out = nt.nodes.new("ShaderNodeOutputMaterial")
-    nt.links.new(em.outputs[0], out.inputs["Surface"])
-    return m
+    up = PX_PER_UNIT * math.sin(math.radians(60))  # 高さ 1 → 画面で上へ何px（H で 16px）
+    pts = []
+    for x, y in ((-half, -half), (half, -half), (half, half), (-half, half)):
+        z = slope(x, y) if slope else 0.0
+        pts.append((CELL / 2 + (x + y) * 64 / TILE, GROUND_CY + (x - y) * 32 / TILE - z * up))
+    yy, xx = np.mgrid[0:CELL, 0:CELL] + 0.5
+    inside = np.ones((CELL, CELL), bool)
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:] + pts[:1]):
+        # 並びは 左→下→右→上 の角。内側は辺に対して外積が負の側
+        inside &= (x1 - x0) * (yy - y0) - (y1 - y0) * (xx - x0) < 0
+    return inside
 
 
-def _render_with(materials_for, path):
-    """全ての形の材質を一時的に差し替えて描く。"""
-    scene = bpy.context.scene
-    saved = []
-    for ob in [ob for ob in scene.objects if ob.type == "MESH"]:
-        for slot in ob.material_slots:
-            saved.append((slot, slot.material))
-            slot.material = materials_for(slot.material)
-    scene.render.filepath = path
-    bpy.ops.render.render(write_still=True)
-    for slot, mat in saved:
-        slot.material = mat
+def _render_ground(slope, path):
+    """持ち分マスク（地面の範囲）を PNG に書く。"""
+    m = _ground_mask(slope).astype(np.uint8) * 255
+    save_rgba(path, np.dstack([m, m, m, np.full_like(m, 255)]))
 
 
-def render_cell(name, exits=None, diag=False, slope=False, wide=None):
+def render_cell(name, exits=None, slope=None):
     """通常の描画に加えて、
-    - exits を渡したタイル（線路・道路）は name_own.png（持ち分マスク）を描く。画素の半分以上が持ち分の面なら残す
+    - exits を渡したタイル（線路・道路）は name_own.png（持ち分マスク = 地面の範囲）を描く。
+      画素の中心が地面の菱形の中なら残す。slope は坂の高さ slope(x, y)
     - 特殊色の材質があれば name_mask.png も描く（どの画素にどの特殊色を入れるか）"""
     path = os.path.join(WORK, name + ".png")
     mask_path = os.path.join(WORK, name + "_mask.png")
@@ -801,9 +766,7 @@ def render_cell(name, exits=None, diag=False, slope=False, wide=None):
         if os.path.exists(p):
             os.remove(p)
     if exits is not None:
-        own = _own_material(exits, diag, OWN_MARGIN_SLOPE if slope else OWN_MARGIN,
-                            (wide, OWN_MARGIN_SLOPE) if diag and wide else None)
-        _render_with(lambda m: own, own_path)
+        _render_ground(slope, own_path)
     meshes = [ob for ob in scene.objects if ob.type == "MESH"]
     if not any(s.material and s.material.get("special") for ob in meshes for s in ob.material_slots):
         return path
@@ -960,8 +923,7 @@ def track_sheet(profile="new"):
             build_track(paths, slope, rail_scale=DIAG_RAIL, ballast_scale=DIAG_BALLAST)
         else:
             build_track(paths, slope)
-        cells[pos] = render_cell(f"{prof['sheet']}_{name}", exits_of(name), diag=name.startswith("diag_"),
-                                 slope=slope is not None, wide=DIAG_WIDE_TRACK)
+        cells[pos] = render_cell(f"{prof['sheet']}_{name}", exits_of(name), slope=slope)
 
     # 確認用: タイル菱形そのもの（基準位置の検証に使う。シートには入れない）
     set_anchor(128)
