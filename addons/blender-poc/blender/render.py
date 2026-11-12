@@ -4,7 +4,8 @@
     blender -b --factory-startup --python blender/render.py
 
 出力:
-    src/track.png      線路（道床に厚みあり）。セル配置は iss の線路と同じ
+    src/track.png      線路・新描画位置（iss に合わせる）。src/track_old.png は旧描画位置（SIS に合わせる）
+    src/road.png       道路（歩道付き。幅は SIS の一般道に合わせる）
     src/tollbooth.png  料金所風の建物（屋根がタイルからはみ出す）
     work/              セルごとの生の描画結果（確認用）
 """
@@ -12,6 +13,7 @@ import math
 import os
 import sys
 
+import bmesh
 import bpy
 import numpy as np
 from mathutils import Vector
@@ -92,7 +94,32 @@ def set_anchor(tile_center_y):
     bpy.context.scene.camera.data.shift_y = (tile_center_y - CELL / 2) / CELL
 
 
-def material(name, rgb, rough=0.8, metal=0.0):
+def noisy_material(name, rgb_a, rgb_b, scale=40.0, rough=0.8, emit=0.0):
+    """2色をノイズで混ぜた材質（石畳・アスファルトのまだら模様）。emit は明るさの底上げ。"""
+    if name in bpy.data.materials:
+        return bpy.data.materials[name]
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    noise = nt.nodes.new("ShaderNodeTexNoise")
+    noise.inputs["Scale"].default_value = scale
+    noise.inputs["Detail"].default_value = 2.0
+    ramp = nt.nodes.new("ShaderNodeValToRGB")
+    ramp.color_ramp.elements[0].position = 0.35
+    ramp.color_ramp.elements[0].color = (*rgb_a, 1)
+    ramp.color_ramp.elements[1].position = 0.65
+    ramp.color_ramp.elements[1].color = (*rgb_b, 1)
+    nt.links.new(noise.outputs["Fac"], ramp.inputs["Fac"])
+    nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
+    bsdf.inputs["Roughness"].default_value = rough
+    if emit:
+        nt.links.new(ramp.outputs["Color"], bsdf.inputs["Emission Color"])
+        bsdf.inputs["Emission Strength"].default_value = emit
+    return m
+
+
+def material(name, rgb, rough=0.8, metal=0.0, emit=0.0):
     if name in bpy.data.materials:
         return bpy.data.materials[name]
     m = bpy.data.materials.new(name)
@@ -101,6 +128,9 @@ def material(name, rgb, rough=0.8, metal=0.0):
     bsdf.inputs["Base Color"].default_value = (*rgb, 1)
     bsdf.inputs["Roughness"].default_value = rough
     bsdf.inputs["Metallic"].default_value = metal
+    if emit:
+        bsdf.inputs["Emission Color"].default_value = (*rgb, 1)
+        bsdf.inputs["Emission Strength"].default_value = emit
     return m
 
 
@@ -265,6 +295,194 @@ def clip_to_tile(ob):
     mod.object = _clipper
     bpy.context.view_layer.objects.active = ob
     bpy.ops.object.modifier_apply(modifier=mod.name)
+
+
+# ---------------------------------------------------------------- 道路
+# SIS の一般道（SIS_L_RG1-1_01S、歩道付き 50km/h）の断面に合わせる。横位置はタイル半幅 5 に対する値:
+#   中央線 0 / 車道 ±3.2 / 路側の白線 ±3.3〜3.45 / 縁石 ±3.6〜3.85 / 歩道 〜タイルの端
+ROAD_HW = 3.6          # 車道の半幅（縁石の立ち上がりまで）
+CURB_W = 0.25          # 縁石の上面の幅
+SIDEWALK_H = 0.25      # 歩道の高さ（縁石の立ち上がり 約2px）
+LINE_W = 0.15          # 白線の幅（約1px）
+EDGE_LINE = 3.37       # 路側の白線の中心
+ROAD_DIAG = 2 / math.sqrt(10)  # 斜めの横幅の倍率（SIS も線路と同じく縮めている）
+# 斜めの車道の半幅（縮めた後）。SIS は斜めで白線の外側に余白があり、縁石は中心線から約 2.7 の位置
+ROAD_DIAG_HW = 2.7
+
+
+def boolean(ob, cutter, op="DIFFERENCE", transfer=False):
+    mod = ob.modifiers.new("bool", "BOOLEAN")
+    mod.operation = op
+    mod.solver = "EXACT"
+    mod.object = cutter
+    mod.use_self = True  # 型が重なり合う（分岐・十字）ときも抜けるように
+    if transfer:
+        mod.material_mode = "TRANSFER"
+    bpy.context.view_layer.objects.active = ob
+    bpy.ops.object.modifier_apply(modifier=mod.name)
+
+
+def prism(pts, z0=-1.0, z1=1.0):
+    """平面の多角形 pts を z0〜z1 に押し出した柱の頂点と面。"""
+    n = len(pts)
+    verts = [Vector((x, y, z0)) for x, y in pts] + [Vector((x, y, z1)) for x, y in pts]
+    faces = [tuple(reversed(range(n))), tuple(range(n, 2 * n))]
+    faces += [(i, (i + 1) % n, n + (i + 1) % n, n + i) for i in range(n)]
+    return verts, faces
+
+
+def corner_piece(corner, r, n=12):
+    """タイルの角 corner の歩道を、四角から半径 r の扇形にするために抜く部分（四角 - 扇形）。"""
+    cx, cy = corner
+    sx, sy = math.copysign(1, cx), math.copysign(1, cy)
+    pts = [(cx - sx * r, cy), (cx - sx * r, cy - sy * r), (cx, cy - sy * r)]
+    a0 = math.atan2(-sy, 0)
+    a1 = math.atan2(0, -sx)
+    if a1 - a0 > math.pi:
+        a1 -= 2 * math.pi
+    if a0 - a1 > math.pi:
+        a1 += 2 * math.pi
+    for i in range(1, n):
+        t = a0 + (a1 - a0) * i / n
+        pts.append((cx + r * math.cos(t), cy + r * math.sin(t)))
+    return prism(pts)
+
+
+def half_tile(path):
+    """斜めのタイルで残す半分（経路が切り取る角の側）。Simutrans は残り半分を隣のタイルに描く。"""
+    mid = (path[0] + path[-1]) / 2
+    u = Vector((mid.x, mid.y)).normalized()
+    ang = math.atan2(u.y, u.x)
+    return box(u.x * 15, u.y * 15, 0, 30, 60, 80, rot=ang)
+
+
+def recalc_normals(ob):
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(ob.data)
+    bm.free()
+
+
+def build_road(paths, lines, slope=None, scale=1.0, clip=True, size=TILE + 4, corners=(), half=None, hw=ROAD_HW):
+    """道路を作る。paths は車道の中心線（複数で分岐・十字）、lines は (path, u) の白線。
+    歩道は全面の板から車道を抜いて作るので、分岐の口やカーブの外側も自然に埋まる。
+    corners は歩道の角を丸くするタイルの角、half は斜めのタイルで残す半分を決める経路。"""
+    m_asphalt = noisy_material("road_asphalt", (0.013, 0.0135, 0.015), (0.028, 0.029, 0.031), scale=60, rough=0.9)
+    m_curb = material("road_curb", (0.62, 0.61, 0.59))
+    m_paving = noisy_material("road_paving", (0.025, 0.035, 0.02), (0.26, 0.31, 0.22), scale=35)
+    m_line = material("road_line", (0.95, 0.95, 0.95), rough=0.6, emit=0.6)
+    bx, by = size if isinstance(size, tuple) else (size, size)  # 板の大きさ（アイコンは道路に沿った帯）
+
+    def cutter(name, w):
+        prof = [(-w * scale, -1.0), (w * scale, -1.0), (w * scale, 1.0), (-w * scale, 1.0)]
+        parts = [sweep(p, prof) for p in paths]
+        # 角を丸くする: 歩道の角の四角から扇形を除いた部分も抜く
+        parts += [corner_piece(c, TILE / 2 - w) for c in corners]
+        ob = mesh_object(name, *merge(parts), m_curb)
+        ob.hide_render = True
+        # sweep の面の向きは経路の向きで変わるので、外向きにそろえる（Boolean が効かなくなる）
+        recalc_normals(ob)
+        return ob
+
+    asphalt = mesh_object("asphalt", *box(0, 0, -0.02, bx, by, 0.04), m_asphalt)
+    curb = mesh_object("curb", *box(0, 0, SIDEWALK_H / 2, bx, by, SIDEWALK_H), m_curb)
+    paving = mesh_object("paving", *box(0, 0, SIDEWALK_H + 0.01, bx, by, 0.02), m_paving)
+    cut_road = cutter("cut_road", hw)
+    cut_curb = cutter("cut_curb", hw + CURB_W / scale)
+    # 車道の切り口（縁石の立ち上がり）は縁石の色にする
+    boolean(curb, cut_road, transfer=True)
+    boolean(paving, cut_curb)
+    for ob in (cut_road, cut_curb):
+        bpy.data.objects.remove(ob, do_unlink=True)
+
+    obs = [asphalt, curb, paving]
+    for i, (path, u) in enumerate(lines):
+        w = LINE_W / 2
+        u *= scale
+        prof = [(u - w, 0.0), (u + w, 0.0), (u + w, 0.012), (u - w, 0.012)]
+        obs.append(mesh_object(f"line{i}", *sweep(path, prof), m_line))
+
+    for ob in obs:
+        if slope:
+            for v in ob.data.vertices:
+                v.co.z += slope(v.co.x, v.co.y)
+        if clip:
+            clip_to_tile(ob)
+    if half is not None:
+        keeper = mesh_object("half", *half_tile(half), m_curb)
+        keeper.hide_render = True
+        for ob in obs:
+            boolean(ob, keeper, op="INTERSECT")
+        bpy.data.objects.remove(keeper, do_unlink=True)
+
+
+def road_sheet():
+    half = TILE / 2
+    N, S, E, W, O = (0, half), (0, -half), (half, 0), (-half, 0), (0, 0)
+    arc_sw = arc((-half, -half), 0, 90)
+    arc_nw = arc((-half, half), -90, 0)
+    arc_ne = arc((half, half), 180, 270)
+    arc_se = arc((half, -half), 90, 180)
+    sn, we = straight(S, N), straight(W, E)
+    both = lambda p: [(p, -EDGE_LINE), (p, 0.0), (p, EDGE_LINE)]  # 両側の白線と中央線
+    # 行き止まり: 車道は奥の歩道の手前（両脇の歩道と同じ幅を残す）まで
+    end = lambda d: [-Vector(d).normalized() * ROAD_HW, Vector(d) * 1.12]
+    sides = lambda p: [(p, -EDGE_LINE), (p, EDGE_LINE)]
+    NE_, NW_, SE_, SW_ = (half, half), (-half, half), (half, -half), (-half, -half)
+    jobs = {
+        # セル位置は線路と同じ（行, 列）。最後の要素は歩道の角を丸くするタイルの角
+        (0, 2): ("ns", [sn], both(sn), None),
+        (0, 3): ("ew", [we], both(we), None),
+        (0, 5): ("s", [end(S)], sides(end(S)), None),
+        (0, 6): ("w", [end(W)], sides(end(W)), None),
+        (0, 7): ("n", [end(N)], sides(end(N)), None),
+        (0, 8): ("e", [end(E)], sides(end(E)), None),
+        # 単独のタイル（どこにもつながらない）は SIS と同じく十字と同じ形
+        (0, 9): ("single", [sn, we], [], None, (NE_, NW_, SE_, SW_)),
+        (1, 0): ("up12", [sn], both(sn), lambda x, y: H * (y + half) / TILE),
+        (1, 1): ("up9", [we], both(we), lambda x, y: H * (half - x) / TILE),
+        (1, 2): ("up3", [sn], both(sn), lambda x, y: H * (half - y) / TILE),
+        (1, 3): ("up6", [we], both(we), lambda x, y: H * (x + half) / TILE),
+        (1, 5): ("up2_12", [sn], both(sn), lambda x, y: 2 * H * (y + half) / TILE),
+        (1, 6): ("up2_9", [we], both(we), lambda x, y: 2 * H * (half - x) / TILE),
+        (1, 7): ("up2_3", [sn], both(sn), lambda x, y: 2 * H * (half - y) / TILE),
+        (1, 8): ("up2_6", [we], both(we), lambda x, y: 2 * H * (x + half) / TILE),
+        (2, 5): ("curve_sw", [arc_sw], both(arc_sw), None),
+        (2, 6): ("curve_nw", [arc_nw], both(arc_nw), None),
+        (2, 7): ("curve_ne", [arc_ne], both(arc_ne), None),
+        (2, 8): ("curve_se", [arc_se], both(arc_se), None),
+        # 分岐: 直線の中央線と、枝の無い側の白線だけを引く
+        (3, 5): ("nse", [sn, straight(O, E)], [(sn, 0.0), (sn, -EDGE_LINE)], None, (NE_, SE_)),
+        (3, 6): ("new", [we, straight(O, N)], [(we, 0.0), (we, EDGE_LINE)], None, (NE_, NW_)),
+        (3, 7): ("nsw", [sn, straight(O, W)], [(sn, 0.0), (sn, EDGE_LINE)], None, (NW_, SW_)),
+        (3, 8): ("sew", [we, straight(O, S)], [(we, 0.0), (we, -EDGE_LINE)], None, (SE_, SW_)),
+        (3, 9): ("nsew", [sn, we], [], None, (NE_, NW_, SE_, SW_)),
+    }
+    diag = {
+        (2, 0): ("diag_sw", straight(S, W, ext=2.5)),
+        (2, 1): ("diag_nw", straight(N, W, ext=2.5)),
+        (2, 2): ("diag_ne", straight(N, E, ext=2.5)),
+        (2, 3): ("diag_se", straight(S, E, ext=2.5)),
+    }
+    set_anchor(128)
+    cells = {}
+    for pos, (name, paths, lines, slope, *rest) in jobs.items():
+        clear_models()
+        build_road(paths, lines, slope, corners=rest[0] if rest else ())
+        cells[pos] = render_cell("road_" + name)
+    for pos, (name, path) in diag.items():
+        clear_models()
+        build_road([path], both(path), scale=ROAD_DIAG, half=path, hw=ROAD_DIAG_HW / ROAD_DIAG)
+        cells[pos] = render_cell("road_" + name)
+
+    # アイコン: 道路を大きく斜めに通し、左上に最高速度を書く
+    clear_models()
+    long = straight((0, -12), (0, 12))
+    build_road([long], both(long), clip=False, size=(TILE, 26))
+    cells[(0, 0)] = render_icon("road_icon", 0.5, shift=(-0.14, 0.2), label="50")
+    cells[(0, 1)] = cells[(0, 2)]
+    make_sheet(cells, 4, 10, os.path.join(SRC, "road.png"))
 
 
 def build_tollbooth(rot_deg):
@@ -531,10 +749,12 @@ if __name__ == "__main__":
     os.makedirs(SRC, exist_ok=True)
     setup_scene()
     print(f"[info] ortho={ORTHO:.4f} px/unit={PX_PER_UNIT:.4f} height_step={H:.4f}")
-    targets = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["track", "track_old", "tollbooth"]
+    targets = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["track", "track_old", "road", "tollbooth"]
     if "track" in targets:
         track_sheet("new")
     if "track_old" in targets:
         track_sheet("old")
+    if "road" in targets:
+        road_sheet()
     if "tollbooth" in targets:
         tollbooth_sheet()

@@ -14,6 +14,7 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 | `blender/preview.py` | 確認用の拡大画像 `work/preview.png` を作る |
 | `src/track.dat` | 線路・新描画位置（道床が低い。今の pak128・iss）。セル配置は iss の線路と同じ |
 | `src/track_old.dat` | 線路・旧描画位置（道床が高い。古い pak128・SIS）。形は `track.dat` と同じで、名前は `bpoc_track_old` |
+| `src/road.dat` | 道路（歩道付き、50km/h）。幅・白線・縁石の位置は SIS の一般道 `SIS_L_RG1-1_01S` に合わせる。セル配置は線路と同じ |
 | `src/tollbooth.dat` | 料金所風の建物（駅の付属建物扱い）。屋根がタイルからはみ出す |
 
 ## 必要なもの
@@ -27,7 +28,7 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 
 ```powershell
 D:\bin\blender\blender.exe -b --factory-startup --python blender/render.py
-cd src; makeobj pak256 ..\dist\bpoc.pak track.dat track_old.dat tollbooth.dat; cd ..
+cd src; makeobj pak256 ..\dist\bpoc.pak track.dat track_old.dat road.dat tollbooth.dat; cd ..
 ```
 
 iss と同じく `pak256` で 256px セルとして切り出す（ゲームは pak128）。
@@ -65,7 +66,7 @@ D:\bin\blender\blender.exe -b --factory-startup --python blender/check.py -- ..\
 - 分岐（T字）`nse`/`new`/`nsw`/`sew` は「直線＋枝へ両側から入るカーブ」、十字 `nsew` は「直線2本＋4方向のカーブ」。
   どちら側へ分かれても線がつながって見える。分岐部でまくらぎが交差する。
   田の字・菱形・十字の確認パターン（`flat.sve`）でゲーム内表示を確認（`docs/ingame_junctions*.png`）
-- 全セル（線路29×2（新・旧）+ 建物4 + アイコン3）の描画からシート化まで約8秒
+- 全セル（線路29×2（新・旧）+ 道路29 + 建物4 + アイコン4）の描画からシート化まで約14秒
 - makeobj で pak 化成功（警告なし）
 - ゲーム内で表示を確認（Simutrans OTRP v62.4 / pak128、`docs/ingame.png`・`docs/ingame_detail.png`）:
   直線・端・分岐とカーブ・斜めの連続・坂（1段上げた土地への上り）が途切れずにつながる。
@@ -95,6 +96,23 @@ D:\bin\blender\blender.exe -b --factory-startup --python blender/check.py -- ..\
     レールも暗くて見分けにくいので、1〜2px の差までは判定できていない（`docs/seam_new.png`・`docs/seam_new_detail.png`）
   - 検証用のカーブが pak128 標準の斜めとつながる所では、カーブの丸みが大きく張り出して見える（`docs/seam_new.png` の中央）
 - SIS は 1959 年登場だが、`flat.sve`（1930 年）でもスクリプトからは敷けた
+
+### 道路（2026-11-12）
+
+車道の幅はアドオンによってまちまちなので、SIS の一般道（`Local_Street/1-1lane` の `SIS_L_RG1-1_01S`、歩道付き 50km/h）を基準にした。
+
+- SIS の直線セルの中心の列を測った断面（タイル半幅を 5 とした横位置）: 中央線 0、車道 ±3.2、路側の白線 ±3.3〜3.45、
+  縁石 ±3.6〜3.85（奥側は立ち上がりが 2〜3px 見える）、歩道はタイルの端まで。路面は地面と同じ高さ（中央線がタイル中心を通る）
+- 作り方: タイル全面の歩道（縁石の色の板 + 石畳の薄い板）から、車道の中心線に沿った型を Boolean で抜く。
+  抜いた切り口が縁石の立ち上がりになる。分岐・十字は型を重ねるだけで口が開き、角は扇形に丸める（SIS と同じ）
+- 斜め: SIS もタイルの半分の三角形だけを描き（残りは隣のタイル）、横幅を 2/√10 倍に縮めている。
+  ただし車道の半幅は縮めた後で約 2.7 と、白線の外に余白がある。これに合わせた
+- SIS とセルごとに並べた比較: `docs/road_cells.png`（上段 SIS、下段 移植版）。斜めの白線と縁石の位置は 1px 以内
+- 色は SIS の直線で平均を合わせた（車道 49/45、歩道 89/84。左が移植版）。石畳とアスファルトのまだら模様はノイズで付けた
+- ゲーム内のつなぎ目（`ingame/road_seam.nut`。SIS → 検証用 → SIS の順に1本につなぐ）: 東西・南北の直線、斜め、坂、
+  SIS の直線から分かれる分岐で、歩道の縁・縁石・白線が段差なくつながった（`docs/road_seam.png`・`docs/road_seam_detail.png`）
+- SIS と違うところ: 行き止まりの白線（SIS はコの字に回す。移植版は両脇だけ）、十字の中央の × 印、単独タイルの角の形、
+  斜めのタイルの内側の歩道の端に小さな段が出る
 
 ## ゲーム内での確認
 
