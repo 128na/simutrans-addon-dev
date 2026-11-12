@@ -207,7 +207,8 @@ def arc(center, start_deg, end_deg, radius=TILE / 2, n=24, ext=0.6):
 BALLAST_H = 0.12
 BALLAST = [(-1.9, 0.0), (1.9, 0.0), (1.55, BALLAST_H), (-1.55, BALLAST_H)]
 SLEEPER_Z, SLEEPER_H, SLEEPER_LEN = 0.15, 0.08, 2.0
-RAIL_IN, RAIL_OUT, RAIL_Z0, RAIL_Z1 = 0.5, 0.6, 0.19, 0.30
+# レールの間隔は iss・SIS に合わせて画面上 6px（直線で 1単位 ≈ 6.4px）
+RAIL_IN, RAIL_OUT, RAIL_Z0, RAIL_Z1 = 0.417, 0.517, 0.19, 0.30
 
 # 斜めのタイルの横幅の倍率。3D のまま描くと、斜めは横幅が縮まずに映って直線の約1.6倍太く見える。
 # 画面上で直線と同じ太さに見える比率 2/√10 にする（pak128 標準も斜めはレール間隔を細く描く）
@@ -342,7 +343,18 @@ def make_sheet(cells, rows, cols, out):
 
 # ---------------------------------------------------------------- 各アドオン
 
-def track_sheet():
+# 線路の描画位置。形状は同じで、画面上の上下位置だけを整数 px ずらす（正: 下へ）
+#   new: 新描画位置（道床が低い。今の pak128・iss）
+#   old: 旧描画位置（道床が高い。古い pak128・SIS）
+# iss と SIS を比べると、どの方位でもレールが画面上で 4〜4.5px 違うだけだった
+TRACK_PROFILES = {
+    "new": {"sheet": "track", "dy": 3},
+    "old": {"sheet": "track_old", "dy": -1},
+}
+
+
+def track_sheet(profile="new"):
+    prof = TRACK_PROFILES[profile]
     half = TILE / 2
     N, S, E, W, O = (0, half), (0, -half), (half, 0), (-half, 0), (0, 0)
     up = lambda f: (lambda x, y: f(x, y))
@@ -384,7 +396,7 @@ def track_sheet():
         (3, 8): ("sew", [straight(W, E), arc_sw, arc_se], None),
         (3, 9): ("nsew", [straight(S, N), straight(W, E), arc_sw, arc_nw, arc_ne, arc_se], None),
     }
-    set_anchor(128)  # dat オフセット -64,-32 と対応
+    set_anchor(128 + prof["dy"])  # dat オフセット -64,-32 と対応
     cells = {}
     for pos, (name, paths, slope) in jobs.items():
         clear_models()
@@ -392,9 +404,10 @@ def track_sheet():
             build_track(paths, slope, rail_scale=DIAG_RAIL, ballast_scale=DIAG_BALLAST)
         else:
             build_track(paths, slope)
-        cells[pos] = render_cell("track_" + name)
+        cells[pos] = render_cell(f"{prof['sheet']}_{name}")
 
     # 確認用: タイル菱形そのもの（基準位置の検証に使う。シートには入れない）
+    set_anchor(128)
     clear_models()
     v, f = box(0, 0, -0.001, TILE, TILE, 0.002)
     mesh_object("tile", v, f, material("tile", (0.5, 0.5, 0.5)))
@@ -411,7 +424,7 @@ def track_sheet():
     cells[(0, 0)] = render_icon("track_icon", 0.5, shift=(-0.14, 0.2), label="100")
     cells[(0, 1)] = cells[(0, 2)]  # カーソルは ns と同じ絵
 
-    make_sheet(cells, 4, 10, os.path.join(SRC, "track.png"))
+    make_sheet(cells, 4, 10, os.path.join(SRC, prof["sheet"] + ".png"))
 
 
 ICON = 32
@@ -518,8 +531,10 @@ if __name__ == "__main__":
     os.makedirs(SRC, exist_ok=True)
     setup_scene()
     print(f"[info] ortho={ORTHO:.4f} px/unit={PX_PER_UNIT:.4f} height_step={H:.4f}")
-    targets = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["track", "tollbooth"]
+    targets = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["track", "track_old", "tollbooth"]
     if "track" in targets:
-        track_sheet()
+        track_sheet("new")
+    if "track_old" in targets:
+        track_sheet("old")
     if "tollbooth" in targets:
         tollbooth_sheet()
