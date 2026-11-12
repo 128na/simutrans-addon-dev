@@ -179,6 +179,9 @@ Copy-Item dist\bpoc.pak <Simutrans>\addons\pak128\
 python <simutrans>\.agents\skills\simutrans-mcp-gui-debug\scripts\mcp_client.py --port 47123 --run-squirrel (Get-Content -Raw ingame\place.nut) --capture work\ingame.png
 ```
 
+- 全方位の見本: `ingame/all_dirs.nut` で、線路（新・旧）・道路・高速道路に同じ形の見本を x=20〜 y=20〜 に敷く
+  （行き止まり4・直線2・カーブ4・T字4・十字・斜め2系統・坂4方向。ゲーム内で各タイルの向き15種と坂4種がそろうのを確認した）。
+  料金所も4つの向きで y=42〜43 に置く。flat.sve にはこれを敷いた状態で保存してある（元の平地は `flat.sve.before-all-dirs-20261112`）
 - 付属建物（type=extension）は停留所の隣にしか置けない
 - 昼夜の切り替え（表示設定の「夜間は暗くする」）が入っていると短い周期で暗くなるので、数秒おきに撮って明るいものを使う
 - 夜の表示を見るときは「夜間は暗くする」を切り、明るさを固定して変える。検証に使った環境では pak128 の `config/menuconf.tab` に
