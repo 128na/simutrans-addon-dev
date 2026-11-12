@@ -958,6 +958,10 @@ def track_sheet(profile="new"):
             build_track(paths, slope, rail_scale=DIAG_RAIL, ballast_scale=DIAG_BALLAST)
         else:
             build_track(paths, slope)
+        # 画面で横向きの斜め（nw・se）は、絵のずれ（地面から 128+dy-GROUND_CY px）の半分だけ下げる。
+        # 絵を下げることはマップ上で南東へずらすことと同じで、直線は辺を横切る点が辺に沿ってずれる。
+        # 横向きの斜めは半分だけずらすと、両端で直線と同じ点を通る（縦向きの斜めにはそういう位置が無い）
+        set_anchor(GROUND_CY + (128 + prof["dy"] - GROUND_CY) // 2 if name in ("diag_nw", "diag_se") else 128 + prof["dy"])
         cells[pos] = render_cell(f"{prof['sheet']}_{name}", exits_of(name), slope=slope, cy=cy)
 
     # 確認用: タイル菱形そのもの（基準位置の検証に使う。シートには入れない）
