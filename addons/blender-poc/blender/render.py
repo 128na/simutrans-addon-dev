@@ -755,13 +755,17 @@ GROUND_CY = 127
 ROAD_CY = 128
 
 
-def _ground_mask(slope, side=None, cy=GROUND_CY):
+def _ground_mask(slope, side=None, cy=GROUND_CY, spill=0):
     """タイルの地面（四隅の高さは slope、無ければ平ら）が画面で占める画素。画素の中心が四角形の中なら 255。
     side（top/bottom/left/right）を渡すと、菱形のうち中心を通る横・縦の線のその側だけにする（斜めのタイル）。
     線は隣の菱形の頂点と同じ位置なので、隣の直線・斜めのタイルの縁と同じ行・列で切れる。
     cy は菱形の中心の行（絵を地面より下に描くときは、持ち分も下げる）。坂は本体が地面を物と一緒に後から描き、
-    奥のタイルのはみ出しを消すので、地面の位置（GROUND_CY）の菱形も足す"""
+    奥のタイルのはみ出しを消すので、地面の位置（GROUND_CY）の菱形も足す。
+    spill は、菱形のまま手前の2辺だけを何行広げるか（その下へ半行も足す）。pak128 標準の線路（Rail_100）は
+    自分の菱形の上の1行を描かず、奥のタイルのはみ出しで埋めるので、奥に来たときにそこを埋める"""
     m = _ground_mask_at(slope, side, cy)
+    if spill:
+        m |= _ground_mask_at(slope, side, cy + spill) | _ground_mask_at(slope, side, cy + spill + 0.5)
     if cy != GROUND_CY:
         # 手前の縁を半行広げる（標準の道路は上の縁を半行ずれた並びで空けるので、1画素おきに草が見えた）
         m |= _ground_mask_at(slope, side, cy + 0.5)
@@ -788,13 +792,13 @@ def _ground_mask_at(slope, side, cy):
     return inside
 
 
-def _render_ground(slope, path, side=None, cy=GROUND_CY):
+def _render_ground(slope, path, side=None, cy=GROUND_CY, spill=0):
     """持ち分マスク（地面の範囲）を PNG に書く。"""
-    m = _ground_mask(slope, side, cy).astype(np.uint8) * 255
+    m = _ground_mask(slope, side, cy, spill).astype(np.uint8) * 255
     save_rgba(path, np.dstack([m, m, m, np.full_like(m, 255)]))
 
 
-def render_cell(name, exits=None, slope=None, side=None, cy=GROUND_CY):
+def render_cell(name, exits=None, slope=None, side=None, cy=GROUND_CY, spill=0):
     """通常の描画に加えて、
     - exits を渡したタイル（線路・道路）は name_own.png（持ち分マスク = 地面の範囲）を描く。
       画素の中心が地面の菱形の中なら残す。slope は坂の高さ slope(x, y)
@@ -809,7 +813,7 @@ def render_cell(name, exits=None, slope=None, side=None, cy=GROUND_CY):
         if os.path.exists(p):
             os.remove(p)
     if exits is not None:
-        _render_ground(slope, own_path, side, cy)
+        _render_ground(slope, own_path, side, cy, spill)
     meshes = [ob for ob in scene.objects if ob.type == "MESH"]
     if not any(s.material and s.material.get("special") for ob in meshes for s in ob.material_slots):
         return path
@@ -910,9 +914,11 @@ def make_sheet(cells, rows, cols, out):
 #   old: 旧描画位置（レールが高い。古い pak128・SIS）
 # iss と SIS を比べると、どの方位でもレールが画面上で 4〜4.5px 違うだけだった
 TRACK_PROFILES = {
-    "new": {"sheet": "track", "dy": 3},
-    "old": {"sheet": "track_old", "dy": -1},
+    "new": {"sheet": "track", "dy": 3, "spill": 1},
+    "old": {"sheet": "track_old", "dy": -1, "spill": 0},
 }
+# spill: 持ち分を手前の2辺へ何行はみ出させるか（_ground_mask）。新は pak128 標準の Rail_100 と同じく 1 行。
+# Rail_100 は自分の菱形の上の1行を描かないので、はみ出さないと、こちらが奥・Rail_100 が手前の継ぎ目に草の線が出た
 # 道床は両方とも旧の位置（地面の菱形と同じ）に描き、新はレールとまくらぎだけを下げる。
 # pak128 標準の Rail_100 も iss も、レールは新の位置だが道床は地面の位置にあり、斜めの絵もタイルの中心のまま。
 # 道床まで下げると、画面で縦向きの斜め（sw・ne）は辺で直線と同じ点を通る位置が無く、道床の角に段が出た
@@ -978,7 +984,7 @@ def track_sheet(profile="new"):
             build_track(paths, slope, rail_scale=DIAG_RAIL, ballast_scale=DIAG_BALLAST, rail_drop=d)
         else:
             build_track(paths, slope, rail_drop=d)
-        cells[pos] = render_cell(f"{prof['sheet']}_{name}", exits_of(name), slope=slope, cy=cy)
+        cells[pos] = render_cell(f"{prof['sheet']}_{name}", exits_of(name), slope=slope, cy=cy, spill=prof["spill"])
 
     # 確認用: タイル菱形そのもの（基準位置の検証に使う。シートには入れない）
     set_anchor(128)
