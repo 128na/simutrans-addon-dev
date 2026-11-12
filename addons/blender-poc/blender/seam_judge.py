@@ -9,7 +9,7 @@
   両側の中央値の差から「中心のずれ」（段）と「幅の差」を出す。幅の差は道の作りの違いなので、合否には使わない
 - 草: 継ぎ目の辺の線（±1px）の上で、両側の帯の縁より GRASS_MARGIN px 内側にある草の画素の数。継ぎ目に入った草の線や隙間
 - 模様: 帯を横切る明るさの断面（レール・白線・縁石）を両側で比べ、いちばん合うずらし量
-合否: 草 0、|中心のずれ| <= TOL_CENTER（両側の縁が測れて、幅の差が TOL_WIDTH 以下のときだけ。縁がタイルの角まで届く道・曲がりは片側しか測れないので参考）、|模様のずれ| <= TOL_PATTERN（相関が弱いときと、曲がりのタイルの継ぎ目は模様を判定しない）。
+合否: 草 0、|中心のずれ| <= TOL_CENTER（両側の縁が測れて、幅の差が TOL_WIDTH 以下のときだけ。縁がタイルの角まで届く道・曲がりは片側しか測れないので参考。坂と平地の継ぎ目も、坂の帯が広く測れるので参考）、|模様のずれ| <= TOL_PATTERN（相関が弱いときと、曲がりのタイルの継ぎ目は模様を判定しない）。
 曲がりの絵は帯を横切る線が曲がった先の帯にもかかるので、相手より 8px 以上外まで続く縁は比べず、もう片方の縁だけで中心のずれを出す。
 出力.png は継ぎ目ごとに拡大して並べた画像（目で確かめる用。中心の紫の点が継ぎ目の点）。
 位置はタイルの並びから計算する（jump したタイルのセルの左上が画面の (192, 256)）。SEAM_RANGE=n で、このアドオンのセルが画面といちばん合う位置を ±n px 探す。
@@ -273,7 +273,10 @@ def main():
         center = float(np.mean(known)) if known else None
         # 幅が大きく違う道どうし（作りの違い）は、中心の差を段とは見なさない（参考に出す）
         # 片側の縁だけのとき（曲がり・幅いっぱいの道）は幅の違いと区別できないので、これも参考
-        judge_center = width is not None and abs(width) <= TOL_WIDTH
+        # 坂と平地の継ぎ目は、坂の帯が直角の向きに広く測れる（手本どうしの Rail_100 の平地→坂でも、坂が 6px 広く中心は 0）。
+        # 平地の相手と坂のこちらの幅がそろって見えても作りの違いを含むので、これも参考（坂どうしは比べる）
+        slope_mix = bool(a.slope) != bool(b.slope)
+        judge_center = width is not None and abs(width) <= TOL_WIDTH and not slope_mix
         lo, hi = max(ba[0], bb[0]) + GRASS_MARGIN, min(ba[1], bb[1]) - GRASS_MARGIN
         # 継ぎ目の辺の線（±1px）の上で、両側の帯の内側にある草
         e = (c1 - c0) / np.linalg.norm(c1 - c0)
@@ -300,7 +303,7 @@ def main():
                 ok = False
         results.append(ok)
         print(f"[seam] {'OK' if ok else 'NG'} {tag} @({p[0]:.0f},{p[1]:.0f}): 中心のずれ {'比べない' if center is None else f'{center:+.1f}px'}{'（片側の縁だけ）' if len(known) == 1 else ''}"
-              f"{'' if judge_center or center is None else '（幅が違うので参考）'} "
+              f"{'' if judge_center or center is None else '（坂と平地なので参考）' if slope_mix else '（幅が違うので参考）'} "
               f"幅の差 {'-' if width is None else f'{width:+.1f}px'} "
               f"継ぎ目の草 {len(grass)}px {sorted(grass)[:4]} {pat}"
               f"（縁 相手 {ba[0]:+.0f}〜{ba[1]:+.0f} / こちら {bb[0]:+.0f}〜{bb[1]:+.0f}）")
