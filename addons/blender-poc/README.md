@@ -701,3 +701,19 @@ pak に入れるときは `makeobj` の引数に `track_trial.dat track_wall.dat
 - **雪の確認**: 全面が雪のマップ `flat_snow.sve` で見本を流し、線路・側壁・橋・本体の線路の雪の絵が出ることを確かめた（`docs/trial_snow.png`）
 - **車両**: 走らせる確認はできていない。`ingame/train.nut` で車庫・駅・編成までは作れたが、スクリプトで作ったダイヤを
   `convoy_x.change_schedule` が受け付けなかった（「less than two entries remained after removing doubles」。原因は未特定）
+
+### 橋の Start の手前の壁・行き止まりの並び・高架（2026-11-13 続き）
+
+- **橋の Start の手前の壁が欠けていた**: 高さのある部品の持ち分は「地面の範囲を上へ広げる」作りで、地面の四角形だけを上へずらしていた。
+  Start は持ち分の地面を坂の下まで下げているので、平らな橋の上の手前の壁まで届かなかった。
+  持ち分の全体（下へ広げた分も含む）を上へずらして足すようにした（`render_layers`）
+- **行き止まりの端の壁**: タイルの幅いっぱいに作り、残した側壁の外側だけを削る（`_beyond_prisms` を基盤と共用）。center にも付ける。
+  側壁のない側はタイルの端まで延びるので、back・center・front を並べた行き止まりが 1 つのコの字になる。
+  基盤も端の壁の奥を削るので、center の行き止まりが全面の板にならない
+- **高架**（`bpoc_track_elev_{single,back,center,front}`。dat は `system_type=1`、シートは `src/track_elev_*.png`）:
+  側壁の 4 つの版に橋脚（`_pier_shape`。経路の中ほどの下、線路を横切る向きに長い柱）を足したもの。
+  持ち分は床の 1 段（16px）下まで広げる（`_ground_mask(lower=)`）。アイコンは S・B・C・F の印と高架の帯。雪の絵もある
+- ゲームで確かめた（`ingame/elev.nut`・`ingame/bridge.nut`。`docs/trial_elevated.png`・`docs/trial_ends_start.png`）:
+  高架の単線の輪と行き止まり、高架の 3 線（両端が行き止まり）、地上の 3 線の行き止まり、橋の Start の両側の壁
+- 車両: 手で編成を走らせて、壁・欄干との重なりに問題が無いことを確かめてもらった（壁が低いので重なる所が少ない）
+- 残り: 高架の坂・分岐・斜めはゲームで見ていない。高架と橋・地上の線路との継ぎ目も見ていない

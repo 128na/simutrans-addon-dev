@@ -425,7 +425,9 @@ def _end_wall_shape(path, k):
     """行き止まりの端の壁: 車止めの奥で左右の側壁をつなぐ（コの字になる）。"""
     d = (path[1] - path[0]).normalized()
     c = path[0] - d * (WALL_W / 2)
-    return box(c.x, c.y, WALL_H / 2, WALL_W, 2 * (WALL_U + WALL_W) * k, WALL_H, rot=math.atan2(d.y, d.x))
+    # タイルの幅いっぱいに作る。側壁のある側は、その外側を後で削る（track_sheet）。側壁のない側はタイルの端まで延びて、
+    # 並べた線路の端の壁とつながる（back・center・front を並べた行き止まりが、1 つのコの字になる）
+    return box(c.x, c.y, WALL_H / 2, WALL_W, 14.0, WALL_H, rot=math.atan2(d.y, d.x))
 
 
 def _ramp_body_shape(path, k):
@@ -442,6 +444,17 @@ PIER_W, PIER_L = 1.6, 3.2
 
 
 _M_BASE = ("base", (0.50, 0.50, 0.48))
+PIER_SIZE = 1.6
+
+
+def _pier_shape(path, k):
+    """高架の橋脚: 経路の中ほどの下に立つ柱。床（基盤）の下から、1 段下の地面まで。"""
+    mid = path[len(path) // 2] if len(path) > 2 else (path[0] + path[-1]) / 2
+    d = (path[-1] - path[0]).normalized()
+    return box(mid.x, mid.y, -(H + BASE_H) / 2, PIER_SIZE, PIER_SIZE * 2.4, H - BASE_H, rot=math.atan2(d.y, d.x))  # 線路を横切る向きに長い
+
+
+TRACK_EXTRAS += (Part("pier", "bed", "bed", ("base", (0.50, 0.50, 0.48)), _pier_shape, "pier"),)
 TRACK_EXTRAS += (Part("endw", "bed", "bed", _M_WALL, _end_wall_shape, "wall", "end", tall=True),
                  Part("rampbody", "bed", "bed", _M_BASE, _ramp_body_shape, "ramp", ground=True))
 # 雪の絵（dat の image[..][1]）で差し替える材質。道床とまくらぎに雪が積もり、レールは見える
@@ -550,16 +563,8 @@ def _arc_circle(path):
     return centre, (a - centre).length
 
 
-def build_base(walls, paths, k, datum, slope, div, mat, clip=True):
-    """基盤（道床の下の板。上面が路盤の面、厚み BASE_H は橋で側面に見える）を作る。
-    タイル全面の板から、残した壁の外側だけを削る。壁のない側はタイルの端まで埋まるので、
-    - 並べた線路の基盤とつながる（直線・斜め・直角カーブの内側と外側）
-    - 分岐・十字で、基盤が壁を突き抜けない（壁の外側は必ず削られる）
-    - 壁が 1 枚も無ければタイル全面になる（中線、1 タイルだけの軌道）
-    walls は残した壁の物（assemble が pname・pi・cut を付けている）。通り道で一部が削られた直線の壁は、
-    削られた先に線路があるので外側を削らない（カーブの内側の壁の外側は、ほかの通り道に重ならないのでいつも削る）"""
-    plate = mesh_object("base", *box(0, 0, -BASE_H / 2, TILE + 8, TILE + 8, BASE_H), material(*mat))
-    plate["tall"] = False
+def _beyond_prisms(walls, paths, k):
+    """残した壁それぞれの「外側」を表す柱の集まり（基盤や端の壁から削る型）。"""
     uw = (WALL_U + WALL_W) * k
     cut = []
     for w in walls:
@@ -590,6 +595,20 @@ def build_base(walls, paths, k, datum, slope, div, mat, clip=True):
             a, b = path[0] - d * 30, path[-1] + d * 30
             pts = [a + n * uw, b + n * uw, b + n * 40, a + n * 40]
         cut.append(prism([(q.x, q.y) for q in pts], -2, 2))
+    return cut
+
+
+def build_base(walls, paths, k, datum, slope, div, mat, clip=True):
+    """基盤（道床の下の板。上面が路盤の面、厚み BASE_H は橋で側面に見える）を作る。
+    タイル全面の板から、残した壁の外側だけを削る。壁のない側はタイルの端まで埋まるので、
+    - 並べた線路の基盤とつながる（直線・斜め・直角カーブの内側と外側）
+    - 分岐・十字で、基盤が壁を突き抜けない（壁の外側は必ず削られる）
+    - 壁が 1 枚も無ければタイル全面になる（中線、1 タイルだけの軌道）
+    walls は残した壁の物（assemble が pname・pi・cut を付けている）。通り道で一部が削られた直線の壁は、
+    削られた先に線路があるので外側を削らない（カーブの内側の壁の外側は、ほかの通り道に重ならないのでいつも削る）"""
+    plate = mesh_object("base", *box(0, 0, -BASE_H / 2, TILE + 8, TILE + 8, BASE_H), material(*mat))
+    plate["tall"] = False
+    cut = _beyond_prisms(walls, paths, k)
     if cut:
         cutter = mesh_object("basecut", *merge(cut), material(*mat))
         recalc_normals(cutter)
@@ -1093,7 +1112,7 @@ GROUND_CY = 127
 ROAD_CY = 128
 
 
-def _ground_mask(slope, side=None, cy=GROUND_CY, spill=0, solid=False):
+def _ground_mask(slope, side=None, cy=GROUND_CY, spill=0, solid=False, lower=0):
     """タイルの地面（四隅の高さは slope、無ければ平ら）が画面で占める画素。画素の中心が四角形の中なら 255。
     side（top/bottom/left/right）を渡すと、菱形のうち中心を通る横・縦の線のその側だけにする（斜めのタイル）。
     線は隣の菱形の頂点と同じ位置なので、隣の直線・斜めのタイルの縁と同じ行・列で切れる。
@@ -1113,6 +1132,11 @@ def _ground_mask(slope, side=None, cy=GROUND_CY, spill=0, solid=False):
         m |= _ground_mask_at(slope, side, cy + 0.5)
         if slope:
             m |= _ground_mask_at(slope, side, GROUND_CY)
+    if lower:
+        # 下へ広げる（高架: 床の下の橋脚が、床より lower 行下の地面まで見える）
+        base = m.copy()
+        for k in range(1, lower + 1):
+            m[k:] |= base[:-k]
     return m
 
 
@@ -1134,13 +1158,13 @@ def _ground_mask_at(slope, side, cy):
     return inside
 
 
-def _render_ground(slope, path, side=None, cy=GROUND_CY, spill=0, solid=False):
+def _render_ground(slope, path, side=None, cy=GROUND_CY, spill=0, solid=False, lower=0):
     """持ち分マスク（地面の範囲）を PNG に書く。"""
-    m = _ground_mask(slope, side, cy, spill, solid).astype(np.uint8) * 255
+    m = _ground_mask(slope, side, cy, spill, solid, lower).astype(np.uint8) * 255
     save_rgba(path, np.dstack([m, m, m, np.full_like(m, 255)]))
 
 
-def render_cell(name, exits=None, slope=None, side=None, cy=GROUND_CY, spill=0, solid=False):
+def render_cell(name, exits=None, slope=None, side=None, cy=GROUND_CY, spill=0, solid=False, lower=0):
     """通常の描画に加えて、
     - exits を渡したタイル（線路・道路）は name_own.png（持ち分マスク = 地面の範囲）を描く。
       画素の中心が地面の菱形の中なら残す。slope は坂の高さ slope(x, y)
@@ -1155,7 +1179,7 @@ def render_cell(name, exits=None, slope=None, side=None, cy=GROUND_CY, spill=0, 
         if os.path.exists(p):
             os.remove(p)
     if exits is not None:
-        _render_ground(slope, own_path, side, cy, spill, solid)
+        _render_ground(slope, own_path, side, cy, spill, solid, lower)
     meshes = [ob for ob in scene.objects if ob.type == "MESH"]
     if not any(s.material and s.material.get("special") for ob in meshes for s in ob.material_slots):
         return path
@@ -1172,7 +1196,7 @@ def render_cell(name, exits=None, slope=None, side=None, cy=GROUND_CY, spill=0, 
     return path
 
 
-def render_layers(name, obs, split, exits, slope, cy, spill, rise, solid=False):
+def render_layers(name, obs, split, exits, slope, cy, spill, rise, solid=False, lower=0):
     """高さのある部品（tall）を別の層として描いて重ねる。返すのは（奥の絵のパス, 手前の絵のパス または None）。
     - 本体: 持ち分（地面の範囲）で切る
     - 高さのある部品: 持ち分を上へ rise 行広げた範囲で切る（奥のタイルの絵の上に出る。建物と同じ）
@@ -1181,14 +1205,17 @@ def render_layers(name, obs, split, exits, slope, cy, spill, rise, solid=False):
     body = [ob for ob in obs if not ob.get("tall")]
     for ob in tall:
         ob.hide_render = True
-    img = load_rgba8(render_cell(name, exits, slope=slope, cy=cy, spill=spill, solid=solid)).copy()
+    img = load_rgba8(render_cell(name, exits, slope=slope, cy=cy, spill=spill, solid=solid, lower=lower)).copy()
     own = load_rgba8(os.path.join(WORK, name + "_own.png"))[..., 0] >= 128
     img[..., 3] = np.where(own, img[..., 3], 0)
     for ob in body:
         ob.hide_render = True
-    m = _ground_mask(slope, None, cy, spill, solid)
+    m = _ground_mask(slope, None, cy, spill, solid, lower)
+    # 上へ広げる: 持ち分の全体（坂の下・高架の下へ広げた分も含む）を 1 行ずつ上へずらして足す。
+    # 前は地面の四角形だけをずらしていたので、地面を下げた絵（橋の Start）で、平らな橋の上の手前の壁が切れた
+    base = m.copy()
     for k in range(1, rise + 1):
-        m |= _ground_mask_at(slope, None, cy - k)
+        m[:-k] |= base[k:]
     front = near_camera(obs) if split else []
 
     def layer(objs, suffix):
@@ -1316,6 +1343,11 @@ TRACK_PROFILES = {
 # 基盤は、壁のある側は壁まで、壁のない側はタイルの端まで
 for _variant in ("back", "center", "front"):
     TRACK_PROFILES[f"wall_{_variant}"] = dict(TRACK_PROFILES["wall_single"], sheet=f"track_wall_{_variant}", walls=_variant)
+# 高架（dat の system_type=1）: 側壁の 4 つの版に橋脚を足し、持ち分を床の 1 段（16px）下まで広げる
+for _variant, _walls in (("single", "both"), ("back", "back"), ("center", "center"), ("front", "front")):
+    TRACK_PROFILES[f"elev_{_variant}"] = dict(TRACK_PROFILES["wall_single"], sheet=f"track_elev_{_variant}", walls=_walls,
+                                               groups=("body", "wall", "base", "structure", "pier"), lower=16,
+                                               band="elevated")
 ICON_BADGE = {"both": "S", "back": "B", "center": "C", "front": "F"}  # アイコンの右下の印（single / back / center / front）
 WALL_RISE = 11  # 側壁の高さ（画面の px。持ち分を上へ広げる行数）
 # datums: 基準面ごとの下げ幅（Datum(drop, ground)）。絵の基準位置は両方とも BALLAST_DY（地面の菱形より 1px 上 = 旧の位置）。
@@ -1418,14 +1450,27 @@ def track_sheet(profile="new"):
                     "front": lambda ob: ob in near, "back": lambda ob: ob not in near}[side]
             walls = [ob for ob in obs if ob.get("tall")]
             # 行き止まりの端の壁は、壁のある版ならいつも残す
-            kept = [ob for ob in walls if (side != "center" if ob.name.startswith("endw") else keep(ob))]
+            kept = [ob for ob in walls if ob.name.startswith("endw") or keep(ob)]
             for ob in [ob for ob in walls if ob not in kept]:
                 obs.remove(ob)
                 bpy.data.objects.remove(ob, do_unlink=True)
             mask_slope = slope
+            kb = (widths or {}).get("bed", 1.0)
+            end_walls = [ob for ob in kept if ob.name.startswith("endw")]
+            sides = _beyond_prisms([ob for ob in kept if not ob.name.startswith("endw")], paths, kb)
+            if end_walls and sides:
+                # 端の壁から、残した側壁の外側を削る（側壁のある側は側壁で止まる）
+                cutter = mesh_object("endcut", *merge(sides), material(*_M_WALL))
+                recalc_normals(cutter)
+                mv = datum_move(prof["datums"]["bed"], slope, div)
+                if mv is not None:
+                    for v in cutter.data.vertices:
+                        v.co += mv
+                for ob in end_walls:
+                    boolean(ob, cutter)
+                bpy.data.objects.remove(cutter, do_unlink=True)
             if "base" in grp:
                 bmat = (skin or {}).get("base", _M_BASE)
-                kb = (widths or {}).get("bed", 1.0)
                 if name == "single":
                     # 1 タイルだけの軌道: 線路も壁も置かず、タイル全面の基盤だけにする（高架のすき間を埋める景観用）
                     for ob in obs:
@@ -1439,12 +1484,13 @@ def track_sheet(profile="new"):
             cname = f"{prof['sheet']}{suffix}_{name}"
             if any(ob.get("tall") for ob in obs):
                 cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, True, exits_of(name), mask_slope, cy,
-                                                                      prof["spill"], WALL_RISE, prof.get("solid", False))
+                                                                      prof["spill"], WALL_RISE, prof.get("solid", False),
+                                                                      prof.get("lower", 0))
                 if front:
                     cells[(pos[0] + row0 + prof["front_row"], pos[1])] = front
             else:
                 cells[(pos[0] + row0, pos[1])] = render_cell(cname, exits_of(name), slope=mask_slope, cy=cy, spill=prof["spill"],
-                                                             solid=prof.get("solid", False))
+                                                             solid=prof.get("solid", False), lower=prof.get("lower", 0))
 
     if prof.get("piers"):
         # 橋脚: 橋の下の地面のタイルに立つ柱（高さ 1 段）。線路の向きに直角に長い。(2, 0) が南北の橋、(2, 1) が東西の橋
@@ -1667,6 +1713,8 @@ if __name__ == "__main__":
     for _variant in ("single", "back", "center", "front"):
         if f"track_wall_{_variant}" in targets:
             track_sheet(f"wall_{_variant}")
+        if f"track_elev_{_variant}" in targets:
+            track_sheet(f"elev_{_variant}")
     if "icons" in targets:
         icon_gallery()
     if "road" in targets:

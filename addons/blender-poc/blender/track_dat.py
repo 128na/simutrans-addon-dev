@@ -5,7 +5,7 @@ src/track.dat の絵の割り当て（[0] の行）を元に、シートの行�
 - 手前の絵: front + キー（frontimage・frontimageup・frontimageup2・frontdiagonal）。同じ列の 4 行下
 - 雪の絵: 同じキーの [1]。手前の絵が無いシートは 4 行下、あるシートは 8 行下
 
-書き出すもの: track.dat・track_old.dat（雪の行を足す）、track_trial.dat、track_wall_{single,back,center,front}.dat、track_bridge.dat
+書き出すもの: track.dat・track_old.dat（雪の行を足す）、track_trial.dat、track_wall_{single,back,center,front}.dat、track_elev_{...}.dat、track_bridge.dat
 """
 import os
 import re
@@ -26,9 +26,11 @@ def template():
     return head, imgs
 
 
-def way(name, sheet, comment, front=False, snow=True):
+def way(name, sheet, comment, front=False, snow=True, elevated=False):
     head, imgs = template()
     out = [comment if l.startswith("#") else l.replace("bpoc_track", name).replace("track.", sheet + ".") for l in head]
+    if elevated:
+        out = [l.replace("system_type=0", "system_type=1") for l in out]
     block = 8 if front else 4
     for season, base in ((0, 0), (1, block)) if snow else ((0, 0),):
         for key, idx, r, c, off in imgs:
@@ -80,4 +82,7 @@ if __name__ == "__main__":
     for side, ja in (("single", "両側（単線用）"), ("back", "奥だけ"), ("center", "なし（中線用）"), ("front", "手前だけ")):
         way(f"bpoc_track_wall_{side}", f"track_wall_{side}",
             f"# Blender 検証用の線路の試作: 側壁 {ja}・基盤・車止め。カメラに近い側の壁は手前の絵（front...）、雪は [1]", front=True)
+        way(f"bpoc_track_elev_{side}", f"track_elev_{side}",
+            f"# Blender 検証用の線路の試作: 高架（system_type=1）。側壁 {ja}・基盤・橋脚。手前の壁は front...、雪は [1]",
+            front=True, elevated=True)
     bridge()
