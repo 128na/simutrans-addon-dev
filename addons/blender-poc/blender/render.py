@@ -1333,7 +1333,7 @@ TRACK_PROFILES = {
     # 試作: 新に側壁を足したもの。カメラに近い側の壁は手前の絵（frontimage。下の 4 行に同じ並び）
     # 試作: 橋（obj=bridge）。直線と坂（橋の端）だけを描き、床版・側壁（欄干）を足す。橋脚は別のセル
     "bridge": {"sheet": "track_bridge", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
-               "groups": ("body", "wall", "base", "ramp"), "front_row": 4, "snow": True, "solid": True, "band": "elevated",
+               "groups": ("body", "wall", "base", "ramp"), "front_row": 4, "snow": True, "solid": True, "band": "bridge",
                "only": ("ns", "ew", "up12", "up9", "up3", "up6", "up2_12", "up2_9", "up2_3", "up2_6"), "piers": True,
                "starts": True},
     "wall_single": {"sheet": "track_wall_single", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
@@ -1547,7 +1547,14 @@ ICON_STYLES = {
     "expressway": {"bg": ((70, 90, 190), (24, 30, 96))},
     "tram": {"bg": ((196, 150, 0), (120, 84, 0))},
 }
-ICON_BANDS = {"elevated": (200, 200, 205), "tunnel": (60, 50, 44)}  # 下の帯の色（地上は帯なし）
+# 下の帯（地上は帯なし）。（上端, 下端, 色）の並びで、アイコンの高さに対する比。帯は下の 4px ほどにとどめ、右下の印を隠さない
+#   高架: 灰色の床と、その下の橋脚 2 本 / 橋: 灰色の床と、その下の水色 / トンネル: 暗い帯
+ICON_BANDS = {
+    "elevated": [(0.875, 0.9375, 0.0, 1.0, (205, 205, 210)), (0.9375, 1.0, 0.18, 0.30, (205, 205, 210)),
+                 (0.9375, 1.0, 0.70, 0.82, (205, 205, 210))],
+    "bridge": [(0.875, 0.9375, 0.0, 1.0, (205, 205, 210)), (0.9375, 1.0, 0.0, 1.0, (70, 150, 230))],
+    "tunnel": [(0.875, 1.0, 0.0, 1.0, (40, 34, 30))],
+}
 
 
 def add_label(text, x, y, height, color=(1, 1, 1), align="LEFT", res=ICON):
@@ -1621,7 +1628,7 @@ def render_icon(name, zoom, shift=(0.0, 0.0), label=None, style=None, badge=None
     cam.shift_x, cam.shift_y = shift
     labels = add_label(label, 0.07, 0.07, 0.44) if label else []
     if badge:
-        labels += add_label(badge, 0.93, 0.62, 0.30, color=(1.0, 0.9, 0.2), align="RIGHT")
+        labels += add_label(badge, 0.93, 0.52 if band else 0.62, 0.30, color=(1.0, 0.9, 0.2), align="RIGHT")
     big = load_rgba8(render_cell(name)).astype(np.float32) / 255
     for ob in labels:
         bpy.data.objects.remove(ob, do_unlink=True)
@@ -1636,7 +1643,8 @@ def render_icon(name, zoom, shift=(0.0, 0.0), label=None, style=None, badge=None
     a = big[..., 3:4]
     rgb = big[..., :3] * a + bg * (1 - a)
     if band:  # 帯は絵の上に重ねる（下に敷くと道の絵に隠れる）
-        rgb[int(size * 0.84):] = np.array(ICON_BANDS[band], np.float32) / 255
+        for y0, y1, x0, x1, color in ICON_BANDS[band]:
+            rgb[int(size * y0):int(size * y1), int(size * x0):int(size * x1)] = np.array(color, np.float32) / 255
     small = rgb.reshape(ICON, ICON_SS, ICON, ICON_SS, 3).mean(axis=(1, 3))
     icon = np.concatenate([small, np.ones((ICON, ICON, 1), np.float32)], axis=2)
     cell = np.zeros((CELL, CELL, 4), np.uint8)
@@ -1672,6 +1680,68 @@ def icon_gallery():
         tiles.append(cell[:ICON, :ICON].repeat(6, 0).repeat(6, 1))
         tiles.append(np.full((ICON * 6, 6, 4), 255, np.uint8))
     save_rgba(os.path.join(WORK, "icon_gallery.png"), np.concatenate(tiles[:-1], 1))
+
+
+# ---- トンネル（obj=tunnel）: 坂のタイルに置く坑口。奥の絵 = 線路と暗い内側、手前の絵 = 坑口の躯体（車両を隠す）
+TUNNEL_FACE = 3.0     # 低い側の辺から坑口の面までの距離
+TUNNEL_BORE = (1.7, 2.0)    # 穴の半幅と高さ
+TUNNEL_HOOD = (3.0, 2.8)    # 躯体の半幅と高さ
+TUNNEL_RISE = 26      # 躯体の高さ（画面の px。持ち分を上へ広げる行数）
+
+
+def tunnel_sheet():
+    """坑口 4 方向。pak128 では坑口は 2 段の坂にしか置けない（本体の tunnelbauer）。BackImage[N] は北が高い坂（南から入る）。シートは 行 0: 奥の絵、行 1: 手前の絵、行 2・3: 雪。"""
+    half = TILE / 2
+    N, S, E, W = (0, half), (0, -half), (half, 0), (-half, 0)
+    dirs = {  # 名前: (列, 経路, 高い側の向き, 坂の高さ)
+        "n": (2, straight(S, N), Vector((0, 1)), lambda x, y: 2 * H * (y + half) / TILE),
+        "s": (3, straight(S, N), Vector((0, -1)), lambda x, y: 2 * H * (half - y) / TILE),
+        "e": (4, straight(W, E), Vector((1, 0)), lambda x, y: 2 * H * (x + half) / TILE),
+        "w": (5, straight(W, E), Vector((-1, 0)), lambda x, y: 2 * H * (half - x) / TILE),
+    }
+    prof = TRACK_PROFILES["new"]
+    set_anchor(128 + BALLAST_DY)
+    cells = {}
+    a0, a1 = -half + TUNNEL_FACE, half + 0.3  # 坑口の面と、躯体の奥の端（経路に沿った位置）
+    for row0, skin in ((0, None), (2, SNOW_SKIN)):
+        for name, (col, path, d, slope) in dirs.items():
+            rot = math.atan2(d.y, d.x)
+            c = d * ((a0 + a1) / 2)
+            # 持ち分: 坂の面と、その下の平らな地面までの間。上へは躯体の高さだけ広げる
+            m = _ground_mask(slope, None, GROUND_CY, 0, solid=True)
+            base = m.copy()
+            for k in range(1, TUNNEL_RISE + 1):
+                m[:-k] |= base[k:]
+
+            def shot(suffix):
+                img = load_rgba8(render_cell(f"tunnel{'_snow' if skin else ''}_{name}{suffix}")).copy()
+                img[..., 3] = np.where(m & (img[..., 3] >= 128), 255, 0)
+                path_ = os.path.join(WORK, f"tunnel{'_snow' if skin else ''}_{name}{suffix}_full.png")
+                save_rgba(path_, img)
+                return path_
+
+            # 奥の絵: 平らな線路（坂に切り込む）と、穴の内側の暗い箱
+            clear_models()
+            assemble(TRACK_PARTS, [path], prof["datums"], skin=skin)
+            dark = mesh_object("dark", *box(c.x, c.y, 1.03, a1 - a0 - 0.1, 2 * TUNNEL_BORE[0] + 0.1, 2.0, rot=rot),
+                               material("tunnel_dark", (0.015, 0.015, 0.015)))
+            clip_to_tile(dark, 0.0)
+            cells[(row0, col)] = shot("_back")
+            # 手前の絵: 坑口の躯体（面から奥の辺まで）。穴を抜く
+            clear_models()
+            hood = mesh_object("hood", *box(c.x, c.y, TUNNEL_HOOD[1] / 2, a1 - a0, 2 * TUNNEL_HOOD[0], TUNNEL_HOOD[1], rot=rot),
+                               material(*_M_WALL))
+            bore = mesh_object("bore", *box(0, 0, TUNNEL_BORE[1] / 2 - 0.5, 30, 2 * TUNNEL_BORE[0], TUNNEL_BORE[1] + 1.0, rot=rot),
+                               material(*_M_WALL))
+            boolean(hood, bore)
+            bpy.data.objects.remove(bore, do_unlink=True)
+            clip_to_tile(hood, 0.0)
+            cells[(row0 + 1, col)] = shot("_front")
+    clear_models()
+    assemble(TRACK_PARTS, [straight((0, -12), (0, 12), ext=0.6)], clip=False)
+    cells[(0, 0)] = render_icon("track_tunnel_icon", 0.5, shift=(-0.14, 0.2), label="100", style="track", band="tunnel")
+    cells[(0, 1)] = cells[(0, 2)]
+    make_sheet(cells, 4, 6, os.path.join(SRC, "track_tunnel.png"))
 
 
 def tollbooth_sheet():
@@ -1715,6 +1785,8 @@ if __name__ == "__main__":
             track_sheet(f"wall_{_variant}")
         if f"track_elev_{_variant}" in targets:
             track_sheet(f"elev_{_variant}")
+    if "track_tunnel" in targets:
+        tunnel_sheet()
     if "icons" in targets:
         icon_gallery()
     if "road" in targets:

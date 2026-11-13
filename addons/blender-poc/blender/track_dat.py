@@ -75,6 +75,31 @@ cursor=track_bridge.0.1,-64,-32
     open(os.path.join(SRC, "track_bridge.dat"), "w", encoding="utf8", newline="\n").write(head + "\n".join(out) + "\n")
 
 
+def tunnel():
+    """坑口。image[N] は北が高い坂のタイル（本体の tunnel_desc_t::slope_indices）。行 0: 奥、行 1: 手前、行 2・3: 雪。"""
+    out = """# Blender 検証用の線路のトンネルの試作: 坑口の躯体（手前の絵）と、線路・暗い内側（奥の絵）
+obj=tunnel
+name=bpoc_track_tunnel
+copyright=blender-poc
+waytype=track
+way=bpoc_track
+cost=50000
+maintenance=1000
+topspeed=100
+intro_year=1900
+intro_month=1
+retire_year=2999
+retire_month=1
+icon=> track_tunnel.0.0
+cursor=track_tunnel.0.1,-64,-32
+""".splitlines()
+    for season, base in ((0, 0), (1, 2)):
+        for col, d in enumerate("NSEW"):
+            out.append(f"BackImage[{d}][{season}]=track_tunnel.{base}.{col + 2},-64,-32")
+            out.append(f"FrontImage[{d}][{season}]=track_tunnel.{base + 1}.{col + 2},-64,-32")
+    open(os.path.join(SRC, "track_tunnel.dat"), "w", encoding="utf8", newline="\n").write("\n".join(out) + "\n")
+
+
 if __name__ == "__main__":
     way("bpoc_track", "track", "# Blender 検証用の線路（道床に厚みあり）。セル配置は iss の線路と同じ。下の 4 行は雪の絵（[1]）")
     way("bpoc_track_old", "track_old", "# Blender 検証用の線路（旧描画位置）。下の 4 行は雪の絵（[1]）")
@@ -86,3 +111,4 @@ if __name__ == "__main__":
             f"# Blender 検証用の線路の試作: 高架（system_type=1）。側壁 {ja}・基盤・橋脚。手前の壁は front...、雪は [1]",
             front=True, elevated=True)
     bridge()
+    tunnel()
