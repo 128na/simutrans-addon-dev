@@ -521,11 +521,11 @@ Rail_100 の平地（奥）→ こちらの坂の継ぎ目で、`seam_judge.py` 
 | 試作 | シート・dat・見本 | 内容 |
 |---|---|---|
 | `bpoc_track_trial` | `src/track_trial.*`・`ingame/trial.nut` | 車止め・さび色・雪の絵・アイコンの印・カーソルの札 |
-| `bpoc_track_wall` | `src/track_wall.*`・`ingame/wall.nut` | 側壁 |
+| `bpoc_track_wall` | `src/track_wall.*`・`ingame/wall.nut` | 側壁（後に `bpoc_track_wall_single`・`src/track_wall_single.*` に改名） |
 | `bpoc_track_bridge` | `src/track_bridge.*`・`ingame/bridge.nut` | 橋（床版・欄干・橋脚） |
 
 描くのは `blender/render.py -- track_trial`・`track_wall`・`track_bridge`・`icons`（アイコンの見本 `work/icon_gallery.png`）。
-pak に入れるときは `makeobj` の引数に `track_trial.dat track_wall.dat track_bridge.dat` を足す。
+pak に入れるときの `makeobj` の引数は、上の「ビルド」の行を見る（この節の時点では `track_trial.dat track_wall.dat track_bridge.dat` を足していた。`track_wall` は後に `track_wall_single` に改名）。
 
 部品の持ち方（`render.py`）:
 - `Part` に二つの印を足した。`where="end"` は経路の始点（行き止まりの端）にだけ置く部品、`tall=True` は高さのある部品
