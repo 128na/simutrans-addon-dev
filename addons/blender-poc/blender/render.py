@@ -1688,8 +1688,9 @@ def tunnel_sheet():
         for name, (col, path, d, slope) in dirs.items():
             rot = math.atan2(d.y, d.x)
             c = d * ((a0 + a1) / 2)
-            # 持ち分: 坂の面と、その下の平らな地面までの間。上へは躯体の高さだけ広げる
-            m = _ground_mask(slope, None, GROUND_CY, 0, solid=True)
+            # 持ち分: 坂の面だけ。上へは躯体の高さだけ広げる。坂の面より下（高い側の辺の下の面や、そこから覗く穴の中）は
+            # 手前の丘のタイルに隠れる所なので描かない（描くと、口が奥を向いた坑口で穴の中が丘の上にはみ出した）
+            m = _ground_mask(slope, None, GROUND_CY, 0)
             base = m.copy()
             for k in range(1, TUNNEL_RISE + 1):
                 m[:-k] |= base[k:]
@@ -1704,10 +1705,13 @@ def tunnel_sheet():
             # 奥の絵: 平らな線路（坂に切り込む）と、穴の内側の暗い床と壁
             clear_models()
             assemble(TRACK_PARTS, [path], prof["datums"], skin=skin)
-            # 穴の内側: 暗い床と左右の壁だけを置く（線路は床の上に見える。箱で埋めると線路まで隠れた）
+            # 穴の内側: 床（基盤と同じ材質）と暗い左右の壁だけを置く（線路は床の上に見える。箱で埋めると線路まで隠れた）
             m_dark = material("tunnel_dark", (0.015, 0.015, 0.015))
             n = Vector((d.y, -d.x))
-            inner = [box(c.x, c.y, 0.005, a1 - a0 - 0.1, 2 * TUNNEL_BORE[0] + 0.1, 0.01, rot=rot)]
+            floor = mesh_object("floor", *box(c.x, c.y, 0.005, a1 - a0 - 0.1, 2 * TUNNEL_BORE[0] + 0.1, 0.01, rot=rot),
+                                material(*(skin or {}).get("base", _M_BASE)))
+            clip_to_tile(floor, 0.0)
+            inner = []
             for s in (1, -1):
                 q = c + n * (s * (TUNNEL_BORE[0] + 0.05))
                 inner.append(box(q.x, q.y, TUNNEL_BORE[1] / 2, a1 - a0 - 0.1, 0.1, TUNNEL_BORE[1], rot=rot))
