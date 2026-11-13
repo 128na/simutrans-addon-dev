@@ -40,7 +40,7 @@ function pattern(label, w, x0, y0) {
   return s;
 }
 
-local out = pattern("wall", way_desc_x("bpoc_track_wall"), 20, 120);
+local out = pattern("wall", way_desc_x("bpoc_track_wall_single"), 20, 120);
 // 複線・3線: 奥だけ壁（back）・壁なし（center）・手前だけ壁（front）を並べる。カメラは南東なので、東西の線路は北が奥、南北の線路は西が奥
 local pl = player_x(0);
 local wb = way_desc_x("bpoc_track_wall_back");

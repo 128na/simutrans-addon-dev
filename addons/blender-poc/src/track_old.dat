@@ -1,4 +1,4 @@
-# Blender 検証用の線路・旧描画位置（レールが高い。古い pak128・SIS に合わせる）。形は track.dat と同じ
+# Blender 検証用の線路（旧描画位置）。下の 4 行は雪の絵（[1]）
 obj=way
 name=bpoc_track_old
 copyright=blender-poc
@@ -41,3 +41,31 @@ image[new][0]=track_old.3.6,-64,-32
 image[nsw][0]=track_old.3.7,-64,-32
 image[sew][0]=track_old.3.8,-64,-32
 image[nsew][0]=track_old.3.9,-64,-32
+image[ns][1]=track_old.4.2,-64,-32
+image[ew][1]=track_old.4.3,-64,-32
+image[s][1]=track_old.4.5,-64,-32
+image[w][1]=track_old.4.6,-64,-32
+image[n][1]=track_old.4.7,-64,-32
+image[e][1]=track_old.4.8,-64,-32
+image[-][1]=track_old.4.9,-64,-32
+imageup[12][1]=track_old.5.0,-64,-32
+imageup[9][1]=track_old.5.1,-64,-32
+imageup[3][1]=track_old.5.2,-64,-32
+imageup[6][1]=track_old.5.3,-64,-32
+imageup2[12][1]=track_old.5.5,-64,-32
+imageup2[9][1]=track_old.5.6,-64,-32
+imageup2[3][1]=track_old.5.7,-64,-32
+imageup2[6][1]=track_old.5.8,-64,-32
+diagonal[sw][1]=track_old.6.0,-64,-32
+diagonal[nw][1]=track_old.6.1,-64,-32
+diagonal[ne][1]=track_old.6.2,-64,-32
+diagonal[se][1]=track_old.6.3,-64,-32
+image[sw][1]=track_old.6.5,-64,-32
+image[nw][1]=track_old.6.6,-64,-32
+image[ne][1]=track_old.6.7,-64,-32
+image[se][1]=track_old.6.8,-64,-32
+image[nse][1]=track_old.7.5,-64,-32
+image[new][1]=track_old.7.6,-64,-32
+image[nsw][1]=track_old.7.7,-64,-32
+image[sew][1]=track_old.7.8,-64,-32
+image[nsew][1]=track_old.7.9,-64,-32

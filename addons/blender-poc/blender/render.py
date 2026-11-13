@@ -320,6 +320,7 @@ class Part:
     group: str = "body"
     where: str = "path"  # path: 経路に沿う。end: 経路の始点（行き止まりの端）に置く。assemble(ends=True) のときだけ作る
     tall: bool = False   # 高さのある部品。タイルちょうどに切り、持ち分を上へ広げた層として別に描く（render_layers）
+    ground: bool = False  # 坂のタイルだけで作り、坂を当てた後に地面（z=0）より下を切り上げる（坂の下を埋める躯体）
     corridor: float = 0.0  # 分岐・十字で、ほかの経路の通り道（中心からこの幅）に入る部分を削る（側壁が線路を横切らないように）
 
 
@@ -414,15 +415,23 @@ def _diag_long(path):
 
 def _wall_shape(s):
     def shape(path, k):
-        if k != 1.0:  # 斜め
-            if not _away_side(path, s):
-                return None
-            u0, u1 = s * (DIAG_EDGE_U - WALL_W), s * DIAG_EDGE_U
-            path = _diag_long(path)
-        else:
-            u0, u1 = s * WALL_U * k, s * (WALL_U + WALL_W) * k
+        # 斜めも直線と同じ作り: 経路から一定の距離（斜めは道床と同じ倍率 k）。タイルの辺で直線の壁と同じ点を通る
+        u0, u1 = s * WALL_U * k, s * (WALL_U + WALL_W) * k
         return sweep(path, [(u0, 0.0), (u1, 0.0), (u1, WALL_H), (u0, WALL_H)][::s])
     return shape
+
+
+def _end_wall_shape(path, k):
+    """行き止まりの端の壁: 車止めの奥で左右の側壁をつなぐ（コの字になる）。"""
+    d = (path[1] - path[0]).normalized()
+    c = path[0] - d * (WALL_W / 2)
+    return box(c.x, c.y, WALL_H / 2, WALL_W, 2 * (WALL_U + WALL_W) * k, WALL_H, rot=math.atan2(d.y, d.x))
+
+
+def _ramp_body_shape(path, k):
+    """橋の端の坂（平地から立ち上がる坂）の躯体: 基盤の下を地面まで埋める。assemble が坂を当てた後、地面より下を切り上げる。"""
+    u = (WALL_U + WALL_W) * k
+    return sweep(path, [(-u, -60.0), (u, -60.0), (u, -BASE_H), (-u, -BASE_H)])
 
 
 TRACK_EXTRAS += tuple(Part(name, "bed", "bed", _M_WALL, _wall_shape(s), "wall", tall=True, corridor=WALL_U)
@@ -438,10 +447,13 @@ def _base_shape(s, open_side):
     カーブの内側は半径より広げられないので、タイルの角の手前で止める"""
     def shape(path, k):
         if k != 1.0:
-            # 斜め: 壁のある側（と角の側）は帯の縁まで。壁のない側は、タイルの残りの半分もいっぱいまで埋める
-            # （並べた斜めの線路の帯の間には 1 本ぶんの帯が空き、両側の線路のタイルの残りの半分がそこを埋める）
-            u = 11.0 if open_side and _away_side(path, s) else DIAG_EDGE_U + 0.1
-            path = _diag_long(path)
+            # 斜め: 壁のある側は壁まで（直線と同じ）。壁のない側は、角の側なら自分の三角形の端まで、
+            # 角と反対の側ならタイルの残りの半分もいっぱいまで埋める（並べた斜めの線路の間は、両側のタイルの残りの半分が埋める）
+            if open_side:
+                u = 11.0 if _away_side(path, s) else DIAG_EDGE_U + 0.1
+                path = _diag_long(path)
+            else:
+                u = (WALL_U + WALL_W) * k
         else:
             u = (4.95 if len(path) > 4 else 7.2) if open_side else (WALL_U + WALL_W) * k
         return sweep(path, [(0.0, -BASE_H), (s * u, -BASE_H), (s * u, 0.0), (0.0, 0.0)][::s])
@@ -449,12 +461,16 @@ def _base_shape(s, open_side):
 
 
 _M_BASE = ("base", (0.50, 0.50, 0.48))
+TRACK_EXTRAS += (Part("endw", "bed", "bed", _M_WALL, _end_wall_shape, "wall", "end", tall=True),
+                 Part("rampbody", "bed", "bed", _M_BASE, _ramp_body_shape, "ramp", ground=True))
 # base: 壁のある側の基盤（いつも作る）。open: 壁のない側の基盤（その側の壁が無いときだけ残す。track_sheet）
 TRACK_EXTRAS += tuple(Part(f"{kind}{n}", "bed", "bed", ("base_open", _M_BASE[1]) if kind == "open" else _M_BASE,
                            _base_shape(s, kind == "open"), "base")
                       for kind in ("base", "open") for n, s in (("L", -1), ("R", 1)))
 # 雪の絵（dat の image[..][1]）で差し替える材質。道床とまくらぎに雪が積もり、レールは見える
-SNOW_SKIN = {"ballast": ("snow", (0.90, 0.93, 0.97), 0.9), "sleeper": ("snow_sleeper", (0.80, 0.84, 0.90), 0.9)}
+_SNOW = ("snow", (0.90, 0.93, 0.97), 0.9)
+SNOW_SKIN = {"ballast": _SNOW, "sleeper": ("snow_sleeper", (0.80, 0.84, 0.90), 0.9),
+             "baseL": _SNOW, "baseR": _SNOW, "openL": _SNOW, "openR": _SNOW}
 FLAT = {"bed": Datum(), "rail": Datum()}
 
 
@@ -501,7 +517,7 @@ def assemble(parts, paths, datums=FLAT, slope=None, clip=True, widths=None, div=
     obs = []
     for i, path in enumerate(paths):
         for part in parts:
-            if part.group not in groups or (part.where == "end" and not ends):
+            if part.group not in groups or (part.where == "end" and not ends) or (part.ground and not slope):
                 continue
             geo = part.shape(path, widths.get(part.width, 1.0))
             if geo is None:
@@ -529,10 +545,15 @@ def assemble(parts, paths, datums=FLAT, slope=None, clip=True, widths=None, div=
                 for v in ob.data.vertices:
                     v.co += move
             ob["tall"] = part.tall
+            ob["ground"] = part.ground
             obs.append(ob)
     for ob in obs:
         if slope:
             apply_slope(ob, slope)
+            if ob.get("ground"):
+                for v in ob.data.vertices:
+                    # 底は地面に、上面は地面より少し上に（厚みが 0 になると切り抜きで形が消える）
+                    v.co.z = 0.0 if v.co.z < -10 else max(v.co.z, 0.02)
         if clip:
             clip_to_tile(ob, TALL_PAD if ob.get("tall") else CLIP_PAD)
             if ob.get("tall"):
@@ -1005,7 +1026,7 @@ GROUND_CY = 127
 ROAD_CY = 128
 
 
-def _ground_mask(slope, side=None, cy=GROUND_CY, spill=0):
+def _ground_mask(slope, side=None, cy=GROUND_CY, spill=0, solid=False):
     """タイルの地面（四隅の高さは slope、無ければ平ら）が画面で占める画素。画素の中心が四角形の中なら 255。
     side（top/bottom/left/right）を渡すと、菱形のうち中心を通る横・縦の線のその側だけにする（斜めのタイル）。
     線は隣の菱形の頂点と同じ位置なので、隣の直線・斜めのタイルの縁と同じ行・列で切れる。
@@ -1014,6 +1035,10 @@ def _ground_mask(slope, side=None, cy=GROUND_CY, spill=0):
     spill は、菱形のまま手前の2辺だけを何行広げるか（その下へ半行も足す）。pak128 標準の線路（Rail_100）は
     自分の菱形の上の1行を描かず、奥のタイルのはみ出しで埋めるので、奥に来たときにそこを埋める"""
     m = _ground_mask_at(slope, side, cy)
+    if solid and slope:
+        # 平らな地面の上に立つ坂（橋の端）: 坂の面から地面までの間も持ち分にする（躯体の側面が見える）
+        for k in range(32):
+            m |= _ground_mask_at(lambda x, y, k=k: slope(x, y) * k / 32, side, cy)
     if spill:
         m |= _ground_mask_at(slope, side, cy + spill) | _ground_mask_at(slope, side, cy + spill + 0.5)
     if cy != GROUND_CY:
@@ -1042,13 +1067,13 @@ def _ground_mask_at(slope, side, cy):
     return inside
 
 
-def _render_ground(slope, path, side=None, cy=GROUND_CY, spill=0):
+def _render_ground(slope, path, side=None, cy=GROUND_CY, spill=0, solid=False):
     """持ち分マスク（地面の範囲）を PNG に書く。"""
-    m = _ground_mask(slope, side, cy, spill).astype(np.uint8) * 255
+    m = _ground_mask(slope, side, cy, spill, solid).astype(np.uint8) * 255
     save_rgba(path, np.dstack([m, m, m, np.full_like(m, 255)]))
 
 
-def render_cell(name, exits=None, slope=None, side=None, cy=GROUND_CY, spill=0):
+def render_cell(name, exits=None, slope=None, side=None, cy=GROUND_CY, spill=0, solid=False):
     """通常の描画に加えて、
     - exits を渡したタイル（線路・道路）は name_own.png（持ち分マスク = 地面の範囲）を描く。
       画素の中心が地面の菱形の中なら残す。slope は坂の高さ slope(x, y)
@@ -1063,7 +1088,7 @@ def render_cell(name, exits=None, slope=None, side=None, cy=GROUND_CY, spill=0):
         if os.path.exists(p):
             os.remove(p)
     if exits is not None:
-        _render_ground(slope, own_path, side, cy, spill)
+        _render_ground(slope, own_path, side, cy, spill, solid)
     meshes = [ob for ob in scene.objects if ob.type == "MESH"]
     if not any(s.material and s.material.get("special") for ob in meshes for s in ob.material_slots):
         return path
@@ -1080,7 +1105,7 @@ def render_cell(name, exits=None, slope=None, side=None, cy=GROUND_CY, spill=0):
     return path
 
 
-def render_layers(name, obs, split, exits, slope, cy, spill, rise):
+def render_layers(name, obs, split, exits, slope, cy, spill, rise, solid=False):
     """高さのある部品（tall）を別の層として描いて重ねる。返すのは（奥の絵のパス, 手前の絵のパス または None）。
     - 本体: 持ち分（地面の範囲）で切る
     - 高さのある部品: 持ち分を上へ rise 行広げた範囲で切る（奥のタイルの絵の上に出る。建物と同じ）
@@ -1089,12 +1114,12 @@ def render_layers(name, obs, split, exits, slope, cy, spill, rise):
     body = [ob for ob in obs if not ob.get("tall")]
     for ob in tall:
         ob.hide_render = True
-    img = load_rgba8(render_cell(name, exits, slope=slope, cy=cy, spill=spill)).copy()
+    img = load_rgba8(render_cell(name, exits, slope=slope, cy=cy, spill=spill, solid=solid)).copy()
     own = load_rgba8(os.path.join(WORK, name + "_own.png"))[..., 0] >= 128
     img[..., 3] = np.where(own, img[..., 3], 0)
     for ob in body:
         ob.hide_render = True
-    m = _ground_mask(slope, None, cy, spill)
+    m = _ground_mask(slope, None, cy, spill, solid)
     for k in range(1, rise + 1):
         m |= _ground_mask_at(slope, None, cy - k)
     front = near_camera(obs) if split else []
@@ -1206,23 +1231,24 @@ def make_sheet(cells, rows, cols, out):
 #   old: 旧描画位置（レールが高い。古い pak128・SIS）
 # iss と SIS を比べると、どの方位でもレールが画面上で 4〜4.5px 違うだけだった
 TRACK_PROFILES = {
-    "new": {"sheet": "track", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)}},
-    "old": {"sheet": "track_old", "spill": 0, "datums": FLAT},
+    "new": {"sheet": "track", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)}, "snow": True},
+    "old": {"sheet": "track_old", "spill": 0, "datums": FLAT, "snow": True},
     # 試作: 新に、車止め・さび色・雪の絵を足したもの（本体のシートの検証を崩さないよう、別のアドオンにする）
     "trial": {"sheet": "track_trial", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
               "groups": ("body", "structure", "weathering"), "snow": True},
     # 試作: 新に側壁を足したもの。カメラに近い側の壁は手前の絵（frontimage。下の 4 行に同じ並び）
     # 試作: 橋（obj=bridge）。直線と坂（橋の端）だけを描き、床版・側壁（欄干）を足す。橋脚は別のセル
     "bridge": {"sheet": "track_bridge", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
-               "groups": ("body", "wall", "base"), "front_row": 4,
+               "groups": ("body", "wall", "base", "ramp"), "front_row": 4, "snow": True, "solid": True, "band": "elevated",
                "only": ("ns", "ew", "up12", "up9", "up3", "up6", "up2_12", "up2_9", "up2_3", "up2_6"), "piers": True},
-    "wall": {"sheet": "track_wall", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
-             "groups": ("body", "wall", "base"), "front_row": 4},
+    "wall_single": {"sheet": "track_wall_single", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
+                    "groups": ("body", "wall", "base", "structure"), "front_row": 4, "snow": True, "walls": "both"},
 }
 # 側壁と基盤のバリエーション: 両側（単線用）・back（奥だけ）・center（壁なし。中線）・front（手前だけ）。
 # 基盤は、壁のある側は壁まで、壁のない側はタイルの端まで
-for _side in ("back", "center", "front"):
-    TRACK_PROFILES[f"wall_{_side}"] = dict(TRACK_PROFILES["wall"], sheet=f"track_wall_{_side}", walls=_side)
+for _variant in ("back", "center", "front"):
+    TRACK_PROFILES[f"wall_{_variant}"] = dict(TRACK_PROFILES["wall_single"], sheet=f"track_wall_{_variant}", walls=_variant)
+ICON_BADGE = {"both": "S", "back": "B", "center": "C", "front": "F"}  # アイコンの右下の印（single / back / center / front）
 WALL_RISE = 11  # 側壁の高さ（画面の px。持ち分を上へ広げる行数）
 # datums: 基準面ごとの下げ幅（Datum(drop, ground)）。絵の基準位置は両方とも BALLAST_DY（地面の菱形より 1px 上 = 旧の位置）。
 # ground: 下げ幅のうち、地面の上での位置のずれにあたる px（datum_move）。新は道床の輪郭が地面の菱形の中心線より 1px 下
@@ -1289,9 +1315,11 @@ def track_sheet(profile="new"):
         jobs = {k: v for k, v in jobs.items() if v[0] in prof["only"]}
     groups = prof.get("groups", ("body",))
     # 雪の絵は下の 4 行に同じ並びで置く（dat の image[..][1]）。汚れは雪に隠れるので入れない
+    # 行の並び: 奥の絵 4 行 →（手前の絵 4 行）→ 雪の奥の絵 4 行 →（雪の手前の絵 4 行）
+    block = 8 if "front_row" in prof else 4
     variants = [(0, "", None, groups)]
     if prof.get("snow"):
-        variants.append((4, "_snow", SNOW_SKIN, tuple(g for g in groups if g != "weathering")))
+        variants.append((block, "_snow", SNOW_SKIN, tuple(g for g in groups if g != "weathering")))
     for row0, suffix, skin, grp in variants:
         for pos, (name, paths, slope) in jobs.items():
             clear_models()
@@ -1311,19 +1339,14 @@ def track_sheet(profile="new"):
             keep = {"both": lambda ob: True, "center": lambda ob: False,
                     "front": lambda ob: ob in near, "back": lambda ob: ob not in near}[side]
             walls = [ob for ob in obs if ob.get("tall")]
-            kept = [ob for ob in walls if keep(ob)]
-            if name.startswith("diag_") and side in ("back", "front"):
-                # 斜め（iss と同じ）: 角の側の壁は付けない。角と反対側の壁だけが、手前か奥のどちらかの版に出る
-                ref = _centre([ob for ob in obs if not ob.get("tall")])
-                kept = [ob for ob in kept if (_centre([ob]) - ref).dot(ref) < 0]
-            # 壁のない側の基盤（open）: 斜めは壁を外した側、それ以外は手前/奥で決める（back は手前側、front は奥側、center は両方）
+            # 行き止まりの端の壁は、壁のある版ならいつも残す
+            kept = [ob for ob in walls if (side != "center" if ob.name.startswith("endw") else keep(ob))]
+            # 壁のない側の基盤（open）: 手前/奥で決める（back は手前側、front は奥側、center は両方）
             opens = [ob for ob in obs if ob.name.startswith("open")]
             if side == "both":
                 keep_open = []
             elif side == "center":
                 keep_open = opens
-            elif name.startswith("diag_"):
-                keep_open = [ob for ob in opens if ob.name[4:] not in {w.name[4:] for w in kept}]
             else:
                 near_open = near_camera(obs, axis, kind="open", origin=origin)
                 keep_open = [ob for ob in opens if (ob in near_open) == (side == "back")]
@@ -1332,12 +1355,13 @@ def track_sheet(profile="new"):
                 bpy.data.objects.remove(ob, do_unlink=True)
             cname = f"{prof['sheet']}{suffix}_{name}"
             if any(ob.get("tall") for ob in obs):
-                cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, True, exits_of(name),
-                                                                      slope, cy, prof["spill"], WALL_RISE)
+                cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, True, exits_of(name), slope, cy,
+                                                                      prof["spill"], WALL_RISE, prof.get("solid", False))
                 if front:
-                    cells[(pos[0] + prof["front_row"], pos[1])] = front
+                    cells[(pos[0] + row0 + prof["front_row"], pos[1])] = front
             else:
-                cells[(pos[0] + row0, pos[1])] = render_cell(cname, exits_of(name), slope=slope, cy=cy, spill=prof["spill"])
+                cells[(pos[0] + row0, pos[1])] = render_cell(cname, exits_of(name), slope=slope, cy=cy, spill=prof["spill"],
+                                                             solid=prof.get("solid", False))
 
     if prof.get("piers"):
         # 橋脚: 橋の下の地面のタイルに立つ柱（高さ 1 段）。線路の向きに直角に長い。(2, 0) が南北の橋、(2, 1) が東西の橋
@@ -1369,11 +1393,16 @@ def track_sheet(profile="new"):
         clear_models()
         assemble(parts, [straight(S, N)], prof["datums"], groups=groups)
         cells[(0, 1)] = render_cursor("track_trial_cursor", "100", "track")
+    elif "walls" in prof or "band" in prof:
+        # 側壁のバリエーションは右下の印（S・B・C・F）、橋は下の帯で区別する
+        cells[(0, 0)] = render_icon(prof["sheet"] + "_icon", 0.5, shift=(-0.14, 0.2), label="100", style="track",
+                                    badge=ICON_BADGE.get(prof.get("walls")), band=prof.get("band"))
+        cells[(0, 1)] = cells[(0, 2)]
     else:
         cells[(0, 0)] = render_icon("track_icon", 0.5, shift=(-0.14, 0.2), label="100")
         cells[(0, 1)] = cells[(0, 2)]  # カーソルは ns と同じ絵
 
-    rows = 8 if prof.get("snow") or "front_row" in prof else 4
+    rows = block * (2 if prof.get("snow") else 1)
     make_sheet(cells, rows, 10, os.path.join(SRC, prof["sheet"] + ".png"))
 
 
@@ -1552,11 +1581,9 @@ if __name__ == "__main__":
         track_sheet("trial")
     if "track_bridge" in targets:
         track_sheet("bridge")
-    if "track_wall" in targets:
-        track_sheet("wall")
-    for _side in ("back", "center", "front"):
-        if f"track_wall_{_side}" in targets:
-            track_sheet(f"wall_{_side}")
+    for _variant in ("single", "back", "center", "front"):
+        if f"track_wall_{_variant}" in targets:
+            track_sheet(f"wall_{_variant}")
     if "icons" in targets:
         icon_gallery()
     if "road" in targets:
