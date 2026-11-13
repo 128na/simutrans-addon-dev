@@ -1738,7 +1738,11 @@ def tunnel_sheet():
     clear_models()
     assemble(TRACK_PARTS, [straight((0, -12), (0, 12), ext=0.6)], clip=False)
     cells[(0, 0)] = render_icon("track_tunnel_icon", 0.5, shift=(-0.14, 0.2), label="100", style="track", band="tunnel")
-    cells[(0, 1)] = cells[(0, 2)]
+    # カーソル: 口が手前を向いた坑口（BackImage[N]）の奥の絵に手前の絵（躯体）を重ねた 1 枚
+    back, front = load_rgba8(cells[(0, 2)]), load_rgba8(cells[(1, 2)])
+    cursor = np.where(front[..., 3:] >= 128, front, back)
+    cells[(0, 1)] = os.path.join(WORK, "tunnel_cursor.png")
+    save_rgba(cells[(0, 1)], cursor)
     make_sheet(cells, 4, 6, os.path.join(SRC, "track_tunnel.png"))
 
 
