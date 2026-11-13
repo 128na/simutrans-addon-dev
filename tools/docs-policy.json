@@ -1,0 +1,42 @@
+{
+  "$comment": "Phase 0 ベースライン（docs-lint init existing で生成）。現存する現在形 md を一旦すべて livingDocs へ登録した状態。段階的に records/ADR/台帳へ再分類し、本当に「常に最新であるべき」ものだけが living として残るよう縮小していく。",
+  "scanRoots": {
+    "recursive": [
+      "docs"
+    ],
+    "flat": [
+      "."
+    ]
+  },
+  "ledgers": [
+    "docs/dependency-debt.md"
+  ],
+  "recordDirs": [
+    "docs/records"
+  ],
+  "adrDir": "docs/adr",
+  "templateDir": "docs/templates",
+  "forbiddenFileNames": [
+    "INDEX.md",
+    "index.md",
+    "TODO.md"
+  ],
+  "forbiddenDirNames": [
+    "temp",
+    "tmp",
+    "draft",
+    "wip"
+  ],
+  "dependencyDebtHeader": "| Package | Current | Target | Blocker | Type | Revisit condition | Recorded |",
+  "dependencyDebtTypes": [
+    "temporary",
+    "infra",
+    "behavior-change"
+  ],
+  "livingDocs": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "README.md",
+    "docs/README.md"
+  ]
+}
