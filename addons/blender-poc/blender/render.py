@@ -390,6 +390,16 @@ def _wall_shape(s):
 
 TRACK_EXTRAS += tuple(Part(name, "bed", "bed", _M_WALL, _wall_shape(s), "wall", tall=True)
                       for name, s in (("wallL", -1), ("wallR", 1)))
+# 橋: 床版（路盤の下の板）と橋脚。床版は路盤に乗る部品、橋脚は橋の下の地面のタイルに描く別の絵
+DECK_U, DECK_H = 2.45, 0.35
+PIER_W, PIER_L = 1.6, 3.2
+
+
+def _deck_shape(path, k):
+    return sweep(path, [(-DECK_U * k, -DECK_H), (DECK_U * k, -DECK_H), (DECK_U * k, 0.0), (-DECK_U * k, 0.0)])
+
+
+TRACK_EXTRAS += (Part("deck", "bed", "bed", _M_WALL, _deck_shape, "deck"),)
 # 雪の絵（dat の image[..][1]）で差し替える材質。道床とまくらぎに雪が積もり、レールは見える
 SNOW_SKIN = {"ballast": ("snow", (0.90, 0.93, 0.97), 0.9), "sleeper": ("snow_sleeper", (0.80, 0.84, 0.90), 0.9)}
 FLAT = {"bed": Datum(), "rail": Datum()}
@@ -1104,6 +1114,10 @@ TRACK_PROFILES = {
     "trial": {"sheet": "track_trial", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
               "groups": ("body", "structure", "weathering"), "snow": True},
     # 試作: 新に側壁を足したもの。手前の壁は frontimage（下の 1 行。直線だけ）
+    # 試作: 橋（obj=bridge）。直線と坂（橋の端）だけを描き、床版・側壁（欄干）を足す。橋脚は別のセル
+    "bridge": {"sheet": "track_bridge", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
+               "groups": ("body", "wall", "deck"), "front_row": 4,
+               "only": ("ns", "ew", "up12", "up9", "up3", "up6"), "piers": True},
     "wall": {"sheet": "track_wall", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
              "groups": ("body", "wall"), "front_row": 4},
 }
@@ -1169,6 +1183,8 @@ def track_sheet(profile="new"):
     set_anchor(128 + BALLAST_DY)
     cells = {}
     parts = TRACK_PARTS + TRACK_EXTRAS
+    if "only" in prof:
+        jobs = {k: v for k, v in jobs.items() if v[0] in prof["only"]}
     groups = prof.get("groups", ("body",))
     # 雪の絵は下の 4 行に同じ並びで置く（dat の image[..][1]）。汚れは雪に隠れるので入れない
     variants = [(0, "", None, groups)]
@@ -1192,6 +1208,15 @@ def track_sheet(profile="new"):
                     cells[(prof["front_row"], pos[1])] = front
             else:
                 cells[(pos[0] + row0, pos[1])] = render_cell(cname, exits_of(name), slope=slope, cy=cy, spill=prof["spill"])
+
+    if prof.get("piers"):
+        # 橋脚: 橋の下の地面のタイルに立つ柱（高さ 1 段）。線路の向きに直角に長い。(2, 0) が南北の橋、(2, 1) が東西の橋
+        set_anchor(128)
+        for col, (sx, sy) in enumerate(((PIER_L, PIER_W), (PIER_W, PIER_L))):
+            clear_models()
+            mesh_object("pier", *box(0, 0, H / 2, sx, sy, H), material(*_M_WALL))
+            cells[(2, col)] = render_cell(f"{prof['sheet']}_pier{col}")
+        set_anchor(128 + BALLAST_DY)
 
     # 確認用: タイル菱形そのもの（基準位置の検証に使う。シートには入れない）
     set_anchor(128)
@@ -1248,7 +1273,7 @@ def add_label(text, x, y, height, color=(1, 1, 1), align="LEFT", res=ICON):
     obs = []
     # 影（右下に1px）→ 白文字の順に重ねる
     px = scale / res
-    for dx, dy, color, depth in ((px, -px, (0.0, 0.10, 0.08), 9.0), (0, 0, color, 10.0)):
+    for dx, dy, color, depth in ((px, -px, (0.0, 0.18, 0.08), 9.0), (0, 0, color, 10.0)):
         cu = bpy.data.curves.new("label", "FONT")
         cu.body = text
         cu.size = height * scale / 0.72  # 大文字の高さが height になるように
@@ -1387,6 +1412,8 @@ if __name__ == "__main__":
         track_sheet("old")
     if "track_trial" in targets:
         track_sheet("trial")
+    if "track_bridge" in targets:
+        track_sheet("bridge")
     if "track_wall" in targets:
         track_sheet("wall")
     if "icons" in targets:
