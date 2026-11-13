@@ -41,5 +41,17 @@ function pattern(label, w, x0, y0) {
 }
 
 local out = pattern("wall", way_desc_x("bpoc_track_wall"), 20, 120);
+// 複線・3線: 奥だけ壁（back）・壁なし（bpoc_track）・手前だけ壁（front）を並べる。カメラは南東なので、東西の線路は北が奥、南北の線路は西が奥
+local pl = player_x(0);
+local wb = way_desc_x("bpoc_track_wall_back");
+local wf = way_desc_x("bpoc_track_wall_front");
+local wn = way_desc_x("bpoc_track");
+out += r("dbl ew back", command_x.build_way(pl, coord3d(20, 140, 0), coord3d(26, 140, 0), wb, true));
+out += r("dbl ew front", command_x.build_way(pl, coord3d(20, 141, 0), coord3d(26, 141, 0), wf, true));
+out += r("dbl ns back", command_x.build_way(pl, coord3d(30, 138, 0), coord3d(30, 144, 0), wb, true));
+out += r("dbl ns front", command_x.build_way(pl, coord3d(31, 138, 0), coord3d(31, 144, 0), wf, true));
+out += r("tri ew back", command_x.build_way(pl, coord3d(20, 146, 0), coord3d(26, 146, 0), wb, true));
+out += r("tri ew none", command_x.build_way(pl, coord3d(20, 147, 0), coord3d(26, 147, 0), wn, true));
+out += r("tri ew front", command_x.build_way(pl, coord3d(20, 148, 0), coord3d(26, 148, 0), wf, true));
 gui.close_all_windows();
 return out;

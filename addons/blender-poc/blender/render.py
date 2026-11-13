@@ -311,6 +311,7 @@ class Part:
     group: str = "body"
     where: str = "path"  # path: 経路に沿う。end: 経路の始点（行き止まりの端）に置く。assemble(ends=True) のときだけ作る
     tall: bool = False   # 高さのある部品。タイルちょうどに切り、持ち分を上へ広げた層として別に描く（render_layers）
+    corridor: float = 0.0  # 分岐・十字で、ほかの経路の通り道（中心からこの幅）に入る部分を削る（側壁が線路を横切らないように）
 
 
 def _bed_shape(path, k):
@@ -388,7 +389,7 @@ def _wall_shape(s):
     return shape
 
 
-TRACK_EXTRAS += tuple(Part(name, "bed", "bed", _M_WALL, _wall_shape(s), "wall", tall=True)
+TRACK_EXTRAS += tuple(Part(name, "bed", "bed", _M_WALL, _wall_shape(s), "wall", tall=True, corridor=WALL_U)
                       for name, s in (("wallL", -1), ("wallR", 1)))
 # 橋: 床版（路盤の下の板）と橋脚。床版は路盤に乗る部品、橋脚は橋の下の地面のタイルに描く別の絵
 DECK_U, DECK_H = 2.45, 0.35
@@ -454,6 +455,18 @@ def assemble(parts, paths, datums=FLAT, slope=None, clip=True, widths=None, div=
             if geo is None:
                 continue
             ob = mesh_object(f"{part.name}{i}", *geo, material(*skin.get(part.name, part.material)))
+            if part.corridor and len(paths) > 1:
+                # ほかの経路の通り道に入る部分を削る。残るのは、通り道の集まりの外側の縁に立つ壁だけ
+                w = part.corridor * widths.get(part.width, 1.0) - 0.02
+                prof = [(-w, -1.0), (w, -1.0), (w, 3.0), (-w, 3.0)]
+                cutter = mesh_object("corridor", *merge([sweep(q, prof) for j, q in enumerate(paths) if j != i]),
+                                     material(*part.material))
+                recalc_normals(cutter)
+                boolean(ob, cutter)
+                bpy.data.objects.remove(cutter, do_unlink=True)
+                if not ob.data.polygons:
+                    bpy.data.objects.remove(ob, do_unlink=True)
+                    continue
             # 動かすのは坂を当てて切り抜く前（切り抜きの余白より動く量が大きいので、後だと端が欠ける）
             move = moves[part.datum]
             if move is not None:
@@ -466,7 +479,37 @@ def assemble(parts, paths, datums=FLAT, slope=None, clip=True, widths=None, div=
             apply_slope(ob, slope)
         if clip:
             clip_to_tile(ob, TALL_PAD if ob.get("tall") else CLIP_PAD)
+            if ob.get("tall"):
+                open_ends(ob, TALL_PAD)
     return obs
+
+
+def open_ends(ob, pad):
+    """タイルの境で切った切り口の面を取る。切り口の面は壁の側面より暗く映り、隣のタイルの壁との境に縦線で見えた。
+    行き止まりの端（タイルの中にある端）の面は残る。"""
+    lim = TILE / 2 + pad
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    dead = [f for f in bm.faces if any(all(abs(v.co[a] - s * lim) < 1e-4 for v in f.verts) for a in (0, 1) for s in (1, -1))]
+    bmesh.ops.delete(bm, geom=dead, context="FACES")
+    bm.to_mesh(ob.data)
+    bm.free()
+    ob.data.update()
+
+
+def near_camera(obs):
+    """高さのある部品のうち、カメラに近い側のもの（重心が本体の重心よりカメラ側）。直線・坂・行き止まり・カーブ・横向きの斜めで決まる。
+    画面で縦向きの斜めは左右に並ぶので、どちらも奥として扱う"""
+    rot = bpy.context.scene.camera.rotation_euler.to_matrix()
+    fwd = rot @ Vector((0, 0, -1))
+    toward = -Vector((fwd.x, fwd.y, 0)).normalized()
+
+    def centre(objs):
+        vs = [v.co for ob in objs for v in ob.data.vertices]
+        return sum(vs, Vector()) / max(1, len(vs))
+
+    ref = centre([ob for ob in obs if not ob.get("tall")])
+    return [ob for ob in obs if ob.get("tall") and (centre([ob]) - ref).dot(toward) > 0.3]
 
 
 def apply_slope(ob, slope):
@@ -996,18 +1039,7 @@ def render_layers(name, obs, split, exits, slope, cy, spill, rise):
     m = _ground_mask(slope, None, cy, spill)
     for k in range(1, rise + 1):
         m |= _ground_mask_at(slope, None, cy - k)
-    rot = bpy.context.scene.camera.rotation_euler.to_matrix()
-    fwd = rot @ Vector((0, 0, -1))
-    # 手前の部品: 重心が本体の重心よりカメラ側にあるもの（直線・坂・行き止まり・カーブ・横向きの斜め）。
-    # 画面で縦向きの斜めは左右に並ぶので、どちらも奥の絵に入れる
-    toward = -Vector((fwd.x, fwd.y, 0)).normalized()
-
-    def centre(objs):
-        vs = [v.co for ob in objs for v in ob.data.vertices]
-        return sum(vs, Vector()) / max(1, len(vs))
-
-    ref = centre(body)
-    front = [ob for ob in tall if split and (centre([ob]) - ref).dot(toward) > 0.3]
+    front = near_camera(obs) if split else []
 
     def layer(objs, suffix):
         for ob in tall:
@@ -1129,6 +1161,9 @@ TRACK_PROFILES = {
     "wall": {"sheet": "track_wall", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
              "groups": ("body", "wall"), "front_row": 4},
 }
+# 側壁のバリエーション: single（両側。単線用）・back（奥だけ）・front（手前だけ）。壁なし（中線）は本体の線路を使う
+for _side in ("back", "front"):
+    TRACK_PROFILES[f"wall_{_side}"] = dict(TRACK_PROFILES["wall"], sheet=f"track_wall_{_side}", walls=_side)
 WALL_RISE = 11  # 側壁の高さ（画面の px。持ち分を上へ広げる行数）
 # datums: 基準面ごとの下げ幅（Datum(drop, ground)）。絵の基準位置は両方とも BALLAST_DY（地面の菱形より 1px 上 = 旧の位置）。
 # ground: 下げ幅のうち、地面の上での位置のずれにあたる px（datum_move）。新は道床の輪郭が地面の菱形の中心線より 1px 下
@@ -1204,10 +1239,15 @@ def track_sheet(profile="new"):
             # 画面で横向きの斜め（nw・se）は下げ幅を半分にする（datum_move の div）。斜めは横幅も細くする
             div = 2 if name in ("diag_nw", "diag_se") else 1
             widths = {"gauge": DIAG_RAIL, "bed": DIAG_BALLAST} if name.startswith("diag_") else None
-            # 分岐・十字は、壁が線路を横切るので壁を付けない
-            g = tuple(x for x in grp if x != "wall") if len(paths) > 1 else grp
-            obs = assemble(parts, paths, prof["datums"], slope, widths=widths, div=div, groups=g,
+            obs = assemble(parts, paths, prof["datums"], slope, widths=widths, div=div, groups=grp,
                            ends=name in ("s", "w", "n", "e"), skin=skin)
+            # 側壁のバリエーション（複線以上を並べて作るとき用）: back はカメラから遠い側の壁だけ、front は近い側の壁だけ
+            side = prof.get("walls", "both")
+            if side != "both":
+                near = near_camera(obs)
+                for ob in [ob for ob in obs if ob.get("tall") and ((ob in near) != (side == "front"))]:
+                    obs.remove(ob)
+                    bpy.data.objects.remove(ob, do_unlink=True)
             cname = f"{prof['sheet']}{suffix}_{name}"
             if any(ob.get("tall") for ob in obs):
                 cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, True, exits_of(name),
@@ -1424,6 +1464,9 @@ if __name__ == "__main__":
         track_sheet("bridge")
     if "track_wall" in targets:
         track_sheet("wall")
+    for _side in ("back", "front"):
+        if f"track_wall_{_side}" in targets:
+            track_sheet(f"wall_{_side}")
     if "icons" in targets:
         icon_gallery()
     if "road" in targets:
