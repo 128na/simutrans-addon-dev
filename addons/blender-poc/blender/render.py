@@ -309,6 +309,7 @@ class Part:
     material: tuple
     shape: Callable
     group: str = "body"
+    where: str = "path"  # path: 経路に沿う。end: 経路の始点（行き止まりの端）に置く。assemble(ends=True) のときだけ作る
 
 
 def _bed_shape(path, k):
@@ -337,7 +338,50 @@ TRACK_PARTS = (
     Part("railL", "rail", "gauge", _M_RAIL, _rail_shape(-1)),
     Part("railR", "rail", "gauge", _M_RAIL, _rail_shape(1)),
 )
+
+
+def _stop_shape(sy, sz, z, sx=0.2, back=0.0):
+    """車止めの箱。行き止まりの端（経路の始点）から線路の側へ 0.7 入った所に、線路を横切る向きで置く。"""
+    def shape(path, k):
+        d = (path[1] - path[0]).normalized()
+        c = path[0] + d * (0.7 - back)
+        return box(c.x, c.y, z, sx, sy * k, sz, rot=math.atan2(d.y, d.x))
+    return shape
+
+
+def _strip_shape(u0, u1, z, th=0.004):
+    """経路に沿った薄い帯（中心から u0〜u1、左右対称に2本）。面の上の色の違い（さび・わだち・光る頭）に使う。"""
+    def shape(path, k):
+        return merge([sweep(path, [(s * u0 * k, z), (s * u1 * k, z), (s * u1 * k, z + th), (s * u0 * k, z + th)][::s])
+                      for s in (1, -1)])
+    return shape
+
+
+_M_STEEL = ("rail_top", (0.78, 0.79, 0.80), 0.25, 0.9)
+# 立体パーツ・汚れ（TRACK_PROFILES の groups で選ぶ。本体のシートには入れていない）
+TRACK_EXTRAS = (
+    # 車止め: 柱2本 + 横木（赤）+ 中央の白い印
+    Part("stop_postL", "rail", "gauge", ("stop_post", (0.20, 0.20, 0.22)),
+         lambda path, k: _stop_shape(0.16, 0.75, RAIL_Z0 + 0.375, back=0.12)([path[0] + _side(path, 0.47 * k), path[1] + _side(path, 0.47 * k)], 1),
+         "structure", "end"),
+    Part("stop_postR", "rail", "gauge", ("stop_post", (0.20, 0.20, 0.22)),
+         lambda path, k: _stop_shape(0.16, 0.75, RAIL_Z0 + 0.375, back=0.12)([path[0] - _side(path, 0.47 * k), path[1] - _side(path, 0.47 * k)], 1),
+         "structure", "end"),
+    Part("stop_beam", "rail", "gauge", ("stop_beam", (0.75, 0.10, 0.08)), _stop_shape(1.7, 0.36, RAIL_Z0 + 0.68), "structure", "end"),
+    Part("stop_mark", "rail", "gauge", ("stop_mark", (0.92, 0.92, 0.90)), _stop_shape(0.5, 0.38, RAIL_Z0 + 0.68, sx=0.22), "structure", "end"),
+    # さび色: レールの両脇の道床に鉄粉が散る。レールの頭は車輪で磨かれて光る
+    Part("rust", "rail", "gauge", ("rust", (0.47, 0.31, 0.21)), _strip_shape(RAIL_IN - 0.24, RAIL_OUT + 0.24, BALLAST_H), "weathering"),
+    Part("rail_top", "rail", "gauge", _M_STEEL, _strip_shape(RAIL_IN - 0.03, RAIL_OUT + 0.03, RAIL_Z1, 0.02), "weathering"),
+)
+# 雪の絵（dat の image[..][1]）で差し替える材質。道床とまくらぎに雪が積もり、レールは見える
+SNOW_SKIN = {"ballast": ("snow", (0.90, 0.93, 0.97), 0.9), "sleeper": ("snow_sleeper", (0.80, 0.84, 0.90), 0.9)}
 FLAT = {"bed": Datum(), "rail": Datum()}
+
+
+def _side(path, u):
+    """経路の始点で、進む向きに直角な向きへ u。"""
+    d = (path[1] - path[0]).normalized()
+    return Vector((d.y, -d.x)) * u
 
 
 def datum_move(datum, slope=None, div=1):
@@ -367,20 +411,22 @@ def datum_move(datum, slope=None, div=1):
     return px * ((d - ground) / c + ground)
 
 
-def assemble(parts, paths, datums=FLAT, slope=None, clip=True, widths=None, div=1, groups=("body",)):
+def assemble(parts, paths, datums=FLAT, slope=None, clip=True, widths=None, div=1, groups=("body",), ends=False, skin=None):
     """部品を経路ごとに作り、乗っている基準面の分だけ動かし、slope(x,y)->z で傾け、タイルの外を切り落とす。
-    widths は横幅の倍率（Part.width → 倍率。無いものは 1）。"""
+    widths は横幅の倍率（Part.width → 倍率。無いものは 1）。ends は経路の始点が行き止まりの端か（where="end" の部品を作る）。
+    skin は材質の差し替え（部品の名前 → material() の引数。雪など）。"""
+    skin = skin or {}
     widths = widths or {}
     moves = {k: datum_move(d, slope, div) for k, d in datums.items()}
     obs = []
     for i, path in enumerate(paths):
         for part in parts:
-            if part.group not in groups:
+            if part.group not in groups or (part.where == "end" and not ends):
                 continue
             geo = part.shape(path, widths.get(part.width, 1.0))
             if geo is None:
                 continue
-            ob = mesh_object(f"{part.name}{i}", *geo, material(*part.material))
+            ob = mesh_object(f"{part.name}{i}", *geo, material(*skin.get(part.name, part.material)))
             # 動かすのは坂を当てて切り抜く前（切り抜きの余白より動く量が大きいので、後だと端が欠ける）
             move = moves[part.datum]
             if move is not None:
@@ -990,6 +1036,9 @@ def make_sheet(cells, rows, cols, out):
 TRACK_PROFILES = {
     "new": {"sheet": "track", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)}},
     "old": {"sheet": "track_old", "spill": 0, "datums": FLAT},
+    # 試作: 新に、車止め・さび色・雪の絵を足したもの（本体のシートの検証を崩さないよう、別のアドオンにする）
+    "trial": {"sheet": "track_trial", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
+              "groups": ("body", "structure", "weathering"), "snow": True},
 }
 # datums: 基準面ごとの下げ幅（Datum(drop, ground)）。絵の基準位置は両方とも BALLAST_DY（地面の菱形より 1px 上 = 旧の位置）。
 # ground: 下げ幅のうち、地面の上での位置のずれにあたる px（datum_move）。新は道床の輪郭が地面の菱形の中心線より 1px 下
@@ -1051,13 +1100,22 @@ def track_sheet(profile="new"):
     cy = GROUND_CY
     set_anchor(128 + BALLAST_DY)
     cells = {}
-    for pos, (name, paths, slope) in jobs.items():
-        clear_models()
-        # 画面で横向きの斜め（nw・se）は下げ幅を半分にする（datum_move の div）。斜めは横幅も細くする
-        div = 2 if name in ("diag_nw", "diag_se") else 1
-        widths = {"gauge": DIAG_RAIL, "bed": DIAG_BALLAST} if name.startswith("diag_") else None
-        assemble(TRACK_PARTS, paths, prof["datums"], slope, widths=widths, div=div)
-        cells[pos] = render_cell(f"{prof['sheet']}_{name}", exits_of(name), slope=slope, cy=cy, spill=prof["spill"])
+    parts = TRACK_PARTS + TRACK_EXTRAS
+    groups = prof.get("groups", ("body",))
+    # 雪の絵は下の 4 行に同じ並びで置く（dat の image[..][1]）。汚れは雪に隠れるので入れない
+    variants = [(0, "", None, groups)]
+    if prof.get("snow"):
+        variants.append((4, "_snow", SNOW_SKIN, tuple(g for g in groups if g != "weathering")))
+    for row0, suffix, skin, grp in variants:
+        for pos, (name, paths, slope) in jobs.items():
+            clear_models()
+            # 画面で横向きの斜め（nw・se）は下げ幅を半分にする（datum_move の div）。斜めは横幅も細くする
+            div = 2 if name in ("diag_nw", "diag_se") else 1
+            widths = {"gauge": DIAG_RAIL, "bed": DIAG_BALLAST} if name.startswith("diag_") else None
+            assemble(parts, paths, prof["datums"], slope, widths=widths, div=div, groups=grp,
+                     ends=name in ("s", "w", "n", "e"), skin=skin)
+            cells[(pos[0] + row0, pos[1])] = render_cell(f"{prof['sheet']}{suffix}_{name}", exits_of(name), slope=slope,
+                                                         cy=cy, spill=prof["spill"])
 
     # 確認用: タイル菱形そのもの（基準位置の検証に使う。シートには入れない）
     set_anchor(128)
@@ -1074,20 +1132,36 @@ def track_sheet(profile="new"):
     # アイコン: 線路を大きく斜めに通し、左上に最高速度を書く
     clear_models()
     assemble(TRACK_PARTS, [straight((0, -12), (0, 12), ext=0.6)], clip=False)
-    cells[(0, 0)] = render_icon("track_icon", 0.5, shift=(-0.14, 0.2), label="100")
-    cells[(0, 1)] = cells[(0, 2)]  # カーソルは ns と同じ絵
+    if profile == "trial":
+        cells[(0, 0)] = render_icon("track_trial_icon", 0.5, shift=(-0.14, 0.2), label="100", style="track", badge="T")
+        # カーソル: 直線の絵の上に、最高速度を書く（アイコンと同じ色の札）
+        clear_models()
+        assemble(parts, [straight(S, N)], prof["datums"], groups=groups)
+        cells[(0, 1)] = render_cursor("track_trial_cursor", "100", "track")
+    else:
+        cells[(0, 0)] = render_icon("track_icon", 0.5, shift=(-0.14, 0.2), label="100")
+        cells[(0, 1)] = cells[(0, 2)]  # カーソルは ns と同じ絵
 
-    make_sheet(cells, 4, 10, os.path.join(SRC, prof["sheet"] + ".png"))
+    make_sheet(cells, 8 if prof.get("snow") else 4, 10, os.path.join(SRC, prof["sheet"] + ".png"))
 
 
 ICON = 32
 ICON_SS = 4  # 4倍の大きさで描いて縮小し、輪郭をなめらかにする
 LABEL_FONT = "C:/Windows/Fonts/arialbd.ttf"  # 無ければ Blender 標準の字体
 ICON_BG = ((0, 196, 96), (0, 112, 56))  # iss のアイコンに合わせた緑（左上→右下）
+# アイコンのシリーズ: 背景色は waytype で決める（左上→右下）。文字は左上に最高速度、右下に種類の印（badge）、
+# 下の帯（band）は地上/高架などの構造の違い。同じ決まりで並べると、ツールバーで種類の違いが色・数字・印で分かる
+ICON_STYLES = {
+    "track": {"bg": ICON_BG},
+    "road": {"bg": ((96, 132, 196), (40, 64, 120))},
+    "expressway": {"bg": ((70, 90, 190), (24, 30, 96))},
+    "tram": {"bg": ((196, 150, 0), (120, 84, 0))},
+}
+ICON_BANDS = {"elevated": (200, 200, 205), "tunnel": (60, 50, 44)}  # 下の帯の色（地上は帯なし）
 
 
-def add_label(text, x, y, height):
-    """カメラの手前に文字を置く。x, y は 0〜1 の画面位置（左上が0）、height も画面比。"""
+def add_label(text, x, y, height, color=(1, 1, 1), align="LEFT", res=ICON):
+    """カメラの手前に文字を置く。x, y は 0〜1 の画面位置（左上が0）、height も画面比。res は絵の一辺の px（影を 1px ずらす）。"""
     sc = bpy.context.scene
     cam = sc.camera
     scale = cam.data.ortho_scale
@@ -1096,12 +1170,13 @@ def add_label(text, x, y, height):
     shift = Vector((cam.data.shift_x, cam.data.shift_y))
     obs = []
     # 影（右下に1px）→ 白文字の順に重ねる
-    px = scale / ICON
-    for dx, dy, color, depth in ((px, -px, (0.0, 0.18, 0.08), 9.0), (0, 0, (1, 1, 1), 10.0)):
+    px = scale / res
+    for dx, dy, color, depth in ((px, -px, (0.0, 0.10, 0.08), 9.0), (0, 0, color, 10.0)):
         cu = bpy.data.curves.new("label", "FONT")
         cu.body = text
         cu.size = height * scale / 0.72  # 大文字の高さが height になるように
         cu.align_y = "TOP"
+        cu.align_x = align
         if os.path.exists(LABEL_FONT):
             cu.font = bpy.data.fonts.load(LABEL_FONT, check_existing=True)
         ob = bpy.data.objects.new("label", cu)
@@ -1123,8 +1198,30 @@ def add_label(text, x, y, height):
     return obs
 
 
-def render_icon(name, zoom, shift=(0.0, 0.0), label=None):
-    """今のモデルをアイコンにする。背景を塗り、文字を重ね、セルの左上 32x32 に置く。"""
+def render_cursor(name, label, style):
+    """今のモデル（1タイル分の絵）をカーソルにする。タイルの上に、アイコンと同じ背景色の札と文字を足す。
+    選んでいる物が何かは札の色（waytype）と文字（最高速度など）で分かる。"""
+    c0, c1 = ICON_STYLES[style]["bg"]
+    labels = add_label(label, 0.5, 0.325, 0.045, align="CENTER", res=CELL)
+    rgba = load_rgba8(render_cell(name)).copy()
+    for ob in labels:
+        bpy.data.objects.remove(ob, do_unlink=True)
+    # 札: 文字の後ろの角丸でない四角（文字は不透明な所だけ上に残す）
+    text = rgba[76:100, 96:160].copy()
+    yy = np.linspace(0, 1, 18)[:, None, None]
+    plate = (np.array(c0) * (1 - yy) + np.array(c1) * yy).astype(np.uint8) * np.ones((18, 44, 1), np.uint8)
+    rgba[79:97, 106:150, :3] = plate
+    rgba[79:97, 106:150, 3] = 255
+    a = text[..., 3:4].astype(np.float32) / 255
+    rgba[76:100, 96:160, :3] = (text[..., :3] * a + rgba[76:100, 96:160, :3] * (1 - a)).astype(np.uint8)
+    path = os.path.join(WORK, name + "_cell.png")
+    save_rgba(path, rgba)
+    return path
+
+
+def render_icon(name, zoom, shift=(0.0, 0.0), label=None, style=None, badge=None, band=None):
+    """今のモデルをアイコンにする。背景を塗り、文字を重ね、セルの左上 32x32 に置く。
+    style は ICON_STYLES の名前（背景色）、badge は右下の短い印、band は ICON_BANDS の名前（下の帯）。"""
     sc = bpy.context.scene
     cam = sc.camera.data
     saved = (cam.shift_x, cam.shift_y)
@@ -1133,6 +1230,8 @@ def render_icon(name, zoom, shift=(0.0, 0.0), label=None):
     cam.ortho_scale = TILE * math.sqrt(2) * zoom
     cam.shift_x, cam.shift_y = shift
     labels = add_label(label, 0.07, 0.07, 0.44) if label else []
+    if badge:
+        labels += add_label(badge, 0.93, 0.62, 0.30, color=(1.0, 0.9, 0.2), align="RIGHT")
     big = load_rgba8(render_cell(name)).astype(np.float32) / 255
     for ob in labels:
         bpy.data.objects.remove(ob, do_unlink=True)
@@ -1142,10 +1241,12 @@ def render_icon(name, zoom, shift=(0.0, 0.0), label=None):
 
     # 背景のグラデーションに重ねる
     t = (np.add.outer(np.arange(size), np.arange(size)) / (2 * size - 2))[..., None]
-    c0, c1 = (np.array(c, np.float32) / 255 for c in ICON_BG)
+    c0, c1 = (np.array(c, np.float32) / 255 for c in (ICON_STYLES[style]["bg"] if style else ICON_BG))
     bg = c0 * (1 - t) + c1 * t
     a = big[..., 3:4]
     rgb = big[..., :3] * a + bg * (1 - a)
+    if band:  # 帯は絵の上に重ねる（下に敷くと道の絵に隠れる）
+        rgb[int(size * 0.84):] = np.array(ICON_BANDS[band], np.float32) / 255
     small = rgb.reshape(ICON, ICON_SS, ICON, ICON_SS, 3).mean(axis=(1, 3))
     icon = np.concatenate([small, np.ones((ICON, ICON, 1), np.float32)], axis=2)
     cell = np.zeros((CELL, CELL, 4), np.uint8)
@@ -1163,6 +1264,24 @@ def save_rgba(path, rgba):
     img.file_format = "PNG"
     img.save()
     bpy.data.images.remove(img)
+
+
+def icon_gallery():
+    """アイコンのシリーズの見本（work/icon_gallery.png）。同じ線路・道路の絵で、背景色・数字・印・帯だけを変えて並べる。"""
+    samples = [("track", "100", None, None), ("track", "160", None, "elevated"), ("track", "80", "T", "tunnel"),
+               ("tram", "60", None, None), ("road", "50", None, None), ("road", "50", None, "elevated"),
+               ("expressway", "120", None, None), ("expressway", "120", None, "elevated")]
+    tiles = []
+    for i, (style, label, badge, band) in enumerate(samples):
+        clear_models()
+        if style in ("track", "tram"):
+            assemble(TRACK_PARTS, [straight((0, -12), (0, 12), ext=0.6)], clip=False)
+        else:
+            build_road([straight((0, -12), (0, 12), ext=0.6)], [], clip=False, size=(TILE, 26), sidewalk=style == "road")
+        cell = load_rgba8(render_icon(f"gallery{i}", 0.5, shift=(-0.14, 0.2), label=label, style=style, badge=badge, band=band))
+        tiles.append(cell[:ICON, :ICON].repeat(6, 0).repeat(6, 1))
+        tiles.append(np.full((ICON * 6, 6, 4), 255, np.uint8))
+    save_rgba(os.path.join(WORK, "icon_gallery.png"), np.concatenate(tiles[:-1], 1))
 
 
 def tollbooth_sheet():
@@ -1189,6 +1308,10 @@ if __name__ == "__main__":
         track_sheet("new")
     if "track_old" in targets:
         track_sheet("old")
+    if "track_trial" in targets:
+        track_sheet("trial")
+    if "icons" in targets:
+        icon_gallery()
     if "road" in targets:
         road_sheet()
     if "expressway" in targets:
