@@ -71,7 +71,7 @@
 | トンネルの `image[N]` | 北が高い坂のタイル | `descriptor/tunnel_desc.cc` |
 | トンネルの坑口 | pak128 では 2 段の坂にしか置けない | `bauer/tunnelbauer.cc` |
 | 地形の坂の番号 | 角の桁は sw=1・se=3・ne=9・nw=27。1 段の北が高い坂は 36、南 4、東 12、西 28（2 段は 2 倍） | blender-poc の `ingame/*.nut` で確認 |
-| 高架 | dat は `system_type=1` | blender-poc の `src/track_elev_*.dat` |
+| 高架 | dat は `system_type=1`。平地に敷くと way は地面の 2 段上（`z+2`）のタイルに乗る（pak128）。スクリプトで高架のタイルに道具を使うときはその高さを渡す | blender-poc の `src/track_elev_*.dat`。`ingame/switch_all.nut` で `get_tile_at_height` を見た（2026-11-14） |
 | スクリプトからの `change_schedule` | 通らない（車両との重なりは手で走らせて見る） | [records](../records/2026-11-13_otrp-script-change-schedule.md) |
 
 見本のスクリプトで坂の向きを逆に指定すると、橋が架からない（絵の問題ではない）。
@@ -106,6 +106,7 @@
 - ゲーム: 急坂のある所へ `gui.jump` すると、画面の縦の位置が見当から大きくずれる（急坂の十字で 64px）
 - ゲーム: 坂の見本の斜め隣を崖のままにすると、崖の岩が草の色の判定に掛からず、道床の縁が測れない。角だけ上げた坂にする
 - ゲーム: OTRP 本体を手元でビルドした `../simutrans/build/default/sim.exe` は MSYS2 の DLL を使う。`/c/msys64/mingw64/bin` を PATH に足して起動しないと、`libpng16-16.dll` が無いと言って起動しない
+- ゲーム: MCP の `run_squirrel` で渡したスクリプトの中の日本語の文字列は、`選` が `u9078` のような形に崩れる。名札（`tool_set_marker`）など画面に出す文字は ASCII にする
 - シェル: 標準入力で Python に日本語を流すと cp932 で壊れる。heredoc で `\\n` を含む文字列を書くと改行が壊れることがある
 
 ## 9. 分岐（switch）の絵（OTRP 専用）

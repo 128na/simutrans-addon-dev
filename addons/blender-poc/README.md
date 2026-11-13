@@ -30,8 +30,9 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 | `blender/icons_only.py` | 線路のシートのアイコンだけを描き直して差し替える |
 | `blender/hcat.py` | ゲームの画面を横に並べて 1 枚にする |
 | `ingame/full.nut`・`ingame/full_check.sh` | 全方位の表示確認。way の絵 28 種類を周りとつながった形で出す最小のレイアウトを敷き、way ごとに 5 か所を撮って並べる |
-| `ingame/switch.nut`・`switch_auto.nut` | 分岐の絵（OTRP の switch 画像）の見本。固定した T字・十字と、自動選択で枝が曲がる 8 通り |
-| `ingame/switch_check.sh` | 分岐の絵を手で確かめる準備。pak を入れ、固定の道具がある OTRP のビルドを MCP つきで起動して 2 つの見本を敷く（`GAME_DIR=… EXE=… bash ingame/switch_check.sh`） |
+| `ingame/switch_all.nut` | 分岐の絵（OTRP の switch 画像）を線路の 11 アドオンで全部見る見本。空の平らなマップ（`flat2.sve`）に way ごとに 1 行、標準・選択 1・選択 2 に固定した T字と十字、自動選択の 8 通りを名札つきで敷く |
+| `ingame/switch_auto.nut` | 自動選択の 8 通りだけを `bpoc_track` で敷く（`flat.sve` の y=120） |
+| `ingame/switch_check.sh` | 分岐の絵を手で確かめる準備。pak を入れ、固定の道具がある OTRP のビルドを MCP つきで `flat2` で起動し、`switch_all.nut` を敷く（`GAME_DIR=… EXE=… bash ingame/switch_check.sh`） |
 | `ingame/wall.nut`・`elev.nut`・`bridge.nut`・`tunnel.nut`・`trial.nut` | 側壁・高架・橋・トンネル・試作の見本（複線の並び、行き止まり、橋の端、坑口） |
 | `ingame/train.nut` | 車両を走らせる確認（未完成。ダイヤの設定が通らない） |
 | `src/track_wall_*.dat`・`track_elev_*.dat` | 側壁付きの線路・高架。`single`（両側の壁）・`back`（奥だけ）・`center`（なし）・`front`（手前だけ） |
@@ -791,6 +792,7 @@ pak に入れるときの `makeobj` の引数は、上の「ビルド」の行�
 - 確かめたこと:
   - 描き直した 11 枚のシートで、元からあるセルが前と全画素同じ（試作だけはアイコンとカーソルのセルが今の作りに描き直された）
   - 自動選択（`ingame/switch_auto.nut`）: 本線の途中から枝を出して隣で曲げる 8 通りで、分岐のカーブが隣のカーブへなめらかにつながった（`docs/trial_switch_auto.png`。4 通りを並べた）
-  - 固定（`ingame/switch.nut`）: 輪に十字を入れた T字 4 つと十字を選択 1・2 に固定し、絵が変わることを見た（`docs/trial_switch_pinned.png`。左が 1、右が 2）
+  - 固定: 輪に十字を入れた T字 4 つと十字を選択 1・2 に固定し、絵が変わることを見た（`docs/trial_switch_pinned.png`。左が 1、右が 2）。
+    今は `ingame/switch_all.nut` が線路の 11 アドオンを全部敷く（高架も固定できる）
   - 確かめたビルドは、固定の道具が入った OTRP の本体（`../simutrans/build/default/sim.exe`。起動の注意はリファレンスの 8 章）
 - 残り: 十字の 1・2 がタイルの詳細の「渡り線 A・B」のどちらに当たるか。列車の予約で絵が切り替わる所は見ていない。ex 画像（Y字分岐・複線渡り線）は今の makeobj では書けない
