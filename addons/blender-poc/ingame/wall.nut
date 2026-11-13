@@ -84,5 +84,14 @@ out += r("st back", stair(pl, wb, 20, 207, 5, 1));
 out += r("st2 back", stair(pl, wb, 20, 227, 5, -1));
 out += r("st2 none", stair(pl, wn, 21, 228, 5, -1));
 out += r("st2 front", stair(pl, wf, 22, 229, 5, -1));
+// 直角カーブの 3 線（x=100〜, y=20〜）: 東西の区間は北が奥、南北の区間は西が奥なので、外側の線路は角から先を front に、内側の線路は back に切り替える
+out += r("L outer ew", command_x.build_way(pl, coord3d(100, 20, 0), coord3d(106, 20, 0), wb, true));
+out += r("L outer ns", command_x.build_way(pl, coord3d(107, 20, 0), coord3d(107, 27, 0), wf, true));
+out += r("L outer join", command_x.build_way(pl, coord3d(106, 20, 0), coord3d(107, 20, 0), wf, true));
+out += r("L mid", command_x.build_way(pl, coord3d(100, 21, 0), coord3d(106, 21, 0), wn, true));
+out += r("L mid2", command_x.build_way(pl, coord3d(106, 21, 0), coord3d(106, 27, 0), wn, true));
+out += r("L inner ew", command_x.build_way(pl, coord3d(100, 22, 0), coord3d(104, 22, 0), wf, true));
+out += r("L inner ns", command_x.build_way(pl, coord3d(105, 22, 0), coord3d(105, 27, 0), wb, true));
+out += r("L inner join", command_x.build_way(pl, coord3d(104, 22, 0), coord3d(105, 22, 0), wb, true));
 gui.close_all_windows();
 return out;

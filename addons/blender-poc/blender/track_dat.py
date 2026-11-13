@@ -59,8 +59,8 @@ cursor=track_bridge.0.1,-64,-32
 """
     cells = {
         "Image[NS]": (0, 2), "Image[EW]": (0, 3),
-        "Start[N]": (0, 2), "Start[S]": (0, 2), "Start[E]": (0, 3), "Start[W]": (0, 3),
-        "Start2[N]": (0, 2), "Start2[S]": (0, 2), "Start2[E]": (0, 3), "Start2[W]": (0, 3),
+        "Start[N]": (3, 0), "Start[S]": (3, 1), "Start[E]": (3, 2), "Start[W]": (3, 3),
+        "Start2[N]": (3, 5), "Start2[S]": (3, 6), "Start2[E]": (3, 7), "Start2[W]": (3, 8),
         "Ramp[N]": (1, 0), "Ramp[W]": (1, 1), "Ramp[S]": (1, 2), "Ramp[E]": (1, 3),
         "Ramp2[N]": (1, 5), "Ramp2[W]": (1, 6), "Ramp2[S]": (1, 7), "Ramp2[E]": (1, 8),
     }
