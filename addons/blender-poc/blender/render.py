@@ -1683,10 +1683,12 @@ def icon_gallery():
 
 
 # ---- トンネル（obj=tunnel）: 坂のタイルに置く坑口。奥の絵 = 線路と暗い内側、手前の絵 = 坑口の躯体（車両を隠す）
-TUNNEL_FACE = 3.0     # 低い側の辺から坑口の面までの距離
-TUNNEL_BORE = (1.7, 2.0)    # 穴の半幅と高さ
-TUNNEL_HOOD = (3.0, 2.8)    # 躯体の半幅と高さ
-TUNNEL_RISE = 26      # 躯体の高さ（画面の px。持ち分を上へ広げる行数）
+# 手本（pak128 標準の rail_100_tunnel、iss の tunnel_surface）と同じ作り: 躯体はタイル全体を覆う箱で、屋根は丘の上面（2 段）と同じ高さ。
+# 口は低い側の辺にあり、幅も高さもタイルいっぱいに近い（128jp の大きめの車両も通る）
+TUNNEL_FACE = 0.0                       # 低い側の辺から坑口の面までの距離
+TUNNEL_BORE = (3.4, 2 * H - 0.6)        # 穴の半幅と高さ（屋根の厚み 0.6 を残す）
+TUNNEL_HOOD = (TILE / 2, 2 * H)         # 躯体の半幅と高さ
+TUNNEL_RISE = 36      # 躯体の高さ（画面の px。持ち分を上へ広げる行数）
 
 
 def tunnel_sheet():
@@ -1702,7 +1704,7 @@ def tunnel_sheet():
     prof = TRACK_PROFILES["new"]
     set_anchor(128 + BALLAST_DY)
     cells = {}
-    a0, a1 = -half + TUNNEL_FACE, half + 0.3  # 坑口の面と、躯体の奥の端（経路に沿った位置）
+    a0, a1 = -half + TUNNEL_FACE, half  # 坑口の面と、躯体の奥の端（経路に沿った位置）
     for row0, skin in ((0, None), (2, SNOW_SKIN)):
         for name, (col, path, d, slope) in dirs.items():
             rot = math.atan2(d.y, d.x)
@@ -1723,7 +1725,8 @@ def tunnel_sheet():
             # 奥の絵: 平らな線路（坂に切り込む）と、穴の内側の暗い箱
             clear_models()
             assemble(TRACK_PARTS, [path], prof["datums"], skin=skin)
-            dark = mesh_object("dark", *box(c.x, c.y, 1.03, a1 - a0 - 0.1, 2 * TUNNEL_BORE[0] + 0.1, 2.0, rot=rot),
+            dark = mesh_object("dark", *box(c.x, c.y, TUNNEL_BORE[1] / 2 + 0.03, a1 - a0 - 0.1, 2 * TUNNEL_BORE[0] + 0.1,
+                                              TUNNEL_BORE[1], rot=rot),
                                material("tunnel_dark", (0.015, 0.015, 0.015)))
             clip_to_tile(dark, 0.0)
             cells[(row0, col)] = shot("_back")
