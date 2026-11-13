@@ -31,6 +31,7 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 | `blender/hcat.py` | ゲームの画面を横に並べて 1 枚にする |
 | `ingame/full.nut`・`ingame/full_check.sh` | 全方位の表示確認。way の絵 28 種類を周りとつながった形で出す最小のレイアウトを敷き、way ごとに 5 か所を撮って並べる |
 | `ingame/switch.nut`・`switch_auto.nut` | 分岐の絵（OTRP の switch 画像）の見本。固定した T字・十字と、自動選択で枝が曲がる 8 通り |
+| `ingame/switch_check.sh` | 分岐の絵を手で確かめる準備。pak を入れ、固定の道具がある OTRP のビルドを MCP つきで起動して 2 つの見本を敷く（`GAME_DIR=… EXE=… bash ingame/switch_check.sh`） |
 | `ingame/wall.nut`・`elev.nut`・`bridge.nut`・`tunnel.nut`・`trial.nut` | 側壁・高架・橋・トンネル・試作の見本（複線の並び、行き止まり、橋の端、坑口） |
 | `ingame/train.nut` | 車両を走らせる確認（未完成。ダイヤの設定が通らない） |
 | `src/track_wall_*.dat`・`track_elev_*.dat` | 側壁付きの線路・高架。`single`（両側の壁）・`back`（奥だけ）・`center`（なし）・`front`（手前だけ） |
