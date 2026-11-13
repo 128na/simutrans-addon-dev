@@ -10,6 +10,8 @@
     src/tollbooth.png  料金所風の建物（屋根がタイルからはみ出す）
     work/              セルごとの生の描画結果（確認用）
 """
+from dataclasses import dataclass
+from typing import Callable
 import math
 import os
 import sys
@@ -281,39 +283,79 @@ DIAG_RAIL = 2 / math.sqrt(10)
 DIAG_BALLAST = 1 / math.sqrt(2)
 
 
-def build_track(paths, slope=None, clip=True, rail_scale=1.0, ballast_scale=1.0, rail_drop=0, ballast_drop=0,
-                ground_shift=0):
-    """paths の線路を作り、タイルの外を切り落とし、slope(x,y)->z で傾ける。
-    rail_scale / ballast_scale はレール・まくらぎ／道床の横幅の倍率。
-    rail_drop はレールとまくらぎを、ballast_drop は道床を、平地の画面で何 px 下に描くか。
-    ground_shift は、その下げ幅のうち「地面の上での位置のずれ」にあたる px（残りは、形の高さや基準位置を打ち消す分）。"""
-    m_ballast = material("ballast", (0.42, 0.40, 0.37))
-    m_sleeper = material("sleeper", (0.62, 0.61, 0.58))
-    m_rail = material("rail", (0.50, 0.36, 0.30), rough=0.35, metal=0.6)
+# ---- 組み立て: 道は「部品」の集まりで、部品はどれかの「基準面」に乗る。
+# 描画位置のずれ（下げ幅）は部品ではなく基準面が持つ。同じ基準面の部品は必ず一緒に動くので、
+# 部品を足しても（車止め・側壁・さび・雪など）、乗る基準面を選べば位置は決まる。
+#   bed:  路盤の面。道床・側壁・橋脚など、地面に置く物
+#   rail: 走行面。まくらぎ・レール・車止めなど、軌道に付く物
 
-    ballast = [(u * ballast_scale, v) for u, v in BALLAST]
-    a, b = RAIL_IN * rail_scale, RAIL_OUT * rail_scale
-    rail_l = [(-b, RAIL_Z0), (-a, RAIL_Z0), (-a, RAIL_Z1), (-b, RAIL_Z1)]
-    rail_r = [(a, RAIL_Z0), (b, RAIL_Z0), (b, RAIL_Z1), (a, RAIL_Z1)]
 
-    obs = []
-    for i, path in enumerate(paths):
-        obs.append(mesh_object(f"ballast{i}", *sweep(path, ballast), m_ballast))
-        sleepers = [box(p.x, p.y, SLEEPER_Z, 0.24, SLEEPER_LEN * rail_scale, SLEEPER_H, rot=ang)
-                    for p, ang in along(path, 0.62, 0.31)]
-        if sleepers:
-            obs.append(mesh_object(f"sleeper{i}", *merge(sleepers), m_sleeper))
-        obs.append(mesh_object(f"railL{i}", *sweep(path, rail_l), m_rail))
-        obs.append(mesh_object(f"railR{i}", *sweep(path, rail_r), m_rail))
+@dataclass(frozen=True)
+class Datum:
+    """基準面の描画位置。drop は平地の画面で何 px 下に描くか。
+    ground は、そのうち「地面の上での位置のずれ」にあたる px（残りは、形の高さや基準位置を打ち消す分）。"""
+    drop: int = 0
+    ground: int = 0
 
-    # 画面で n px 下 = 地面の上で手前（カメラ側）へ動かしてから坂の高さを当てる（面に沿って動かす）。
-    # レールと道床を同じやり方で動かすので、坂でもレール・まくらぎは道床の上に乗ったまま（高さを変えずに動かすと埋もれる）。
-    # 坂では手前へ動くと高さも変わり、同じ量を動かしても画面の下げ幅が平地の c 倍になる（c: 手前上がりの坂は 1 より小さい）。
-    # 下げ幅 n のうち
-    #   ground_shift（地面の上での位置のずれ）: 平地と同じ量を動かす。画面の下げ幅は c 倍になるが、
-    #     マップの上で同じ位置なので、タイルの辺で平らな隣の絵と同じ点を通る
-    #   残り（形の高さ・基準位置を打ち消す分。高さは坂でも画面の縦に同じだけ見える）: 画面でちょうどその px になるよう c で割り戻す
-    # 全部を割り戻すと、どの坂でもレールは道床の中ほどに来るが、帯全体が辺で 0.5px（急坂）ずれ、急坂と十字の継ぎ目で道床の縁に 1px の段が出た
+
+@dataclass(frozen=True)
+class Part:
+    """部品。shape(path, k) は経路に沿った形（頂点, 面）を返す（無ければ None）。k は横幅の倍率。
+    datum: 乗る基準面。width: 横幅の倍率をどれに合わせるか（widths のキー）。
+    group: 部品のまとまり（body: 本体。今後 structure: 立体パーツ、weathering: 汚れ、snow: 雪 など。assemble の groups で選ぶ）"""
+    name: str
+    datum: str
+    width: str
+    material: tuple
+    shape: Callable
+    group: str = "body"
+
+
+def _bed_shape(path, k):
+    return sweep(path, [(u * k, v) for u, v in BALLAST])
+
+
+def _sleeper_shape(path, k):
+    boxes = [box(p.x, p.y, SLEEPER_Z, 0.24, SLEEPER_LEN * k, SLEEPER_H, rot=ang) for p, ang in along(path, 0.62, 0.31)]
+    return merge(boxes) if boxes else None
+
+
+def _rail_shape(side):
+    def shape(path, k):
+        a, b = RAIL_IN * k, RAIL_OUT * k
+        if side < 0:
+            return sweep(path, [(-b, RAIL_Z0), (-a, RAIL_Z0), (-a, RAIL_Z1), (-b, RAIL_Z1)])
+        return sweep(path, [(a, RAIL_Z0), (b, RAIL_Z0), (b, RAIL_Z1), (a, RAIL_Z1)])
+    return shape
+
+
+_M_RAIL = ("rail", (0.50, 0.36, 0.30), 0.35, 0.6)
+# 線路の部品（作る順 = 重なりの下から）
+TRACK_PARTS = (
+    Part("ballast", "bed", "bed", ("ballast", (0.42, 0.40, 0.37)), _bed_shape),
+    Part("sleeper", "rail", "gauge", ("sleeper", (0.62, 0.61, 0.58)), _sleeper_shape),
+    Part("railL", "rail", "gauge", _M_RAIL, _rail_shape(-1)),
+    Part("railR", "rail", "gauge", _M_RAIL, _rail_shape(1)),
+)
+FLAT = {"bed": Datum(), "rail": Datum()}
+
+
+def datum_move(datum, slope=None, div=1):
+    """基準面を画面で drop px 下に描くための、形の動かし方（坂を当てる前に足すベクトル）。動かし方はここだけで決める。
+    画面で n px 下 = 地面の上で手前（カメラ側）へ動かしてから坂の高さを当てる（面に沿って動かす）。
+    どの基準面も同じやり方で動かすので、坂でもレール・まくらぎは道床の上に乗ったまま（高さを変えずに動かすと埋もれる）。
+    坂では手前へ動くと高さも変わり、同じ量を動かしても画面の下げ幅が平地の c 倍になる（c: 手前上がりの坂は 1 より小さい）。
+    下げ幅 n のうち
+      ground（地面の上での位置のずれ）: 平地と同じ量を動かす。画面の下げ幅は c 倍になるが、
+        マップの上で同じ位置なので、タイルの辺で平らな隣の絵と同じ点を通る
+      残り（形の高さ・基準位置を打ち消す分。高さは坂でも画面の縦に同じだけ見える）: 画面でちょうどその px になるよう c で割り戻す
+    全部を割り戻すと、どの坂でもレールは道床の中ほどに来るが、帯全体が辺で 0.5px（急坂）ずれ、急坂と十字の継ぎ目で道床の縁に 1px の段が出た。
+    div は下げ幅を割る数。画面で横向きの斜め（nw・se）は 2: 絵を下げることはマップ上で南東へずらすことと同じで、
+    直線は辺を横切る点が辺に沿ってずれる。横向きの斜めは半分だけずらすと、両端で直線と同じ点を通る
+    （縦向きの斜めはずらしても線が動かない）"""
+    d = datum.drop // div
+    if not d:
+        return None
     cam = bpy.context.scene.camera
     rot = cam.rotation_euler.to_matrix()  # matrix_world は作った直後だと更新されていない
     up, fwd = rot @ Vector((0, 1, 0)), rot @ Vector((0, 0, -1))
@@ -321,17 +363,36 @@ def build_track(paths, slope=None, clip=True, rail_scale=1.0, ballast_scale=1.0,
     g = (slope(toward.x, toward.y) - slope(0, 0)) if slope else 0.0  # 手前へ 1 動いたときの高さの変化
     c = (toward.dot(up) + g * up.z) / toward.dot(up)
     px = toward * (cam.data.ortho_scale / CELL) / -toward.dot(up)  # 平地で画面の 1px 下にあたる動き
-    # 動かすのは坂を当てて切り抜く前（切り抜きの余白より動く量が大きいので、後だと端が欠ける）
+    ground = datum.ground if slope else 0
+    return px * ((d - ground) / c + ground)
+
+
+def assemble(parts, paths, datums=FLAT, slope=None, clip=True, widths=None, div=1, groups=("body",)):
+    """部品を経路ごとに作り、乗っている基準面の分だけ動かし、slope(x,y)->z で傾け、タイルの外を切り落とす。
+    widths は横幅の倍率（Part.width → 倍率。無いものは 1）。"""
+    widths = widths or {}
+    moves = {k: datum_move(d, slope, div) for k, d in datums.items()}
+    obs = []
+    for i, path in enumerate(paths):
+        for part in parts:
+            if part.group not in groups:
+                continue
+            geo = part.shape(path, widths.get(part.width, 1.0))
+            if geo is None:
+                continue
+            ob = mesh_object(f"{part.name}{i}", *geo, material(*part.material))
+            # 動かすのは坂を当てて切り抜く前（切り抜きの余白より動く量が大きいので、後だと端が欠ける）
+            move = moves[part.datum]
+            if move is not None:
+                for v in ob.data.vertices:
+                    v.co += move
+            obs.append(ob)
     for ob in obs:
-        d = ballast_drop if ob.name.startswith("ballast") else rail_drop
-        if d:
-            move = px * ((d - ground_shift) / c + ground_shift)
-            for v in ob.data.vertices:
-                v.co += move
         if slope:
             apply_slope(ob, slope)
         if clip:
             clip_to_tile(ob)
+    return obs
 
 
 def apply_slope(ob, slope):
@@ -927,15 +988,16 @@ def make_sheet(cells, rows, cols, out):
 #   old: 旧描画位置（レールが高い。古い pak128・SIS）
 # iss と SIS を比べると、どの方位でもレールが画面上で 4〜4.5px 違うだけだった
 TRACK_PROFILES = {
-    "new": {"sheet": "track", "dy": 3, "spill": 1, "ballast_drop": 2, "ground_shift": 1},
-    "old": {"sheet": "track_old", "dy": -1, "spill": 0, "ballast_drop": 0, "ground_shift": 0},
+    "new": {"sheet": "track", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)}},
+    "old": {"sheet": "track_old", "spill": 0, "datums": FLAT},
 }
-# ground_shift: 下げ幅のうち、地面の上での位置のずれにあたる px（build_track）。新は道床の輪郭が地面の菱形の中心線より 1px 下
+# datums: 基準面ごとの下げ幅（Datum(drop, ground)）。絵の基準位置は両方とも BALLAST_DY（地面の菱形より 1px 上 = 旧の位置）。
+# ground: 下げ幅のうち、地面の上での位置のずれにあたる px（datum_move）。新は道床の輪郭が地面の菱形の中心線より 1px 下
 # （道床を 2px 下げ、基準位置 BALLAST_DY が 1px 上）。レールも同じ 1px（4px 下げ、うち 3px はレールの高さと基準位置の分）。
 # 坂のタイルだけに効く（平地は c = 1 で、下げ幅はそのまま）
 # spill: 持ち分を手前の2辺へ何行はみ出させるか（_ground_mask）。新は pak128 標準の Rail_100 と同じく 1 行。
 # Rail_100 は自分の菱形の上の1行を描かないので、はみ出さないと、こちらが奥・Rail_100 が手前の継ぎ目に草の線が出た
-# 道床の基準は両方とも旧の位置（地面の菱形と同じ）で、新はレールとまくらぎを 4px、道床を ballast_drop（2px）下げる。
+# 新は走行面（レールとまくらぎ）を 4px、路盤（道床）を 2px 下げる。
 # 道床を下げないと、直線でレールが道床の下寄りに見えた（上の余白 約 11px・下 約 6px）。Rail_100 は道床の中心がレールより約 1px 下。
 # 道床を 4px 下げると、画面で縦向きの斜め（sw・ne）は辺で直線と同じ点を通る位置が無く、道床の角に段が出た。2px では段は出なかった
 BALLAST_DY = -1
@@ -988,20 +1050,13 @@ def track_sheet(profile="new"):
     # 手前のタイルへはみ出した 2〜4 行目を手前の地面が消し、どのつなぎ目にも草の線が出た）
     cy = GROUND_CY
     set_anchor(128 + BALLAST_DY)
-    drop = prof["dy"] - BALLAST_DY
     cells = {}
     for pos, (name, paths, slope) in jobs.items():
         clear_models()
-        # 画面で横向きの斜め（nw・se）のレールは、直線のレールの下げ幅の半分だけ下げる。
-        # 絵を下げることはマップ上で南東へずらすことと同じで、直線は辺を横切る点が辺に沿ってずれる。
-        # 横向きの斜めは半分だけずらすと、両端で直線と同じ点を通る（縦向きの斜めはずらしても線が動かない）
-        halve = name in ("diag_nw", "diag_se")  # half は坂の式が使っているので別の名前にする
-        d = drop // 2 if halve else drop
-        bd = prof["ballast_drop"] // 2 if halve else prof["ballast_drop"]
-        if name.startswith("diag_"):
-            build_track(paths, slope, rail_scale=DIAG_RAIL, ballast_scale=DIAG_BALLAST, rail_drop=d, ballast_drop=bd)
-        else:
-            build_track(paths, slope, rail_drop=d, ballast_drop=bd, ground_shift=prof["ground_shift"])
+        # 画面で横向きの斜め（nw・se）は下げ幅を半分にする（datum_move の div）。斜めは横幅も細くする
+        div = 2 if name in ("diag_nw", "diag_se") else 1
+        widths = {"gauge": DIAG_RAIL, "bed": DIAG_BALLAST} if name.startswith("diag_") else None
+        assemble(TRACK_PARTS, paths, prof["datums"], slope, widths=widths, div=div)
         cells[pos] = render_cell(f"{prof['sheet']}_{name}", exits_of(name), slope=slope, cy=cy, spill=prof["spill"])
 
     # 確認用: タイル菱形そのもの（基準位置の検証に使う。シートには入れない）
@@ -1018,7 +1073,7 @@ def track_sheet(profile="new"):
 
     # アイコン: 線路を大きく斜めに通し、左上に最高速度を書く
     clear_models()
-    build_track([straight((0, -12), (0, 12), ext=0.6)], clip=False)
+    assemble(TRACK_PARTS, [straight((0, -12), (0, 12), ext=0.6)], clip=False)
     cells[(0, 0)] = render_icon("track_icon", 0.5, shift=(-0.14, 0.2), label="100")
     cells[(0, 1)] = cells[(0, 2)]  # カーソルは ns と同じ絵
 
