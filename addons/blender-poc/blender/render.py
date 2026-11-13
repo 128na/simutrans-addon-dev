@@ -175,7 +175,7 @@ def mesh_object(name, verts, faces, mat):
 
 def clear_models():
     for ob in list(bpy.context.scene.objects):
-        if ob.type == "MESH" and ob.name != "clip":
+        if ob.type == "MESH" and not ob.name.startswith("clip"):
             bpy.data.objects.remove(ob, do_unlink=True)
 
 
@@ -310,6 +310,7 @@ class Part:
     shape: Callable
     group: str = "body"
     where: str = "path"  # path: 経路に沿う。end: 経路の始点（行き止まりの端）に置く。assemble(ends=True) のときだけ作る
+    tall: bool = False   # 高さのある部品。タイルちょうどに切り、持ち分を上へ広げた層として別に描く（render_layers）
 
 
 def _bed_shape(path, k):
@@ -373,6 +374,22 @@ TRACK_EXTRAS = (
     Part("rust", "rail", "gauge", ("rust", (0.47, 0.31, 0.21)), _strip_shape(RAIL_IN - 0.24, RAIL_OUT + 0.24, BALLAST_H), "weathering"),
     Part("rail_top", "rail", "gauge", _M_STEEL, _strip_shape(RAIL_IN - 0.03, RAIL_OUT + 0.03, RAIL_Z1, 0.02), "weathering"),
 )
+# 側壁: 路盤の両脇に立つ壁（高さ 1.2 ≈ 画面で 9px）。道床と同じ基準面に乗り、横位置は道床の幅に合わせて動く
+# 高さのある部品の切り抜きの余白（約 1.5px）。0 だと、切り口の面（暗い）がタイルの境に縦線で見えた
+TALL_PAD = 0.15
+WALL_U, WALL_W, WALL_H = 2.15, 0.22, 1.2
+_M_WALL = ("wall", (0.60, 0.60, 0.58))
+
+
+def _wall_shape(s):
+    def shape(path, k):
+        u0, u1 = s * WALL_U * k, s * (WALL_U + WALL_W) * k
+        return sweep(path, [(u0, 0.0), (u1, 0.0), (u1, WALL_H), (u0, WALL_H)][::s])
+    return shape
+
+
+TRACK_EXTRAS += tuple(Part(name, "bed", "bed", _M_WALL, _wall_shape(s), "wall", tall=True)
+                      for name, s in (("wallL", -1), ("wallR", 1)))
 # 雪の絵（dat の image[..][1]）で差し替える材質。道床とまくらぎに雪が積もり、レールは見える
 SNOW_SKIN = {"ballast": ("snow", (0.90, 0.93, 0.97), 0.9), "sleeper": ("snow_sleeper", (0.80, 0.84, 0.90), 0.9)}
 FLAT = {"bed": Datum(), "rail": Datum()}
@@ -432,12 +449,13 @@ def assemble(parts, paths, datums=FLAT, slope=None, clip=True, widths=None, div=
             if move is not None:
                 for v in ob.data.vertices:
                     v.co += move
+            ob["tall"] = part.tall
             obs.append(ob)
     for ob in obs:
         if slope:
             apply_slope(ob, slope)
         if clip:
-            clip_to_tile(ob)
+            clip_to_tile(ob, TALL_PAD if ob.get("tall") else CLIP_PAD)
     return obs
 
 
@@ -460,7 +478,7 @@ def apply_slope(ob, slope):
     ob.data.update()
 
 
-_clipper = None
+_clippers = {}
 
 
 # 形はタイルより少し大きく切り抜いておく（タイルの端の画素も、隣とつながった形で描くため）。
@@ -468,14 +486,15 @@ _clipper = None
 CLIP_PAD = 0.6
 
 
-def clip_to_tile(ob):
-    """タイルの範囲（xy: ±TILE/2）より CLIP_PAD だけ大きく切り抜く。"""
-    global _clipper
+def clip_to_tile(ob, pad=CLIP_PAD):
+    """タイルの範囲（xy: ±TILE/2）より pad だけ大きく切り抜く。高さのある部品（側壁など）は pad=0 でタイルちょうどに切る
+    （持ち分を上へ広げるので、はみ出した分が奥のタイルの絵の上に出てしまう）。"""
+    _clipper = _clippers.get(pad)
     if _clipper is None or _clipper.name not in bpy.data.objects:
-        v, f = box(0, 0, 0, TILE + 2 * CLIP_PAD, TILE + 2 * CLIP_PAD, 60)
+        v, f = box(0, 0, 0, TILE + 2 * pad, TILE + 2 * pad, 60)
         me = bpy.data.meshes.new("clip")
         me.from_pydata([tuple(x) for x in v], [], f)
-        _clipper = bpy.data.objects.new("clip", me)
+        _clipper = _clippers[pad] = bpy.data.objects.new("clip", me)
         _clipper.hide_render = True
         bpy.context.scene.collection.objects.link(_clipper)
     mod = ob.modifiers.new("clip", "BOOLEAN")
@@ -950,6 +969,51 @@ def render_cell(name, exits=None, slope=None, side=None, cy=GROUND_CY, spill=0):
     return path
 
 
+def render_layers(name, obs, split, exits, slope, cy, spill, rise):
+    """高さのある部品（tall）を別の層として描いて重ねる。返すのは（奥の絵のパス, 手前の絵のパス または None）。
+    - 本体: 持ち分（地面の範囲）で切る
+    - 高さのある部品: 持ち分を上へ rise 行広げた範囲で切る（奥のタイルの絵の上に出る。建物と同じ）
+    - split なら、カメラに近い側の部品は手前の絵（dat の frontimage。車両の上に描かれる）に分ける"""
+    tall = [ob for ob in obs if ob.get("tall")]
+    body = [ob for ob in obs if not ob.get("tall")]
+    for ob in tall:
+        ob.hide_render = True
+    img = load_rgba8(render_cell(name, exits, slope=slope, cy=cy, spill=spill)).copy()
+    own = load_rgba8(os.path.join(WORK, name + "_own.png"))[..., 0] >= 128
+    img[..., 3] = np.where(own, img[..., 3], 0)
+    for ob in body:
+        ob.hide_render = True
+    m = _ground_mask(slope, None, cy, spill)
+    for k in range(1, rise + 1):
+        m |= _ground_mask_at(slope, None, cy - k)
+    rot = bpy.context.scene.camera.rotation_euler.to_matrix()
+    fwd = rot @ Vector((0, 0, -1))
+    near = lambda ob: sum((v.co for v in ob.data.vertices), Vector()).dot(Vector((fwd.x, fwd.y, 0))) < 0
+    front = [ob for ob in tall if split and near(ob)]
+
+    def layer(objs, suffix):
+        for ob in tall:
+            ob.hide_render = ob not in objs
+        im = load_rgba8(render_cell(name + suffix)).copy()
+        # 輪郭の半透明の画素は捨てる（色が暗く出て、壁の上の縁とタイルの境に黒い点線が見えた）
+        im[..., 3] = np.where(m & (im[..., 3] >= 250), 255, 0)
+        return im
+
+    back = layer([ob for ob in tall if ob not in front], "_tallb")
+    a = back[..., 3:4].astype(np.float32) / 255
+    img[..., :3] = (back[..., :3] * a + img[..., :3] * (1 - a)).astype(np.uint8)
+    img[..., 3] = np.maximum(img[..., 3], back[..., 3])
+    path = os.path.join(WORK, name + "_full.png")
+    save_rgba(path, img)
+    fpath = None
+    if front:
+        fpath = os.path.join(WORK, name + "_front.png")
+        save_rgba(fpath, layer(front, "_tallf"))
+    for ob in obs:
+        ob.hide_render = False
+    return path, fpath
+
+
 def apply_special(rgb, render, mask):
     """マスクで覆われた画素（半分以上覆われたものだけ。縁は普通の色のまま）を特殊色にする。"""
     covered = mask[..., 3] >= 128
@@ -1039,7 +1103,11 @@ TRACK_PROFILES = {
     # 試作: 新に、車止め・さび色・雪の絵を足したもの（本体のシートの検証を崩さないよう、別のアドオンにする）
     "trial": {"sheet": "track_trial", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
               "groups": ("body", "structure", "weathering"), "snow": True},
+    # 試作: 新に側壁を足したもの。手前の壁は frontimage（下の 1 行。直線だけ）
+    "wall": {"sheet": "track_wall", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
+             "groups": ("body", "wall"), "front_row": 4},
 }
+WALL_RISE = 11  # 側壁の高さ（画面の px。持ち分を上へ広げる行数）
 # datums: 基準面ごとの下げ幅（Datum(drop, ground)）。絵の基準位置は両方とも BALLAST_DY（地面の菱形より 1px 上 = 旧の位置）。
 # ground: 下げ幅のうち、地面の上での位置のずれにあたる px（datum_move）。新は道床の輪郭が地面の菱形の中心線より 1px 下
 # （道床を 2px 下げ、基準位置 BALLAST_DY が 1px 上）。レールも同じ 1px（4px 下げ、うち 3px はレールの高さと基準位置の分）。
@@ -1112,10 +1180,18 @@ def track_sheet(profile="new"):
             # 画面で横向きの斜め（nw・se）は下げ幅を半分にする（datum_move の div）。斜めは横幅も細くする
             div = 2 if name in ("diag_nw", "diag_se") else 1
             widths = {"gauge": DIAG_RAIL, "bed": DIAG_BALLAST} if name.startswith("diag_") else None
-            assemble(parts, paths, prof["datums"], slope, widths=widths, div=div, groups=grp,
-                     ends=name in ("s", "w", "n", "e"), skin=skin)
-            cells[(pos[0] + row0, pos[1])] = render_cell(f"{prof['sheet']}{suffix}_{name}", exits_of(name), slope=slope,
-                                                         cy=cy, spill=prof["spill"])
+            # 分岐・十字は、壁が線路を横切るので壁を付けない
+            g = tuple(x for x in grp if x != "wall") if len(paths) > 1 else grp
+            obs = assemble(parts, paths, prof["datums"], slope, widths=widths, div=div, groups=g,
+                           ends=name in ("s", "w", "n", "e"), skin=skin)
+            cname = f"{prof['sheet']}{suffix}_{name}"
+            if any(ob.get("tall") for ob in obs):
+                cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, name in ("ns", "ew"), exits_of(name),
+                                                                      slope, cy, prof["spill"], WALL_RISE)
+                if front:
+                    cells[(prof["front_row"], pos[1])] = front
+            else:
+                cells[(pos[0] + row0, pos[1])] = render_cell(cname, exits_of(name), slope=slope, cy=cy, spill=prof["spill"])
 
     # 確認用: タイル菱形そのもの（基準位置の検証に使う。シートには入れない）
     set_anchor(128)
@@ -1142,7 +1218,8 @@ def track_sheet(profile="new"):
         cells[(0, 0)] = render_icon("track_icon", 0.5, shift=(-0.14, 0.2), label="100")
         cells[(0, 1)] = cells[(0, 2)]  # カーソルは ns と同じ絵
 
-    make_sheet(cells, 8 if prof.get("snow") else 4, 10, os.path.join(SRC, prof["sheet"] + ".png"))
+    rows = 8 if prof.get("snow") else 5 if "front_row" in prof else 4
+    make_sheet(cells, rows, 10, os.path.join(SRC, prof["sheet"] + ".png"))
 
 
 ICON = 32
@@ -1310,6 +1387,8 @@ if __name__ == "__main__":
         track_sheet("old")
     if "track_trial" in targets:
         track_sheet("trial")
+    if "track_wall" in targets:
+        track_sheet("wall")
     if "icons" in targets:
         icon_gallery()
     if "road" in targets:
