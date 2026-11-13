@@ -1,15 +1,43 @@
-# Addons
+# アドオン
 
-Create each new addon in its own directory, for example `addons/<addon-name>/`. Keep its source, assets, documentation, and build configuration together so it can be developed and validated independently.
+新しいアドオンは `addons/<addon-name>/` に、1 つずつ独立したフォルダで作る。ソース・素材・文書・ビルドの設定をその中にまとめ、単独で開発・検証できるようにする。
 
-Each addon should provide a README describing, as applicable:
+構成はアドオンに合う最小のものにする。共有のツールは複数のアドオンが使うときだけリポジトリ直下に置き、共有のコマンドはここかリポジトリ直下の README に書く。
 
-- Purpose and included content
-- Supported Simutrans version and pakset
-- License and attribution for code and assets
-- Required tools and setup
-- Build, installation, and in-game validation steps
+`makeobj` は `PATH` にある。pak のサイズと、アドオン固有のビルドコマンド・前提は README に書く。
 
-Makeobj is available on `PATH` and can be invoked as `makeobj`. Document the pak size and any addon-specific build command or prerequisites.
+## アドオンの README の決まり
 
-Use the smallest structure that fits the addon. Add shared tooling at the repository root only when multiple addons need it; document any shared commands here or in the root README.
+README には**今の状態**だけを書く。読む人が「これは何で、どう作り、どう確かめるか」を、経緯を読まずに分かるようにする。
+
+### 書くもの
+
+| 節 | 中身 |
+|---|---|
+| 目的と中身 | 何のアドオンか、含まれるもの（pak・オブジェクト名）の一覧 |
+| 対象 | Simutrans のバージョンと pakset |
+| ライセンス | コードと素材のライセンス、帰属、参考にした元 |
+| 必要なもの | ツールとその準備 |
+| ビルド | コマンドと出力先 |
+| 導入と検証 | ゲームへの入れ方、確かめ方（スクリプト・見本・ツールの一覧） |
+| 今の決まりごと | そのアドオンだけの作りの決まり（今そうなっていること）。理由は 1〜2 行までにし、詳しい経緯は記録を引く |
+| 残っていること | 未対応・未確認の一覧。受け入れ条件の表を別に持つなら（`ACCEPTANCE.md`）、そこを引くだけにする |
+
+### 書かないもの
+
+| もの | 書く場所 |
+|---|---|
+| 調べた経緯・試行錯誤・日付の付いた作業の記録 | `docs/records/YYYY-MM-DD_slug.md` |
+| ほかのアドオンでも使える決まり（本体の描き方、`.dat` のキー、手本の作り） | `docs/reference/<主題>.md` |
+| 作業の進め方 | スキル（`.claude/skills/`） |
+| できたと言う条件と状態 | `addons/<addon-name>/ACCEPTANCE.md` |
+| 確認用の画像 | `addons/<addon-name>/docs/` |
+
+- 見出しに日付や「続き」を付けない。日付を付けたくなる内容は記録に書く。
+- 直した結果で README の内容が変わったら、節を足さずにその節を書き換える。
+- 記録・リファレンスに移した内容は README から消し、リンクを 1 行残す。
+
+### 開発中のアドオン
+
+試作の間は、README に作業の記録がたまっていてよい。区切り（PR をマージするとき、試作を終えるとき）で、上の決まりに合わせて記録とリファレンスへ移す。
+`blender-poc` は開発中で、README の日付の付いた節は区切りで `docs/records/` へ移す。

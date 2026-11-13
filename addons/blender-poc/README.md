@@ -760,4 +760,4 @@ pak に入れるときの `makeobj` の引数は、上の「ビルド」の行�
   （`docs/trial_tunnel_inside.png`）
 - 車両が坑口を通るとき、躯体が車両の上に描かれることは、手で走らせて確かめてもらった
 - 鉄道（本体・旧・側壁 4 種・高架 4 種・橋・トンネル）はここで一区切り。作るときに引く決まりは
-  `.claude/skills/way-addon-reference/SKILL.md` にまとめた。残りの条件は [`ACCEPTANCE.md`](ACCEPTANCE.md) の × と ？
+  `docs/reference/way-addon.md`（知見）と `.claude/skills/way-addon-build/SKILL.md`（手順）にまとめた。残りの条件は [`ACCEPTANCE.md`](ACCEPTANCE.md) の × と ？

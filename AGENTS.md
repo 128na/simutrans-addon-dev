@@ -1,25 +1,46 @@
-# Repository Guidelines
+# リポジトリの作業ガイド
 
-## Project Structure & Module Organization
+## 構成
 
-This repository is a monorepo for Simutrans addons. Develop new addons as independent projects under `addons/<addon-name>/`; keep each addon's source, assets, documentation, configuration, and tests together. Shared tooling belongs at the root only when multiple addons use it. The sibling repositories `../iss`, `../rtx`, and `../rtg` are archived references, not part of this repository's normal change scope.
+Simutrans アドオンのモノレポ。新しいアドオンは `addons/<addon-name>/` に独立したプロジェクトとして作り、ソース・素材・文書・設定・テストをその中にまとめる。
 
-## Build, Test, and Development Commands
+- 共有のツールは、複数のアドオンが使うときだけリポジトリ直下（`tools/`）に置く。2 つ目のアドオンが既存アドオンのツールを使い始めるときは、その変更の最初のコミットで `tools/` へ移す（アドオンをまたいで `addons/<別のアドオン>/` を参照しない）。
+- 隣の `../iss`・`../rtx`・`../rtg`・`../sis`・`../pak128` は参照用で、このリポジトリの変更対象ではない。`../simutrans` は OTRP 本体の fork で、本体の改修をするとき以外は参照だけにする。
 
-There is no repository-wide build system. Follow the target addon's README and scripts. For addons built from `.dat` definitions, Makeobj is available on `PATH`; from the addon's directory, use `makeobj pak128 .\dist\example.pak .\src\example.dat` (replace `pak128` with the target pakset size). Keep generated output in an addon's documented build directory.
+## ビルド・テスト・検証
 
-## Coding Style & Naming Conventions
+- リポジトリ全体のビルドは無い。変更するアドオンの README とスクリプトに従い、そこに書かれたビルド・検証だけを実行する。
+- `.dat` から pak を作るときは `makeobj`（`PATH` にある）を使う。アドオンのフォルダで `makeobj pak128 .\dist\example.pak .\src\example.dat`（`pak128` は対象の pakset に合わせる）。生成物はアドオンが決めた出力先に置く。
+- 文書は `npx docs-lint` で検査する（CI でも走る）。対象はリポジトリ直下と `docs/` の md。規約は `docs/README.md`。
+- 自動の検査が無いものは、範囲を絞って手で確かめ、確かめていないことを報告する。ゲーム内の見た目はユーザーが確認する。
 
-Follow the language, formatter, and naming style already used by the target addon; do not impose a monorepo-wide toolchain. Use clear, lowercase, hyphen-separated addon directory names (for example, `addons/urban-bridges/`). Keep addon-specific config and dependencies local to that project.
+## 書き方と名前
 
-## Testing Guidelines
+- 言語・フォーマッタ・命名は、対象のアドオンで使っているものに合わせる。モノレポ全体で 1 つのツールを強制しない。
+- アドオンのフォルダ名は小文字のハイフン区切り（例: `addons/urban-bridges/`）。設定と依存はアドオンの中に置く。
+- 文書（README・docs・スキル）は日本語で書く。
 
-Run only the build, lint, and test commands documented for the addon you change. Validate generated pak files or other affected outputs with the addon's intended tools and pakset. If no automated checks exist, perform a focused manual validation and report what remains unchecked.
+## コミットと PR
 
-## Commit & Pull Request Guidelines
+- コミットメッセージは英語の命令形で、先頭に対象を付ける（例: `blender-poc: close the seam between tunnel portals and the adjoining track`、文書だけなら `docs: …`）。
+- PR には、利用者から見た変更、対象のアドオン、関連する issue、実行したビルド・検証とその結果を書く。見た目が変わる変更にはスクリーンショットを付ける。
+- 直したらローカルでコミットして止まる。push・PR 作成・マージはユーザーの指示を待つ。
 
-The available Git history does not establish a commit-message convention; use concise, imperative summaries that name the addon or change, such as `Add urban bridge set`. Pull requests should explain the user-visible change, identify the affected addon, link related issues when applicable, and include screenshots for visual or in-game asset changes. Note build or validation commands and their results.
+## 文書の置き場所
 
-## Addon Documentation & Licensing
+| 書くもの | 置き場所 |
+|---|---|
+| 作業方法（進め方、回すツールと順番、直す場所、確かめ方） | スキル `.claude/skills/<名前>/SKILL.md` |
+| 知見（本体の決まり、`.dat` のキー、手本の作り、道具の癖） | `docs/reference/<主題>.md` |
+| 調べた経緯・作業の記録 | `docs/records/YYYY-MM-DD_slug.md`（書いたら変えない） |
+| 決めた理由 | `docs/adr/NNNN-slug.md` |
+| アドオンの今の状態（目的・対象・ビルド・検証手順） | `addons/<addon-name>/README.md`（決まりは `addons/README.md`） |
 
-Each addon README should state its purpose, supported Simutrans version and pakset when known, license, prerequisites, and build or validation steps. Check licenses and attribution before reusing archived code or assets; the root license does not automatically cover an addon's contents.
+- スキルと知見を混ぜない。スキルに決まりを書き写さず、リファレンスへのリンクで引く。決まりを新しく確かめたら、確かめた場所を付けてリファレンスに足す。
+- 作業の前に、対応するリファレンスを読む（way 系アドオンは `docs/reference/way-addon.md`）。
+- 規約の全体は `docs/README.md`。
+
+## アドオンの文書とライセンス
+
+- 各アドオンの README の決まりは `addons/README.md` にある。
+- アーカイブのコードや素材を使う前に、ライセンスと帰属を確かめる。リポジトリ直下のライセンスは、アドオンの中身には自動では及ばない。

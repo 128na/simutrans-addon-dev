@@ -1,5 +1,5 @@
 {
-  "$comment": "Phase 0 ベースライン（docs-lint init existing で生成）。現存する現在形 md を一旦すべて livingDocs へ登録した状態。段階的に records/ADR/台帳へ再分類し、本当に「常に最新であるべき」ものだけが living として残るよう縮小していく。",
+  "$comment": "docs-lint の設定。検査するのはリポジトリ直下と docs/ の md。livingDocs は常に最新に保つ文書の allowlist で、足すときは理由を docs/adr/ に書く（docs/reference/ は ADR 0001）。規約は docs/README.md。",
   "scanRoots": {
     "recursive": [
       "docs"
@@ -37,6 +37,7 @@
     "AGENTS.md",
     "CLAUDE.md",
     "README.md",
-    "docs/README.md"
+    "docs/README.md",
+    "docs/reference/way-addon.md"
   ]
 }
