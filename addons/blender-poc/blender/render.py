@@ -1722,12 +1722,17 @@ def tunnel_sheet():
                 save_rgba(path_, img)
                 return path_
 
-            # 奥の絵: 平らな線路（坂に切り込む）と、穴の内側の暗い箱
+            # 奥の絵: 平らな線路（坂に切り込む）と、穴の内側の暗い床と壁
             clear_models()
             assemble(TRACK_PARTS, [path], prof["datums"], skin=skin)
-            dark = mesh_object("dark", *box(c.x, c.y, TUNNEL_BORE[1] / 2 + 0.03, a1 - a0 - 0.1, 2 * TUNNEL_BORE[0] + 0.1,
-                                              TUNNEL_BORE[1], rot=rot),
-                               material("tunnel_dark", (0.015, 0.015, 0.015)))
+            # 穴の内側: 暗い床と左右の壁だけを置く（線路は床の上に見える。箱で埋めると線路まで隠れた）
+            m_dark = material("tunnel_dark", (0.015, 0.015, 0.015))
+            n = Vector((d.y, -d.x))
+            inner = [box(c.x, c.y, 0.005, a1 - a0 - 0.1, 2 * TUNNEL_BORE[0] + 0.1, 0.01, rot=rot)]
+            for s in (1, -1):
+                q = c + n * (s * (TUNNEL_BORE[0] + 0.05))
+                inner.append(box(q.x, q.y, TUNNEL_BORE[1] / 2, a1 - a0 - 0.1, 0.1, TUNNEL_BORE[1], rot=rot))
+            dark = mesh_object("dark", *merge(inner), m_dark)
             clip_to_tile(dark, 0.0)
             cells[(row0, col)] = shot("_back")
             # 手前の絵: 坑口の躯体（面から奥の辺まで）。穴を抜く

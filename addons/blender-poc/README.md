@@ -26,6 +26,15 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 | `ingame/capture_check.sh` | 4種類 × 6か所を MCP で撮り、`ingame_diff.py` で比べる（ゲームを MCP ポート付きで起動しておく） |
 | `blender/special.py` | 特殊色の検査。シートに特殊色が何 px、どのセルにあるかを数える |
 | `blender/special_preview.py` | 特殊色の見え方の再現（昼・会社の色を変えたとき・夜）|
+| `blender/track_dat.py` | 線路の dat をまとめて書き出す（手前の絵 `front...` と雪 `[1]` の行を、シートの行の並びどおりに付ける） |
+| `blender/icons_only.py` | 線路のシートのアイコンだけを描き直して差し替える |
+| `blender/hcat.py` | ゲームの画面を横に並べて 1 枚にする |
+| `ingame/full.nut`・`ingame/full_check.sh` | 全方位の表示確認。way の絵 28 種類を周りとつながった形で出す最小のレイアウトを敷き、way ごとに 5 か所を撮って並べる |
+| `ingame/wall.nut`・`elev.nut`・`bridge.nut`・`tunnel.nut`・`trial.nut` | 側壁・高架・橋・トンネル・試作の見本（複線の並び、行き止まり、橋の端、坑口） |
+| `ingame/train.nut` | 車両を走らせる確認（未完成。ダイヤの設定が通らない） |
+| `src/track_wall_*.dat`・`track_elev_*.dat` | 側壁付きの線路・高架。`single`（両側の壁）・`back`（奥だけ）・`center`（なし）・`front`（手前だけ） |
+| `src/track_bridge.dat`・`track_tunnel.dat`・`track_trial.dat` | 橋、トンネル、試作（車止め・さび色） |
+| `ACCEPTANCE.md` | 側壁・基盤・橋・高架・トンネルの受け入れ条件と今の状態 |
 | `src/track.dat` | 線路・新描画位置（レールが低い。今の pak128・iss）。セル配置は iss の線路と同じ |
 | `src/track_old.dat` | 線路・旧描画位置（レールが高い。古い pak128・SIS）。形は `track.dat` と同じで、名前は `bpoc_track_old` |
 | `src/road.dat` | 道路（歩道付き、50km/h）。幅・白線・縁石の位置は SIS の一般道 `SIS_L_RG1-1_01S` に合わせる。セル配置は線路と同じ |
@@ -43,7 +52,7 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 
 ```powershell
 D:\bin\blender\blender.exe -b --factory-startup --python blender/render.py
-cd src; makeobj pak256 ..\dist\bpoc.pak track.dat track_old.dat road.dat expressway.dat tollbooth.dat; cd ..
+cd src; makeobj pak256 ..\dist\bpoc.pak track.dat track_old.dat track_trial.dat track_wall_single.dat track_wall_back.dat track_wall_center.dat track_wall_front.dat track_elev_single.dat track_elev_back.dat track_elev_center.dat track_elev_front.dat track_bridge.dat track_tunnel.dat road.dat expressway.dat tollbooth.dat; cd ..
 ```
 
 iss と同じく `pak256` で 256px セルとして切り出す（ゲームは pak128）。
@@ -744,3 +753,11 @@ pak に入れるときは `makeobj` の引数に `track_trial.dat track_wall.dat
   （幅は前の 2 倍。128jp の大きめの車両を見込む）
 - ゲームで、屋根が丘の上面とそろい、4 方向とも出ることを確かめた（`docs/trial_tunnel.png`）
 - 残り: 手本のような擁壁や口のアーチは作っていない（平らな箱）。車両が通る所は見ていない
+
+### 坑口の内側の線路・鉄道の区切り（2026-11-13 続き）
+
+- 坑口の奥の絵は、穴の内側を暗い箱で埋めていたので線路まで隠れていた。暗い床と左右の壁だけにして、口の中に線路が見えるようにした
+  （`docs/trial_tunnel_inside.png`）
+- 車両が坑口を通るとき、躯体が車両の上に描かれることは、手で走らせて確かめてもらった
+- 鉄道（本体・旧・側壁 4 種・高架 4 種・橋・トンネル）はここで一区切り。作るときに引く決まりは
+  `.claude/skills/way-addon-reference/SKILL.md` にまとめた。残りの条件は [`ACCEPTANCE.md`](ACCEPTANCE.md) の × と ？
