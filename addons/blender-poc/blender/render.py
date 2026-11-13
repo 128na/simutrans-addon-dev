@@ -392,15 +392,24 @@ def _wall_shape(s):
 TRACK_EXTRAS += tuple(Part(name, "bed", "bed", _M_WALL, _wall_shape(s), "wall", tall=True, corridor=WALL_U)
                       for name, s in (("wallL", -1), ("wallR", 1)))
 # 橋: 床版（路盤の下の板）と橋脚。床版は路盤に乗る部品、橋脚は橋の下の地面のタイルに描く別の絵
-DECK_U, DECK_H = 2.45, 0.35
+BASE_H = 0.35
 PIER_W, PIER_L = 1.6, 3.2
 
 
-def _deck_shape(path, k):
-    return sweep(path, [(-DECK_U * k, -DECK_H), (DECK_U * k, -DECK_H), (DECK_U * k, 0.0), (-DECK_U * k, 0.0)])
+def _base_shape(s, open_side):
+    """基盤（道床の下の板。上面が路盤の面、厚み BASE_H は橋で側面に見える）の片側半分。
+    壁のある側は壁の外側の面まで、壁のない側（open_side）はタイルの端まで広げて、隣に並べた線路の基盤とつながる。
+    カーブの内側は半径より広げられないので、タイルの角の手前で止める"""
+    def shape(path, k):
+        u = (4.95 if len(path) > 4 else 7.2) if open_side else (WALL_U + WALL_W) * k
+        return sweep(path, [(0.0, -BASE_H), (s * u, -BASE_H), (s * u, 0.0), (0.0, 0.0)][::s])
+    return shape
 
 
-TRACK_EXTRAS += (Part("deck", "bed", "bed", _M_WALL, _deck_shape, "deck"),)
+_M_BASE = ("base", (0.50, 0.50, 0.48))
+# base: 壁のある側の基盤（いつも作る）。open: 壁のない側の基盤（その側の壁が無いときだけ残す。track_sheet）
+TRACK_EXTRAS += tuple(Part(f"{kind}{n}", "bed", "bed", _M_BASE, _base_shape(s, kind == "open"), "base")
+                      for kind in ("base", "open") for n, s in (("L", -1), ("R", 1)))
 # 雪の絵（dat の image[..][1]）で差し替える材質。道床とまくらぎに雪が積もり、レールは見える
 SNOW_SKIN = {"ballast": ("snow", (0.90, 0.93, 0.97), 0.9), "sleeper": ("snow_sleeper", (0.80, 0.84, 0.90), 0.9)}
 FLAT = {"bed": Datum(), "rail": Datum()}
@@ -1156,13 +1165,14 @@ TRACK_PROFILES = {
     # 試作: 新に側壁を足したもの。カメラに近い側の壁は手前の絵（frontimage。下の 4 行に同じ並び）
     # 試作: 橋（obj=bridge）。直線と坂（橋の端）だけを描き、床版・側壁（欄干）を足す。橋脚は別のセル
     "bridge": {"sheet": "track_bridge", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
-               "groups": ("body", "wall", "deck"), "front_row": 4,
+               "groups": ("body", "wall", "base"), "front_row": 4,
                "only": ("ns", "ew", "up12", "up9", "up3", "up6", "up2_12", "up2_9", "up2_3", "up2_6"), "piers": True},
     "wall": {"sheet": "track_wall", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
-             "groups": ("body", "wall"), "front_row": 4},
+             "groups": ("body", "wall", "base"), "front_row": 4},
 }
-# 側壁のバリエーション: single（両側。単線用）・back（奥だけ）・front（手前だけ）。壁なし（中線）は本体の線路を使う
-for _side in ("back", "front"):
+# 側壁と基盤のバリエーション: 両側（単線用）・back（奥だけ）・center（壁なし。中線）・front（手前だけ）。
+# 基盤は、壁のある側は壁まで、壁のない側はタイルの端まで
+for _side in ("back", "center", "front"):
     TRACK_PROFILES[f"wall_{_side}"] = dict(TRACK_PROFILES["wall"], sheet=f"track_wall_{_side}", walls=_side)
 WALL_RISE = 11  # 側壁の高さ（画面の px。持ち分を上へ広げる行数）
 # datums: 基準面ごとの下げ幅（Datum(drop, ground)）。絵の基準位置は両方とも BALLAST_DY（地面の菱形より 1px 上 = 旧の位置）。
@@ -1243,11 +1253,15 @@ def track_sheet(profile="new"):
                            ends=name in ("s", "w", "n", "e"), skin=skin)
             # 側壁のバリエーション（複線以上を並べて作るとき用）: back はカメラから遠い側の壁だけ、front は近い側の壁だけ
             side = prof.get("walls", "both")
-            if side != "both":
-                near = near_camera(obs)
-                for ob in [ob for ob in obs if ob.get("tall") and ((ob in near) != (side == "front"))]:
-                    obs.remove(ob)
-                    bpy.data.objects.remove(ob, do_unlink=True)
+            near = near_camera(obs)
+            keep = {"both": lambda ob: True, "center": lambda ob: False,
+                    "front": lambda ob: ob in near, "back": lambda ob: ob not in near}[side]
+            gone = {ob.name[4:] for ob in obs if ob.get("tall") and not keep(ob)}  # 壁を外した側（"L0" など）
+            # 壁のない側の基盤（open）は、その側の壁を外したときだけ残す
+            for ob in [ob for ob in obs if (ob.get("tall") and ob.name[4:] in gone)
+                       or (ob.name.startswith("open") and ob.name[4:] not in gone)]:
+                obs.remove(ob)
+                bpy.data.objects.remove(ob, do_unlink=True)
             cname = f"{prof['sheet']}{suffix}_{name}"
             if any(ob.get("tall") for ob in obs):
                 cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, True, exits_of(name),
@@ -1464,7 +1478,7 @@ if __name__ == "__main__":
         track_sheet("bridge")
     if "track_wall" in targets:
         track_sheet("wall")
-    for _side in ("back", "front"):
+    for _side in ("back", "center", "front"):
         if f"track_wall_{_side}" in targets:
             track_sheet(f"wall_{_side}")
     if "icons" in targets:
