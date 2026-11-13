@@ -142,7 +142,16 @@ def noisy_material(name, rgb_a, rgb_b, scale=40.0, rough=0.8, emit=0.0, spec=Non
     return m
 
 
+# 確認用の色: 環境変数 BPOC_DEBUG_COLORS=1 で、灰色ばかりの部品を見分けやすい色に替える。シートは work/debug/ に書く（src は変えない）
+DEBUG_COLORS = {"ballast": (0.85, 0.75, 0.10), "sleeper": (0.95, 0.95, 0.95), "rail": (0.02, 0.02, 0.02),
+                "wall": (0.90, 0.05, 0.05), "base": (0.05, 0.25, 0.90), "rust": (0.9, 0.3, 0.0),
+                "rail_top": (0.0, 0.9, 0.9), "stop_post": (0.5, 0.0, 0.5), "base_open": (0.05, 0.75, 0.25)}
+DEBUG = os.environ.get("BPOC_DEBUG_COLORS") == "1"
+
+
 def material(name, rgb, rough=0.8, metal=0.0, emit=0.0, special=None):
+    if DEBUG and name in DEBUG_COLORS:
+        rgb, metal = DEBUG_COLORS[name], 0.0
     """special に SPECIAL の名前を渡すと、その材質が見えている画素を特殊色にする（render_cell と make_sheet で処理）。
     プレーヤーカラーは光の当たり方で8段階のどれかを選ぶので、rgb は灰色にしておくと明暗がそのまま段階になる。"""
     if name in bpy.data.materials:
@@ -382,9 +391,36 @@ WALL_U, WALL_W, WALL_H = 2.15, 0.22, 1.2
 _M_WALL = ("wall", (0.60, 0.60, 0.58))
 
 
+# 斜めのタイル: 線路はタイルの半分の三角形（角の側）だけを使い、三角形が帯になって続く（iss と同じ）。
+# 帯の縁は「タイルを半分に分ける線」で、経路から DIAG_EDGE_U の距離にある。壁はこの線の上に、角と反対の側にだけ立つ
+# （角の側の縁は、次のタイルの「角と反対の側」の壁が受け持つので、1 枚おきに左右の縁の壁になり、どちらの縁も途切れない）
+DIAG_EDGE_U = TILE / (2 * math.sqrt(2))
+
+
+def _away_side(path, s):
+    """斜めの経路で、s の側（+1: 右、-1: 左）がタイルの中心の側（角と反対の側）か。"""
+    d = (path[-1] - path[0]).normalized()
+    n = Vector((d.y, -d.x)) * s
+    mid = (path[0] + path[-1]) / 2
+    return n.dot(-Vector((mid.x, mid.y))) > 0
+
+
+def _diag_long(path):
+    """斜めの経路を両端で延ばす。帯の縁（タイルの角から角まで）や残りの半分の角まで届かせるため
+    （そのままだと、縁の壁がタイルごとに途切れ、基盤の角に草が残った）。"""
+    d = (path[-1] - path[0]).normalized()
+    return [path[0] - d * 2.5] + path[1:-1] + [path[-1] + d * 2.5]
+
+
 def _wall_shape(s):
     def shape(path, k):
-        u0, u1 = s * WALL_U * k, s * (WALL_U + WALL_W) * k
+        if k != 1.0:  # 斜め
+            if not _away_side(path, s):
+                return None
+            u0, u1 = s * (DIAG_EDGE_U - WALL_W), s * DIAG_EDGE_U
+            path = _diag_long(path)
+        else:
+            u0, u1 = s * WALL_U * k, s * (WALL_U + WALL_W) * k
         return sweep(path, [(u0, 0.0), (u1, 0.0), (u1, WALL_H), (u0, WALL_H)][::s])
     return shape
 
@@ -401,14 +437,21 @@ def _base_shape(s, open_side):
     壁のある側は壁の外側の面まで、壁のない側（open_side）はタイルの端まで広げて、隣に並べた線路の基盤とつながる。
     カーブの内側は半径より広げられないので、タイルの角の手前で止める"""
     def shape(path, k):
-        u = (4.95 if len(path) > 4 else 7.2) if open_side else (WALL_U + WALL_W) * k
+        if k != 1.0:
+            # 斜め: 壁のある側（と角の側）は帯の縁まで。壁のない側は、タイルの残りの半分もいっぱいまで埋める
+            # （並べた斜めの線路の帯の間には 1 本ぶんの帯が空き、両側の線路のタイルの残りの半分がそこを埋める）
+            u = 11.0 if open_side and _away_side(path, s) else DIAG_EDGE_U + 0.1
+            path = _diag_long(path)
+        else:
+            u = (4.95 if len(path) > 4 else 7.2) if open_side else (WALL_U + WALL_W) * k
         return sweep(path, [(0.0, -BASE_H), (s * u, -BASE_H), (s * u, 0.0), (0.0, 0.0)][::s])
     return shape
 
 
 _M_BASE = ("base", (0.50, 0.50, 0.48))
 # base: 壁のある側の基盤（いつも作る）。open: 壁のない側の基盤（その側の壁が無いときだけ残す。track_sheet）
-TRACK_EXTRAS += tuple(Part(f"{kind}{n}", "bed", "bed", _M_BASE, _base_shape(s, kind == "open"), "base")
+TRACK_EXTRAS += tuple(Part(f"{kind}{n}", "bed", "bed", ("base_open", _M_BASE[1]) if kind == "open" else _M_BASE,
+                           _base_shape(s, kind == "open"), "base")
                       for kind in ("base", "open") for n, s in (("L", -1), ("R", 1)))
 # 雪の絵（dat の image[..][1]）で差し替える材質。道床とまくらぎに雪が積もり、レールは見える
 SNOW_SKIN = {"ballast": ("snow", (0.90, 0.93, 0.97), 0.9), "sleeper": ("snow_sleeper", (0.80, 0.84, 0.90), 0.9)}
@@ -465,10 +508,14 @@ def assemble(parts, paths, datums=FLAT, slope=None, clip=True, widths=None, div=
                 continue
             ob = mesh_object(f"{part.name}{i}", *geo, material(*skin.get(part.name, part.material)))
             if part.corridor and len(paths) > 1:
-                # ほかの経路の通り道に入る部分を削る。残るのは、通り道の集まりの外側の縁に立つ壁だけ
-                w = part.corridor * widths.get(part.width, 1.0) - 0.02
-                prof = [(-w, -1.0), (w, -1.0), (w, 3.0), (-w, 3.0)]
-                cutter = mesh_object("corridor", *merge([sweep(q, prof) for j, q in enumerate(paths) if j != i]),
+                # ほかの経路の通り道に入る部分を削る。残るのは、通り道の集まりの外側の縁に立つ壁だけ。
+                # 経路どうしが接する所（タイルの辺の近く）では、二つの経路の壁が同じ位置に重なる。先の経路の壁を残し、
+                # 後の経路の壁は、先の経路の壁の位置まで含めて削る（重なった切れ端が、奥/手前の版で余分な壁として残った）
+                k = widths.get(part.width, 1.0)
+                narrow, wide = part.corridor * k - 0.02, (part.corridor + WALL_W) * k + 0.02
+                band = lambda w: [(-w, -1.0), (w, -1.0), (w, 3.0), (-w, 3.0)]
+                cutter = mesh_object("corridor", *merge([sweep(q, band(wide if j < i else narrow))
+                                                         for j, q in enumerate(paths) if j != i]),
                                      material(*part.material))
                 recalc_normals(cutter)
                 boolean(ob, cutter)
@@ -506,19 +553,21 @@ def open_ends(ob, pad):
     ob.data.update()
 
 
-def near_camera(obs):
-    """高さのある部品のうち、カメラに近い側のもの（重心が本体の重心よりカメラ側）。直線・坂・行き止まり・カーブ・横向きの斜めで決まる。
-    画面で縦向きの斜めは左右に並ぶので、どちらも奥として扱う"""
-    rot = bpy.context.scene.camera.rotation_euler.to_matrix()
-    fwd = rot @ Vector((0, 0, -1))
-    toward = -Vector((fwd.x, fwd.y, 0)).normalized()
+def _centre(objs):
+    vs = [v.co for ob in objs for v in ob.data.vertices]
+    return sum(vs, Vector()) / max(1, len(vs))
 
-    def centre(objs):
-        vs = [v.co for ob in objs for v in ob.data.vertices]
-        return sum(vs, Vector()) / max(1, len(vs))
 
-    ref = centre([ob for ob in obs if not ob.get("tall")])
-    return [ob for ob in obs if ob.get("tall") and (centre([ob]) - ref).dot(toward) > 0.3]
+# 手前/奥を決める向き。カメラは南東にあるので南東が手前。北東と南西は奥行きが同じなので、iss と同じく東寄りを手前にする
+NEAR_AXIS = Vector((1.0, -0.5, 0.0)).normalized()
+
+
+def near_camera(obs, axis=NEAR_AXIS, kind="tall", origin=None):
+    """部品（kind="tall": 高さのある部品、それ以外は名前の頭）のうち、手前の側にあるもの（重心が、本体の重心より axis の向きにある）。
+    origin を渡すと、本体の重心の代わりにその点から測る"""
+    ref = _centre([ob for ob in obs if not ob.get("tall")]) if origin is None else origin
+    pick = (lambda ob: ob.get("tall")) if kind == "tall" else (lambda ob: ob.name.startswith(kind))
+    return [ob for ob in obs if pick(ob) and (_centre([ob]) - ref).dot(axis) > 0.3]
 
 
 def apply_slope(ob, slope):
@@ -1253,13 +1302,32 @@ def track_sheet(profile="new"):
                            ends=name in ("s", "w", "n", "e"), skin=skin)
             # 側壁のバリエーション（複線以上を並べて作るとき用）: back はカメラから遠い側の壁だけ、front は近い側の壁だけ
             side = prof.get("walls", "both")
-            near = near_camera(obs)
+            # 手前/奥を分ける向き: T字は、まっすぐ通る線路（東西か南北）に対して手前か奥かで決める（分岐の向きで壁が変わる）。
+            #   南北の線路は東が手前、東西の線路は南が手前。それ以外はカメラの向き（NEAR_AXIS）
+            axis = {"nse": Vector((1, 0, 0)), "nsw": Vector((1, 0, 0)),
+                    "new": Vector((0, -1, 0)), "sew": Vector((0, -1, 0))}.get(name, NEAR_AXIS)
+            origin = Vector((0, 0, 0)) if len(paths) > 1 else None
+            near = near_camera(obs, axis, origin=origin)
             keep = {"both": lambda ob: True, "center": lambda ob: False,
                     "front": lambda ob: ob in near, "back": lambda ob: ob not in near}[side]
-            gone = {ob.name[4:] for ob in obs if ob.get("tall") and not keep(ob)}  # 壁を外した側（"L0" など）
-            # 壁のない側の基盤（open）は、その側の壁を外したときだけ残す
-            for ob in [ob for ob in obs if (ob.get("tall") and ob.name[4:] in gone)
-                       or (ob.name.startswith("open") and ob.name[4:] not in gone)]:
+            walls = [ob for ob in obs if ob.get("tall")]
+            kept = [ob for ob in walls if keep(ob)]
+            if name.startswith("diag_") and side in ("back", "front"):
+                # 斜め（iss と同じ）: 角の側の壁は付けない。角と反対側の壁だけが、手前か奥のどちらかの版に出る
+                ref = _centre([ob for ob in obs if not ob.get("tall")])
+                kept = [ob for ob in kept if (_centre([ob]) - ref).dot(ref) < 0]
+            # 壁のない側の基盤（open）: 斜めは壁を外した側、それ以外は手前/奥で決める（back は手前側、front は奥側、center は両方）
+            opens = [ob for ob in obs if ob.name.startswith("open")]
+            if side == "both":
+                keep_open = []
+            elif side == "center":
+                keep_open = opens
+            elif name.startswith("diag_"):
+                keep_open = [ob for ob in opens if ob.name[4:] not in {w.name[4:] for w in kept}]
+            else:
+                near_open = near_camera(obs, axis, kind="open", origin=origin)
+                keep_open = [ob for ob in opens if (ob in near_open) == (side == "back")]
+            for ob in [ob for ob in walls if ob not in kept] + [ob for ob in opens if ob not in keep_open]:
                 obs.remove(ob)
                 bpy.data.objects.remove(ob, do_unlink=True)
             cname = f"{prof['sheet']}{suffix}_{name}"
@@ -1463,6 +1531,14 @@ def tollbooth_sheet():
 
 
 if __name__ == "__main__":
+    if DEBUG:
+        import shutil
+        dbg = os.path.join(WORK, "debug")
+        os.makedirs(dbg, exist_ok=True)
+        for f in os.listdir(SRC):
+            if f.endswith(".dat"):
+                shutil.copy(os.path.join(SRC, f), dbg)
+        SRC = dbg
     os.makedirs(WORK, exist_ok=True)
     os.makedirs(SRC, exist_ok=True)
     setup_scene()

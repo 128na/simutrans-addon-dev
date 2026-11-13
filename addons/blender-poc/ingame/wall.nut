@@ -53,5 +53,36 @@ out += r("dbl ns front", command_x.build_way(pl, coord3d(31, 138, 0), coord3d(31
 out += r("tri ew back", command_x.build_way(pl, coord3d(20, 146, 0), coord3d(26, 146, 0), wb, true));
 out += r("tri ew none", command_x.build_way(pl, coord3d(20, 147, 0), coord3d(26, 147, 0), wn, true));
 out += r("tri ew front", command_x.build_way(pl, coord3d(20, 148, 0), coord3d(26, 148, 0), wf, true));
+// 奥・手前の版の T字（分岐が奥向き・手前向き）と斜めの 3 線: y=152〜
+out += r("t back", command_x.build_way(pl, coord3d(20, 154, 0), coord3d(30, 154, 0), wb, true));
+out += r("t back up", command_x.build_way(pl, coord3d(23, 154, 0), coord3d(23, 152, 0), wb, true));
+out += r("t back down", command_x.build_way(pl, coord3d(27, 154, 0), coord3d(27, 156, 0), wb, true));
+out += r("t front", command_x.build_way(pl, coord3d(20, 160, 0), coord3d(30, 160, 0), wf, true));
+out += r("t front up", command_x.build_way(pl, coord3d(23, 160, 0), coord3d(23, 158, 0), wf, true));
+out += r("t front down", command_x.build_way(pl, coord3d(27, 160, 0), coord3d(27, 162, 0), wf, true));
+out += r("dg back", command_x.build_way(pl, coord3d(36, 140, 0), coord3d(41, 145, 0), wb, false));
+out += r("dg none", command_x.build_way(pl, coord3d(35, 141, 0), coord3d(40, 146, 0), wn, false));
+out += r("dg front", command_x.build_way(pl, coord3d(34, 142, 0), coord3d(39, 147, 0), wf, false));
+out += r("dg2 back", command_x.build_way(pl, coord3d(44, 146, 0), coord3d(49, 141, 0), wb, false));
+out += r("dg2 none", command_x.build_way(pl, coord3d(45, 147, 0), coord3d(50, 142, 0), wn, false));
+out += r("dg2 front", command_x.build_way(pl, coord3d(46, 148, 0), coord3d(51, 143, 0), wf, false));
+// 斜めの 3 線（奥・中・手前）: 階段の形を 1 タイルずつ敷いて、3 本が同じ並びになるようにする。y=205〜（右下がり）と y=223〜（右上がり）
+function stair(pl, w, x, y, n, dy) {
+  local e = null;
+  for (local k = 0; k < n; k++) {
+    local a = command_x.build_way(pl, coord3d(x + k, y + k * dy, 0), coord3d(x + k, y + (k + 1) * dy, 0), w, true);
+    local b = command_x.build_way(pl, coord3d(x + k, y + (k + 1) * dy, 0), coord3d(x + k + 1, y + (k + 1) * dy, 0), w, true);
+    if (a != null) e = a;
+    if (b != null) e = b;
+  }
+  return e;
+}
+// 画面で縦向きの斜め（右下がり）は東寄りが手前、横向きの斜め（右上がり）は南寄りが手前
+out += r("st front", stair(pl, wf, 22, 205, 5, 1));
+out += r("st none", stair(pl, wn, 21, 206, 5, 1));
+out += r("st back", stair(pl, wb, 20, 207, 5, 1));
+out += r("st2 back", stair(pl, wb, 20, 227, 5, -1));
+out += r("st2 none", stair(pl, wn, 21, 228, 5, -1));
+out += r("st2 front", stair(pl, wf, 22, 229, 5, -1));
 gui.close_all_windows();
 return out;
