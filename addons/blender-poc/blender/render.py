@@ -998,8 +998,16 @@ def render_layers(name, obs, split, exits, slope, cy, spill, rise):
         m |= _ground_mask_at(slope, None, cy - k)
     rot = bpy.context.scene.camera.rotation_euler.to_matrix()
     fwd = rot @ Vector((0, 0, -1))
-    near = lambda ob: sum((v.co for v in ob.data.vertices), Vector()).dot(Vector((fwd.x, fwd.y, 0))) < 0
-    front = [ob for ob in tall if split and near(ob)]
+    # 手前の部品: 重心が本体の重心よりカメラ側にあるもの（直線・坂・行き止まり・カーブ・横向きの斜め）。
+    # 画面で縦向きの斜めは左右に並ぶので、どちらも奥の絵に入れる
+    toward = -Vector((fwd.x, fwd.y, 0)).normalized()
+
+    def centre(objs):
+        vs = [v.co for ob in objs for v in ob.data.vertices]
+        return sum(vs, Vector()) / max(1, len(vs))
+
+    ref = centre(body)
+    front = [ob for ob in tall if split and (centre([ob]) - ref).dot(toward) > 0.3]
 
     def layer(objs, suffix):
         for ob in tall:
@@ -1113,11 +1121,11 @@ TRACK_PROFILES = {
     # 試作: 新に、車止め・さび色・雪の絵を足したもの（本体のシートの検証を崩さないよう、別のアドオンにする）
     "trial": {"sheet": "track_trial", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
               "groups": ("body", "structure", "weathering"), "snow": True},
-    # 試作: 新に側壁を足したもの。手前の壁は frontimage（下の 1 行。直線だけ）
+    # 試作: 新に側壁を足したもの。カメラに近い側の壁は手前の絵（frontimage。下の 4 行に同じ並び）
     # 試作: 橋（obj=bridge）。直線と坂（橋の端）だけを描き、床版・側壁（欄干）を足す。橋脚は別のセル
     "bridge": {"sheet": "track_bridge", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
                "groups": ("body", "wall", "deck"), "front_row": 4,
-               "only": ("ns", "ew", "up12", "up9", "up3", "up6"), "piers": True},
+               "only": ("ns", "ew", "up12", "up9", "up3", "up6", "up2_12", "up2_9", "up2_3", "up2_6"), "piers": True},
     "wall": {"sheet": "track_wall", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
              "groups": ("body", "wall"), "front_row": 4},
 }
@@ -1202,10 +1210,10 @@ def track_sheet(profile="new"):
                            ends=name in ("s", "w", "n", "e"), skin=skin)
             cname = f"{prof['sheet']}{suffix}_{name}"
             if any(ob.get("tall") for ob in obs):
-                cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, name in ("ns", "ew"), exits_of(name),
+                cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, True, exits_of(name),
                                                                       slope, cy, prof["spill"], WALL_RISE)
                 if front:
-                    cells[(prof["front_row"], pos[1])] = front
+                    cells[(pos[0] + prof["front_row"], pos[1])] = front
             else:
                 cells[(pos[0] + row0, pos[1])] = render_cell(cname, exits_of(name), slope=slope, cy=cy, spill=prof["spill"])
 
@@ -1243,7 +1251,7 @@ def track_sheet(profile="new"):
         cells[(0, 0)] = render_icon("track_icon", 0.5, shift=(-0.14, 0.2), label="100")
         cells[(0, 1)] = cells[(0, 2)]  # カーソルは ns と同じ絵
 
-    rows = 8 if prof.get("snow") else 5 if "front_row" in prof else 4
+    rows = 8 if prof.get("snow") or "front_row" in prof else 4
     make_sheet(cells, rows, 10, os.path.join(SRC, prof["sheet"] + ".png"))
 
 
