@@ -1,6 +1,6 @@
 ---
 name: way-addon-reference
-description: Simutrans の way 系アドオン（線路・道路・側壁・高架・橋・トンネル）を Blender のスクリプトで作るときに引くリファレンス。本体の描き方と dat の決まり、部品と基準面の組み立て、持ち分マスク、バリエーション（single/back/center/front）、橋・高架・トンネルの絵の割り当て、確かめ方、つまずきやすい所をまとめてある。「側壁を付けたい」「高架/橋/トンネルを作りたい」「back/center/front を作りたい」「基盤がはみ出す/すき間が出る」「壁に縦線が出る」「手前の絵（frontimage）を分けたい」「雪の絵を足したい」「アイコンを区別したい」「dat のキーが分からない」「新しい way アドオンを足したい」と言われたとき、addons/blender-poc の render.py・track_dat.py・ingame/*.nut を直すときに使う。位置合わせ（つなぎ目のずれ）は way-calibration スキル。
+description: Simutrans の way 系アドオン（線路・道路・側壁・高架・橋・トンネル）を Blender のスクリプトで作るときに引くリファレンス。本体の描き方と dat の決まり、部品と基準面の組み立て、持ち分マスク、バリエーション（single/back/center/front）、橋・高架・トンネルの絵の割り当て、確かめ方、つまずきやすい所をまとめてある。「側壁を付けたい」「高架/橋/トンネルを作りたい」「back/center/front を作りたい」「基盤がはみ出す/すき間が出る」「壁に縦線が出る」「手前の絵（frontimage）を分けたい」「雪の絵を足したい」「アイコンを区別したい」「分岐（T字・十字）の絵 / switch 画像 / nse1・nse2 を作りたい」「dat のキーが分からない」「新しい way アドオンを足したい」と言われたとき、addons/blender-poc の render.py・track_dat.py・ingame/*.nut を直すときに使う。位置合わせ（つなぎ目のずれ）は way-calibration スキル。
 ---
 
 # way アドオンのリファレンス（Blender のスクリプトで作る）
@@ -93,3 +93,61 @@ dat は手で書かず `python -X utf8 blender/track_dat.py` で書き出す。�
 - ゲームを名前でまとめて終了させない（ユーザーが開いているゲームも閉じる）。自分が起動したビルドだけを閉じる
 - `flat.sve` はユーザーが保存し直していることがある。見本を敷く場所が空いているかを確かめる（「Tile not empty」）
 - シェルの heredoc で `\\n` を含む文字列を書くと改行が壊れることがある。スクリプトのファイルは Write・Edit で書く
+
+## 8. 分岐（switch）の絵（OTRP 専用）
+
+T字・十字の way に、通常の絵のほかに「分岐の向きを示す絵」を持たせる仕組み。標準の Simutrans には無く、OTRP（KU-TA 由来のソース）の本体だけが読む。
+本体のソースで確かめたもの: `descriptor/writer/way_writer.cc`・`descriptor/reader/way_reader.cc`・`descriptor/way_desc.h`・`boden/wege/weg.cc`・`boden/wege/schiene.cc`。
+詳しい経緯は OTRP 本体の PR（`128na/simutrans` の `feature/switch-image-override`、フォーク元 `teamhimeh/simutrans#810`）にある。
+
+### 8.1 dat のキーと絵の番号
+
+| dat のキー | 絵の番号 | 本体の呼び方 |
+|---|---|---|
+| `image[nse1]` `image[new1]` `image[nsw1]` `image[sew1]` `image[nsew1]` | 16–20 | switch 画像（`nw` = false） |
+| `image[nse2]` `image[new2]` `image[nsw2]` `image[sew2]` `image[nsew2]` | 21–25 | switch 画像（`nw` = true） |
+| （今の makeobj では書けない） | 26–30 / 31–35 | ex 画像（`nw` = false / true） |
+
+- 方角の並びは `nse`・`new`・`nsw`・`sew`（T字 4 種）と `nsew`（十字）。手前の絵（`frontimage[...]`）と雪（`[1]`）も同じ並び。
+- `image[new2]` が dat にあると makeobj は 26 枚（通常 16 + 分岐 10）を書き、無いと 16 枚で分岐の絵なしになる。**1 と 2 の 10 枚をそろえる**（片方だけ書くと、もう片方は空の絵になる）。
+- 本体の判定は枚数だけ。16 枚を超えると switch 画像あり、26 枚を超えると ex 画像あり（`way_reader.cc`）。waytype は問わない。
+- ex 画像（26–35）は本体が読むが、`way_writer.cc` のキーは `nsew2` までなので、今の makeobj ではアドオンに入れられない。
+  本体の動作確認には、キーを `nse3`〜`nsew4`（検証用の仮の名前）まで足した makeobj を別に作って使った。本物のキー名は決まっていない。
+
+### 8.2 本体での使われ方
+
+| 場面 | 内容 |
+|---|---|
+| 自動選択 | 線路（tram を含む）と道路の T字・十字だけ。隣のタイルの形から選ぶ（`select_switch_image`・`select_switch_road_image`）。ほかの waytype には自動選択がない |
+| 列車の予約 | 線路は、曲がる経路を取る列車が予約すると、その向きの switch 画像に切り替わる（`schiene_t::reserve`）。固定した分岐は切り替わらない |
+| 固定（OTRP の機能） | タイルの詳細ダイアログで、switch 画像を持つ分岐の画像を選べる。選択は保存され、形が変わる・分岐が解消すると自動に戻る。画像が無い選択肢は出ない |
+
+ダイアログの名前と絵の対応（向きは、自動選択のコードが `nw` の真偽を選ぶ条件から読み取ったもの）:
+
+| ダイアログの名前 | 絵 |
+|---|---|
+| 標準 | 通常の絵（`image[nse]` など） |
+| 北へ分岐／南へ分岐（NSE） | `image[nse2]`／`image[nse1]` |
+| 東へ分岐／西へ分岐（NEW） | `image[new2]`／`image[new1]` |
+| 南へ分岐／北へ分岐（NSW） | `image[nsw2]`／`image[nsw1]` |
+| 西へ分岐／東へ分岐（SEW） | `image[sew2]`／`image[sew1]` |
+| 渡り線 A／B（十字） | `image[nsew2]`／`image[nsew1]`（`way_writer.cc` のコメントでは 1 と 2 は「北西–南東が直進」になる別の交差） |
+| Y字分岐、複線渡り線（ex） | ex 画像（今は作れない） |
+
+T字の向きと十字の A/B は、自動選択のコードから読み取ったもので、実物の絵での確認は十字の 1 例だけ。作者の確認が要る。ずれていたらこの表と本体のラベル（`gui/ground_info.cc`）を直す。
+
+確認の状況（単色の簡易画像で、標準 = 灰・状態 1 = 青・状態 2 = 赤を割り当てて、ゲームで確かめた）:
+
+| waytype | 結果 |
+|---|---|
+| rail | 実際のアドオンで確認（選択・保存・ロード・形の変化で自動に戻る） |
+| tram・monorail・maglev | 実際のアドオンで確認（OTRP 本体の作者による） |
+| road・water（運河）・air（滑走路） | 本体のツールで T字・十字とも選択でき、選択ごとに別の絵になることを確認。詳細ダイアログの表示は未確認 |
+| ex 画像（road・rail） | 検証用 makeobj で 36 枚の way を作り、選択肢 3・4 が別の絵になることを確認。dat の `3` 系は選択肢 4、`4` 系は選択肢 3 |
+| 電力（power） | 対象外。電線は `leitung_t`（`obj_t` 派生）で `weg_t` ではないため、この機能の対象にならない |
+
+### 8.3 作るときの注意
+
+- 1 と 2 は左右反転ではなく、T字なら枝の曲がる側の違い。持ち分は通常の絵と同じ（3 章）。
+- 道路の自動選択は「隣に T字がある」条件で switch 画像（`nw` = false）を使う（`select_switch_road_image`）。線路と意味が違うので、道路用の絵を作るときは `boden/wege/weg.cc` の条件を読んで合わせる。道路で実物を確かめたアドオンは無い。
+- 確かめ方: ゲームで T字を作り、タイルを開いて選択肢を順に選ぶ。スクリプトなら `command_x(tool_set_switch_image).work(pl, pos, "" + wt_rail + ",1")` で選び、`way_x(...).get_image_id()` で絵が変わることを見る（OTRP 本体の `tests/automated-tests/tests/test_switch_image_override.nut`）。
