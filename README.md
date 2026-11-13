@@ -9,6 +9,8 @@ addons/
   <addon-name>/    # アドオンごとに独立した開発プロジェクト
 ```
 
+文書の置き場所（スキル・リファレンス・記録・ADR）は [docs/README.md](./docs/README.md) にあります。
+
 各アドオンは、使用するツールやビルド手順に合わせて必要なファイルを持ちます。monorepo全体で特定の言語・パッケージマネージャー・ビルド方法を強制しません。追加時は [addons/README.md](./addons/README.md) の規約を確認してください。
 
 ## Makeobj
