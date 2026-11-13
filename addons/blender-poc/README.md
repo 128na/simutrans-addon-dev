@@ -30,6 +30,7 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 | `blender/icons_only.py` | 線路のシートのアイコンだけを描き直して差し替える |
 | `blender/hcat.py` | ゲームの画面を横に並べて 1 枚にする |
 | `ingame/full.nut`・`ingame/full_check.sh` | 全方位の表示確認。way の絵 28 種類を周りとつながった形で出す最小のレイアウトを敷き、way ごとに 5 か所を撮って並べる |
+| `ingame/switch.nut`・`switch_auto.nut` | 分岐の絵（OTRP の switch 画像）の見本。固定した T字・十字と、自動選択で枝が曲がる 8 通り |
 | `ingame/wall.nut`・`elev.nut`・`bridge.nut`・`tunnel.nut`・`trial.nut` | 側壁・高架・橋・トンネル・試作の見本（複線の並び、行き止まり、橋の端、坑口） |
 | `ingame/train.nut` | 車両を走らせる確認（未完成。ダイヤの設定が通らない） |
 | `src/track_wall_*.dat`・`track_elev_*.dat` | 側壁付きの線路・高架。`single`（両側の壁）・`back`（奥だけ）・`center`（なし）・`front`（手前だけ） |
@@ -776,3 +777,19 @@ pak に入れるときの `makeobj` の引数は、上の「ビルド」の行�
 - ふつうの線路と側壁つきの線路（`bpoc_track_wall_single`）で、4 方向とも継ぎ目が埋まったことを確かめた（`docs/trial_tunnel_seam.png`。手前向きの坑口 3 つ）
 - トンネルのカーソル（`cursor=track_tunnel.0.1`）を、口が手前を向いた坑口の奥の絵と手前の絵を重ねた 1 枚にした（前は奥の絵だけで、線路と内壁しか見えなかった）。
   ゲームで道具を選んで確かめてもらった（スクリプトからは道具を選べない）
+
+### 分岐の絵（OTRP の switch 画像。2026-11-14）
+
+- 線路の 11 アドオン（本体・旧・試作・側壁 4・高架 4）に、T字・十字の分岐の絵 10 枚（`image[nse1]`〜`image[nsew2]`）を足した。
+  手前の絵（`frontimage`）と雪の絵（`[1]`）も同じ並び。OTRP の本体だけが読み、ほかの本体では今までどおり
+- 作り: まくらぎとレールだけを「直線 + 片側のカーブ」にし、道床・側壁・基盤は元の T字・十字と同じにした。
+  片側のカーブだけで全部を組むと、カーブの内側に丸い壁が立ち、隣のタイルとつながらなかった（`docs/switch_cells.png`。上の行が 1、下の行が 2）
+- シートの置き場所: 行 2 の列 10〜14 が「1」、行 3 の列 10〜14 が「2」（並びは nse・new・nsw・sew・nsew）。シートの幅が 10 列から 15 列になった。
+  手前の絵・雪はいつもの行の決まりのとおり 4 行（手前の絵のあるシートは 8 行）下。dat は `src/track.dat` の分岐の行を元に `track_dat.py` が書き出す
+- どちらのカーブを「1」「2」にするかは、本体の `weg_t::select_switch_image` から決めた（`docs/reference/way-addon.md` の 5 章）
+- 確かめたこと:
+  - 描き直した 11 枚のシートで、元からあるセルが前と全画素同じ（試作だけはアイコンとカーソルのセルが今の作りに描き直された）
+  - 自動選択（`ingame/switch_auto.nut`）: 本線の途中から枝を出して隣で曲げる 8 通りで、分岐のカーブが隣のカーブへなめらかにつながった（`docs/trial_switch_auto.png`。4 通りを並べた）
+  - 固定（`ingame/switch.nut`）: 輪に十字を入れた T字 4 つと十字を選択 1・2 に固定し、絵が変わることを見た（`docs/trial_switch_pinned.png`。左が 1、右が 2）
+  - 確かめたビルドは、固定の道具が入った OTRP の本体（`../simutrans/build/default/sim.exe`。MSYS2 の `mingw64/bin` を PATH に足して起動）
+- 残り: 十字の 1・2 がタイルの詳細の「渡り線 A・B」のどちらに当たるか。列車の予約で絵が切り替わる所は見ていない。ex 画像（Y字分岐・複線渡り線）は今の makeobj では書けない

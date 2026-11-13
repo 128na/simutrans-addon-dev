@@ -72,6 +72,9 @@
 | トンネルの坑口 | pak128 では 2 段の坂にしか置けない | `bauer/tunnelbauer.cc` |
 | 地形の坂の番号 | 角の桁は sw=1・se=3・ne=9・nw=27。1 段の北が高い坂は 36、南 4、東 12、西 28（2 段は 2 倍） | blender-poc の `ingame/*.nut` で確認 |
 | 高架 | dat は `system_type=1` | blender-poc の `src/track_elev_*.dat` |
+| 分岐の絵（OTRP の switch 画像） | `image[nse1]` `image[new1]` `image[nsw1]` `image[sew1]` `image[nsew1]` は本体の `nw`=false（絵の番号 16–20）、末尾 `2` は `nw`=true（21–25）。`image[new2]` が dat にあると makeobj は 26 枚を書く（無いと 16 枚で分岐の絵なし）。手前の絵・雪も同じ並び | `descriptor/way_desc.h` の `get_switch_image_id`・`descriptor/writer/way_writer.cc` |
+| 分岐の絵の曲がる側（線路） | 枝が隣のタイルでどちらへ曲がるかで選ばれる。分岐のタイルの中のカーブは: `nse2` 南–東・`nse1` 北–東、`nsw2` 北–西・`nsw1` 南–西、`new2` 西–北・`new1` 東–北、`sew2` 東–南・`sew1` 西–南（例: `nse2` は東の隣が北へ曲がるとき）。十字の `1`・`2` は自動では選ばれず、タイルの詳細で固定したときだけ出る | `boden/wege/weg.cc` の `select_switch_image`。blender-poc の `ingame/switch_auto.nut` で 8 通りとも隣のカーブへなめらかにつながった |
+| 十字の分岐の絵 | `way_writer.cc` の注記では 1 と 2 は「北西–南東が直進」の別の交差。blender-poc では `nsew1` を南西・北東のカーブ、`nsew2` を北西・南東のカーブにした（どちらが渡り線 A・B に合うかは未確認） | `descriptor/writer/way_writer.cc` |
 | スクリプトからの `change_schedule` | 通らない（車両との重なりは手で走らせて見る） | [records](../records/2026-11-13_otrp-script-change-schedule.md) |
 
 見本のスクリプトで坂の向きを逆に指定すると、橋が架からない（絵の問題ではない）。

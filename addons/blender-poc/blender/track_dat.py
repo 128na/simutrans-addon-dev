@@ -4,6 +4,7 @@ src/track.dat の絵の割り当て（[0] の行）を元に、シートの行�
     奥の絵 4 行 →（手前の絵 4 行。側壁・橋）→ 雪の奥の絵 4 行 →（雪の手前の絵 4 行）
 - 手前の絵: front + キー（frontimage・frontimageup・frontimageup2・frontdiagonal）。同じ列の 4 行下
 - 雪の絵: 同じキーの [1]。手前の絵が無いシートは 4 行下、あるシートは 8 行下
+- 分岐の絵（OTRP の image[nse1]〜image[nsew2]）: track.dat の行のとおり（行 2・3 の列 10〜14）。手前の絵・雪も同じ決まりで書く
 
 書き出すもの: track.dat・track_old.dat（雪の行を足す）、track_trial.dat、track_wall_{single,back,center,front}.dat、track_elev_{...}.dat、track_bridge.dat
 """

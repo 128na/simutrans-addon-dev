@@ -1077,7 +1077,12 @@ def exits_of(name):
         return "ns" if code in (12, 3) else "ew"
     if name == "single":
         return ""
-    return name.split("_")[-1]
+    return _junction(name.split("_")[-1])
+
+
+def _junction(name):
+    """分岐の絵の名前（nse1・nsew2 など）を、元の T字・十字の名前に戻す。それ以外はそのまま。"""
+    return name[:-1] if name[-1:] in ("1", "2") and name[:-1] in ("nse", "new", "nsw", "sew", "nsew") else name
 
 
 # ゲームが地面の菱形を塗る位置（セルの中で、タイル中心が何px目か）。dat のオフセット -64,-32 と対応し、
@@ -1384,6 +1389,20 @@ def track_sheet(profile="new"):
         (3, 8): ("sew", [straight(W, E), arc_sw, arc_se], None),
         (3, 9): ("nsew", [straight(S, N), straight(W, E), arc_sw, arc_nw, arc_ne, arc_se], None),
     }
+    # 分岐の絵（OTRP の switch 画像。dat の image[nse1]〜image[nsew2]）: まくらぎとレールだけを、直線 + 片側のカーブにする。
+    # 道床・側壁・基盤は元の T字・十字と同じ（片側のカーブだけで組むと、カーブの内側に丸い壁が立ち、隣とつながらない）。
+    # 行 2 の列 10〜14 が「1」（本体の nw=false）、行 3 の列 10〜14 が「2」（nw=true）。並びは nse・new・nsw・sew・nsew。
+    # どちらのカーブかは本体の weg_t::select_switch_image から: nse は東の隣が北西のカーブ（北へ分かれる）とき 2 で、
+    # このタイルの中では南–東のカーブを通る。十字の 1 は北西–南東が直進（南西・北東のカーブ）、2 は北東–南西が直進
+    switch_arcs = {"nse": (arc_ne, arc_se), "new": (arc_ne, arc_nw), "nsw": (arc_sw, arc_nw), "sew": (arc_sw, arc_se),
+                   "nsew": ((arc_sw, arc_ne), (arc_nw, arc_se))}
+    if prof.get("switches", True):
+        for col, (base_name, arcs) in enumerate(switch_arcs.items()):
+            lines = [straight(S, N), straight(W, E)] if base_name == "nsew" else [straight(S, N) if "ns" in base_name else straight(W, E)]
+            full = next(v[1] for v in jobs.values() if v[0] == base_name)
+            for k, a in enumerate(arcs):
+                jobs[(2 + k, 10 + col)] = (f"{base_name}{k + 1}", full, None,
+                                           lines + (list(a) if base_name == "nsew" else [a]))
     # dat オフセット -64,-32 と対応。持ち分は地面の菱形のまま（新描画位置は絵が 4px 下だが、持ち分を 4 行下げると、
     # 手前のタイルへはみ出した 2〜4 行目を手前の地面が消し、どのつなぎ目にも草の線が出た）
     cy = GROUND_CY
@@ -1410,19 +1429,24 @@ def track_sheet(profile="new"):
     if prof.get("snow"):
         variants.append((block, "_snow", SNOW_SKIN, tuple(g for g in groups if g != "weathering")))
     for row0, suffix, skin, grp in variants:
-        for pos, (name, paths, slope) in jobs.items():
+        for pos, (name, paths, slope, *rails) in jobs.items():
             clear_models()
             # 画面で横向きの斜め（nw・se）は下げ幅を半分にする（datum_move の div）。斜めは横幅も細くする
             div = 2 if name in ("diag_nw", "diag_se") else 1
             widths = {"gauge": DIAG_RAIL, "bed": DIAG_BALLAST} if name.startswith("diag_") else None
-            obs = assemble(parts, paths, prof["datums"], slope, widths=widths, div=div, groups=grp,
-                           ends=name in ("s", "w", "n", "e"), skin=skin)
+            kw = dict(widths=widths, div=div, groups=grp, ends=name in ("s", "w", "n", "e"), skin=skin)
+            if rails:
+                # 分岐の絵: 走行面（rail の基準面の部品）だけを分岐の経路で作る
+                obs = (assemble([p for p in parts if p.datum != "rail"], paths, prof["datums"], slope, **kw)
+                       + assemble([p for p in parts if p.datum == "rail"], rails[0], prof["datums"], slope, **kw))
+            else:
+                obs = assemble(parts, paths, prof["datums"], slope, **kw)
             # 側壁のバリエーション（複線以上を並べて作るとき用）: back はカメラから遠い側の壁だけ、front は近い側の壁だけ
             side = prof.get("walls", "both")
             # 手前/奥を分ける向き: T字は、まっすぐ通る線路（東西か南北）に対して手前か奥かで決める（分岐の向きで壁が変わる）。
             #   南北の線路は東が手前、東西の線路は南が手前。それ以外はカメラの向き（NEAR_AXIS）
             axis = {"nse": Vector((1, 0, 0)), "nsw": Vector((1, 0, 0)),
-                    "new": Vector((0, -1, 0)), "sew": Vector((0, -1, 0))}.get(name, NEAR_AXIS)
+                    "new": Vector((0, -1, 0)), "sew": Vector((0, -1, 0))}.get(_junction(name), NEAR_AXIS)
             origin = Vector((0, 0, 0)) if len(paths) > 1 else None
             near = near_camera(obs, axis, origin=origin)
             keep = {"both": lambda ob: True, "center": lambda ob: False,
@@ -1511,7 +1535,7 @@ def track_sheet(profile="new"):
         cells[(0, 1)] = cells[(0, 2)]  # カーソルは ns と同じ絵
 
     rows = block * (2 if prof.get("snow") else 1)
-    make_sheet(cells, rows, 10, os.path.join(SRC, prof["sheet"] + ".png"))
+    make_sheet(cells, rows, 15 if any(c >= 10 for _, c in cells) else 10, os.path.join(SRC, prof["sheet"] + ".png"))
 
 
 ICON = 32

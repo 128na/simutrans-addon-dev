@@ -45,6 +45,7 @@ description: Simutrans の way 系アドオン（線路・道路・側壁・高�
 | 部品の出方 | `BPOC_DEBUG_COLORS=1 blender ... render.py -- <シート>` → `work/debug/` のセルを見る |
 | 全方位の表示 | `bash ingame/full_check.sh`（`ingame/full.nut` のレイアウト。way ごとに 5 か所を並べる） |
 | 複線・行き止まりの並び・高架・橋・トンネル | `ingame/wall.nut`・`elev.nut`・`bridge.nut`・`tunnel.nut` |
+| 分岐の絵（OTRP） | `ingame/switch_auto.nut`（自動選択。分岐のカーブが隣のカーブへなめらかにつながるか）・`ingame/switch.nut`（タイルの詳細の固定。選択 1・2 で絵が変わるか）。固定の道具がある OTRP のビルドで流す |
 | 雪 | `flat_snow.sve` で起動して同じ見本を流す |
 | 本体が変わっていないこと | 描き直して前のシートと全画素を比べる |
 | アイコンだけ直したとき | `blender/icons_only.py`（絵のセルを描き直さない） |
