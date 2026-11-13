@@ -72,9 +72,6 @@
 | トンネルの坑口 | pak128 では 2 段の坂にしか置けない | `bauer/tunnelbauer.cc` |
 | 地形の坂の番号 | 角の桁は sw=1・se=3・ne=9・nw=27。1 段の北が高い坂は 36、南 4、東 12、西 28（2 段は 2 倍） | blender-poc の `ingame/*.nut` で確認 |
 | 高架 | dat は `system_type=1` | blender-poc の `src/track_elev_*.dat` |
-| 分岐の絵（OTRP の switch 画像） | `image[nse1]` `image[new1]` `image[nsw1]` `image[sew1]` `image[nsew1]` は本体の `nw`=false（絵の番号 16–20）、末尾 `2` は `nw`=true（21–25）。`image[new2]` が dat にあると makeobj は 26 枚を書く（無いと 16 枚で分岐の絵なし）。手前の絵・雪も同じ並び | `descriptor/way_desc.h` の `get_switch_image_id`・`descriptor/writer/way_writer.cc` |
-| 分岐の絵の曲がる側（線路） | 枝が隣のタイルでどちらへ曲がるかで選ばれる。分岐のタイルの中のカーブは: `nse2` 南–東・`nse1` 北–東、`nsw2` 北–西・`nsw1` 南–西、`new2` 西–北・`new1` 東–北、`sew2` 東–南・`sew1` 西–南（例: `nse2` は東の隣が北へ曲がるとき）。十字の `1`・`2` は自動では選ばれず、タイルの詳細で固定したときだけ出る | `boden/wege/weg.cc` の `select_switch_image`。blender-poc の `ingame/switch_auto.nut` で 8 通りとも隣のカーブへなめらかにつながった |
-| 十字の分岐の絵 | `way_writer.cc` の注記では 1 と 2 は「北西–南東が直進」の別の交差。blender-poc では `nsew1` を南西・北東のカーブ、`nsew2` を北西・南東のカーブにした（どちらが渡り線 A・B に合うかは未確認） | `descriptor/writer/way_writer.cc` |
 | スクリプトからの `change_schedule` | 通らない（車両との重なりは手で走らせて見る） | [records](../records/2026-11-13_otrp-script-change-schedule.md) |
 
 見本のスクリプトで坂の向きを逆に指定すると、橋が架からない（絵の問題ではない）。
@@ -108,6 +105,7 @@
 - Blender: 作った直後のカメラの `matrix_world` は更新されていない。向きは `rotation_euler.to_matrix()` から取る
 - ゲーム: 急坂のある所へ `gui.jump` すると、画面の縦の位置が見当から大きくずれる（急坂の十字で 64px）
 - ゲーム: 坂の見本の斜め隣を崖のままにすると、崖の岩が草の色の判定に掛からず、道床の縁が測れない。角だけ上げた坂にする
+- ゲーム: OTRP 本体を手元でビルドした `../simutrans/build/default/sim.exe` は MSYS2 の DLL を使う。`/c/msys64/mingw64/bin` を PATH に足して起動しないと、`libpng16-16.dll` が無いと言って起動しない
 - シェル: 標準入力で Python に日本語を流すと cp932 で壊れる。heredoc で `\\n` を含む文字列を書くと改行が壊れることがある
 
 ## 9. 分岐（switch）の絵（OTRP 専用）
@@ -169,5 +167,9 @@ T字のカーブの向きは、blender-poc の見本（`ingame/switch_auto.nut`�
 ### 9.3 絵の作りと確かめ方
 
 - 1 と 2 は左右反転ではなく、T字なら枝の曲がる側の違い。持ち分は通常の絵と同じ（2 章）。
+- 線路の T字の 1・2 で、タイルの中に描くカーブの向きは 9.2 の表のとおり（枝が隣のタイルでどちらへ曲がるかで選ばれ、タイルの中はその手前側のカーブ）。
+- 線路の十字の 1・2 は自動では選ばれない（`select_switch_image` は T字 4 種だけを見る）。タイルの詳細で固定したときだけ出る
+- 変えるのは走行面（まくらぎ・レール）だけにし、道床・側壁・基盤は通常の T字・十字と同じにする。
+  片側のカーブだけで全部を組むと、カーブの内側に丸い壁が立ち、隣のタイルとつながらない（blender-poc の側壁の版で確認、2026-11-14）
 - 道路の自動選択は「隣に T字がある」条件で switch 画像（`nw` = false）を使う（`select_switch_road_image`）。線路と意味が違うので、道路用の絵を作るときは `boden/wege/weg.cc` の条件を読んで合わせる。道路で実物を確かめたアドオンは無い。
 - 確かめ方: ゲームで T字を作り、タイルを開いて選択肢を順に選ぶ。スクリプトなら `command_x(tool_set_switch_image).work(pl, pos, "" + wt_rail + ",1")` で選び、`way_x(...).get_image_id()` で絵が変わることを見る（OTRP 本体の自動テスト `test_switch_image_override.nut`）。

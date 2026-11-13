@@ -786,10 +786,10 @@ pak に入れるときの `makeobj` の引数は、上の「ビルド」の行�
   片側のカーブだけで全部を組むと、カーブの内側に丸い壁が立ち、隣のタイルとつながらなかった（`docs/switch_cells.png`。上の行が 1、下の行が 2）
 - シートの置き場所: 行 2 の列 10〜14 が「1」、行 3 の列 10〜14 が「2」（並びは nse・new・nsw・sew・nsew）。シートの幅が 10 列から 15 列になった。
   手前の絵・雪はいつもの行の決まりのとおり 4 行（手前の絵のあるシートは 8 行）下。dat は `src/track.dat` の分岐の行を元に `track_dat.py` が書き出す
-- どちらのカーブを「1」「2」にするかは、本体の `weg_t::select_switch_image` から決めた（`docs/reference/way-addon.md` の 5 章）
+- どちらのカーブを「1」「2」にするかは、本体の `weg_t::select_switch_image` から決めた（[`docs/reference/way-addon.md`](../../docs/reference/way-addon.md) の 9 章）
 - 確かめたこと:
   - 描き直した 11 枚のシートで、元からあるセルが前と全画素同じ（試作だけはアイコンとカーソルのセルが今の作りに描き直された）
   - 自動選択（`ingame/switch_auto.nut`）: 本線の途中から枝を出して隣で曲げる 8 通りで、分岐のカーブが隣のカーブへなめらかにつながった（`docs/trial_switch_auto.png`。4 通りを並べた）
   - 固定（`ingame/switch.nut`）: 輪に十字を入れた T字 4 つと十字を選択 1・2 に固定し、絵が変わることを見た（`docs/trial_switch_pinned.png`。左が 1、右が 2）
-  - 確かめたビルドは、固定の道具が入った OTRP の本体（`../simutrans/build/default/sim.exe`。MSYS2 の `mingw64/bin` を PATH に足して起動）
+  - 確かめたビルドは、固定の道具が入った OTRP の本体（`../simutrans/build/default/sim.exe`。起動の注意はリファレンスの 8 章）
 - 残り: 十字の 1・2 がタイルの詳細の「渡り線 A・B」のどちらに当たるか。列車の予約で絵が切り替わる所は見ていない。ex 画像（Y字分岐・複線渡り線）は今の makeobj では書けない
