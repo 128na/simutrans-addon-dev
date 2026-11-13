@@ -128,6 +128,12 @@ T字・十字の way に、通常の絵のほかに「分岐の向きを示す�
 - 本体の判定は枚数だけ。16 枚を超えると switch 画像あり、26 枚を超えると ex 画像あり（`way_reader.cc`）。waytype は問わない。
 - ex 画像（26–35）は本体が読むが、`way_writer.cc` のキーは `nsew2` までなので、今の makeobj ではアドオンに入れられない。
   本体の動作確認には、キーを `nse3`〜`nsew4`（検証用の仮の名前）まで足した makeobj を別に作って使った。本物のキー名は決まっていない。
+- ex 画像を書ける makeobj は公開されていない（2026-11-14 に確かめた）。
+  - `teamhimeh/simutrans` のリリース（v63_3 まで）の添付はゲーム本体だけで、makeobj は無い。
+  - OTRP のソースの makeobj は本家 Simutrans 125 の makeobj 60.12 と同じで、キーは `nsew2` まで。
+  - ex 画像を読む処理（26 枚を超えたら ex、`weg.cc` の `is_ex_image`）は、2021-12-12 の「KUTA_v6 source」のコミットに既にある。本家の Simutrans には無い。そのコミットの makeobj も 26 枚まで。
+- 本体が見るのは絵の並び（26 番から `26 + ribi_to_extra + nw * 5`）だけで、キー名は makeobj の中で決まる。
+  KU-TA 側に非公開の makeobj と、それで作った pak がある可能性は残る。キー名を決める前に、OTRP の開発者に既存の名前が無いか聞く。
 
 ### 9.2 本体での使われ方
 
