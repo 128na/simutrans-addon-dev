@@ -999,9 +999,31 @@ ROAD_PARTS = (
 ) + tuple(Part(f"wear{i}", "bed", "lane", _wear_material("street", (0.013, 0.0135, 0.015), (0.028, 0.029, 0.031), t),
                _lane_strips(spans, 0.0015 * i, fade=f), "weathering") for i, (spans, t, f) in enumerate(WEAR_LAYERS))
 # 雪の絵の路肩の雪（group "snow"）: 線路より除雪されている想定で、車道（路側の白線の少し外まで）を抜いた残りだけに積もる
-SNOW_EDGE = EDGE_LINE + 0.15  # 雪を抜く半幅（白線の外側 約 1px は路面を見せる）
-ROAD_PARTS += (Part("snowbank", "bed", "road", _SNOW, lambda t, k: box(0, 0, 0.02, *t.size, 0.04), "snow", "tile",
-                    carve=lambda t, k: t.hw * SNOW_EDGE / ROAD_HW),)
+# 境目は車線の境（路側の白線）のあたりでぼかす: 白線の内側まで薄いまだらの雪（シャーベット）を 3 段重ね、白線の外から積もった雪。
+# 薄い段は白線（上面 0.012）より下に置き、白線はまだらの上に見せる。くっきりした境は目立った（2026-11-15、ゲームで確認）
+SNOW_LAYERS = (  # (部品の名前, 雪を抜く半幅, 路面の色から雪へ寄せる具合（None は積もった雪）, 下面, 厚み)
+    ("slush0", EDGE_LINE - 0.90, 0.20, 0.0075, 0.001),
+    ("slush1", EDGE_LINE - 0.50, 0.40, 0.0085, 0.001),
+    ("slush2", EDGE_LINE - 0.20, 0.55, 0.0095, 0.001),
+    # 積もった雪は白線から 1〜2px 離し、間を灰色のまだらにする。白線のすぐ外から白い雪にすると、カメラに近い側の白線が
+    # 雪と見分けられなかった（2026-11-15）。厚みも白線（0.012）より薄くする
+    ("snowbank", EDGE_LINE + 0.35, None, 0.0, 0.0115),
+)
+_SNOW_LO, _SNOW_HI = (0.70, 0.73, 0.78), (0.90, 0.93, 0.97)
+
+
+def _slush_material(tag, lo, hi, t, spec=None):
+    """まだらの雪: 路面の 2 色を雪の色へ t だけ寄せ、粗いまだらにする（ぼかしの段）。"""
+    mix = lambda a, b: tuple(x + (y - x) * t for x, y in zip(a, b))
+    return lambda: noisy_material(f"road_slush_{tag}_{round(t * 100)}", mix(lo, _SNOW_LO), mix(hi, _SNOW_HI), scale=45,
+                                  rough=0.9, spec=spec)
+
+
+ROAD_PARTS += tuple(
+    Part(n, "bed", "road", _SNOW if t is None else _slush_material("street", (0.013, 0.0135, 0.015), (0.028, 0.029, 0.031), t),
+         (lambda z0, th: lambda t_, k: box(0, 0, z0 + th / 2, *t_.size, th))(z0, th), "snow", "tile",
+         carve=(lambda w: lambda t_, k: t_.hw * w / ROAD_HW)(w))
+    for n, w, t, z0, th in SNOW_LAYERS)
 # 高速道路の側壁（iss の都市高速 wrg_0120 と同じく、タイルの端に立つコンクリートの壁）。路面の基準面に乗り、横位置は車線と同じ倍率
 # （斜めは直線の 1/√2 で、タイルの辺で直線の壁と同じ点を通る）。外側の面はタイルの端の少し内側（4.95）
 EXPWY_WALL_U, EXPWY_WALL_W, EXPWY_WALL_H = 4.55, 0.40, 1.1
@@ -1034,7 +1056,9 @@ ROAD_PROFILES = {
     "expressway": {"sheet": "expressway", "prefix": "expwy_", "groups": ("body", "marking", "weathering"),
                    "skin": dict({"asphalt": _M_EXPWY_ASPHALT},
                                 **{f"wear{i}": _wear_material("expwy", (0.0027, 0.0027, 0.004), (0.016, 0.016, 0.023), t, 0.0)
-                                   for i, (_, t, _) in enumerate(WEAR_LAYERS)}),
+                                   for i, (_, t, _) in enumerate(WEAR_LAYERS)},
+                                **{n: _slush_material("expwy", (0.0027, 0.0027, 0.004), (0.016, 0.016, 0.023), t, 0.0)
+                                   for n, _, t, _, _ in SNOW_LAYERS if t is not None}),
                    "expressway": True, "label": "120", "style": "expressway"},
 }
 for _variant, _walls in (("single", "both"), ("back", "back"), ("center", "center"), ("front", "front")):
