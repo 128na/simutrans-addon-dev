@@ -1334,6 +1334,7 @@ for _variant, _walls in (("single", "both"), ("back", "back"), ("center", "cente
                                                band="elevated")
 # 試作: ex 画像（Y字・三方分岐）が使えたらどう見えるかを、switch 画像の 1・2 の枠に入れて見る（別のアドオン。雪なし）
 TRACK_PROFILES["ex_proto"] = dict(TRACK_PROFILES["new"], sheet="track_ex_proto", ex_proto=True, snow=False)
+TRACK_PROFILES["ex_proto2"] = dict(TRACK_PROFILES["ex_proto"], sheet="track_ex_proto2", ex_proto="crossover")
 ICON_BADGE = {"both": "S", "back": "B", "center": "C", "front": "F"}  # アイコンの右下の印（single / back / center / front）
 WALL_RISE = 11  # 側壁の高さ（画面の px。持ち分を上へ広げる行数）
 # datums: 基準面ごとの下げ幅（Datum(drop, ground)）。絵の基準位置は両方とも BALLAST_DY（地面の菱形より 1px 上 = 旧の位置）。
@@ -1404,7 +1405,11 @@ def track_sheet(profile="new"):
             full = next(v[1] for v in jobs.values() if v[0] == base_name)
             for k, a in enumerate(arcs):
                 rails = lines + (list(a) if base_name == "nsew" else [a])
-                if prof.get("ex_proto"):
+                if prof.get("ex_proto") == "crossover":
+                    # 試作 2: 渡り線の中央の十字。直線 2 本だけの交差（カーブなし）を十字の 1・2 に入れる。T字は通常のまま
+                    if base_name == "nsew":
+                        rails = [straight(S, N), straight(W, E)]
+                elif prof.get("ex_proto"):
                     # 試作: ex 画像の形を 1・2 の枠で見る。T字の 1 は Y字（両側のカーブだけ、直線なし）、2 は通常のまま。
                     # 十字の 1・2 は三方分岐（東西の直線 + 東へ開く／西へ開く両側のカーブ）
                     if base_name == "nsew":
@@ -1815,6 +1820,8 @@ if __name__ == "__main__":
         track_sheet("trial")
     if "track_ex_proto" in targets:
         track_sheet("ex_proto")
+    if "track_ex_proto2" in targets:
+        track_sheet("ex_proto2")
     if "track_bridge" in targets:
         track_sheet("bridge")
     for _variant in ("single", "back", "center", "front"):

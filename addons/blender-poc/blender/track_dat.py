@@ -106,6 +106,8 @@ if __name__ == "__main__":
     way("bpoc_track_old", "track_old", "# Blender 検証用の線路（旧描画位置）。下の 4 行は雪の絵（[1]）")
     way("bpoc_track_ex_proto", "track_ex_proto",
         "# Blender 検証用の線路の試作: 分岐の 1・2 の枠に ex 画像の形を入れたもの（T字の 1 = Y字、十字の 1・2 = 三方分岐）", snow=False)
+    way("bpoc_track_ex_proto2", "track_ex_proto2",
+        "# Blender 検証用の線路の試作 2: 渡り線の中央の十字を、直線 2 本だけの交差にしたもの（十字の 1・2。T字は通常のまま）", snow=False)
     way("bpoc_track_trial", "track_trial", "# Blender 検証用の線路の試作: 車止め・さび色・雪の絵（[1]。下の 4 行）")
     for side, ja in (("single", "両側（単線用）"), ("back", "奥だけ"), ("center", "なし（中線用）"), ("front", "手前だけ")):
         way(f"bpoc_track_wall_{side}", f"track_wall_{side}",
