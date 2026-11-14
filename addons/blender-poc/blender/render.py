@@ -632,8 +632,9 @@ def _arc_circle(path):
     return centre, (a - centre).length
 
 
-def _beyond_prisms(walls, paths, k, wu=None, ww=None):
-    """残した壁それぞれの「外側」を表す柱の集まり（基盤や端の壁から削る型）。wu・ww は壁の位置と厚み（既定は線路）。"""
+def _beyond_prisms(walls, paths, k, wu=None, ww=None, zr=(-2, 2)):
+    """残した壁それぞれの「外側」を表す柱の集まり（基盤や端の壁から削る型）。wu・ww は壁の位置と厚み（既定は線路）。
+    zr は柱の高さの範囲。坂を当てた後の物を削るときは、坂の高さまで広げる（ROAD_CUT_Z）"""
     ww = ww or WALL_W
     uw = ((wu or WALL_U) + ww) * k
     cut = []
@@ -652,10 +653,10 @@ def _beyond_prisms(walls, paths, k, wu=None, ww=None):
             ring = lambda rad: [c + Vector((math.cos(a), math.sin(a))) * rad for a in
                                 (2 * math.pi * i / 64 for i in range(64))]
             if inner:
-                cut.append(prism([(q.x, q.y) for q in ring(r - uw)], -2, 2))
+                cut.append(prism([(q.x, q.y) for q in ring(r - uw)], *zr))
             elif not w["cut"]:
                 a, b = ring(r + uw), ring(40.0)
-                cut += [prism([(q.x, q.y) for q in (a[i], b[i], b[(i + 1) % 64], a[(i + 1) % 64])], -2, 2) for i in range(64)]
+                cut += [prism([(q.x, q.y) for q in (a[i], b[i], b[(i + 1) % 64], a[(i + 1) % 64])], *zr) for i in range(64)]
             continue
         else:  # 直線・斜め
             if w["cut"]:
@@ -664,7 +665,7 @@ def _beyond_prisms(walls, paths, k, wu=None, ww=None):
             n = Vector((d.y, -d.x)) * s
             a, b = path[0] - d * 30, path[-1] + d * 30
             pts = [a + n * uw, b + n * uw, b + n * 40, a + n * 40]
-        cut.append(prism([(q.x, q.y) for q in pts], -2, 2))
+        cut.append(prism([(q.x, q.y) for q in pts], *zr))
     return cut
 
 
@@ -948,16 +949,24 @@ _WEAR_LO, _WEAR_HI = (0.030, 0.031, 0.033), (0.060, 0.061, 0.064)
 _M_OIL = lambda: noisy_material("road_oil", (0.004, 0.004, 0.005), (0.012, 0.012, 0.013), scale=90, rough=0.7)
 
 
-def _wear_material(tag, lo, hi, t, spec=None):
-    """走行跡の材質: 路面の 2 色（lo・hi）を、磨かれた色へ t だけ寄せる。"""
+def _mix_material(kind, tag, lo, hi, to, t, scale, spec=None):
+    """路面の 2 色（lo・hi）を、目標の 2 色 to へ t だけ寄せたまだらの材質（走行跡・まだらの雪）。"""
     mix = lambda a, b: tuple(x + (y - x) * t for x, y in zip(a, b))
-    return lambda: noisy_material(f"road_wear_{tag}_{round(t * 100)}", mix(lo, _WEAR_LO), mix(hi, _WEAR_HI), scale=90,
+    return lambda: noisy_material(f"road_{kind}_{tag}_{round(t * 100)}", mix(lo, to[0]), mix(hi, to[1]), scale=scale,
                                   rough=0.9, spec=spec)
+
+
+def _wear_material(tag, lo, hi, t, spec=None):
+    """走行跡の材質: 路面の 2 色を、磨かれた色へ t だけ寄せる。"""
+    return _mix_material("wear", tag, lo, hi, (_WEAR_LO, _WEAR_HI), t, 90, spec)
 
 
 class WearPath(list):
     """走行跡だけに使う経路。fade=True は行き止まりへ向かう経路で、始点（閉じた側）から濃い帯ほど手前で止める。"""
-    fade = False
+
+    def __init__(self, points, fade=False):
+        super().__init__(points)
+        self.fade = fade
 
 
 def _trim_start(path, dist):
@@ -1014,9 +1023,7 @@ _SNOW_LO, _SNOW_HI = (0.70, 0.73, 0.78), (0.90, 0.93, 0.97)
 
 def _slush_material(tag, lo, hi, t, spec=None):
     """まだらの雪: 路面の 2 色を雪の色へ t だけ寄せ、粗いまだらにする（ぼかしの段）。"""
-    mix = lambda a, b: tuple(x + (y - x) * t for x, y in zip(a, b))
-    return lambda: noisy_material(f"road_slush_{tag}_{round(t * 100)}", mix(lo, _SNOW_LO), mix(hi, _SNOW_HI), scale=45,
-                                  rough=0.9, spec=spec)
+    return _mix_material("slush", tag, lo, hi, (_SNOW_LO, _SNOW_HI), t, 45, spec)
 
 
 ROAD_PARTS += tuple(
@@ -1027,6 +1034,7 @@ ROAD_PARTS += tuple(
 # 高速道路の側壁（iss の都市高速 wrg_0120 と同じく、タイルの端に立つコンクリートの壁）。路面の基準面に乗り、横位置は車線と同じ倍率
 # （斜めは直線の 1/√2 で、タイルの辺で直線の壁と同じ点を通る）。外側の面はタイルの端の少し内側（4.95）
 EXPWY_WALL_U, EXPWY_WALL_W, EXPWY_WALL_H = 4.55, 0.40, 1.1
+ROAD_CUT_Z = (-10.0, 4 * H)  # 坂を当てた後の道路の部品から削る型の高さ（急坂 2H より十分高く）
 ROAD_PARTS += tuple(Part(n, "bed", "lane", _M_WALL, _wall_shape(sg, EXPWY_WALL_U, EXPWY_WALL_W, EXPWY_WALL_H), "wall", tall=True,
                          corridor=EXPWY_WALL_U, thick=EXPWY_WALL_W) for n, sg in (("wallL", -1), ("wallR", 1)))
 ROAD_PARTS += (Part("endw", "bed", "lane", _M_WALL, _end_wall(EXPWY_WALL_W, EXPWY_WALL_H), "wall", "end", tall=True),)
@@ -1206,9 +1214,7 @@ def road_sheet(style="street"):
             "nsew": [sn, we, arc_sw, arc_nw, arc_ne, arc_se]}
     for d_name, open_ in (("s", S), ("w", W), ("n", N), ("e", E)):
         dv = Vector(open_).normalized()
-        wp = WearPath([-dv * 1.0, Vector(open_) + dv * PATH_EXT])
-        wp.fade = True
-        wear[d_name] = [wp]
+        wear[d_name] = [WearPath([-dv * 1.0, Vector(open_) + dv * PATH_EXT], fade=True)]
     # 坂のタイルから始まる橋の端（Start・Start2）: 平らな橋の絵の下に、坂の地面までの躯体を足す（線路の橋と同じ）。
     # 本体の slope_t::north は南が高い坂で、そのとき Start[N] が使われる（東西も同じく、名前と反対の側が高い）
     grounds = {}
@@ -1233,16 +1239,14 @@ def road_sheet(style="street"):
         if walls:
             kl = DIAG_EDGE if name.startswith("diag_") else 1.0
             kept = select_walls(obs, name, paths, walls)
-            trim_end_walls(kept, paths, kl, None, EXPWY_WALL_U, EXPWY_WALL_W)
+            trim_end_walls(kept, paths, kl, None, EXPWY_WALL_U, EXPWY_WALL_W, ROAD_CUT_Z)
             # 路面・白線・走行跡・路肩の雪も、残した壁の外側を削る（基盤と同じ型）。斜めでは壁が経路から約 3.2 にあり、
             # タイルの角（3.54）までの路面が壁の外へはみ出して見えた（2026-11-15、ゲームで確認）
-            beyond = _beyond_prisms(kept, paths, kl, EXPWY_WALL_U, EXPWY_WALL_W)
+            # 型の柱は坂の高さまで伸ばす（ROAD_CUT_Z）。路面は坂を当てた後なので、-2〜2 では橋の端の坂（高さ H〜2H）の
+            # 上の方が削れずに残り、壁の手前に路面が出て躯体にかぶさった（2026-11-15、ゲームで確認）
+            beyond = _beyond_prisms(kept, paths, kl, EXPWY_WALL_U, EXPWY_WALL_W, ROAD_CUT_Z)
             if beyond:
                 cutter = mesh_object("roadcut", *merge(beyond), material(*_M_BASE))
-                # 型の柱は高さ -2〜2。路面は坂を当てた後なので、橋の端の坂（高さ H〜2H）では上の方が削れずに残り、
-                # 壁の手前に路面が出て躯体にかぶさった（2026-11-15、ゲームで確認）。坂の高さまで伸ばす
-                for v in cutter.data.vertices:
-                    v.co.z = -10.0 if v.co.z < 0 else 4 * H
                 recalc_normals(cutter)
                 for ob in [ob for ob in obs if not ob.get("tall") and not ob.get("pname", "").startswith("pier")]:
                     boolean(ob, cutter)
@@ -1732,10 +1736,10 @@ def select_walls(obs, name, paths, side, wall_names=None):
     return kept
 
 
-def trim_end_walls(kept, paths, k, move, wu=None, ww=None):
-    """行き止まりの端の壁から、残した側壁の外側を削る（側壁のある側は側壁で止まる）。move は路盤の基準面の動き。"""
+def trim_end_walls(kept, paths, k, move, wu=None, ww=None, zr=(-2, 2)):
+    """行き止まりの端の壁から、残した側壁の外側を削る（側壁のある側は側壁で止まる）。move は路盤の基準面の動き。zr は _beyond_prisms と同じ"""
     end_walls = [ob for ob in kept if ob.name.startswith("endw")]
-    sides = _beyond_prisms([ob for ob in kept if not ob.name.startswith("endw")], paths, k, wu, ww)
+    sides = _beyond_prisms([ob for ob in kept if not ob.name.startswith("endw")], paths, k, wu, ww, zr)
     if not (end_walls and sides):
         return
     cutter = mesh_object("endcut", *merge(sides), material(*_M_WALL))

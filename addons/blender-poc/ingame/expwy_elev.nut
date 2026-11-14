@@ -1,4 +1,5 @@
 // 高架の高速道路（bpoc_expressway_elev_{single,back,center,front}）の見本。空の平らなマップ（flat2.sve・flat_snow.sve）の x=200〜, y=40〜 に敷く。
+// 今の検証用マップ flat_512.sve でも、この座標（温暖側）にそのまま敷ける。雪は x を 256 ずらす。道路の全種類をまとめて見るときは ingame/road_review.nut
 //   (200,40)〜 single の輪と行き止まり
 //   (200,50)〜 3 車線（back + center + front）の東西の直線。両端は行き止まり
 //   (212,40)〜 3 車線の南北の直線

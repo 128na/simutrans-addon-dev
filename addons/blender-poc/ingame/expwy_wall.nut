@@ -1,4 +1,5 @@
 // 高速道路の側壁の版（bpoc_expressway_wall_{single,back,center,front}）の並べ方の見本。空の平らなマップ（flat2.sve・flat_snow.sve）の
+// 今の検証用マップ flat_512.sve でも、この座標（温暖側）にそのまま敷ける。雪は x を 256 ずらす。道路の全種類をまとめて見るときは ingame/road_review.nut
 // x=150〜, y=40〜 に敷く（flat2 の西側には線路の見本がある）。座標は OX だけ東へずらす。1 本ずつの全パターンは ingame/full.nut（WAYS を選んで full_check.sh）で見る。
 // 東西の道は北が奥、南北の道は西が奥（カメラは南東）。斜めは東寄りが手前。
 //   (5,40)〜  東西の 2 車線（back + front）と 3 車線（back + center + front）。両端は行き止まり
