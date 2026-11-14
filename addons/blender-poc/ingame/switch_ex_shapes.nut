@@ -5,11 +5,15 @@
 //   2 行目（y=155）三方: 十字の両側の隣がそろって同じ側へ曲がる（1 本が 3 本に開く）。ex（曲がる側と反対の T字の向き, nw=true）
 //   3 行目（y=175）十字の東隣が西–北のカーブで、信号で西向きだけに絞ったもの。十字は ex（sew, nw=false）、西隣は switch の絵（x=40 は西隣が T字）
 // 名札は ASCII（MCP 経由の日本語は崩れる）
+// 試作のアドオン bpoc_track_ex_proto（分岐の 1・2 の枠に ex の形を入れたもの）で敷くときは WAY と OX を書き換える。
+// そのときは Y字・三方分岐・渡り線の西隣の分岐の絵を固定する（選択肢 1 = dat の「2」の枠、2 = dat の「1」の枠）
+local WAY = "bpoc_track";
+local OX = 0;
 function r(name, v) { return v == null ? "" : name + "=[" + v + "]\n"; }
 local pl = player_x(0);
-local w = way_desc_x("bpoc_track");
+local w = way_desc_x(WAY);
 local marker = command_x(tool_set_marker);
-local p = function(x, y) { return coord3d(x, y, 0); };
+local p = function(x, y) { return coord3d(OX + x, y, 0); };
 local out = "";
 local line = function(x0, y0, x1, y1) { return command_x.build_way(pl, p(x0, y0), p(x1, y1), w, true); };
 
@@ -63,6 +67,12 @@ foreach (k, west_t in [false, true]) {
   }
   out += "crossover " + k + ": signal=" + (sig == null ? "none" : sig.get_name()) + " masked=" + masked + "\n";
   out += r("label", marker.work(pl, p(cx + 3, cy + 2), west_t ? "crossover (west T)" : "crossover (west curve)"));
+}
+if (WAY == "bpoc_track_ex_proto") {
+  local pin = command_x(tool_set_switch_image);
+  // [x, y, 選択肢]: Y字 4 つ（dat の 1 = Y字）、三方分岐の東と西（十字の 1 = 東へ 1 本、2 = 西へ 1 本）、渡り線の西隣の T字（dat の 2 = 南–東のカーブ）
+  foreach (q in [[20, 135, 2], [40, 135, 2], [60, 135, 2], [80, 135, 2], [20, 155, 2], [40, 155, 1], [39, 175, 1]])
+    out += r("pin " + q[0] + "," + q[1], pin.work(pl, p(q[0], q[1]), "" + wt_rail + "," + q[2]));
 }
 gui.close_all_windows();
 return out;

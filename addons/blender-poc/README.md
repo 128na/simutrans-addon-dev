@@ -31,7 +31,7 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 | `blender/hcat.py` | ゲームの画面を横に並べて 1 枚にする |
 | `ingame/full.nut`・`ingame/full_check.sh` | 全方位の表示確認。way の絵 28 種類を周りとつながった形で出す最小のレイアウトを敷き、way ごとに 5 か所を撮って並べる |
 | `ingame/switch_all.nut` | 分岐の絵（OTRP の switch 画像）を線路の 11 アドオンで全部見る見本。空の平らなマップ（`flat2.sve`）に way ごとに 1 行、標準・選択 1・選択 2 に固定した T字と十字、自動選択の 8 通りを名札つきで敷く |
-| `ingame/switch_ex_shapes.nut` | ex 画像（Y字分岐・三方・渡り線）を本体が自動で選ぶ線路の形を、`bpoc_track` で `flat2.sve` の y=130 から下に敷く。blender-poc には ex 画像が無いので、絵は通常のまま |
+| `ingame/switch_ex_shapes.nut` | ex 画像（Y字分岐・三方・渡り線）を本体が自動で選ぶ線路の形を、`flat2.sve` の y=130 から下に敷く。既定は `bpoc_track`（絵は通常のまま）。先頭の `WAY` を `bpoc_track_ex_proto`、`OX` を 100 にすると、試作の way で敷いて分岐の絵を固定する |
 | `ingame/switch_auto.nut` | 自動選択の 8 通りだけを `bpoc_track` で敷く（`flat.sve` の y=120） |
 | `ingame/switch_check.sh` | 分岐の絵を手で確かめる準備。pak を入れ、固定の道具がある OTRP のビルドを MCP つきで `flat2` で起動し、`switch_all.nut` を敷く（`GAME_DIR=… EXE=… bash ingame/switch_check.sh`） |
 | `ingame/wall.nut`・`elev.nut`・`bridge.nut`・`tunnel.nut`・`trial.nut` | 側壁・高架・橋・トンネル・試作の見本（複線の並び、行き止まり、橋の端、坑口） |
@@ -796,4 +796,20 @@ pak に入れるときの `makeobj` の引数は、上の「ビルド」の行�
   - 固定: 輪に十字を入れた T字 4 つと十字を選択 1・2 に固定し、絵が変わることを見た（`docs/trial_switch_pinned.png`。左が 1、右が 2）。
     今は `ingame/switch_all.nut` が線路の 11 アドオンを全部敷く（高架も固定できる）
   - 確かめたビルドは、固定の道具が入った OTRP の本体（`../simutrans/build/default/sim.exe`。起動の注意はリファレンスの 8 章）
-- 残り: 十字の 1・2 がタイルの詳細の「渡り線 A・B」のどちらに当たるか。列車の予約で絵が切り替わる所は見ていない。ex 画像（Y字分岐・複線渡り線）は今の makeobj では書けない
+- 残り: 十字の 1・2 がタイルの詳細の「渡り線 A・B」のどちらに当たるか。列車の予約で絵が切り替わる所は見ていない。ex 画像（Y字分岐・三方分岐・渡り線）は今の makeobj では書けない（下の試作）
+
+### ex 画像の形の試作（2026-11-14）
+
+ex 画像は今の makeobj では書けない（[リファレンス](../../docs/reference/way-addon.md) の 9.1・9.4）。書けるようになったらどう見えるかを、分岐の絵の 1・2 の枠に ex の形を入れた別のアドオンで試した。
+
+- アドオン: `bpoc_track_ex_proto`（`src/track_ex_proto.dat`・`.png`。雪なし）。本体の pak とは別に作る:
+  `D:inlenderlender.exe -b --factory-startup --python blender/render.py -- track_ex_proto` → `python -X utf8 blender/track_dat.py` → `cd src; makeobj pak256 ..\distpoc_ex_proto.pak track_ex_proto.dat; cd ..`
+- 絵の割り当て（`render.py` の `ex_proto`）: T字の 1 = Y字（両側のカーブだけで直線なし）、T字の 2 = 通常の分岐のまま、十字の 1 = 三方分岐（東西の直線 + 東へ 1 本で西へ開く）、十字の 2 = 三方分岐（西へ 1 本で東へ開く）。
+  道床・基盤は元の T字・十字と同じ
+- ゲームでは自動では選ばれないので、`ingame/switch_ex_shapes.nut` で敷いてタイルの詳細の固定で見た（選択肢 1 が dat の「2」、2 が dat の「1」）
+- 見た目:
+  - Y字（`docs/trial_ex_proto_y.png`。通常の絵は `docs/trial_ex_shape_y.png`）: 通常の T字の絵では直線と 2 本のカーブが重なって見えるのが、1 本が左右に開く形になった
+  - 三方分岐（`docs/trial_ex_proto_3way.png`）: 直線と両側のカーブだけになり、使わない南北の直線と反対側のカーブが消えた
+  - 渡り線（`docs/trial_ex_proto_crossover.png`）: 西隣の T字を南–東のカーブに固定した。中央の十字は通常の絵のまま（本体の条件が十字に何を描かせたいのかが読み取れず、決めていない）
+- 残り: 南北へ 1 本の三方分岐は枠が足りず作っていない。渡り線の十字の絵と、西隣に付く絵の向き（リファレンス 9.4）。本当に入れるには makeobj のキーを足す
+
