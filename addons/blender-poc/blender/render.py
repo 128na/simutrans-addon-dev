@@ -1688,8 +1688,10 @@ def tunnel_sheet():
         for name, (col, path, d, slope) in dirs.items():
             rot = math.atan2(d.y, d.x)
             c = d * ((a0 + a1) / 2)
-            # 持ち分: 坂の面と、その下の平らな地面までの間。上へは躯体の高さだけ広げる
-            m = _ground_mask(slope, None, GROUND_CY, 0, solid=True)
+            # 持ち分: 坂の面だけ。上へは躯体の高さだけ広げる。坂の面より下（高い側の辺の下の面や、そこから覗く穴の中）は
+            # 手前の丘のタイルに隠れる所なので描かない（描くと、口が奥を向いた坑口で穴の中が丘の上にはみ出した）
+            # 手前の 2 辺は線路と同じだけ広げる（spill。0 だと口の辺で隣の線路との間に 1 画素おきのすき間が出た）
+            m = _ground_mask(slope, None, GROUND_CY, prof["spill"])
             base = m.copy()
             for k in range(1, TUNNEL_RISE + 1):
                 m[:-k] |= base[k:]
@@ -1704,13 +1706,22 @@ def tunnel_sheet():
             # 奥の絵: 平らな線路（坂に切り込む）と、穴の内側の暗い床と壁
             clear_models()
             assemble(TRACK_PARTS, [path], prof["datums"], skin=skin)
-            # 穴の内側: 暗い床と左右の壁だけを置く（線路は床の上に見える。箱で埋めると線路まで隠れた）
+            # 穴の内側: 床（基盤と同じ材質）と暗い左右の壁だけを置く（線路は床の上に見える。箱で埋めると線路まで隠れた）
             m_dark = material("tunnel_dark", (0.015, 0.015, 0.015))
             n = Vector((d.y, -d.x))
-            inner = [box(c.x, c.y, 0.005, a1 - a0 - 0.1, 2 * TUNNEL_BORE[0] + 0.1, 0.01, rot=rot)]
+            # 床はタイルの幅いっぱい（躯体の下は隠れる。口の辺では、隣の側壁つきの線路の基盤と 1 行重なってすき間を埋める）
+            floor = mesh_object("floor", *box(c.x, c.y, 0.005, a1 - a0, TILE, 0.01, rot=rot),
+                                material(*(skin or {}).get("base", _M_BASE)))
+            # 基盤と同じ基準面（bed）に乗せる。動かさないと、隣の線路の基盤より 2px 上で止まり、辺に 1 行のすき間が出た
+            mv = datum_move(prof["datums"]["bed"])
+            if mv is not None:
+                floor.location += mv
+            clip_to_tile(floor)
+            inner = []
             for s in (1, -1):
                 q = c + n * (s * (TUNNEL_BORE[0] + 0.05))
-                inner.append(box(q.x, q.y, TUNNEL_BORE[1] / 2, a1 - a0 - 0.1, 0.1, TUNNEL_BORE[1], rot=rot))
+                # 長さはタイルの辺まで（辺の手前で止めると、隣の側壁の上の縁に 1 画素おきのすき間が出た）
+                inner.append(box(q.x, q.y, TUNNEL_BORE[1] / 2, a1 - a0, 0.1, TUNNEL_BORE[1], rot=rot))
             dark = mesh_object("dark", *merge(inner), m_dark)
             clip_to_tile(dark, 0.0)
             cells[(row0, col)] = shot("_back")
@@ -1727,7 +1738,11 @@ def tunnel_sheet():
     clear_models()
     assemble(TRACK_PARTS, [straight((0, -12), (0, 12), ext=0.6)], clip=False)
     cells[(0, 0)] = render_icon("track_tunnel_icon", 0.5, shift=(-0.14, 0.2), label="100", style="track", band="tunnel")
-    cells[(0, 1)] = cells[(0, 2)]
+    # カーソル: 口が手前を向いた坑口（BackImage[N]）の奥の絵に手前の絵（躯体）を重ねた 1 枚
+    back, front = load_rgba8(cells[(0, 2)]), load_rgba8(cells[(1, 2)])
+    cursor = np.where(front[..., 3:] >= 128, front, back)
+    cells[(0, 1)] = os.path.join(WORK, "tunnel_cursor.png")
+    save_rgba(cells[(0, 1)], cursor)
     make_sheet(cells, 4, 6, os.path.join(SRC, "track_tunnel.png"))
 
 
