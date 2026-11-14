@@ -58,8 +58,8 @@ Blender は `blender -b --factory-startup --python <script> -- <引数>` で動�
 
 ### 3. ゲームで差分を取る
 
-1. pak を作ってゲームの `addons/pak128/` に置き、ゲームを MCP ポート付きで起動する（`flat.sve`）。
-2. 見本は `ingame/all_dirs.nut` で敷く（`flat.sve` には保存済み。別のマップなら `--run-squirrel` で流す）。
+1. pak を作ってゲームの `addons/pak128/` に置き、ゲームを MCP ポート付きで起動する（`flat_512.sve`。リファレンスの 8.1）。
+2. 見本は `ingame/all_dirs.nut` を `--run-squirrel` で流して敷く（`flat_512.sve` は開くたびに空。古い `flat.sve` には保存済み）。
 3. `sh ingame/capture_check.sh` を回す（`SPECS` で種類を絞れる）。
 4. 全か所が `[diff] 0 px` になるまで直す。`[shape]` の候補は座標を `zoom.py` で拡大し、つなぎ目か、行き止まりの端のような自然な角かを見分ける。
 5. 線路の模様のくり返しで位置合わせがずれたときは、`INGAME_LOCATE=x,y` で位置を直接与える。

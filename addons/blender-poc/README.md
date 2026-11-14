@@ -58,7 +58,7 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 
 ```powershell
 D:\bin\blender\blender.exe -b --factory-startup --python blender/render.py
-cd src; makeobj pak256 ..\dist\bpoc.pak track.dat track_old.dat track_trial.dat track_wall_single.dat track_wall_back.dat track_wall_center.dat track_wall_front.dat track_elev_single.dat track_elev_back.dat track_elev_center.dat track_elev_front.dat track_bridge.dat track_tunnel.dat road.dat expressway.dat tollbooth.dat; cd ..
+cd src; makeobj pak256 ..\dist\bpoc.pak track.dat track_old.dat track_trial.dat track_wall_single.dat track_wall_back.dat track_wall_center.dat track_wall_front.dat track_elev_single.dat track_elev_back.dat track_elev_center.dat track_elev_front.dat track_bridge.dat track_tunnel.dat road.dat expressway.dat expressway_wall_single.dat expressway_wall_back.dat expressway_wall_center.dat expressway_wall_front.dat expressway_elev_single.dat expressway_elev_back.dat expressway_elev_center.dat expressway_elev_front.dat expressway_bridge.dat expressway_tunnel.dat tollbooth.dat; cd ..
 ```
 
 iss と同じく `pak256` で 256px セルとして切り出す（ゲームは pak128）。
@@ -167,6 +167,114 @@ SIS の道路8種（一般道 50/70/80km/h、高速 80/100/120/999km/h）の直�
 - SIS とセルごとに並べた比較: `docs/expressway_cells.png`（上段 SIS、下段 移植版）
 - ゲーム内のつなぎ目（`ingame/road_seam.nut` の y=160〜）: 直線・斜め・坂・分岐で白線が段差なくつながった（`docs/expressway_seam.png`）
 - SIS と違うところ: 分岐・十字のタイルの左右の角にある小さな透明の三角、行き止まりの白線の模様（SIS は市松模様）
+
+### 道路の組み立て直し・雪・路面の汚れ（2026-11-14）
+
+- 道路も線路と同じく、部品（`ROAD_PARTS`）と基準面を `assemble` で組み立てる作りにした。描き直した絵は前と全画素同じ
+- 雪の絵（`image[..][1]`）をシートの下の 4 行に足した。路面は踏み固めた雪、歩道・縁石は新しい雪で、白線は描かない。車輪の跡は暗い轍になる
+- 路面の汚れ（車輪の跡・油のしみ・補修の跡）を材質で描き、本体のシートに入れた（別の版にはしない）
+- ゲーム内の全パターン（`full_check.sh`、`flat2.sve`）: `docs/full_road.png`・`docs/full_expressway.png`。
+  `flat2` は残高が足りず坂を作れないので、区画 D・E の坂は平らなまま。坂は雪のマップ（`flat_snow.sve`、`ACCEPTANCE.md` の 9-2）で見た
+
+### 高速道路の側壁（2026-11-14）
+
+線路の側壁と同じく、壁の付き方で 4 つの版を作った（`bpoc_expressway_wall_{single,back,center,front}`。両側・奥だけ・なし・手前だけ）。
+手本は iss の都市高速 `wrg_0120_*`（タイルの端に立つコンクリートの壁）。複数車線の道は、外側の車線に back・front、内側に center を敷く。
+
+- 壁は路面の基準面に乗る。横位置は車線と同じ倍率（斜めは直線の 1/√2）で、外側の面はタイルの端の少し内側。行き止まりは端にも壁を立てる
+- 分岐・十字は枝の口で壁を開ける。カメラに近い側の壁は手前の絵（`front...`）。近い斜めの絵は持たない（線路の側壁と同じ）
+- 雪は路面と同じく踏み固めた雪にし、壁はそのまま見せる
+- ゲーム内（`ingame/expwy_wall.nut`、`flat2.sve`）: 2 車線・3 車線の東西・南北、T字、斜め（階段の形で敷く）で、壁が外側にだけ出てつながった
+  （`docs/expwy_wall_lanes.png`・`docs/expwy_wall_diag.png`）。全パターン（`WAYS=... bash ingame/full_check.sh`）は `docs/full_expwy_wall_single.png`
+- 雪（`flat_snow.sve`、`OY=170`）: `docs/road_snow.png`・`docs/full_expwy_wall_single_snow.png`。坂のタイルは土地を上げると雪でなくなるので、坂の道は雪なしの絵になる（地面と合っている）
+
+### 高架の高速道路（2026-11-14）
+
+側壁の版と同じ 4 つの版に、床の下の基盤と橋脚を足した（`bpoc_expressway_elev_{single,back,center,front}`、`system_type=1`）。
+
+- 基盤は線路の高架と同じ作り（`build_base`）で、壁の外側を削り、壁の無い側はタイルの端まで埋める。路面の板の下に入れる（上面を同じ高さにすると重なって基盤の灰色が出た）
+- 橋脚は道を横切る向きに長い柱で、両側の壁の下まで届く。床がタイルいっぱいなので、中央だけの柱は床に隠れて見えなかった
+- back・center の斜めは橋脚を描かない（線路の高架と同じ）
+- ゲーム内（`ingame/expwy_elev.nut`、`flat2.sve`）: 輪・行き止まり・3 車線の直線と斜めで床がつながり、橋脚が並んだ
+  （`docs/expwy_elev_loop.png`・`docs/expwy_elev_lanes.png`・`docs/expwy_elev_diag.png`）
+- 気づいた点: 3 車線の行き止まりの端の側面に、白い点線のような模様が見える（`docs/expwy_elev_lanes.png` の右下）。原因は調べていない
+
+### 高速道路の橋（2026-11-14）
+
+手本は iss の都市高速の橋（`bridge/road` の `0120_bridge1`。床の縁が青い桁）。線路の橋と同じセルの並びで作った（`bpoc_expressway_bridge`）。
+
+- 床は両側の壁の版（`bpoc_expressway_wall_single` と同じ欄干）に、基盤を足したもの。基盤の側面を青い桁の色にした
+- 端の坂（Ramp）は坂の下を地面まで埋め、坂のタイルから始まる端（Start）は平らな床の下に地面までの橋台を足す（線路の橋と同じ）
+- 橋脚の絵は道を横切る向きに長い柱で、両側の壁の下まで届く
+- ゲーム内（`ingame/expwy_bridge.nut`、`flat_snow.sve`）: 平地から平地への東西・南北の橋と、谷に架けた橋で、床・端・橋脚がつながった
+  （`docs/expwy_bridge_snow.png`・`docs/expwy_bridge_valley_snow.png`）。夏（`flat.sve`）は `docs/expwy_bridge.png`
+- 気づいた点: 桁の青い側面は壁の真下にあり、ゲームではほとんど見えない。iss のように床の縁に見せるには、桁を壁の外へ出す必要がある
+
+### 高速道路のトンネル（2026-11-14）
+
+手本は iss の都市高速の坑口（`tunnel/road`。タイルいっぱいの箱と、口の上の橙色の名板）。線路のトンネル（`tunnel_sheet`）を高速道路でも使えるようにした（`bpoc_expressway_tunnel`）。
+
+- 穴は両側の壁の内側まで広げ、奥の絵は高速道路の路面と暗い内壁。道路と同じく地面より 1px 下に描き、持ち分の spill は 0
+- 口の上に名板を付けた。カーソルは線路と同じく、口が手前を向いた坑口の奥の絵と手前の絵を重ねた 1 枚
+- 線路のトンネルの絵は変わらない（描き直して差分なし）
+- ゲーム内（`ingame/expwy_tunnel.nut`、`flat.sve`）: 東西・南北の 2 段の尾根を掘り、坑口と前後の高速道路がつながった（`docs/expwy_tunnel.png`・`docs/expwy_tunnel_ns.png`）。雪のマップでは見ていない
+
+### 道路のアイコンとカーソル（2026-11-14）
+
+道路・高速道路の全部の版のアイコンを、線路のシリーズと同じ型にそろえた: 背景の色（道路は青、高速道路は濃い青。`ICON_STYLES`）、
+左上の最高速度、右下の印（側壁の版 S・B・C・F）、下の帯（高架・橋・トンネル）。
+カーソルは南北の直線の絵（壁は版のとおり。トンネルは坑口の重ね絵）の上に、アイコンと同じ色の札と最高速度を足した（`render_cursor`）。
+
+- 並べた画像: `docs/road_icons.png`（道路・高速道路・側壁 back・高架 front）、`docs/road_icons2.png`（橋・トンネル）。左がアイコン（4 倍）、右がカーソル
+- 描き直しで変わったのはアイコンとカーソルのセルだけ（ほかのセルは画素の差なし）
+- ゲームのツールバーでの見え方は確かめていない
+
+### 道路の確認用パターン（2026-11-15）
+
+道路の全種類を 1 か所に並べて、見て回るための見本（`ingame/road_review.nut`）。種類ごとに ASCII の名札が付く。
+
+- 流し方: `-mcp-port 47123` で `flat_512.sve` を開き、`python <mcp_client.py> --port 47123 --timeout 300 --run-squirrel "$(cat ingame/road_review.nut)"`。
+  `ok` が返れば全部敷けた。温暖側の原点 (20,20) と降雪側の原点 (276,20) の 2 か所に同じ並びで敷く（2026-11-15、`flat_512` で確認）
+- 古い `flat.sve`・`flat_snow.sve` で流すときは、スクリプトの `ORIGINS` を `[[176, 194]]` にする。`flat2.sve` は坂が作れないので使わない
+- `flat_512.sve` は読み取り専用で、敷いた結果は保存していない。見て回るときは自分で流す（残したいときはゲームで保存する）
+- 土地を上げたタイル（坂の十字・谷の橋の端・トンネルの坑口）は気候が温暖に戻る。スクリプトは敷いた後に降雪側の一帯を降雪に塗り直すので、坂の道も雪の絵になる（2026-11-15 から。それより前に保存した `road.sve` は塗り直していない）
+- 写真: `docs/review_summer.png`（一般道・側壁 single・側壁の 3 車線・橋）、`docs/review_summer2.png`（高速道路・高架 single・高架の 3 車線・トンネル）、
+  `docs/review_snow.png`（雪: 一般道と名札・側壁 single・側壁の 3 車線・橋）
+
+座標の一覧（原点からの位置。温暖側は (20,20)、降雪側は (276,20) を足す。`flat.sve`・`flat_snow.sve` で流したときの原点は (176,194)。名札はそれぞれの区画の 1 行上）:
+
+| 区画 | way | 原点 | 中身（原点からの位置） |
+|---|---|---|---|
+| 1 本ずつ | `bpoc_road` | (0,0) | 行き止まり 東西 (0,0)-(2,0)・南北 (4,0)-(4,2) / 輪・十字・T字・カーブ (0,4)-(6,10) / 斜め 右下がり (7,0)〜(10,3)・右上がり (11,3)〜(14,0) / 近い斜め (15,0)〜 と (16,0)〜 の 2 本 / 坂の十字 (11,7) / 急坂の十字 (17,7) |
+| 1 本ずつ | `bpoc_expressway` | (22,0) | 同上 |
+| 1 本ずつ | `bpoc_expressway_wall_single` | (0,14) | 同上 |
+| 1 本ずつ | `bpoc_expressway_elev_single` | (22,14) | 同上（坂の十字・急坂の十字は無い。高架は坂に敷かない） |
+| 3 車線 | `bpoc_expressway_wall_{back,center,front}` | (46,0) | 東西の直線 (0,0)-(6,2) / 南北の直線 (9,0)-(11,6) / 直角カーブ (13,0)-(20,7) / 斜め 右下がり (22,0)〜(28,6) / T字 back (0,9)-(8,13)・front (10,9)-(18,13) / 近い斜め back (21,9)〜・front (22,9)〜 |
+| 3 車線 | `bpoc_expressway_elev_{back,center,front}` | (46,16) | 同上 |
+| 橋・トンネル | `bpoc_expressway_bridge`・`bpoc_expressway_tunnel` | (2,31) | 平地からの橋 東西 (2,0)-(9,0)・南北 (14,0)-(14,9) / 谷の橋 東西 1 段 (1,4)-(7,4)・2 段 (1,8)-(7,8)・南北 1 段 (24,1)-(24,7) / トンネル 東西 (1,14)-(5,14)・南北 (20,1)-(20,5) |
+
+撮った所（原点から。`gui.set_zoom(3)`）: 一般道 (10,5)・側壁 single (10,19)・側壁の 3 車線 (57,6)・高架の 3 車線 (57,22)・橋 (10,35)・トンネル (20,40)。
+`flat_512` での写真: `docs/review_512_temperate.png`（温暖側）・`docs/review_512_snow.png`（降雪側）。上に挙げた `review_summer`・`review_summer2`・`review_snow` は `flat`・`flat_snow` で撮ったもの
+
+### 確認を受けた直し: 走行跡・はみ出し・雪（2026-11-15）
+
+確認用パターン（ユーザーが保存した `road.sve`）を見てもらった指摘に合わせて直した。
+
+- 補修跡をやめた（1 タイルごとに同じ所に並んで目立った）
+- 走行跡（車輪の跡）を広げてぼかした。小型車から大型車まで輪距が違うので、広く薄い帯の上に狭く濃い帯を 3 段重ねる（`WEAR_LAYERS`）。
+  高速道路の跡は、暗い路面の色から寄せる（一般道と同じ色だとくっきりしすぎた）
+- 交差点（T字・十字）の跡に、直進に加えて右左折のカーブを足した。行き止まりの跡は、閉じた側の手前で止める（濃い帯ほど手前で止まる）
+- 側壁の版の斜めで、路面・白線がタイルの角まで出て壁の外にはみ出していた。残した壁の外側を、基盤と同じ型で路面からも削る
+- 橋の端の坂（Ramp）の躯体が、坂の下の端で路面より上に出ていた。躯体の上面を路面の少し下に下げた
+- 橋の端の坂で、路面が手前の壁の外に出て躯体にかぶさっていた（高コントラストで 3px ほどの暗い帯）。壁の外を削る型の高さが -2〜2 で、
+  坂を当てた後の路面の高い所が削れずに残っていた。型を坂の高さまで伸ばした（側壁・高架の坂のタイルも同じ）
+- 雪の絵は、線路より除雪されている想定で、車道は夏と同じ（路面・白線・走行跡）にし、雪は路肩（路側の白線の外）と歩道・縁石だけにした。
+  高速道路の分岐の口は、右左折の経路に沿って雪を抜く
+- 雪の境目は、車線の境（路側の白線）のあたりでぼかす。白線の内側から、路面の色から雪の色へ寄せたまだらの段を 3 つ重ね、積もった雪は白線から 1〜2px 外から始める
+  （白線のすぐ外から白い雪にすると、カメラに近い側の白線が雪と見分けられなかった）。拡大: `docs/fb_snow_edge.png`
+- 坂の雪: 土地を上げたタイルは気候が温暖（4）に戻っていた。`road_review.nut` は敷いた後に降雪側を `tool_set_climate` で降雪（7）に塗り直す
+- ゲーム（`road.sve`、敷き直さずに pak を差し替えて確認）: `docs/fb_road.png`（一般道の夏）・`docs/fb_road_snow.png`（一般道の雪）・
+  `docs/fb_expressway_snow.png`（高速道路の雪）・`docs/fb_wall_diag.png`（側壁の斜めの拡大）・`docs/fb_bridge_ramp.png`（橋の坂の下の端の拡大）
 
 ## つなぎ目のバリ（2026-11-12）
 
