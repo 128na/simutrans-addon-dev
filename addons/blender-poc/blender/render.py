@@ -1239,6 +1239,10 @@ def road_sheet(style="street"):
             beyond = _beyond_prisms(kept, paths, kl, EXPWY_WALL_U, EXPWY_WALL_W)
             if beyond:
                 cutter = mesh_object("roadcut", *merge(beyond), material(*_M_BASE))
+                # 型の柱は高さ -2〜2。路面は坂を当てた後なので、橋の端の坂（高さ H〜2H）では上の方が削れずに残り、
+                # 壁の手前に路面が出て躯体にかぶさった（2026-11-15、ゲームで確認）。坂の高さまで伸ばす
+                for v in cutter.data.vertices:
+                    v.co.z = -10.0 if v.co.z < 0 else 4 * H
                 recalc_normals(cutter)
                 for ob in [ob for ob in obs if not ob.get("tall") and not ob.get("pname", "").startswith("pier")]:
                     boolean(ob, cutter)
