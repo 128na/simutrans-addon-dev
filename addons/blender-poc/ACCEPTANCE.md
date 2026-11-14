@@ -1,6 +1,7 @@
-# 受け入れ条件（側壁・基盤・橋・高架の線路）
+# 受け入れ条件（側壁・基盤・橋・高架の線路と道路）
 
 側壁付きの線路（`bpoc_track_wall_{single,back,center,front}`）・高架（`bpoc_track_elev_{...}`）・橋（`bpoc_track_bridge`）を「できた」と言うための条件。
+道路・高速道路は「9. 道路・高速道路」にまとめた。
 直すたびにこの表で確かめ、条件が増えたらここに足す。確かめ方の「見本」は `ingame/` のスクリプト、
 「色」は確認用の色（`BPOC_DEBUG_COLORS=1`。壁: 赤、基盤: 青、道床: 黄）でセルを見ること。
 
@@ -103,6 +104,32 @@ way のアドオンは、絵が 28 種類ある（`image` 16・`imageup` 4・`im
 
 今のレイアウトで出ないもの: 高架の坂（高架は地面の坂の上に敷かないので、区画 D・E を作らない）、1 タイルだけの軌道（`build_way` で始点と終点を同じにしても敷けるかは未確認）。
 
+## 9. 道路・高速道路
+
+一般道（`bpoc_road`）と高速道路（`bpoc_expressway`）。側壁・高架・橋・トンネルは高速道路だけに作った（歩道付きの一般道には作らない。2026-11-14 に決めた）。
+見本は `ingame/expwy_wall.nut`・`expwy_elev.nut`・`expwy_bridge.nut`・`expwy_tunnel.nut`。全パターンは `WAYS="..." bash ingame/full_check.sh`（`OY` で並べ始める行を変える）。
+
+| # | 条件 | 状態 | 確かめ方 |
+|---|---|---|---|
+| 9-1 | 路面に車輪の跡・油のしみ・補修の跡がある（本体のシートに入れたまま） | ○ | `full_check.sh` の `bpoc_road`・`bpoc_expressway`（`flat2.sve`） |
+| 9-2 | 雪の絵がある（6 章の 5-2）。坂のタイルは土地が雪でなくなるので雪なしの絵になる | ○ | `flat_snow.sve` で `full_check.sh`（`docs/road_snow.png`） |
+| 9-3 | 側壁の版 single・back・center・front がある。壁の決め方は線路の側壁と同じ | ○ | `expwy_wall.nut` |
+| 9-4 | 2 車線・3 車線の東西・南北で、壁が外側の車線にだけ立ち、T字は分岐の向きで壁が変わる | ○ | `expwy_wall.nut`（`docs/expwy_wall_lanes.png`） |
+| 9-5 | 斜めの 3 車線で、壁が正しい側に出る（右上がりは南寄りが手前） | ○ | `expwy_wall.nut` の階段の斜め（`docs/expwy_wall_diag.png`） |
+| 9-6 | 側壁の版の全パターン（区画 A〜E）で、壁が切れずにつながる | △ | single はゲームで見た（`docs/full_expwy_wall_single.png`）。back・center・front は `full_check.sh` を回したが 1 枚ずつは見ていない |
+| 9-7 | カメラに近い側の壁が、車両より手前に描かれる | ？ | 車両を走らせていない |
+| 9-8 | 高架の 4 つの版があり、床の下に橋脚が見え、輪・3 車線・斜めで床がつながる | ○ | `expwy_elev.nut`（`docs/expwy_elev_*.png`） |
+| 9-9 | 高架の 3 車線の行き止まりの端に、余分な模様が出ない | × | 端の側面に白い点線のような模様が見える（`docs/expwy_elev_lanes.png` の右下）。原因は未調査 |
+| 9-10 | 高架の坂・分岐で、橋脚と床の下の見え方がおかしくない | ？ | ゲームで見ていない |
+| 9-11 | 橋を東西・南北に架けられ、平地からの端（Ramp）と坂からの端（Start）の下が地面まで埋まる | ○ | `expwy_bridge.nut`（`docs/expwy_bridge.png`・`docs/expwy_bridge_valley_snow.png`） |
+| 9-12 | 橋の床の縁が、手本（iss の都市高速の橋）のように青い桁に見える | × | 桁の側面が壁の真下にあり、ほとんど見えない |
+| 9-13 | back・center・front の橋がある | × | 両側の壁の版だけ |
+| 9-14 | トンネルを東西・南北に掘れ、坑口 4 方向と前後の道路がつながる | ○ | `expwy_tunnel.nut`（`flat.sve`。`docs/expwy_tunnel.png`・`docs/expwy_tunnel_ns.png`） |
+| 9-15 | トンネルの雪の絵 | △ | シートの下の 2 行。雪のマップでは見ていない |
+| 9-16 | アイコンが線路のシリーズと同じ型（背景の色・最高速度・右下の印・下の帯）で、版を見分けられる | △ | セルで確認（`docs/road_icons.png`・`docs/road_icons2.png`）。ツールバーでは見ていない |
+| 9-17 | カーソルに、アイコンと同じ色の札と最高速度がある | △ | セルで確認。道具を選んで見ていない |
+| 9-18 | 側壁・高架・橋・トンネルを足しても、一般道・高速道路の本体の絵が変わらない | ○ | 描き直したシートを前のシートとセルごとに比較（変わったのはアイコンとカーソルだけ） |
+
 ## 確かめ方の手順
 
 1. `python -X utf8 blender/track_dat.py`（dat を書き出す）
@@ -111,4 +138,5 @@ way のアドオンは、絵が 28 種類ある（`image` 16・`imageup` 4・`im
 4. `flat.sve` で `bash ingame/full_check.sh` を回し、`work/full/<way>.png` を 1 枚ずつ見る（全方位の表示確認）。
    複線・行き止まりの並び・橋・高架・トンネルは `ingame/wall.nut`・`elev.nut`・`bridge.nut`・`tunnel.nut` を流して撮る
 5. `flat_snow.sve` で同じ見本を流し、雪の絵を見る
+   道路は `expwy_*.nut` を流し、全パターンは `WAYS="bpoc_road bpoc_expressway ..." OY=170 bash ingame/full_check.sh`（保存データの空いている行に合わせる）
 6. 本体のシートを描き直したときは、前のシートと全画素を比べる

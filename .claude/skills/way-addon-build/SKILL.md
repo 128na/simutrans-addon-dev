@@ -44,7 +44,7 @@ description: Simutrans の way 系アドオン（線路・道路・側壁・高�
 | 何を | どうやって |
 |---|---|
 | 部品の出方 | `BPOC_DEBUG_COLORS=1 blender ... render.py -- <シート>` → `work/debug/` のセルを見る |
-| 全方位の表示 | `bash ingame/full_check.sh`（`ingame/full.nut` のレイアウト。way ごとに 5 か所を並べる） |
+| 全方位の表示 | `bash ingame/full_check.sh`（`ingame/full.nut` のレイアウト。way ごとに 5 か所を並べる。`WAYS` で way を、`OY` で並べ始める行を選ぶ。保存データの空いている行に合わせる） |
 | 複線・行き止まりの並び・高架・橋・トンネル | `ingame/wall.nut`・`elev.nut`・`bridge.nut`・`tunnel.nut` |
 | 近い斜め（1 タイルずらした斜め 2 本） | `ingame/close_diag.nut` を `flat2` の x=105 から右に流す。全版の南東・北東の組を並べる。決まりはリファレンスの 5・6 章 |
 | 雪 | `flat_snow.sve` で起動して同じ見本を流す |

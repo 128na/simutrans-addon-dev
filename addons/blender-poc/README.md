@@ -58,7 +58,7 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 
 ```powershell
 D:\bin\blender\blender.exe -b --factory-startup --python blender/render.py
-cd src; makeobj pak256 ..\dist\bpoc.pak track.dat track_old.dat track_trial.dat track_wall_single.dat track_wall_back.dat track_wall_center.dat track_wall_front.dat track_elev_single.dat track_elev_back.dat track_elev_center.dat track_elev_front.dat track_bridge.dat track_tunnel.dat road.dat expressway.dat tollbooth.dat; cd ..
+cd src; makeobj pak256 ..\dist\bpoc.pak track.dat track_old.dat track_trial.dat track_wall_single.dat track_wall_back.dat track_wall_center.dat track_wall_front.dat track_elev_single.dat track_elev_back.dat track_elev_center.dat track_elev_front.dat track_bridge.dat track_tunnel.dat road.dat expressway.dat expressway_wall_single.dat expressway_wall_back.dat expressway_wall_center.dat expressway_wall_front.dat expressway_elev_single.dat expressway_elev_back.dat expressway_elev_center.dat expressway_elev_front.dat expressway_bridge.dat expressway_tunnel.dat tollbooth.dat; cd ..
 ```
 
 iss と同じく `pak256` で 256px セルとして切り出す（ゲームは pak128）。
