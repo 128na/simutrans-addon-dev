@@ -6,7 +6,8 @@ src/track.dat の絵の割り当て（[0] の行）を元に、シートの行�
 - 雪の絵: 同じキーの [1]。手前の絵が無いシートは 4 行下、あるシートは 8 行下
 - 分岐の絵（OTRP の image[nse1]〜image[nsew2]）: track.dat の行のとおり（行 2・3 の列 10〜14）。手前の絵・雪も同じ決まりで書く
 
-書き出すもの: track.dat・track_old.dat（雪の行を足す）、track_trial.dat、track_wall_{single,back,center,front}.dat、track_elev_{...}.dat、track_bridge.dat
+書き出すもの: track.dat・track_old.dat（雪の行を足す）、track_trial.dat、track_wall_{single,back,center,front}.dat、track_elev_{...}.dat、track_bridge.dat、
+road.dat・expressway.dat（自分の dat の [0] の行から。雪の行を足す）
 """
 import os
 import re
@@ -15,10 +16,10 @@ SRC = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
 IMG = re.compile(r"(image|imageup|imageup2|diagonal)(\[[^\]]*\])\[0\]=(\w+)\.(\d+)\.(\d+)(.*)")
 
 
-def template():
-    """track.dat の先頭（設定）と、絵の割り当て（キー, 添字, 行, 列, オフセット）。"""
+def template(src="track.dat"):
+    """dat の先頭（設定）と、絵の割り当て（キー, 添字, 行, 列, オフセット）。[0] の行だけを読む（[1]・front... の行は書き出すたびに作り直す）。"""
     head, imgs = [], []
-    for l in open(os.path.join(SRC, "track.dat"), encoding="utf8").read().splitlines():
+    for l in open(os.path.join(SRC, src), encoding="utf8").read().splitlines():
         m = IMG.match(l)
         if m:
             imgs.append((m[1], m[2], int(m[4]), int(m[5]), m[6]))
@@ -38,6 +39,20 @@ def way(name, sheet, comment, front=False, snow=True, elevated=False):
             if front and idx.startswith("[close"):
                 # 側壁・高架の版は近い斜めの絵を持たない（本体が 1 タイルに 2 本の way で作り、back と front を組み合わせられる）
                 continue
+            out.append(f"{key}{idx}[{season}]={sheet}.{r + base}.{c}{off}")
+            if front:
+                out.append(f"front{key}{idx}[{season}]={sheet}.{r + base + 4}.{c}{off}")
+    open(os.path.join(SRC, sheet + ".dat"), "w", encoding="utf8", newline="\n").write("\n".join(out) + "\n")
+
+
+def road(sheet, front=False):
+    """道路・高速道路の dat を、自分の dat の [0] の行から書き直す（高速道路のカーブは斜めの絵を指すので、線路の割り当ては使わない）。
+    行の並びは線路と同じ: 奥の絵 4 行 →（手前の絵 4 行）→ 雪の奥の絵 4 行 →（雪の手前の絵 4 行）"""
+    head, imgs = template(sheet + ".dat")
+    out = list(head)
+    block = 8 if front else 4
+    for season, base in ((0, 0), (1, block)):
+        for key, idx, r, c, off in imgs:
             out.append(f"{key}{idx}[{season}]={sheet}.{r + base}.{c}{off}")
             if front:
                 out.append(f"front{key}{idx}[{season}]={sheet}.{r + base + 4}.{c}{off}")
@@ -120,3 +135,5 @@ if __name__ == "__main__":
             front=True, elevated=True)
     bridge()
     tunnel()
+    road("road")
+    road("expressway")

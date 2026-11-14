@@ -930,13 +930,16 @@ ROAD_PARTS = (
          carve=lambda t, k: t.hw, transfer=True),
     Part("paving", "bed", "road", _M_PAVING, lambda t, k: box(0, 0, SIDEWALK_H + 0.01, *t.size, 0.02), "sidewalk", "tile",
          carve=lambda t, k: t.hw + t.curb_w / k),
-    Part("line", "bed", "road", _M_LINE, _line_shape, where="line"),
+    Part("line", "bed", "road", _M_LINE, _line_shape, "marking", "line"),
 )
 # 道路の描き分け（ROAD_PROFILES）: skin は部品の材質の差し替え（高速道路のアスファルト）、groups は使う部品のまとまり
 ROAD_PROFILES = {
-    "street": {"sheet": "road", "prefix": "road_", "groups": ("body", "sidewalk"), "skin": {}},
-    "expressway": {"sheet": "expressway", "prefix": "expwy_", "groups": ("body",), "skin": {"asphalt": _M_EXPWY_ASPHALT}},
+    "street": {"sheet": "road", "prefix": "road_", "groups": ("body", "sidewalk", "marking"), "skin": {}},
+    "expressway": {"sheet": "expressway", "prefix": "expwy_", "groups": ("body", "marking"), "skin": {"asphalt": _M_EXPWY_ASPHALT}},
 }
+# 雪の絵（dat の image[..][1]）の材質。路面は踏み固められた灰色がかった雪、歩道と縁石は新しい雪。白線は雪に隠れる（marking を描かない）
+_M_ROAD_SNOW = lambda: noisy_material("road_snow", (0.60, 0.63, 0.68), (0.80, 0.83, 0.88), scale=60, rough=0.9)
+ROAD_SNOW_SKIN = {"asphalt": _M_ROAD_SNOW, "curb": _SNOW, "paving": _SNOW}
 
 
 def build_road(paths, lines, slope=None, scale=1.0, clip=True, size=TILE + 4, corners=(), half=None, hw=ROAD_HW,
@@ -960,8 +963,9 @@ DIAG_EXT = 8.0
 
 
 def road_sheet(style="street"):
+    prof = ROAD_PROFILES[style]
     expwy = style == "expressway"
-    prefix = "expwy_" if expwy else "road_"
+    prefix, groups = prof["prefix"], prof["groups"]
     half = TILE / 2
     N, S, E, W, O = (0, half), (0, -half), (half, 0), (-half, 0), (0, 0)
     arc_sw = arc((-half, -half), 0, 90)
@@ -1034,44 +1038,51 @@ def road_sheet(style="street"):
     # 道路は SIS・pak128 標準と同じく、地面の菱形より 1px 下に描く（ROAD_CY）。持ち分も同じだけ下げる（下の _ground_mask）
     set_anchor(ROAD_CY)
     cells = {}
-    for pos, (name, paths, lines, slope, *rest) in jobs.items():
-        clear_models()
-        build_road(paths, lines, slope, corners=rest[0] if rest else (), sidewalk=not expwy)
-        cells[pos] = render_cell(prefix + name, exits_of(name), slope=slope, cy=ROAD_CY)
+    # 雪の絵は下の 4 行に同じ並びで置く（dat の image[..][1]。線路と同じ行の並び）。白線は雪に隠れるので描かない
+    variants = [(0, "", {}, groups), (4, "_snow", ROAD_SNOW_SKIN, tuple(g for g in groups if g != "marking"))]
     k = DIAG_EDGE / ROAD_DIAG  # 経路からの距離の倍率（scale=ROAD_DIAG を掛けると直線の 1/√2）
+    for row0, suffix, skin, grp in variants:
+        kw = dict(sidewalk=not expwy, groups=grp, skin=skin)
+        for pos, (name, paths, lines, slope, *rest) in jobs.items():
+            clear_models()
+            build_road(paths, lines, slope, corners=rest[0] if rest else (), **kw)
+            cells[(pos[0] + row0, pos[1])] = render_cell(prefix + suffix.lstrip("_") + ("_" if suffix else "") + name,
+                                                         exits_of(name), slope=slope, cy=ROAD_CY)
 
-    def build_diag(name, path, over=DIAG_OVERFILL):
-        # 画面で横向きになる斜め（se・nw）は、中央線がちょうど画素の行の境に乗り、2行に分かれて灰色に見える。
-        # 半画素ずらして1行に収める（どちらも南東の側へ。sweep の +u は se で南東、nw で北西）
-        c = {"diag_se": DIAG_CENTER_SHIFT, "diag_nw": -DIAG_CENTER_SHIFT}.get(name, 0.0) / ROAD_DIAG
-        e = EDGE_LINE * k
-        if name in ("diag_se", "diag_nw"):
-            # 路側の白線も、経路（画素の行の境）からの距離を「整数 + 0.5」px に丸めて1行に収める（約 0.3px 内へ）。
-            # 縦向きの斜め（sw・ne）はそのままで列に収まる。両方を同時に収める EDGE_LINE は無い
-            e = (math.floor(EDGE_LINE * DIAG_EDGE * DIAG_PX) + 0.5) / DIAG_PX / ROAD_DIAG
-        build_road([path], [(path, -e), (path, c), (path, e)], scale=ROAD_DIAG,
-                   half=path, hw=ROAD_HW * k, sidewalk=not expwy, curb_w=CURB_W * DIAG_EDGE, half_over=over)
+        def build_diag(name, path, over=DIAG_OVERFILL):
+            # 画面で横向きになる斜め（se・nw）は、中央線がちょうど画素の行の境に乗り、2行に分かれて灰色に見える。
+            # 半画素ずらして1行に収める（どちらも南東の側へ。sweep の +u は se で南東、nw で北西）
+            c = {"diag_se": DIAG_CENTER_SHIFT, "diag_nw": -DIAG_CENTER_SHIFT}.get(name, 0.0) / ROAD_DIAG
+            e = EDGE_LINE * k
+            if name in ("diag_se", "diag_nw"):
+                # 路側の白線も、経路（画素の行の境）からの距離を「整数 + 0.5」px に丸めて1行に収める（約 0.3px 内へ）。
+                # 縦向きの斜め（sw・ne）はそのままで列に収まる。両方を同時に収める EDGE_LINE は無い
+                e = (math.floor(EDGE_LINE * DIAG_EDGE * DIAG_PX) + 0.5) / DIAG_PX / ROAD_DIAG
+            build_road([path], [(path, -e), (path, c), (path, e)], scale=ROAD_DIAG,
+                       half=path, hw=ROAD_HW * k, curb_w=CURB_W * DIAG_EDGE, half_over=over, **kw)
 
-    for pos, (name, path) in diag.items():
-        clear_models()
-        build_diag(name, path)
-        cells[pos] = render_cell(prefix + name, exits_of(name), side=DIAG_HALF[name], cy=ROAD_CY)
-    # 近い斜め（diagonal[close1]・[close2]）: 1 タイル空けて並べた斜め 2 本が分け合う十字のタイル。
-    # 絵があると分け合うタイルは十字 1 本の way になる（壁の無い線路と同じ）。斜めの 2 片をそのまま 1 枚に描き、持ち分は菱形全体。
-    # 片は中心線で切って重ねない（重ねると歩道の面が二重になる）
-    for pos, name, pair in (((2, 4), "close1", ("diag_nw", "diag_se")), ((2, 9), "close2", ("diag_ne", "diag_sw"))):
-        clear_models()
-        for d in pair:
-            build_diag(d, next(p for n, p in diag.values() if n == d), over=0.0)
-        cells[pos] = render_cell(prefix + name, exits_of(name), cy=ROAD_CY)
+        for pos, (name, path) in diag.items():
+            clear_models()
+            build_diag(name, path)
+            cells[(pos[0] + row0, pos[1])] = render_cell(prefix + suffix.lstrip("_") + ("_" if suffix else "") + name,
+                                                         exits_of(name), side=DIAG_HALF[name], cy=ROAD_CY)
+        # 近い斜め（diagonal[close1]・[close2]）: 1 タイル空けて並べた斜め 2 本が分け合う十字のタイル。
+        # 絵があると分け合うタイルは十字 1 本の way になる（壁の無い線路と同じ）。斜めの 2 片をそのまま 1 枚に描き、持ち分は菱形全体。
+        # 片は中心線で切って重ねない（重ねると歩道の面が二重になる）
+        for pos, name, pair in (((2, 4), "close1", ("diag_nw", "diag_se")), ((2, 9), "close2", ("diag_ne", "diag_sw"))):
+            clear_models()
+            for d in pair:
+                build_diag(d, next(p for n, p in diag.values() if n == d), over=0.0)
+            cells[(pos[0] + row0, pos[1])] = render_cell(prefix + suffix.lstrip("_") + ("_" if suffix else "") + name,
+                                                         exits_of(name), cy=ROAD_CY)
 
     # アイコン: 道路を大きく斜めに通し、左上に最高速度を書く
     clear_models()
     long = straight((0, -12), (0, 12), ext=0.6)
-    build_road([long], both(long), clip=False, size=(TILE, 26), sidewalk=not expwy)
+    build_road([long], both(long), clip=False, size=(TILE, 26), sidewalk=not expwy, groups=groups)
     cells[(0, 0)] = render_icon(prefix + "icon", 0.5, shift=(-0.14, 0.2), label="120" if expwy else "50")
     cells[(0, 1)] = cells[(0, 2)]
-    make_sheet(cells, 4, 10, os.path.join(SRC, "expressway.png" if expwy else "road.png"))
+    make_sheet(cells, 8, 10, os.path.join(SRC, prof["sheet"] + ".png"))
 
 
 def build_tollbooth(rot_deg):
