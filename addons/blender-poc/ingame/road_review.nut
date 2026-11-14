@@ -157,6 +157,8 @@ foreach (o in ORIGINS) {
   out += lanes("bpoc_expressway_wall_", OX + 46, OY);
   out += lanes("bpoc_expressway_elev_", OX + 46, OY + 16);
   out += structures(OX + 2, OY + 31);
+  // 降雪側: 土地を上げ下げしたタイルは気候が温暖（4）に戻り、坂の道路が雪の絵にならない。敷いた後に一帯を降雪（7）に塗り直す
+  if (OX >= 256) out += r("climate", command_x(tool_set_climate).work(pl, coord3d(OX - 2, OY - 2, 0), coord3d(OX + 78, OY + 52, 0), "7"));
 }
 gui.close_all_windows();
 return out == "" ? "ok" : out;
