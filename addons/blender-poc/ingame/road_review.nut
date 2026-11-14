@@ -1,9 +1,9 @@
 // 道路の見た目の最終確認用パターン: 1〜9 で作った道路の全種類を 1 か所に並べる。名札（ASCII）付き。
-// flat.sve（夏）・flat_snow.sve（雪）の南東 x=176〜251, y=193〜242 に敷く（どちらも空いている所）。
-// flat2.sve では坂が作れない（残高が足りず set_slope が失敗する）ので、坂・坂から始まる橋・トンネルは敷けない。
-// 座標の一覧は README の「道路の確認用パターン」。原点 OX, OY を変えると全体が動く。
+// 検証用の flat_512.sve（512x512・フリープレイ。x<256 が温暖、x>=256 が降雪）に、温暖側 (20,20)〜 と降雪側 (276,20)〜 の 2 か所へ同じ並びで敷く。
+// 1 か所の大きさは 76x50 タイル。座標の一覧は README の「道路の確認用パターン」（原点からの位置）。ORIGINS を変えると敷く所が動く。
+// 古い flat.sve・flat_snow.sve で使うときは ORIGINS を [[176, 194]] にする（南東の空いている所）。flat2.sve は坂が作れないので使わない。
 function r(name, v) { return v == null ? "" : name + "=[" + v + "]\n"; }
-local OX = 176, OY = 194;
+local ORIGINS = [[20, 20], [276, 20]];
 local pl = player_x(0);
 local marker = command_x(tool_set_marker);
 local out = "";
@@ -148,12 +148,15 @@ function structures(ox, oy) {
   return s;
 }
 
-out += single("bpoc_road", OX, OY, true);
-out += single("bpoc_expressway", OX + 22, OY, true);
-out += single("bpoc_expressway_wall_single", OX, OY + 14, true);
-out += single("bpoc_expressway_elev_single", OX + 22, OY + 14, false);
-out += lanes("bpoc_expressway_wall_", OX + 46, OY);
-out += lanes("bpoc_expressway_elev_", OX + 46, OY + 16);
-out += structures(OX + 2, OY + 31);
+foreach (o in ORIGINS) {
+  local OX = o[0], OY = o[1];
+  out += single("bpoc_road", OX, OY, true);
+  out += single("bpoc_expressway", OX + 22, OY, true);
+  out += single("bpoc_expressway_wall_single", OX, OY + 14, true);
+  out += single("bpoc_expressway_elev_single", OX + 22, OY + 14, false);
+  out += lanes("bpoc_expressway_wall_", OX + 46, OY);
+  out += lanes("bpoc_expressway_elev_", OX + 46, OY + 16);
+  out += structures(OX + 2, OY + 31);
+}
 gui.close_all_windows();
 return out == "" ? "ok" : out;
