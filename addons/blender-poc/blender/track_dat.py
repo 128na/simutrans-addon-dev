@@ -35,6 +35,9 @@ def way(name, sheet, comment, front=False, snow=True, elevated=False):
     block = 8 if front else 4
     for season, base in ((0, 0), (1, block)) if snow else ((0, 0),):
         for key, idx, r, c, off in imgs:
+            if front and idx.startswith("[close"):
+                # 側壁・高架の版は近い斜めの絵を持たない（本体が 1 タイルに 2 本の way で作り、back と front を組み合わせられる）
+                continue
             out.append(f"{key}{idx}[{season}]={sheet}.{r + base}.{c}{off}")
             if front:
                 out.append(f"front{key}{idx}[{season}]={sheet}.{r + base + 4}.{c}{off}")
