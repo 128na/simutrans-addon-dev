@@ -191,6 +191,16 @@ SIS の道路8種（一般道 50/70/80km/h、高速 80/100/120/999km/h）の直�
   （`docs/expwy_elev_loop.png`・`docs/expwy_elev_lanes.png`・`docs/expwy_elev_diag.png`）
 - 気づいた点: 3 車線の行き止まりの端の側面に、白い点線のような模様が見える（`docs/expwy_elev_lanes.png` の右下）。原因は調べていない
 
+### 高速道路の橋（2026-11-14）
+
+手本は iss の都市高速の橋（`bridge/road` の `0120_bridge1`。床の縁が青い桁）。線路の橋と同じセルの並びで作った（`bpoc_expressway_bridge`）。
+
+- 床は両側の壁の版（`bpoc_expressway_wall_single` と同じ欄干）に、基盤を足したもの。基盤の側面を青い桁の色にした
+- 端の坂（Ramp）は坂の下を地面まで埋め、坂のタイルから始まる端（Start）は平らな床の下に地面までの橋台を足す（線路の橋と同じ）
+- 橋脚の絵は道を横切る向きに長い柱で、両側の壁の下まで届く
+- ゲーム内（`ingame/expwy_bridge.nut`、`flat_snow.sve`）: 平地から平地への東西・南北の橋と、谷に架けた橋で、床・端・橋脚がつながった
+  （`docs/expwy_bridge_snow.png`・`docs/expwy_bridge_valley_snow.png`）。雪の無いマップでの見た目（青い桁）はゲームで見ていない
+
 ## つなぎ目のバリ（2026-11-12）
 
 ゲーム内の等倍表示で、斜め同士と坂の周りのタイルの境にバリが出ていた。原因と直し方:

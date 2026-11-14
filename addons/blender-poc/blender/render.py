@@ -721,14 +721,14 @@ def build_base(walls, paths, k, datum, slope, div, mat, clip=True, extra_cut=Non
     return plate
 
 
-def build_start_body(path, ground, datum, mat):
+def build_start_body(path, ground, datum, mat, u=None):
     """坂のタイルから始まる橋の端（Start）の躯体: 平らな基盤の下を、坂の地面まで埋める。
     ground(x, y) は基盤の面から見た地面の高さ（0 以下）。"""
     d = (path[-1] - path[0]).normalized()
     half = TILE / 2
     # タイルの辺に頂点を置く（辺の外は地面の高さを辺のまま延ばす）
     pts = [path[0], path[0] + d * PATH_EXT, path[-1] - d * PATH_EXT, path[-1]]
-    u = WALL_U + WALL_W
+    u = u or WALL_U + WALL_W
     ob = mesh_object("startbody", *sweep(pts, [(-u, -60.0), (u, -60.0), (u, -BASE_H), (-u, -BASE_H)]), material(*mat))
     ob["tall"] = False
     cl = lambda v: max(-half, min(half, v))
@@ -997,6 +997,13 @@ def _expwy_pier_shape(path, k):
 
 
 ROAD_PARTS += (Part("pier", "bed", "lane", _M_BASE, _expwy_pier_shape, "pier"),)
+# 橋の端の坂（平地から立ち上がる坂）の躯体: 線路の rampbody と同じく、基盤の下を地面まで埋める（壁の外側まで）
+ROAD_PARTS += (Part("rampbody", "bed", "lane", _M_BASE,
+                    lambda path, k: sweep(path, [(-(EXPWY_WALL_U + EXPWY_WALL_W) * k, -60.0), ((EXPWY_WALL_U + EXPWY_WALL_W) * k, -60.0),
+                                                 ((EXPWY_WALL_U + EXPWY_WALL_W) * k, -BASE_H), (-(EXPWY_WALL_U + EXPWY_WALL_W) * k, -BASE_H)]),
+                    "ramp", ground=True),)
+# 橋の桁: iss の都市高速の橋（bridge/road の 0120_bridge1）と同じく、床の縁を青い鋼の帯に見せる（基盤の側面）
+_M_GIRDER = ("girder", (0.22, 0.40, 0.62))
 # 道路の描き分け（ROAD_PROFILES）: skin は部品の材質の差し替え（高速道路のアスファルト）、groups は使う部品のまとまり。
 # walls は側壁の版（both = single・back・center・front。線路の TRACK_PROFILES と同じ決め方）
 ROAD_PROFILES = {
@@ -1013,6 +1020,11 @@ for _variant, _walls in (("single", "both"), ("back", "back"), ("center", "cente
     ROAD_PROFILES[f"expwy_elev_{_variant}"] = dict(ROAD_PROFILES[f"expwy_wall_{_variant}"], sheet=f"expressway_elev_{_variant}",
                                                    prefix=f"expwy_elev_{_variant}_", elevated=True, lower=16, band="elevated",
                                                    groups=ROAD_PROFILES[f"expwy_wall_{_variant}"]["groups"] + ("pier",))
+# 橋: 両側の壁（欄干）の版に、青い桁（基盤）・端の坂と橋台の躯体・橋脚の絵を足す。セルの並びは線路の橋と同じ
+ROAD_PROFILES["expwy_bridge"] = dict(ROAD_PROFILES["expwy_wall_single"], sheet="expressway_bridge", prefix="expwy_bridge_",
+                                     bridge=True, solid=True, band="bridge", base_mat=_M_GIRDER, piers=True, starts=True,
+                                     groups=ROAD_PROFILES["expwy_wall_single"]["groups"] + ("ramp",),
+                                     only=("ns", "ew", "up12", "up9", "up3", "up6", "up2_12", "up2_9", "up2_3", "up2_6"))
 # 雪の絵（dat の image[..][1]）の材質。路面は踏み固められた灰色がかった雪、歩道と縁石は新しい雪。白線は雪に隠れる（marking を描かない）
 _M_ROAD_SNOW = lambda: noisy_material("road_snow", (0.60, 0.63, 0.68), (0.80, 0.83, 0.88), scale=60, rough=0.9)
 # 雪の路面の痛みは、車輪の通る所だけが轍（わだち）になって暗く見える。油と補修跡は雪に隠れる
@@ -1130,6 +1142,20 @@ def road_sheet(style="street"):
         (2, 2): ("diag_ne", straight(N, E, ext=DIAG_EXT)),
         (2, 3): ("diag_se", straight(S, E, ext=DIAG_EXT)),
     }
+    if "only" in prof:
+        jobs = {k_: v for k_, v in jobs.items() if v[0] in prof["only"]}
+        diag = {}
+    # 坂のタイルから始まる橋の端（Start・Start2）: 平らな橋の絵の下に、坂の地面までの躯体を足す（線路の橋と同じ）。
+    # 本体の slope_t::north は南が高い坂で、そのとき Start[N] が使われる（東西も同じく、名前と反対の側が高い）
+    grounds = {}
+    if prof.get("starts"):
+        high = {"n": lambda x, y: (half - y) / TILE, "s": lambda x, y: (y + half) / TILE,
+                "e": lambda x, y: (half - x) / TILE, "w": lambda x, y: (x + half) / TILE}
+        for j, d in enumerate("nsew"):
+            for col, steps, pre in ((j, 1, "start"), (5 + j, 2, "start2")):
+                p_ = sn if d in "ns" else we
+                jobs[(3, col)] = (f"{pre}_{d}", [p_], both(p_), None)
+                grounds[f"{pre}_{d}"] = (lambda f, n: lambda x, y: n * H * (f(x, y) - 1))(high[d], steps)
     # 道路は SIS・pak128 標準と同じく、地面の菱形より 1px 下に描く（ROAD_CY）。持ち分も同じだけ下げる（下の _ground_mask）
     set_anchor(ROAD_CY)
     cells = {}
@@ -1144,26 +1170,31 @@ def road_sheet(style="street"):
             kl = DIAG_EDGE if name.startswith("diag_") else 1.0
             kept = select_walls(obs, name, paths, walls)
             trim_end_walls(kept, paths, kl, None, EXPWY_WALL_U, EXPWY_WALL_W)
-            if prof.get("elevated"):
+            if prof.get("elevated") or prof.get("bridge"):
                 if walls in ("back", "center") and name.startswith("diag_"):
                     # back・center の斜めは橋脚を描かない（線路の高架と同じ。手前の front の線の橋脚で足りる）
                     for ob in [ob for ob in obs if ob.name.startswith("pier")]:
                         obs.remove(ob)
                         bpy.data.objects.remove(ob, do_unlink=True)
                 # 基盤: 路面の下の板。残した壁の外側を削り、壁の無い側はタイルの端まで埋める（並べた車線の基盤とつながる）
-                base = build_base(kept, paths, kl, FLAT["bed"], slope, 1, _M_BASE, wu=EXPWY_WALL_U, ww=EXPWY_WALL_W)
+                base = build_base(kept, paths, kl, FLAT["bed"], slope, 1, prof.get("base_mat", _M_BASE), wu=EXPWY_WALL_U,
+                                  ww=EXPWY_WALL_W)
                 # 路面の板（厚み 0.04）の下に入れる。上面が路面と同じ高さだと重なって基盤の灰色が出た（2026-11-14、ゲームで確認）
                 for v in base.data.vertices:
                     v.co.z -= 0.05
                 obs.append(base)
-        lower = prof.get("lower", 0)
+                if name in grounds:
+                    obs.append(build_start_body(paths[0], grounds[name], FLAT["bed"], _M_BASE, u=EXPWY_WALL_U + EXPWY_WALL_W))
+                    slope = grounds[name]  # 持ち分を、坂の地面まで下へ広げる
+        lower, solid = prof.get("lower", 0), prof.get("solid", False)
         if any(ob.get("tall") for ob in obs):
             cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, True, exits_of(name), slope, ROAD_CY, 0,
-                                                                  WALL_RISE, lower=lower, side=side)
+                                                                  WALL_RISE, solid, lower, side=side)
             if front:
                 cells[(pos[0] + row0 + prof["front_row"], pos[1])] = front
         else:
-            cells[(pos[0] + row0, pos[1])] = render_cell(cname, exits_of(name), slope=slope, side=side, cy=ROAD_CY, lower=lower)
+            cells[(pos[0] + row0, pos[1])] = render_cell(cname, exits_of(name), slope=slope, side=side, cy=ROAD_CY, solid=solid,
+                                                         lower=lower)
 
     for row0, suffix, skin, grp in variants:
         kw = dict(sidewalk=not expwy, groups=grp, skin=skin)
@@ -1201,13 +1232,22 @@ def road_sheet(style="street"):
                 build_diag(d, next(p for n, p in diag.values() if n == d), over=0.0)
             cells[(pos[0] + row0, pos[1])] = render_cell(cn(name), exits_of(name), cy=ROAD_CY)
 
+    if prof.get("piers"):
+        # 橋脚: 橋の下の地面のタイルに立つ柱（高さ 1 段）。道を横切る向きに、両側の壁の下まで長い。(2, 0) が南北の橋、(2, 1) が東西の橋
+        set_anchor(128)
+        for col, (sx, sy) in enumerate(((2 * EXPWY_WALL_U, PIER_W), (PIER_W, 2 * EXPWY_WALL_U))):
+            clear_models()
+            mesh_object("pier", *box(0, 0, H / 2, sx, sy, H), material(*_M_BASE))
+            cells[(2, col)] = render_cell(f"{prof['sheet']}_pier{col}")
+        set_anchor(ROAD_CY)
+
     # アイコン: 道路を大きく斜めに通し、左上に最高速度を書く
     clear_models()
     long = straight((0, -12), (0, 12), ext=0.6)
     build_road([long], both(long), clip=False, size=(TILE, 26), sidewalk=not expwy, groups=groups)
     if walls:
         cells[(0, 0)] = render_icon(prefix + "icon", 0.5, shift=(-0.14, 0.2), label=prof["label"], style=prof["style"],
-                                    badge=ICON_BADGE[walls], band=prof.get("band"))
+                                    badge=None if prof.get("bridge") else ICON_BADGE[walls], band=prof.get("band"))
     else:
         cells[(0, 0)] = render_icon(prefix + "icon", 0.5, shift=(-0.14, 0.2), label=prof["label"])
     cells[(0, 1)] = cells[(0, 2)]
@@ -2072,6 +2112,7 @@ if __name__ == "__main__":
              "icons", "road", "expressway", "tollbooth"}
     known |= {f"track_{w}_{v}" for w in ("wall", "elev") for v in ("single", "back", "center", "front")}
     known |= {f"expressway_{w}_{v}" for w in ("wall", "elev") for v in ("single", "back", "center", "front")}
+    known |= {"expressway_bridge"}
     unknown = [t for t in targets if t not in known]
     if unknown:
         # 名前の打ち間違いで何も描かずに正常終了しないように止める（render_parallel.py が失敗として拾う）
@@ -2106,5 +2147,7 @@ if __name__ == "__main__":
             road_sheet(f"expwy_wall_{_variant}")
         if f"expressway_elev_{_variant}" in targets:
             road_sheet(f"expwy_elev_{_variant}")
+    if "expressway_bridge" in targets:
+        road_sheet("expwy_bridge")
     if "tollbooth" in targets:
         tollbooth_sheet()

@@ -7,7 +7,7 @@ src/track.dat の絵の割り当て（[0] の行）を元に、シートの行�
 - 分岐の絵（OTRP の image[nse1]〜image[nsew2]）: track.dat の行のとおり（行 2・3 の列 10〜14）。手前の絵・雪も同じ決まりで書く
 
 書き出すもの: track.dat・track_old.dat（雪の行を足す）、track_trial.dat、track_wall_{single,back,center,front}.dat、track_elev_{...}.dat、track_bridge.dat、
-road.dat・expressway.dat（自分の dat の [0] の行から。雪の行を足す）、expressway_{wall,elev}_{...}.dat
+road.dat・expressway.dat（自分の dat の [0] の行から。雪の行を足す）、expressway_{wall,elev}_{...}.dat、expressway_bridge.dat
 """
 import os
 import re
@@ -70,24 +70,25 @@ def road(sheet, front=False, src=None, name=None, comment=None, elevated=False):
     open(os.path.join(SRC, sheet + ".dat"), "w", encoding="utf8", newline="\n").write("\n".join(out) + "\n")
 
 
-def bridge():
-    head = """# Blender 検証用の線路の橋の試作: 基盤・欄干・橋脚・端の坂の躯体。絵の位置は調整していない
+def bridge(sheet="track_bridge", name="bpoc_track_bridge", waytype="track", topspeed=100, cost=40000, maintenance=1000,
+           comment="# Blender 検証用の線路の橋の試作: 基盤・欄干・橋脚・端の坂の躯体。絵の位置は調整していない"):
+    head = f"""{comment}
 # 端の坂（Ramp）の向きは「坂の高い側」: Ramp[N] は北が高い坂の絵（本体の slope_t::north は南が高い坂で、S の絵を使う）
 obj=bridge
-name=bpoc_track_bridge
+name={name}
 copyright=blender-poc
-waytype=track
-cost=40000
-maintenance=1000
-topspeed=100
+waytype={waytype}
+cost={cost}
+maintenance={maintenance}
+topspeed={topspeed}
 max_lenght=16
 intro_year=1900
 intro_month=1
 retire_year=2999
 retire_month=1
 pillar_distance=1
-icon=> track_bridge.0.0
-cursor=track_bridge.0.1,-64,-32
+icon=> {sheet}.0.0
+cursor={sheet}.0.1,-64,-32
 """
     cells = {
         "Image[NS]": (0, 2), "Image[EW]": (0, 3),
@@ -99,10 +100,10 @@ cursor=track_bridge.0.1,-64,-32
     out = []
     for season, base in ((0, 0), (1, 8)):
         for k, (r, c) in cells.items():
-            out.append(f"Back{k}[{season}]=track_bridge.{r + base}.{c},-64,-32")
-            out.append(f"Front{k}[{season}]=track_bridge.{r + base + 4}.{c},-64,-32")
-        out += [f"backPillar[S][{season}]=track_bridge.2.0,-64,-32", f"backPillar[W][{season}]=track_bridge.2.1,-64,-32"]
-    open(os.path.join(SRC, "track_bridge.dat"), "w", encoding="utf8", newline="\n").write(head + "\n".join(out) + "\n")
+            out.append(f"Back{k}[{season}]={sheet}.{r + base}.{c},-64,-32")
+            out.append(f"Front{k}[{season}]={sheet}.{r + base + 4}.{c},-64,-32")
+        out += [f"backPillar[S][{season}]={sheet}.2.0,-64,-32", f"backPillar[W][{season}]={sheet}.2.1,-64,-32"]
+    open(os.path.join(SRC, sheet + ".dat"), "w", encoding="utf8", newline="\n").write(head + "\n".join(out) + "\n")
 
 
 def tunnel():
@@ -146,6 +147,8 @@ if __name__ == "__main__":
             front=True, elevated=True)
     bridge()
     tunnel()
+    bridge("expressway_bridge", "bpoc_expressway_bridge", "road", 120, 120000, 3000,
+           "# Blender 検証用の高速道路の橋: 青い桁（iss の都市高速の橋が手本）・欄干の壁・橋脚・端の坂と橋台の躯体。雪は [1]")
     road("road")
     road("expressway")
     for side, ja in (("single", "両側（単独用）"), ("back", "奥だけ"), ("center", "なし（中の車線用）"), ("front", "手前だけ")):
