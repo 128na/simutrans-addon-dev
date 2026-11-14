@@ -949,3 +949,16 @@ ex 画像は今の makeobj では書けない（[リファレンス](../../docs/
   2 本の間は歩道（高速道路はアスファルト）になる。南東へ下る組（`docs/trial_close_road_se.png`）・北東へ上る組（`docs/trial_close_expwy_ne.png`）とも、
   縁石と白線は段差なくつながった（2026-11-14、ゲームで確認）
 - 敷き方: `ingame/close_diag.nut`。壁の無い版と道路は東西と南北の直線を 1 本ずつ通して十字を作る（カーブのタイルから 3 本目を足すと向きが崩れる）。側壁・高架の版は階段の斜めを `build_way` でそのまま敷く
+
+### 高架の橋脚を 2 段にする（2026-11-15）
+
+pak128 の高架は、本体の既定で床が地面の 2 段上になる（`way_height_clearance` が無い pak は `height_conversion_factor` と同じ。決まりはリファレンスの 5 章の表）。
+橋脚が 1 段ぶんしかなく、床の下で宙に浮いていたので直した。
+
+- 線路の高架 4 版（`track_elev_*`）と高速道路の高架 4 版（`expressway_elev_*`）の橋脚を、床の下から 2 段下の地面までにした。
+  段数は `render.py` の `ELEV_STEPS`（2）にまとめ、持ち分を下へ広げる行数（`lower`）も `ELEV_LOWER`（16 × 段数 = 32）から出す
+- ゲーム内（`flat_512.sve`、`ingame/elev.nut`・`ingame/expwy_elev.nut`）: 線路・高速道路とも、橋脚が地面まで届いた
+  （`docs/elev_pier_2steps.png`・`docs/expwy_elev_pier_2steps.png`）
+- 橋の橋脚（`piers` のセル）は 1 段のまま。本体が段ごとに積むので、2 段の高さの橋（急坂の端の谷。`ingame/bridge.nut` の y=108）でも地面まで届いた（`docs/bridge_pier_2steps.png`）
+- 既定と違う高さ（ユーザーの `simuconf.tab` の `way_height_clearance`、OTRP の道具ごとの高さの足し）では、橋脚が地面に届かないか埋まる。直していない
+

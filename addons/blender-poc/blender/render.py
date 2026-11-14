@@ -445,11 +445,22 @@ _M_BASE = ("base", (0.50, 0.50, 0.48))
 PIER_SIZE = 1.6
 
 
-def _pier_shape(path, k):
-    """高架の橋脚: 経路の中ほどの下に立つ柱。床（基盤）の下から、1 段下の地面まで。"""
+# 高架の床の高さ（段）。本体は、pak の simuconf に way_height_clearance が無いと height_conversion_factor（pak128 は 2）を使う
+# （simmain.cc）。橋脚はこの段数だけ下の地面まで伸ばし、持ち分も同じだけ下へ広げる（lower = 16 行 × 段数）
+ELEV_STEPS = 2
+ELEV_LOWER = 16 * ELEV_STEPS
+
+
+def _pier_box(path, across):
+    """高架の橋脚: 経路の中ほどの下に立つ、経路を横切る向きに長い柱。床（基盤）の下から、ELEV_STEPS 段下の地面まで。"""
     mid = path[len(path) // 2] if len(path) > 2 else (path[0] + path[-1]) / 2
     d = (path[-1] - path[0]).normalized()
-    return box(mid.x, mid.y, -(H + BASE_H) / 2, PIER_SIZE, PIER_SIZE * 2.4, H - BASE_H, rot=math.atan2(d.y, d.x))  # 線路を横切る向きに長い
+    top, bottom = -BASE_H, -ELEV_STEPS * H
+    return box(mid.x, mid.y, (top + bottom) / 2, PIER_SIZE, across, top - bottom, rot=math.atan2(d.y, d.x))
+
+
+def _pier_shape(path, k):
+    return _pier_box(path, PIER_SIZE * 2.4)  # 線路を横切る向きに長い
 
 
 TRACK_EXTRAS += (Part("pier", "bed", "bed", ("base", (0.50, 0.50, 0.48)), _pier_shape, "pier"),)
@@ -1043,9 +1054,7 @@ EXPWY_PIER_ACROSS = 2 * EXPWY_WALL_U  # 高架の橋脚の、道を横切る向�
 
 def _expwy_pier_shape(path, k):
     """高架の高速道路の橋脚: 経路の中ほどの下に立つ、道を横切る向きに長い柱（線路の _pier_shape と同じ置き方）。"""
-    mid = path[len(path) // 2] if len(path) > 2 else (path[0] + path[-1]) / 2
-    d = (path[-1] - path[0]).normalized()
-    return box(mid.x, mid.y, -(H + BASE_H) / 2, PIER_SIZE, EXPWY_PIER_ACROSS * k, H - BASE_H, rot=math.atan2(d.y, d.x))
+    return _pier_box(path, EXPWY_PIER_ACROSS * k)
 
 
 ROAD_PARTS += (Part("pier", "bed", "lane", _M_BASE, _expwy_pier_shape, "pier"),)
@@ -1073,9 +1082,9 @@ for _variant, _walls in (("single", "both"), ("back", "back"), ("center", "cente
     ROAD_PROFILES[f"expwy_wall_{_variant}"] = dict(ROAD_PROFILES["expressway"], sheet=f"expressway_wall_{_variant}",
                                                    prefix=f"expwy_wall_{_variant}_", walls=_walls, front_row=4,
                                                    groups=ROAD_PROFILES["expressway"]["groups"] + ("wall",))
-    # 高架（system_type=1）: 側壁の版に、床の下の基盤（build_base）と橋脚を足す。橋脚は床の下から 1 段下の地面まで（lower 行下まで描く）
+    # 高架（system_type=1）: 側壁の版に、床の下の基盤（build_base）と橋脚を足す。橋脚は床の下から ELEV_STEPS 段下の地面まで（lower 行下まで描く）
     ROAD_PROFILES[f"expwy_elev_{_variant}"] = dict(ROAD_PROFILES[f"expwy_wall_{_variant}"], sheet=f"expressway_elev_{_variant}",
-                                                   prefix=f"expwy_elev_{_variant}_", elevated=True, lower=16, band="elevated",
+                                                   prefix=f"expwy_elev_{_variant}_", elevated=True, lower=ELEV_LOWER, band="elevated",
                                                    groups=ROAD_PROFILES[f"expwy_wall_{_variant}"]["groups"] + ("pier",))
 # 橋: 両側の壁（欄干）の版に、青い桁（基盤）・端の坂と橋台の躯体・橋脚の絵を足す。セルの並びは線路の橋と同じ
 ROAD_PROFILES["expwy_bridge"] = dict(ROAD_PROFILES["expwy_wall_single"], sheet="expressway_bridge", prefix="expwy_bridge_",
@@ -1695,10 +1704,10 @@ TRACK_PROFILES = {
 # 基盤は、壁のある側は壁まで、壁のない側はタイルの端まで
 for _variant in ("back", "center", "front"):
     TRACK_PROFILES[f"wall_{_variant}"] = dict(TRACK_PROFILES["wall_single"], sheet=f"track_wall_{_variant}", walls=_variant)
-# 高架（dat の system_type=1）: 側壁の 4 つの版に橋脚を足し、持ち分を床の 1 段（16px）下まで広げる
+# 高架（dat の system_type=1）: 側壁の 4 つの版に橋脚を足し、持ち分を床の ELEV_STEPS 段（16px × 段数）下まで広げる
 for _variant, _walls in (("single", "both"), ("back", "back"), ("center", "center"), ("front", "front")):
     TRACK_PROFILES[f"elev_{_variant}"] = dict(TRACK_PROFILES["wall_single"], sheet=f"track_elev_{_variant}", walls=_walls,
-                                               groups=("body", "wall", "base", "structure", "pier"), lower=16,
+                                               groups=("body", "wall", "base", "structure", "pier"), lower=ELEV_LOWER,
                                                band="elevated")
 # 試作: ex 画像（Y字・三方分岐）が使えたらどう見えるかを、switch 画像の 1・2 の枠に入れて見る（別のアドオン。雪なし）
 TRACK_PROFILES["ex_proto"] = dict(TRACK_PROFILES["new"], sheet="track_ex_proto", ex_proto=True, snow=False)
