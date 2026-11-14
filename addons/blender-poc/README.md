@@ -803,7 +803,7 @@ pak に入れるときの `makeobj` の引数は、上の「ビルド」の行�
 ex 画像は今の makeobj では書けない（[リファレンス](../../docs/reference/way-addon.md) の 9.1・9.4）。書けるようになったらどう見えるかを、分岐の絵の 1・2 の枠に ex の形を入れた別のアドオンで試した。
 
 - アドオン: `bpoc_track_ex_proto`（`src/track_ex_proto.dat`・`.png`。雪なし）。本体の pak とは別に作る:
-  `D:inlenderlender.exe -b --factory-startup --python blender/render.py -- track_ex_proto` → `python -X utf8 blender/track_dat.py` → `cd src; makeobj pak256 ..\distpoc_ex_proto.pak track_ex_proto.dat; cd ..`
+  `D:\bin\blender\blender.exe -b --factory-startup --python blender/render.py -- track_ex_proto` → `python -X utf8 blender/track_dat.py` → `cd src; makeobj pak256 ..\dist\bpoc_ex_proto.pak track_ex_proto.dat; cd ..`
 - 絵の割り当て（`render.py` の `ex_proto`）: T字の 1 = Y字（両側のカーブだけで直線なし）、T字の 2 = 通常の分岐のまま、十字の 1 = 三方分岐（東西の直線 + 東へ 1 本で西へ開く）、十字の 2 = 三方分岐（西へ 1 本で東へ開く）。
   道床・基盤は元の T字・十字と同じ
 - ゲームでは自動では選ばれないので、`ingame/switch_ex_shapes.nut` で敷いてタイルの詳細の固定で見た（選択肢 1 が dat の「2」、2 が dat の「1」）
