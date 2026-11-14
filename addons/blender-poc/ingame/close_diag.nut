@@ -3,6 +3,7 @@
 // - 壁の無い版（本体・旧・試作）: 近い斜めの絵（diagonal[close1]・[close2]）があるので、分け合うタイルは十字 1 本の way になる。
 //   十字は東西と南北の直線を 1 本ずつ通して作る（カーブのタイルから 3 本目を足すと、つながりが崩れるため）。
 //   南東へ下る組は、k ごとに東西 (k,k)→(k+2,k) と南北 (k+1,k-1)→(k+1,k+1)。(k+1,k) が十字になる
+// - 道路・高速道路: 近い斜めの絵があるので、壁の無い線路と同じく十字で作る
 // - 側壁・高架の版: 近い斜めの絵を持たないので、本体は分け合うタイルに 2 本の way を置く。奥の線を back、手前の線を front、
 //   3 本なら真ん中を center にして、斜めの階段をそのまま build_way で敷く
 // 名札は ASCII（MCP 経由の日本語は崩れる）
@@ -12,7 +13,8 @@ local ROWS = [["track", ["bpoc_track"]], ["old", ["bpoc_track_old"]], ["trial", 
               ["wall back+front", ["bpoc_track_wall_back", "bpoc_track_wall_front"]],
               ["wall back+center+front", ["bpoc_track_wall_back", "bpoc_track_wall_center", "bpoc_track_wall_front"]],
               ["elev back+front", ["bpoc_track_elev_back", "bpoc_track_elev_front"]],
-              ["elev back+center+front", ["bpoc_track_elev_back", "bpoc_track_elev_center", "bpoc_track_elev_front"]]];
+              ["elev back+center+front", ["bpoc_track_elev_back", "bpoc_track_elev_center", "bpoc_track_elev_front"]],
+              ["road", ["bpoc_road"]], ["expressway", ["bpoc_expressway"]]];
 local N = 6;
 local pl = player_x(0);
 local marker = command_x(tool_set_marker);

@@ -795,13 +795,14 @@ DIAG_OVERFILL = 0.6
 DIAG_HALF = {"diag_nw": "top", "diag_se": "bottom", "diag_sw": "left", "diag_ne": "right"}
 
 
-def half_tile(path):
-    """斜めのタイルで残す範囲（経路が切り取る角の側の帯）を、少し広げた箱。Simutrans は残りを隣のタイルに描く。"""
+def half_tile(path, over=DIAG_OVERFILL):
+    """斜めのタイルで残す範囲（経路が切り取る角の側の帯）を、少し広げた箱。Simutrans は残りを隣のタイルに描く。
+    over は中心線を越えて広げる幅（近い斜めは 2 片を 1 枚に描くので 0 にして、片どうしを重ねない）"""
     mid = (path[0] + path[-1]) / 2
     u = Vector((mid.x, mid.y)).normalized()
     ang = math.atan2(u.y, u.x)
     far = TILE / 2 * math.sqrt(2)  # 中心から角の頂点を通る線まで
-    lo, hi = -DIAG_OVERFILL, far + DIAG_OVERFILL
+    lo, hi = -over, far + DIAG_OVERFILL
     c = (lo + hi) / 2
     return box(u.x * c, u.y * c, 0, hi - lo, 60, 80, rot=ang)
 
@@ -826,7 +827,7 @@ def dashes(path, dash=0.6, period=1.6):
 
 
 def build_road(paths, lines, slope=None, scale=1.0, clip=True, size=TILE + 4, corners=(), half=None, hw=ROAD_HW,
-               sidewalk=True, curb_w=CURB_W):
+               sidewalk=True, curb_w=CURB_W, half_over=DIAG_OVERFILL):
     """道路を作る。paths は車道の中心線（複数で分岐・十字）、lines は (path, u) か (path, u, "dash") の白線。
     歩道は全面の板から車道を抜いて作るので、分岐の口やカーブの外側も自然に埋まる。
     corners は歩道の角を丸くするタイルの角、half は斜めのタイルで残す半分を決める経路。
@@ -869,7 +870,7 @@ def build_road(paths, lines, slope=None, scale=1.0, clip=True, size=TILE + 4, co
         u *= scale
         prof = [(u - w, 0.0), (u + w, 0.0), (u + w, 0.012), (u - w, 0.012)]
         obs.append(mesh_object(f"line{i}", *sweep(path, prof), m_line))
-    finish_road(obs, slope, clip, half, m_curb)
+    finish_road(obs, slope, clip, half, m_curb, half_over)
 
 
 def build_sidewalk(bx, by, scale, hw, curb_w, cutter, m_curb, m_paving):
@@ -886,14 +887,14 @@ def build_sidewalk(bx, by, scale, hw, curb_w, cutter, m_curb, m_paving):
     return [curb, paving]
 
 
-def finish_road(obs, slope, clip, half, m_curb):
+def finish_road(obs, slope, clip, half, m_curb, half_over=DIAG_OVERFILL):
     for ob in obs:
         if slope:
             apply_slope(ob, slope)
         if clip:
             clip_to_tile(ob)
     if half is not None:
-        keeper = mesh_object("half", *half_tile(half), m_curb)
+        keeper = mesh_object("half", *half_tile(half, half_over), m_curb)
         keeper.hide_render = True
         for ob in obs:
             boolean(ob, keeper, op="INTERSECT")
@@ -989,8 +990,8 @@ def road_sheet(style="street"):
         build_road(paths, lines, slope, corners=rest[0] if rest else (), sidewalk=not expwy)
         cells[pos] = render_cell(prefix + name, exits_of(name), slope=slope, cy=ROAD_CY)
     k = DIAG_EDGE / ROAD_DIAG  # 経路からの距離の倍率（scale=ROAD_DIAG を掛けると直線の 1/√2）
-    for pos, (name, path) in diag.items():
-        clear_models()
+
+    def build_diag(name, path, over=DIAG_OVERFILL):
         # 画面で横向きになる斜め（se・nw）は、中央線がちょうど画素の行の境に乗り、2行に分かれて灰色に見える。
         # 半画素ずらして1行に収める（どちらも南東の側へ。sweep の +u は se で南東、nw で北西）
         c = {"diag_se": DIAG_CENTER_SHIFT, "diag_nw": -DIAG_CENTER_SHIFT}.get(name, 0.0) / ROAD_DIAG
@@ -1000,8 +1001,20 @@ def road_sheet(style="street"):
             # 縦向きの斜め（sw・ne）はそのままで列に収まる。両方を同時に収める EDGE_LINE は無い
             e = (math.floor(EDGE_LINE * DIAG_EDGE * DIAG_PX) + 0.5) / DIAG_PX / ROAD_DIAG
         build_road([path], [(path, -e), (path, c), (path, e)], scale=ROAD_DIAG,
-                   half=path, hw=ROAD_HW * k, sidewalk=not expwy, curb_w=CURB_W * DIAG_EDGE)
+                   half=path, hw=ROAD_HW * k, sidewalk=not expwy, curb_w=CURB_W * DIAG_EDGE, half_over=over)
+
+    for pos, (name, path) in diag.items():
+        clear_models()
+        build_diag(name, path)
         cells[pos] = render_cell(prefix + name, exits_of(name), side=DIAG_HALF[name], cy=ROAD_CY)
+    # 近い斜め（diagonal[close1]・[close2]）: 1 タイル空けて並べた斜め 2 本が分け合う十字のタイル。
+    # 絵があると分け合うタイルは十字 1 本の way になる（壁の無い線路と同じ）。斜めの 2 片をそのまま 1 枚に描き、持ち分は菱形全体。
+    # 片は中心線で切って重ねない（重ねると歩道の面が二重になる）
+    for pos, name, pair in (((2, 4), "close1", ("diag_nw", "diag_se")), ((2, 9), "close2", ("diag_ne", "diag_sw"))):
+        clear_models()
+        for d in pair:
+            build_diag(d, next(p for n, p in diag.values() if n == d), over=0.0)
+        cells[pos] = render_cell(prefix + name, exits_of(name), cy=ROAD_CY)
 
     # アイコン: 道路を大きく斜めに通し、左上に最高速度を書く
     clear_models()

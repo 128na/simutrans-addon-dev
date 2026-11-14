@@ -32,7 +32,7 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 | `ingame/full.nut`・`ingame/full_check.sh` | 全方位の表示確認。way の絵 28 種類を周りとつながった形で出す最小のレイアウトを敷き、way ごとに 5 か所を撮って並べる |
 | `ingame/switch_all.nut` | 分岐の絵（OTRP の switch 画像）を線路の 11 アドオンで全部見る見本。空の平らなマップ（`flat2.sve`）に way ごとに 1 行、標準・選択 1・選択 2 に固定した T字と十字、自動選択の 8 通りを名札つきで敷く |
 | `ingame/switch_ex_shapes.nut` | ex 画像（Y字分岐・三方・渡り線）を本体が自動で選ぶ線路の形を、`flat2.sve` の y=130 から下に敷く。既定は `bpoc_track`（絵は通常のまま）。先頭の `WAY` を `bpoc_track_ex_proto`、`OX` を 100 にすると、試作の way で敷いて分岐の絵を固定する |
-| `ingame/close_diag.nut` | 近い斜め（1 タイルずらして並べた斜め 2 本）の見本。`flat2.sve` の x=105 から右に、線路の全版（壁なし 3 種・側壁・高架の 2 本と 3 本）の南東・北東の組を名札つきで敷く |
+| `ingame/close_diag.nut` | 近い斜め（1 タイルずらして並べた斜め 2 本）の見本。`flat2.sve` の x=105 から右に、線路の全版（壁なし 3 種・側壁・高架の 2 本と 3 本）と道路・高速道路の南東・北東の組を名札つきで敷く |
 | `blender/render_parallel.py` | シートを Blender の別々のプロセスで同時に描く（`--jobs` 既定 8、上限 8）。ふつうの Python で動かす |
 | `ingame/switch_auto.nut` | 自動選択の 8 通りだけを `bpoc_track` で敷く（`flat.sve` の y=120） |
 | `ingame/switch_check.sh` | 分岐の絵を手で確かめる準備。pak を入れ、固定の道具がある OTRP のビルドを MCP つきで `flat2` で起動し、`switch_all.nut` を敷く（`GAME_DIR=… EXE=… bash ingame/switch_check.sh`） |
@@ -837,4 +837,7 @@ ex 画像は今の makeobj では書けない（[リファレンス](../../docs/
   - 高架の back・center の斜めは橋脚を描かない（手前の front の橋脚で足りる。描くと手前の線の床に暗い点線が出た）
   - 南東へ下る組（`docs/trial_close_wall_se.png`）・北東へ上る組（`docs/trial_close_elev3_ne.png`）とも、境目の線や重なりは出なかった
   - 北東へ上る組（画面で横）では、手前の線のレールがその線の手前の壁・手すりに隠れる。1 本だけでも同じ。車両を走らせても絵の欠けや重なりは出なかったので、このままにした（ユーザーが確認）
-- 敷き方: `ingame/close_diag.nut`。壁の無い版は東西と南北の直線を 1 本ずつ通して十字を作る（カーブのタイルから 3 本目を足すと向きが崩れる）。側壁・高架の版は階段の斜めを `build_way` でそのまま敷く
+- 道路・高速道路: 同じく `diagonal[close1]`（行 2 の列 4）・`[close2]`（列 9）を足した。斜めの 2 片（車道・縁石・白線）を中心線で切って 1 枚に描き、
+  2 本の間は歩道（高速道路はアスファルト）になる。南東へ下る組（`docs/trial_close_road_se.png`）・北東へ上る組（`docs/trial_close_expwy_ne.png`）とも、
+  縁石と白線は段差なくつながった（2026-11-14、ゲームで確認）
+- 敷き方: `ingame/close_diag.nut`。壁の無い版と道路は東西と南北の直線を 1 本ずつ通して十字を作る（カーブのタイルから 3 本目を足すと向きが崩れる）。側壁・高架の版は階段の斜めを `build_way` でそのまま敷く
