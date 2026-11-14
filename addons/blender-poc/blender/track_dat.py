@@ -7,7 +7,7 @@ src/track.dat の絵の割り当て（[0] の行）を元に、シートの行�
 - 分岐の絵（OTRP の image[nse1]〜image[nsew2]）: track.dat の行のとおり（行 2・3 の列 10〜14）。手前の絵・雪も同じ決まりで書く
 
 書き出すもの: track.dat・track_old.dat（雪の行を足す）、track_trial.dat、track_wall_{single,back,center,front}.dat、track_elev_{...}.dat、track_bridge.dat、
-road.dat・expressway.dat（自分の dat の [0] の行から。雪の行を足す）
+road.dat・expressway.dat（自分の dat の [0] の行から。雪の行を足す）、expressway_{wall,elev}_{...}.dat
 """
 import os
 import re
@@ -151,3 +151,5 @@ if __name__ == "__main__":
     for side, ja in (("single", "両側（単独用）"), ("back", "奥だけ"), ("center", "なし（中の車線用）"), ("front", "手前だけ")):
         road(f"expressway_wall_{side}", front=True, src="expressway.dat", name=f"bpoc_expressway_wall_{side}",
              comment=f"# Blender 検証用の高速道路: 側壁 {ja}。カメラに近い側の壁は手前の絵（front...）、雪は [1]")
+        road(f"expressway_elev_{side}", front=True, src="expressway.dat", name=f"bpoc_expressway_elev_{side}", elevated=True,
+             comment=f"# Blender 検証用の高速道路: 高架（system_type=1）。側壁 {ja}・基盤・橋脚。手前の壁は front...、雪は [1]")

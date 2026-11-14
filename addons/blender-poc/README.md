@@ -180,6 +180,17 @@ SIS の道路8種（一般道 50/70/80km/h、高速 80/100/120/999km/h）の直�
   （`docs/expwy_wall_lanes.png`・`docs/expwy_wall_diag.png`）。全パターン（`WAYS=... bash ingame/full_check.sh`）は `docs/full_expwy_wall_single.png`
 - 雪（`flat_snow.sve`、`OY=170`）: `docs/road_snow.png`・`docs/full_expwy_wall_single_snow.png`。坂のタイルは土地を上げると雪でなくなるので、坂の道は雪なしの絵になる（地面と合っている）
 
+### 高架の高速道路（2026-11-14）
+
+側壁の版と同じ 4 つの版に、床の下の基盤と橋脚を足した（`bpoc_expressway_elev_{single,back,center,front}`、`system_type=1`）。
+
+- 基盤は線路の高架と同じ作り（`build_base`）で、壁の外側を削り、壁の無い側はタイルの端まで埋める。路面の板の下に入れる（上面を同じ高さにすると重なって基盤の灰色が出た）
+- 橋脚は道を横切る向きに長い柱で、両側の壁の下まで届く。床がタイルいっぱいなので、中央だけの柱は床に隠れて見えなかった
+- back・center の斜めは橋脚を描かない（線路の高架と同じ）
+- ゲーム内（`ingame/expwy_elev.nut`、`flat2.sve`）: 輪・行き止まり・3 車線の直線と斜めで床がつながり、橋脚が並んだ
+  （`docs/expwy_elev_loop.png`・`docs/expwy_elev_lanes.png`・`docs/expwy_elev_diag.png`）
+- 気づいた点: 3 車線の行き止まりの端の側面に、白い点線のような模様が見える（`docs/expwy_elev_lanes.png` の右下）。原因は調べていない
+
 ## つなぎ目のバリ（2026-11-12）
 
 ゲーム内の等倍表示で、斜め同士と坂の周りのタイルの境にバリが出ていた。原因と直し方:
