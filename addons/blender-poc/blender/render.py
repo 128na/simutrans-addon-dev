@@ -1245,12 +1245,16 @@ def road_sheet(style="street"):
     clear_models()
     long = straight((0, -12), (0, 12), ext=0.6)
     build_road([long], both(long), clip=False, size=(TILE, 26), sidewalk=not expwy, groups=groups)
+    # 線路のシリーズと同じ型: 背景の色（道路・高速道路）、左上の最高速度、右下の印（側壁の版 S・B・C・F）、下の帯（高架・橋）
+    badge = ICON_BADGE[walls] if walls and not prof.get("bridge") else None
+    cells[(0, 0)] = render_icon(prefix + "icon", 0.5, shift=(-0.14, 0.2), label=prof["label"], style=prof["style"], badge=badge,
+                                band=prof.get("band"))
+    # カーソル: 南北の直線の絵（壁は版のとおり）の上に、アイコンと同じ色の札と最高速度
+    clear_models()
+    obs = build_road([sn], both(sn), sidewalk=not expwy, groups=groups)
     if walls:
-        cells[(0, 0)] = render_icon(prefix + "icon", 0.5, shift=(-0.14, 0.2), label=prof["label"], style=prof["style"],
-                                    badge=None if prof.get("bridge") else ICON_BADGE[walls], band=prof.get("band"))
-    else:
-        cells[(0, 0)] = render_icon(prefix + "icon", 0.5, shift=(-0.14, 0.2), label=prof["label"])
-    cells[(0, 1)] = cells[(0, 2)]
+        select_walls(obs, "ns", [sn], walls)
+    cells[(0, 1)] = render_cursor(prefix + "cursor", prof["label"], prof["style"])
     make_sheet(cells, 2 * block, 10, os.path.join(SRC, prof["sheet"] + ".png"))
 
 
@@ -1908,16 +1912,21 @@ def add_label(text, x, y, height, color=(1, 1, 1), align="LEFT", res=ICON):
     return obs
 
 
-def render_cursor(name, label, style):
+def render_cursor(name, label, style, base=None):
     """今のモデル（1タイル分の絵）をカーソルにする。タイルの上に、アイコンと同じ背景色の札と文字を足す。
-    選んでいる物が何かは札の色（waytype）と文字（最高速度など）で分かる。"""
+    選んでいる物が何かは札の色（waytype）と文字（最高速度など）で分かる。
+    base（RGBA の配列）を渡すと、モデルの代わりにその絵に札を足す（文字だけを空の場面で描く。トンネルの重ね絵）。"""
     c0, c1 = ICON_STYLES[style]["bg"]
+    if base is not None:
+        clear_models()
     labels = add_label(label, 0.5, 0.325, 0.045, align="CENTER", res=CELL)
-    rgba = load_rgba8(render_cell(name)).copy()
+    rgba = load_rgba8(render_cell(name if base is None else name + "_text")).copy()
     for ob in labels:
         bpy.data.objects.remove(ob, do_unlink=True)
     # 札: 文字の後ろの角丸でない四角（文字は不透明な所だけ上に残す）
     text = rgba[76:100, 96:160].copy()
+    if base is not None:
+        rgba = base.copy()
     yy = np.linspace(0, 1, 18)[:, None, None]
     plate = (np.array(c0) * (1 - yy) + np.array(c1) * yy).astype(np.uint8) * np.ones((18, 44, 1), np.uint8)
     rgba[79:97, 106:150, :3] = plate
@@ -2098,8 +2107,12 @@ def tunnel_sheet(kind="track"):
     # カーソル: 口が手前を向いた坑口（BackImage[N]）の奥の絵に手前の絵（躯体）を重ねた 1 枚
     back, front = load_rgba8(cells[(0, 2)]), load_rgba8(cells[(1, 2)])
     cursor = np.where(front[..., 3:] >= 128, front, back)
-    cells[(0, 1)] = os.path.join(WORK, f"{pre}_cursor.png")
-    save_rgba(cells[(0, 1)], cursor)
+    if expwy:
+        # 道路のシリーズは、カーソルにアイコンと同じ色の札と最高速度を足す
+        cells[(0, 1)] = render_cursor(f"{pre}_cursor", "120", "expressway", base=cursor)
+    else:
+        cells[(0, 1)] = os.path.join(WORK, f"{pre}_cursor.png")
+        save_rgba(cells[(0, 1)], cursor)
     make_sheet(cells, 4, 6, os.path.join(SRC, ("expressway" if expwy else "track") + "_tunnel.png"))
 
 
