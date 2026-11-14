@@ -199,7 +199,17 @@ SIS の道路8種（一般道 50/70/80km/h、高速 80/100/120/999km/h）の直�
 - 端の坂（Ramp）は坂の下を地面まで埋め、坂のタイルから始まる端（Start）は平らな床の下に地面までの橋台を足す（線路の橋と同じ）
 - 橋脚の絵は道を横切る向きに長い柱で、両側の壁の下まで届く
 - ゲーム内（`ingame/expwy_bridge.nut`、`flat_snow.sve`）: 平地から平地への東西・南北の橋と、谷に架けた橋で、床・端・橋脚がつながった
-  （`docs/expwy_bridge_snow.png`・`docs/expwy_bridge_valley_snow.png`）。雪の無いマップでの見た目（青い桁）はゲームで見ていない
+  （`docs/expwy_bridge_snow.png`・`docs/expwy_bridge_valley_snow.png`）。夏（`flat.sve`）は `docs/expwy_bridge.png`
+- 気づいた点: 桁の青い側面は壁の真下にあり、ゲームではほとんど見えない。iss のように床の縁に見せるには、桁を壁の外へ出す必要がある
+
+### 高速道路のトンネル（2026-11-14）
+
+手本は iss の都市高速の坑口（`tunnel/road`。タイルいっぱいの箱と、口の上の橙色の名板）。線路のトンネル（`tunnel_sheet`）を高速道路でも使えるようにした（`bpoc_expressway_tunnel`）。
+
+- 穴は両側の壁の内側まで広げ、奥の絵は高速道路の路面と暗い内壁。道路と同じく地面より 1px 下に描き、持ち分の spill は 0
+- 口の上に名板を付けた。カーソルは線路と同じく、口が手前を向いた坑口の奥の絵と手前の絵を重ねた 1 枚
+- 線路のトンネルの絵は変わらない（描き直して差分なし）
+- ゲーム内（`ingame/expwy_tunnel.nut`、`flat.sve`）: 東西・南北の 2 段の尾根を掘り、坑口と前後の高速道路がつながった（`docs/expwy_tunnel.png`・`docs/expwy_tunnel_ns.png`）。雪のマップでは見ていない
 
 ## つなぎ目のバリ（2026-11-12）
 

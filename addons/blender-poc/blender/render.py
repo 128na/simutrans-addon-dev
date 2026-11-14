@@ -2004,8 +2004,8 @@ TUNNEL_HOOD = (TILE / 2, 2 * H)         # 躯体の半幅と高さ
 TUNNEL_RISE = 36      # 躯体の高さ（画面の px。持ち分を上へ広げる行数）
 
 
-def tunnel_sheet():
-    """坑口 4 方向。pak128 では坑口は 2 段の坂にしか置けない（本体の tunnelbauer）。BackImage[N] は北が高い坂（南から入る）。シートは 行 0: 奥の絵、行 1: 手前の絵、行 2・3: 雪。"""
+def tunnel_sheet(kind="track"):
+    """坑口 4 方向（kind: track・expressway）。pak128 では坑口は 2 段の坂にしか置けない（本体の tunnelbauer）。BackImage[N] は北が高い坂（南から入る）。シートは 行 0: 奥の絵、行 1: 手前の絵、行 2・3: 雪。"""
     half = TILE / 2
     N, S, E, W = (0, half), (0, -half), (half, 0), (-half, 0)
     dirs = {  # 名前: (列, 経路, 高い側の向き, 坂の高さ)
@@ -2015,45 +2015,57 @@ def tunnel_sheet():
         "w": (5, straight(W, E), Vector((-1, 0)), lambda x, y: 2 * H * (half - x) / TILE),
     }
     prof = TRACK_PROFILES["new"]
-    set_anchor(128 + BALLAST_DY)
+    expwy = kind == "expressway"
+    # 高速道路: iss の都市高速の坑口（tunnel/road。タイルいっぱいの箱と口の上の名板）が手本。穴は両側の壁の内側まで広げる。
+    # 道路は地面の菱形より 1px 下に描く（ROAD_CY）。持ち分も同じだけ下げ、隣の道路と同じく spill は 0
+    bore_w = EXPWY_WALL_U - 0.1 if expwy else TUNNEL_BORE[0]
+    cy, spill = (ROAD_CY, 0) if expwy else (GROUND_CY, prof["spill"])
+    pre = "expwy_tunnel" if expwy else "tunnel"
+    set_anchor(ROAD_CY if expwy else 128 + BALLAST_DY)
     cells = {}
     a0, a1 = -half + TUNNEL_FACE, half  # 坑口の面と、躯体の奥の端（経路に沿った位置）
-    for row0, skin in ((0, None), (2, SNOW_SKIN)):
+    for row0, skin in ((0, None), (2, ROAD_SNOW_SKIN if expwy else SNOW_SKIN)):
         for name, (col, path, d, slope) in dirs.items():
             rot = math.atan2(d.y, d.x)
             c = d * ((a0 + a1) / 2)
             # 持ち分: 坂の面だけ。上へは躯体の高さだけ広げる。坂の面より下（高い側の辺の下の面や、そこから覗く穴の中）は
             # 手前の丘のタイルに隠れる所なので描かない（描くと、口が奥を向いた坑口で穴の中が丘の上にはみ出した）
             # 手前の 2 辺は線路と同じだけ広げる（spill。0 だと口の辺で隣の線路との間に 1 画素おきのすき間が出た）
-            m = _ground_mask(slope, None, GROUND_CY, prof["spill"])
+            m = _ground_mask(slope, None, cy, spill)
             base = m.copy()
             for k in range(1, TUNNEL_RISE + 1):
                 m[:-k] |= base[k:]
 
             def shot(suffix):
-                img = load_rgba8(render_cell(f"tunnel{'_snow' if skin else ''}_{name}{suffix}")).copy()
+                img = load_rgba8(render_cell(f"{pre}{'_snow' if skin else ''}_{name}{suffix}")).copy()
                 img[..., 3] = np.where(m & (img[..., 3] >= 128), 255, 0)
-                path_ = os.path.join(WORK, f"tunnel{'_snow' if skin else ''}_{name}{suffix}_full.png")
+                path_ = os.path.join(WORK, f"{pre}{'_snow' if skin else ''}_{name}{suffix}_full.png")
                 save_rgba(path_, img)
                 return path_
 
             # 奥の絵: 平らな線路（坂に切り込む）と、穴の内側の暗い床と壁
             clear_models()
-            assemble(TRACK_PARTS, [path], prof["datums"], skin=skin)
-            # 穴の内側: 床（基盤と同じ材質）と暗い左右の壁だけを置く（線路は床の上に見える。箱で埋めると線路まで隠れた）
             m_dark = material("tunnel_dark", (0.015, 0.015, 0.015))
             n = Vector((d.y, -d.x))
-            # 床はタイルの幅いっぱい（躯体の下は隠れる。口の辺では、隣の側壁つきの線路の基盤と 1 行重なってすき間を埋める）
-            floor = mesh_object("floor", *box(c.x, c.y, 0.005, a1 - a0, TILE, 0.01, rot=rot),
-                                material(*(skin or {}).get("base", _M_BASE)))
-            # 基盤と同じ基準面（bed）に乗せる。動かさないと、隣の線路の基盤より 2px 上で止まり、辺に 1 行のすき間が出た
-            mv = datum_move(prof["datums"]["bed"])
-            if mv is not None:
-                floor.location += mv
-            clip_to_tile(floor)
+            if expwy:
+                # 道路は路面の板がタイル全面にあるので床は要らない。雪の絵は白線を描かない（道路のシートと同じ）
+                grp = ROAD_PROFILES["expressway"]["groups"]
+                build_road([path], [(path, -EDGE_LINE), (path, 0.0), (path, EDGE_LINE)], sidewalk=False, skin=skin,
+                           groups=tuple(g for g in grp if g != "marking") if skin else grp)
+            else:
+                assemble(TRACK_PARTS, [path], prof["datums"], skin=skin)
+                # 穴の内側: 床（基盤と同じ材質）と暗い左右の壁だけを置く（線路は床の上に見える。箱で埋めると線路まで隠れた）
+                # 床はタイルの幅いっぱい（躯体の下は隠れる。口の辺では、隣の側壁つきの線路の基盤と 1 行重なってすき間を埋める）
+                floor = mesh_object("floor", *box(c.x, c.y, 0.005, a1 - a0, TILE, 0.01, rot=rot),
+                                    material(*(skin or {}).get("base", _M_BASE)))
+                # 基盤と同じ基準面（bed）に乗せる。動かさないと、隣の線路の基盤より 2px 上で止まり、辺に 1 行のすき間が出た
+                mv = datum_move(prof["datums"]["bed"])
+                if mv is not None:
+                    floor.location += mv
+                clip_to_tile(floor)
             inner = []
             for s in (1, -1):
-                q = c + n * (s * (TUNNEL_BORE[0] + 0.05))
+                q = c + n * (s * (bore_w + 0.05))
                 # 長さはタイルの辺まで（辺の手前で止めると、隣の側壁の上の縁に 1 画素おきのすき間が出た）
                 inner.append(box(q.x, q.y, TUNNEL_BORE[1] / 2, a1 - a0, 0.1, TUNNEL_BORE[1], rot=rot))
             dark = mesh_object("dark", *merge(inner), m_dark)
@@ -2063,21 +2075,32 @@ def tunnel_sheet():
             clear_models()
             hood = mesh_object("hood", *box(c.x, c.y, TUNNEL_HOOD[1] / 2, a1 - a0, 2 * TUNNEL_HOOD[0], TUNNEL_HOOD[1], rot=rot),
                                material(*_M_WALL))
-            bore = mesh_object("bore", *box(0, 0, TUNNEL_BORE[1] / 2 - 0.5, 30, 2 * TUNNEL_BORE[0], TUNNEL_BORE[1] + 1.0, rot=rot),
+            bore = mesh_object("bore", *box(0, 0, TUNNEL_BORE[1] / 2 - 0.5, 30, 2 * bore_w, TUNNEL_BORE[1] + 1.0, rot=rot),
                                material(*_M_WALL))
             boolean(hood, bore)
             bpy.data.objects.remove(bore, do_unlink=True)
             clip_to_tile(hood, 0.0)
+            if expwy:
+                # 口の上の名板（iss の坑口と同じ橙色の板）。面から少し手前に出す
+                q = d * (a0 - 0.06)
+                plate = mesh_object("plate", *box(q.x, q.y, TUNNEL_BORE[1] + 0.3, 0.12, 2.2, 0.4, rot=rot),
+                                    material("tunnel_plate", (0.85, 0.55, 0.12)))
+                clip_to_tile(plate, 0.3)
             cells[(row0 + 1, col)] = shot("_front")
     clear_models()
-    assemble(TRACK_PARTS, [straight((0, -12), (0, 12), ext=0.6)], clip=False)
-    cells[(0, 0)] = render_icon("track_tunnel_icon", 0.5, shift=(-0.14, 0.2), label="100", style="track", band="tunnel")
+    long = straight((0, -12), (0, 12), ext=0.6)
+    if expwy:
+        build_road([long], [(long, -EDGE_LINE), (long, 0.0), (long, EDGE_LINE)], clip=False, size=(TILE, 26), sidewalk=False)
+        cells[(0, 0)] = render_icon("expwy_tunnel_icon", 0.5, shift=(-0.14, 0.2), label="120", style="expressway", band="tunnel")
+    else:
+        assemble(TRACK_PARTS, [long], clip=False)
+        cells[(0, 0)] = render_icon("track_tunnel_icon", 0.5, shift=(-0.14, 0.2), label="100", style="track", band="tunnel")
     # カーソル: 口が手前を向いた坑口（BackImage[N]）の奥の絵に手前の絵（躯体）を重ねた 1 枚
     back, front = load_rgba8(cells[(0, 2)]), load_rgba8(cells[(1, 2)])
     cursor = np.where(front[..., 3:] >= 128, front, back)
-    cells[(0, 1)] = os.path.join(WORK, "tunnel_cursor.png")
+    cells[(0, 1)] = os.path.join(WORK, f"{pre}_cursor.png")
     save_rgba(cells[(0, 1)], cursor)
-    make_sheet(cells, 4, 6, os.path.join(SRC, "track_tunnel.png"))
+    make_sheet(cells, 4, 6, os.path.join(SRC, ("expressway" if expwy else "track") + "_tunnel.png"))
 
 
 def tollbooth_sheet():
@@ -2112,7 +2135,7 @@ if __name__ == "__main__":
              "icons", "road", "expressway", "tollbooth"}
     known |= {f"track_{w}_{v}" for w in ("wall", "elev") for v in ("single", "back", "center", "front")}
     known |= {f"expressway_{w}_{v}" for w in ("wall", "elev") for v in ("single", "back", "center", "front")}
-    known |= {"expressway_bridge"}
+    known |= {"expressway_bridge", "expressway_tunnel"}
     unknown = [t for t in targets if t not in known]
     if unknown:
         # 名前の打ち間違いで何も描かずに正常終了しないように止める（render_parallel.py が失敗として拾う）
@@ -2149,5 +2172,7 @@ if __name__ == "__main__":
             road_sheet(f"expwy_elev_{_variant}")
     if "expressway_bridge" in targets:
         road_sheet("expwy_bridge")
+    if "expressway_tunnel" in targets:
+        tunnel_sheet("expressway")
     if "tollbooth" in targets:
         tollbooth_sheet()

@@ -7,7 +7,7 @@ src/track.dat の絵の割り当て（[0] の行）を元に、シートの行�
 - 分岐の絵（OTRP の image[nse1]〜image[nsew2]）: track.dat の行のとおり（行 2・3 の列 10〜14）。手前の絵・雪も同じ決まりで書く
 
 書き出すもの: track.dat・track_old.dat（雪の行を足す）、track_trial.dat、track_wall_{single,back,center,front}.dat、track_elev_{...}.dat、track_bridge.dat、
-road.dat・expressway.dat（自分の dat の [0] の行から。雪の行を足す）、expressway_{wall,elev}_{...}.dat、expressway_bridge.dat
+road.dat・expressway.dat（自分の dat の [0] の行から。雪の行を足す）、expressway_{wall,elev}_{...}.dat、expressway_bridge.dat・expressway_tunnel.dat
 """
 import os
 import re
@@ -106,29 +106,30 @@ cursor={sheet}.0.1,-64,-32
     open(os.path.join(SRC, sheet + ".dat"), "w", encoding="utf8", newline="\n").write(head + "\n".join(out) + "\n")
 
 
-def tunnel():
+def tunnel(sheet="track_tunnel", name="bpoc_track_tunnel", waytype="track", way="bpoc_track", topspeed=100, cost=50000,
+           maintenance=1000, comment="# Blender 検証用の線路のトンネルの試作: 坑口の躯体（手前の絵）と、線路・暗い内側（奥の絵）"):
     """坑口。image[N] は北が高い坂のタイル（本体の tunnel_desc_t::slope_indices）。行 0: 奥、行 1: 手前、行 2・3: 雪。"""
-    out = """# Blender 検証用の線路のトンネルの試作: 坑口の躯体（手前の絵）と、線路・暗い内側（奥の絵）
+    out = f"""{comment}
 obj=tunnel
-name=bpoc_track_tunnel
+name={name}
 copyright=blender-poc
-waytype=track
-way=bpoc_track
-cost=50000
-maintenance=1000
-topspeed=100
+waytype={waytype}
+way={way}
+cost={cost}
+maintenance={maintenance}
+topspeed={topspeed}
 intro_year=1900
 intro_month=1
 retire_year=2999
 retire_month=1
-icon=> track_tunnel.0.0
-cursor=track_tunnel.0.1,-64,-32
+icon=> {sheet}.0.0
+cursor={sheet}.0.1,-64,-32
 """.splitlines()
     for season, base in ((0, 0), (1, 2)):
         for col, d in enumerate("NSEW"):
-            out.append(f"BackImage[{d}][{season}]=track_tunnel.{base}.{col + 2},-64,-32")
-            out.append(f"FrontImage[{d}][{season}]=track_tunnel.{base + 1}.{col + 2},-64,-32")
-    open(os.path.join(SRC, "track_tunnel.dat"), "w", encoding="utf8", newline="\n").write("\n".join(out) + "\n")
+            out.append(f"BackImage[{d}][{season}]={sheet}.{base}.{col + 2},-64,-32")
+            out.append(f"FrontImage[{d}][{season}]={sheet}.{base + 1}.{col + 2},-64,-32")
+    open(os.path.join(SRC, sheet + ".dat"), "w", encoding="utf8", newline="\n").write("\n".join(out) + "\n")
 
 
 if __name__ == "__main__":
@@ -149,6 +150,8 @@ if __name__ == "__main__":
     tunnel()
     bridge("expressway_bridge", "bpoc_expressway_bridge", "road", 120, 120000, 3000,
            "# Blender 検証用の高速道路の橋: 青い桁（iss の都市高速の橋が手本）・欄干の壁・橋脚・端の坂と橋台の躯体。雪は [1]")
+    tunnel("expressway_tunnel", "bpoc_expressway_tunnel", "road", "bpoc_expressway", 120, 400000, 8800,
+           "# Blender 検証用の高速道路のトンネル: 坑口の躯体と名板（iss の都市高速の坑口が手本。手前の絵）と、道路・暗い内側（奥の絵）")
     road("road")
     road("expressway")
     for side, ja in (("single", "両側（単独用）"), ("back", "奥だけ"), ("center", "なし（中の車線用）"), ("front", "手前だけ")):
