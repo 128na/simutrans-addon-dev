@@ -920,6 +920,38 @@ def _line_shape(path, u, lw, k):
     return sweep(path, [(u - w, 0.0), (u + w, 0.0), (u + w, 0.012), (u - w, 0.012)])
 
 
+# 路面の痛み（group "weathering"。線路のさび色に当たる）: 形ではなく材質の違い。路面の上の薄い板で、横位置は車線（倍率 "lane"。
+# 斜めは直線の 1/√2 で、タイルの辺で直線と同じ点を通る）に合わせる。車線は中央線から路側の白線まで（中心 ±1.6）
+#   wear: 車輪の通る所（車線の中心 ±0.55）が磨かれて明るい帯 / oil: 車線の中ほどに落ちた油の暗い帯 /
+#   patch・patch_seal: 補修跡（片側の車線に 1 枚。新しい黒いアスファルトと、縁の明るい目地）
+WHEEL_U = ((0.90, 1.25), (1.95, 2.30))
+OIL_U = (1.45, 1.75)
+_M_WEAR = lambda: noisy_material("road_wear", (0.030, 0.031, 0.033), (0.060, 0.061, 0.064), scale=90, rough=0.9)
+_M_OIL = lambda: noisy_material("road_oil", (0.004, 0.004, 0.005), (0.012, 0.012, 0.013), scale=90, rough=0.7)
+_M_PATCH = lambda: noisy_material("road_patch", (0.003, 0.003, 0.004), (0.010, 0.010, 0.011), scale=70, rough=0.9)
+_M_SEAL = ("road_seal", (0.10, 0.10, 0.10), 0.9)  # 補修跡の縁の目地（明るい灰色の線）
+
+
+def _lane_strips(spans, z=0.0, th=0.004):
+    """経路に沿った薄い帯（中心から u0〜u1 を左右に 1 本ずつ。spans は (u0, u1) の並び）。白線（厚み 0.012）より下に置く。"""
+    def shape(path, k):
+        return merge([sweep(path, [(s * u0 * k, z), (s * u1 * k, z), (s * u1 * k, z + th), (s * u0 * k, z + th)][::s])
+                      for u0, u1 in spans for s in (1, -1)])
+    return shape
+
+
+def _patch_shape(grow=0.0, z=0.002):
+    """補修跡: 経路の 6 割の所で、+u の側の車線を覆う四角（長さ 1.6・幅 1.7）。タイルの辺から離して置く（隣と食い違わない）。
+    grow は四方へ広げる幅（継ぎ目の目地。少し下に置いて縁だけが見える）"""
+    def shape(path, k):
+        total = sum((path[i + 1] - path[i]).length for i in range(len(path) - 1))
+        p, ang = along(path, total, total * 0.6)[0]
+        d = Vector((math.cos(ang), math.sin(ang)))
+        c = p + Vector((d.y, -d.x)) * 1.6 * k
+        return box(c.x, c.y, z, 1.6 + 2 * grow, (1.7 + 2 * grow) * k, 0.004, rot=ang)
+    return shape
+
+
 # 道路の部品（作る順 = 重なりの下から）。どれも路面の基準面（bed）に乗り、横幅の倍率は "road"（斜めは ROAD_DIAG）。
 #   asphalt: タイル全面の路面 / curb: 歩道の高さの板から車道を抜く（切り口が縁石の立ち上がり）/ paving: 歩道の石畳（縁石の上面の幅だけ広く抜く）
 #   line: 白線（RoadTile.lines の 1 本ごと）
@@ -931,15 +963,22 @@ ROAD_PARTS = (
     Part("paving", "bed", "road", _M_PAVING, lambda t, k: box(0, 0, SIDEWALK_H + 0.01, *t.size, 0.02), "sidewalk", "tile",
          carve=lambda t, k: t.hw + t.curb_w / k),
     Part("line", "bed", "road", _M_LINE, _line_shape, "marking", "line"),
+    Part("wear", "bed", "lane", _M_WEAR, _lane_strips(WHEEL_U), "weathering"),
+    Part("oil", "bed", "lane", _M_OIL, _lane_strips([OIL_U]), "weathering"),
+    Part("patch_seal", "bed", "lane", _M_SEAL, _patch_shape(0.12, 0.001), "weathering"),
+    Part("patch", "bed", "lane", _M_PATCH, _patch_shape(), "weathering"),
 )
 # 道路の描き分け（ROAD_PROFILES）: skin は部品の材質の差し替え（高速道路のアスファルト）、groups は使う部品のまとまり
 ROAD_PROFILES = {
-    "street": {"sheet": "road", "prefix": "road_", "groups": ("body", "sidewalk", "marking"), "skin": {}},
-    "expressway": {"sheet": "expressway", "prefix": "expwy_", "groups": ("body", "marking"), "skin": {"asphalt": _M_EXPWY_ASPHALT}},
+    "street": {"sheet": "road", "prefix": "road_", "groups": ("body", "sidewalk", "marking", "weathering"), "skin": {}},
+    "expressway": {"sheet": "expressway", "prefix": "expwy_", "groups": ("body", "marking", "weathering"), "skin": {"asphalt": _M_EXPWY_ASPHALT}},
 }
 # 雪の絵（dat の image[..][1]）の材質。路面は踏み固められた灰色がかった雪、歩道と縁石は新しい雪。白線は雪に隠れる（marking を描かない）
 _M_ROAD_SNOW = lambda: noisy_material("road_snow", (0.60, 0.63, 0.68), (0.80, 0.83, 0.88), scale=60, rough=0.9)
-ROAD_SNOW_SKIN = {"asphalt": _M_ROAD_SNOW, "curb": _SNOW, "paving": _SNOW}
+# 雪の路面の痛みは、車輪の通る所だけが轍（わだち）になって暗く見える。油と補修跡は雪に隠れる
+_M_RUT = lambda: noisy_material("road_rut", (0.22, 0.23, 0.25), (0.40, 0.42, 0.45), scale=80, rough=0.9)
+ROAD_SNOW_SKIN = {"asphalt": _M_ROAD_SNOW, "curb": _SNOW, "paving": _SNOW, "wear": _M_RUT, "oil": _M_ROAD_SNOW,
+                  "patch": _M_ROAD_SNOW, "patch_seal": _M_ROAD_SNOW}
 
 
 def build_road(paths, lines, slope=None, scale=1.0, clip=True, size=TILE + 4, corners=(), half=None, hw=ROAD_HW,
@@ -949,7 +988,9 @@ def build_road(paths, lines, slope=None, scale=1.0, clip=True, size=TILE + 4, co
     sidewalk=False（高速道路）は歩道・縁石を作らず、タイル全面をアスファルトにする（groups・skin を渡すとそちらが優先）。"""
     prof = ROAD_PROFILES["street" if sidewalk else "expressway"]
     tile = RoadTile(paths, lines, corners, size if isinstance(size, tuple) else (size, size), hw, curb_w)
-    return assemble(ROAD_PARTS, paths, datums, slope, clip, {"road": scale}, div,
+    # 車線の倍率: 斜め（scale が 1 でない）は直線の 1/√2（タイルの辺で直線の車線と同じ点を通る）
+    widths = {"road": scale, "lane": 1.0 if scale == 1.0 else DIAG_EDGE}
+    return assemble(ROAD_PARTS, paths, datums, slope, clip, widths, div,
                     groups or prof["groups"], skin=dict(prof["skin"], **(skin or {})), tile=tile, half=half, half_over=half_over)
 
 
