@@ -4,6 +4,7 @@ src/track.dat の絵の割り当て（[0] の行）を元に、シートの行�
     奥の絵 4 行 →（手前の絵 4 行。側壁・橋）→ 雪の奥の絵 4 行 →（雪の手前の絵 4 行）
 - 手前の絵: front + キー（frontimage・frontimageup・frontimageup2・frontdiagonal）。同じ列の 4 行下
 - 雪の絵: 同じキーの [1]。手前の絵が無いシートは 4 行下、あるシートは 8 行下
+- 分岐の絵（OTRP の image[nse1]〜image[nsew2]）: track.dat の行のとおり（行 2・3 の列 10〜14）。手前の絵・雪も同じ決まりで書く
 
 書き出すもの: track.dat・track_old.dat（雪の行を足す）、track_trial.dat、track_wall_{single,back,center,front}.dat、track_elev_{...}.dat、track_bridge.dat
 """
@@ -34,6 +35,9 @@ def way(name, sheet, comment, front=False, snow=True, elevated=False):
     block = 8 if front else 4
     for season, base in ((0, 0), (1, block)) if snow else ((0, 0),):
         for key, idx, r, c, off in imgs:
+            if front and idx.startswith("[close"):
+                # 側壁・高架の版は近い斜めの絵を持たない（本体が 1 タイルに 2 本の way で作り、back と front を組み合わせられる）
+                continue
             out.append(f"{key}{idx}[{season}]={sheet}.{r + base}.{c}{off}")
             if front:
                 out.append(f"front{key}{idx}[{season}]={sheet}.{r + base + 4}.{c}{off}")
@@ -103,6 +107,10 @@ cursor=track_tunnel.0.1,-64,-32
 if __name__ == "__main__":
     way("bpoc_track", "track", "# Blender 検証用の線路（道床に厚みあり）。セル配置は iss の線路と同じ。下の 4 行は雪の絵（[1]）")
     way("bpoc_track_old", "track_old", "# Blender 検証用の線路（旧描画位置）。下の 4 行は雪の絵（[1]）")
+    way("bpoc_track_ex_proto", "track_ex_proto",
+        "# Blender 検証用の線路の試作: 分岐の 1・2 の枠に ex 画像の形を入れたもの（T字の 1 = Y字、十字の 1・2 = 三方分岐）", snow=False)
+    way("bpoc_track_ex_proto2", "track_ex_proto2",
+        "# Blender 検証用の線路の試作 2: 渡り線の中央の十字を、直線 2 本だけの交差にしたもの（十字の 1・2。T字は通常のまま）", snow=False)
     way("bpoc_track_trial", "track_trial", "# Blender 検証用の線路の試作: 車止め・さび色・雪の絵（[1]。下の 4 行）")
     for side, ja in (("single", "両側（単線用）"), ("back", "奥だけ"), ("center", "なし（中線用）"), ("front", "手前だけ")):
         way(f"bpoc_track_wall_{side}", f"track_wall_{side}",

@@ -30,6 +30,12 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 | `blender/icons_only.py` | 線路のシートのアイコンだけを描き直して差し替える |
 | `blender/hcat.py` | ゲームの画面を横に並べて 1 枚にする |
 | `ingame/full.nut`・`ingame/full_check.sh` | 全方位の表示確認。way の絵 28 種類を周りとつながった形で出す最小のレイアウトを敷き、way ごとに 5 か所を撮って並べる |
+| `ingame/switch_all.nut` | 分岐の絵（OTRP の switch 画像）を線路の 11 アドオンで全部見る見本。空の平らなマップ（`flat2.sve`）に way ごとに 1 行、標準・選択 1・選択 2 に固定した T字と十字、自動選択の 8 通りを名札つきで敷く |
+| `ingame/switch_ex_shapes.nut` | ex 画像（Y字分岐・三方・渡り線）を本体が自動で選ぶ線路の形を、`flat2.sve` の y=130 から下に敷く。既定は `bpoc_track`（絵は通常のまま）。先頭の `WAY` を `bpoc_track_ex_proto`、`OX` を 100 にすると、試作の way で敷いて分岐の絵を固定する |
+| `ingame/close_diag.nut` | 近い斜め（1 タイルずらして並べた斜め 2 本）の見本。`flat2.sve` の x=105 から右に、線路の全版（壁なし 3 種・側壁・高架の 2 本と 3 本）の南東・北東の組を名札つきで敷く |
+| `blender/render_parallel.py` | シートを Blender の別々のプロセスで同時に描く（`--jobs` 既定 8、上限 8）。ふつうの Python で動かす |
+| `ingame/switch_auto.nut` | 自動選択の 8 通りだけを `bpoc_track` で敷く（`flat.sve` の y=120） |
+| `ingame/switch_check.sh` | 分岐の絵を手で確かめる準備。pak を入れ、固定の道具がある OTRP のビルドを MCP つきで `flat2` で起動し、`switch_all.nut` を敷く（`GAME_DIR=… EXE=… bash ingame/switch_check.sh`） |
 | `ingame/wall.nut`・`elev.nut`・`bridge.nut`・`tunnel.nut`・`trial.nut` | 側壁・高架・橋・トンネル・試作の見本（複線の並び、行き止まり、橋の端、坑口） |
 | `ingame/train.nut` | 車両を走らせる確認（未完成。ダイヤの設定が通らない） |
 | `src/track_wall_*.dat`・`track_elev_*.dat` | 側壁付きの線路・高架。`single`（両側の壁）・`back`（奥だけ）・`center`（なし）・`front`（手前だけ） |
@@ -56,6 +62,14 @@ cd src; makeobj pak256 ..\dist\bpoc.pak track.dat track_old.dat track_trial.dat 
 ```
 
 iss と同じく `pak256` で 256px セルとして切り出す（ゲームは pak128）。
+
+一部のシートだけ描き直すときは、シートごとに別のプロセスで同時に描く（同時に 8 まで）:
+
+```powershell
+python -X utf8 blender/render_parallel.py --jobs 8 track track_old track_wall_back track_elev_back
+```
+
+1 プロセスは CPU をほとんど使わず、13 枚を 1 プロセスで描くと 40 分ほどかかった。壁あり・高架の 6 枚は 8 並列で約 5 分（2026-11-14）。
 
 位置の検証:
 
@@ -776,3 +790,51 @@ pak に入れるときの `makeobj` の引数は、上の「ビルド」の行�
 - ふつうの線路と側壁つきの線路（`bpoc_track_wall_single`）で、4 方向とも継ぎ目が埋まったことを確かめた（`docs/trial_tunnel_seam.png`。手前向きの坑口 3 つ）
 - トンネルのカーソル（`cursor=track_tunnel.0.1`）を、口が手前を向いた坑口の奥の絵と手前の絵を重ねた 1 枚にした（前は奥の絵だけで、線路と内壁しか見えなかった）。
   ゲームで道具を選んで確かめてもらった（スクリプトからは道具を選べない）
+
+### 分岐の絵（OTRP の switch 画像。2026-11-14）
+
+- 線路の 11 アドオン（本体・旧・試作・側壁 4・高架 4）に、T字・十字の分岐の絵 10 枚（`image[nse1]`〜`image[nsew2]`）を足した。
+  手前の絵（`frontimage`）と雪の絵（`[1]`）も同じ並び。OTRP の本体だけが読み、ほかの本体では今までどおり
+- 作り: まくらぎとレールだけを「直線 + 片側のカーブ」にし、道床・側壁・基盤は元の T字・十字と同じにした。
+  片側のカーブだけで全部を組むと、カーブの内側に丸い壁が立ち、隣のタイルとつながらなかった（`docs/switch_cells.png`。上の行が 1、下の行が 2）
+- シートの置き場所: 行 2 の列 10〜14 が「1」、行 3 の列 10〜14 が「2」（並びは nse・new・nsw・sew・nsew）。シートの幅が 10 列から 15 列になった。
+  手前の絵・雪はいつもの行の決まりのとおり 4 行（手前の絵のあるシートは 8 行）下。dat は `src/track.dat` の分岐の行を元に `track_dat.py` が書き出す
+- どちらのカーブを「1」「2」にするかは、本体の `weg_t::select_switch_image` から決めた（[`docs/reference/way-addon.md`](../../docs/reference/way-addon.md) の 9 章）
+- 確かめたこと:
+  - 描き直した 11 枚のシートで、元からあるセルが前と全画素同じ（試作だけはアイコンとカーソルのセルが今の作りに描き直された）
+  - 自動選択（`ingame/switch_auto.nut`）: 本線の途中から枝を出して隣で曲げる 8 通りで、分岐のカーブが隣のカーブへなめらかにつながった（`docs/trial_switch_auto.png`。4 通りを並べた）
+  - 固定: 輪に十字を入れた T字 4 つと十字を選択 1・2 に固定し、絵が変わることを見た（`docs/trial_switch_pinned.png`。左が 1、右が 2）。
+    今は `ingame/switch_all.nut` が線路の 11 アドオンを全部敷く（高架も固定できる）
+  - 確かめたビルドは、固定の道具が入った OTRP の本体（`../simutrans/build/default/sim.exe`。起動の注意はリファレンスの 8 章）
+- 十字の 1・2 がどちらの直進に当たるかは、ゲームのダイアログで確かめてリファレンス 9.2 に書いた
+- 残り: 列車の予約で絵が切り替わる所は見ていない。ex 画像（Y字分岐・三方分岐・渡り線）は今の makeobj では書けない（下の試作）
+
+### ex 画像の形の試作（2026-11-14）
+
+ex 画像は今の makeobj では書けない（[リファレンス](../../docs/reference/way-addon.md) の 9.1・9.4）。書けるようになったらどう見えるかを、分岐の絵の 1・2 の枠に ex の形を入れた別のアドオンで試した。
+
+- アドオン: `bpoc_track_ex_proto`（`src/track_ex_proto.dat`・`.png`。雪なし）。本体の pak とは別に作る:
+  `D:\bin\blender\blender.exe -b --factory-startup --python blender/render.py -- track_ex_proto` → `python -X utf8 blender/track_dat.py` → `cd src; makeobj pak256 ..\dist\bpoc_ex_proto.pak track_ex_proto.dat; cd ..`
+- 絵の割り当て（`render.py` の `ex_proto`）: T字の 1 = Y字（両側のカーブだけで直線なし）、T字の 2 = 通常の分岐のまま、十字の 1 = 三方分岐（東西の直線 + 東へ 1 本で西へ開く）、十字の 2 = 三方分岐（西へ 1 本で東へ開く）。
+  道床・基盤は元の T字・十字と同じ
+- ゲームでは自動では選ばれないので、`ingame/switch_ex_shapes.nut` で敷いてタイルの詳細の固定で見た（選択肢 1 が dat の「2」、2 が dat の「1」）
+- 見た目:
+  - Y字（`docs/trial_ex_proto_y.png`。通常の絵は `docs/trial_ex_shape_y.png`）: 通常の T字の絵では直線と 2 本のカーブが重なって見えるのが、1 本が左右に開く形になった
+  - 三方分岐（`docs/trial_ex_proto_3way.png`）: 直線と両側のカーブだけになり、使わない南北の直線と反対側のカーブが消えた
+  - 渡り線（`docs/trial_ex_proto_crossover.png`）: 西隣の T字を南–東のカーブに固定した。中央の十字は通常の絵のまま（本体の条件が十字に何を描かせたいのかが読み取れず、決めていない）
+  - 渡り線の十字は通常の絵（直線 2 本 + 4 方向のカーブ）だと三方分岐と見分けがつかなかったので、試作 2 の別アドオン `bpoc_track_ex_proto2`（`src/track_ex_proto2.dat`・`.png`、`dist/bpoc_ex_proto2.pak`）で、十字の 1・2 を直線 2 本だけの交差にした。
+    T字は通常のまま。`switch_ex_shapes.nut` を `WAY` = `bpoc_track_ex_proto2`・`OX` = 100・`OY` = 60 で敷くと、十字と西隣の T字を固定する。
+    カーブの無い交差になり、外側の線から真ん中の線を横切って反対側の線へ移る経路が見分けられるようになった（`docs/trial_ex_proto2_crossover.png`）
+- 残り: 南北へ 1 本の三方分岐は枠が足りず作っていない。渡り線の西隣に付く絵の向き（リファレンス 9.4）。本当に入れるには makeobj のキーを足す
+
+### 近い斜め（2026-11-14）
+
+- 斜めを 1 タイルずらして並べる（間隔は TILE/√2）と、2 本の線が 1 つのタイルを分け合う。決まりはリファレンスの 5・6 章
+- 壁の無い版（`track`・`track_old`・`track_trial`・ex の試作）: `diagonal[close1]`（行 2 の列 4）・`[close2]`（列 9）を足した。分け合うタイルは十字 1 本の way になり、2 本の斜めの片を 1 枚に描く
+  （`docs/trial_close_track_se.png`・`trial_close_track_ne.png`）
+- 側壁・高架の版: close の絵を持たせない（`track_dat.py` で外す）。本体が分け合うタイルに 2 本の way を置くので、奥の線を back、手前の線を front（3 本なら真ん中を center）で敷ける
+  - 斜めの基盤の壁の無い側を、中心線から TILE/(2√2) より外で削る。切り口は下ほど内へ寄る斜めにした（縦に切ると、奥の線の切り口の側面が手前の線の床の上に暗い線で見えた）
+  - 高架の back・center の斜めは橋脚を描かない（手前の front の橋脚で足りる。描くと手前の線の床に暗い点線が出た）
+  - 南東へ下る組（`docs/trial_close_wall_se.png`）・北東へ上る組（`docs/trial_close_elev3_ne.png`）とも、境目の線や重なりは出なかった
+  - 北東へ上る組（画面で横）では、手前の線のレールがその線の手前の壁・手すりに隠れる。1 本だけでも同じ。車両を走らせても絵の欠けや重なりは出なかったので、このままにした（ユーザーが確認）
+- 敷き方: `ingame/close_diag.nut`。壁の無い版は東西と南北の直線を 1 本ずつ通して十字を作る（カーブのタイルから 3 本目を足すと向きが崩れる）。側壁・高架の版は階段の斜めを `build_way` でそのまま敷く

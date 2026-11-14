@@ -577,7 +577,34 @@ def _beyond_prisms(walls, paths, k):
     return cut
 
 
-def build_base(walls, paths, k, datum, slope, div, mat, clip=True):
+# 斜めの基盤の、壁の無い側の幅（中心線から）。近い斜め（1 タイルずらした斜め 2 本、間隔は TILE / √2）の真ん中まで
+DIAG_OPEN_HALF = TILE / (2 * math.sqrt(2))
+DIAG_OPEN_UNDERCUT = 3.0  # 切り口の傾き（高さ 1 あたり中心線へ寄る幅）。基盤の厚み BASE_H で約 1 寄る
+
+
+def _diag_open_cut(walls, path):
+    """斜めの基盤のうち、壁の無い側で、中心線から DIAG_OPEN_HALF より外を削る柱。
+    タイルの角まで塗ると、近い斜めの隣の線のレールを隠し、角が隣の線の壁の外へ三角に突き出す（2026-11-14、ゲームで確認）"""
+    sides = {-1 if w["pname"] == "wallL" else 1 for w in walls if w["pname"] in ("wallL", "wallR")}
+    p0, p1 = Vector((path[0].x, path[0].y)), Vector((path[-1].x, path[-1].y))
+    d = (p1 - p0).normalized()
+    cut = []
+    for s in (-1, 1):
+        if s in sides:
+            continue
+        n = Vector((d.y, -d.x)) * s
+        a, b = p0 - d * 30, p1 + d * 30
+        # 切り口は下ほど中心線へ寄る斜め（上面の縁は DIAG_OPEN_HALF のまま）。縦に切ると、奥の線の切り口の側面（暗い）が
+        # 手前の線の床の上に線で見えた（2026-11-14、ゲームで確認）。下向きの面はカメラから見えない
+        lo, hi = DIAG_OPEN_HALF - 2 * DIAG_OPEN_UNDERCUT, DIAG_OPEN_HALF + 2 * DIAG_OPEN_UNDERCUT
+        verts = [Vector((q.x, q.y, -2)) for q in (a + n * lo, b + n * lo, b + n * 40, a + n * 40)]
+        verts += [Vector((q.x, q.y, 2)) for q in (a + n * hi, b + n * hi, b + n * 40, a + n * 40)]
+        faces = [(3, 2, 1, 0), (4, 5, 6, 7)] + [(i, (i + 1) % 4, 4 + (i + 1) % 4, 4 + i) for i in range(4)]
+        cut.append((verts, faces))
+    return cut
+
+
+def build_base(walls, paths, k, datum, slope, div, mat, clip=True, extra_cut=None):
     """基盤（道床の下の板。上面が路盤の面、厚み BASE_H は橋で側面に見える）を作る。
     タイル全面の板から、残した壁の外側だけを削る。壁のない側はタイルの端まで埋まるので、
     - 並べた線路の基盤とつながる（直線・斜め・直角カーブの内側と外側）
@@ -587,7 +614,7 @@ def build_base(walls, paths, k, datum, slope, div, mat, clip=True):
     削られた先に線路があるので外側を削らない（カーブの内側の壁の外側は、ほかの通り道に重ならないのでいつも削る）"""
     plate = mesh_object("base", *box(0, 0, -BASE_H / 2, TILE + 8, TILE + 8, BASE_H), material(*mat))
     plate["tall"] = False
-    cut = _beyond_prisms(walls, paths, k)
+    cut = _beyond_prisms(walls, paths, k) + (extra_cut or [])
     if cut:
         cutter = mesh_object("basecut", *merge(cut), material(*mat))
         recalc_normals(cutter)
@@ -1072,12 +1099,19 @@ def _mask_materials():
 
 def exits_of(name):
     """セルの名前（ns, up12, diag_sw, curve_ne, nse など）から、つながる辺（n/s/e/w の文字列）を返す。"""
+    if name.startswith("close"):
+        return "nsew"
     if name.startswith("up"):
         code = int(name.split("_")[-1]) if "_" in name else int(name[2:])
         return "ns" if code in (12, 3) else "ew"
     if name == "single":
         return ""
-    return name.split("_")[-1]
+    return _junction(name.split("_")[-1])
+
+
+def _junction(name):
+    """分岐の絵の名前（nse1・nsew2 など）を、元の T字・十字の名前に戻す。それ以外はそのまま。"""
+    return name[:-1] if name[-1:] in ("1", "2") and name[:-1] in ("nse", "new", "nsw", "sew", "nsew") else name
 
 
 # ゲームが地面の菱形を塗る位置（セルの中で、タイル中心が何px目か）。dat のオフセット -64,-32 と対応し、
@@ -1327,6 +1361,9 @@ for _variant, _walls in (("single", "both"), ("back", "back"), ("center", "cente
     TRACK_PROFILES[f"elev_{_variant}"] = dict(TRACK_PROFILES["wall_single"], sheet=f"track_elev_{_variant}", walls=_walls,
                                                groups=("body", "wall", "base", "structure", "pier"), lower=16,
                                                band="elevated")
+# 試作: ex 画像（Y字・三方分岐）が使えたらどう見えるかを、switch 画像の 1・2 の枠に入れて見る（別のアドオン。雪なし）
+TRACK_PROFILES["ex_proto"] = dict(TRACK_PROFILES["new"], sheet="track_ex_proto", ex_proto=True, snow=False)
+TRACK_PROFILES["ex_proto2"] = dict(TRACK_PROFILES["ex_proto"], sheet="track_ex_proto2", ex_proto="crossover")
 ICON_BADGE = {"both": "S", "back": "B", "center": "C", "front": "F"}  # アイコンの右下の印（single / back / center / front）
 WALL_RISE = 11  # 側壁の高さ（画面の px。持ち分を上へ広げる行数）
 # datums: 基準面ごとの下げ幅（Datum(drop, ground)）。絵の基準位置は両方とも BALLAST_DY（地面の菱形より 1px 上 = 旧の位置）。
@@ -1372,6 +1409,10 @@ def track_sheet(profile="new"):
         (2, 1): ("diag_nw", [straight(N, W, ext=2.5)], None),
         (2, 2): ("diag_ne", [straight(N, E, ext=2.5)], None),
         (2, 3): ("diag_se", [straight(S, E, ext=2.5)], None),
+        # 近い斜め（本体の diagonal[close1]・[close2]）: 1 タイル空けて並べた斜め 2 本が 1 つのタイル（十字）に入るときの絵。
+        # close1 は北西と南東の角の 2 片、close2 は北東と南西の角の 2 片（本体 way_desc_t::get_close_diagonal_image_id）
+        (2, 4): ("close1", [straight(N, W, ext=2.5), straight(S, E, ext=2.5)], None),
+        (2, 9): ("close2", [straight(N, E, ext=2.5), straight(S, W, ext=2.5)], None),
         (2, 5): ("curve_sw", [arc_sw], None),
         (2, 6): ("curve_nw", [arc_nw], None),
         (2, 7): ("curve_ne", [arc_ne], None),
@@ -1384,6 +1425,31 @@ def track_sheet(profile="new"):
         (3, 8): ("sew", [straight(W, E), arc_sw, arc_se], None),
         (3, 9): ("nsew", [straight(S, N), straight(W, E), arc_sw, arc_nw, arc_ne, arc_se], None),
     }
+    # 分岐の絵（OTRP の switch 画像。dat の image[nse1]〜image[nsew2]）: まくらぎとレールだけを、直線 + 片側のカーブにする。
+    # 道床・側壁・基盤は元の T字・十字と同じ（片側のカーブだけで組むと、カーブの内側に丸い壁が立ち、隣とつながらない）。
+    # 行 2 の列 10〜14 が「1」（本体の nw=false）、行 3 の列 10〜14 が「2」（nw=true）。並びは nse・new・nsw・sew・nsew。
+    # どちらのカーブかは本体の weg_t::select_switch_image から: nse は東の隣が北西のカーブ（北へ分かれる）とき 2 で、
+    # このタイルの中では南–東のカーブを通る。十字の 1 は北西–南東が直進（南西・北東のカーブ）、2 は北東–南西が直進
+    switch_arcs = {"nse": (arc_ne, arc_se), "new": (arc_ne, arc_nw), "nsw": (arc_sw, arc_nw), "sew": (arc_sw, arc_se),
+                   "nsew": ((arc_sw, arc_ne), (arc_nw, arc_se))}
+    if prof.get("switches", True):
+        for col, (base_name, arcs) in enumerate(switch_arcs.items()):
+            lines = [straight(S, N), straight(W, E)] if base_name == "nsew" else [straight(S, N) if "ns" in base_name else straight(W, E)]
+            full = next(v[1] for v in jobs.values() if v[0] == base_name)
+            for k, a in enumerate(arcs):
+                rails = lines + (list(a) if base_name == "nsew" else [a])
+                if prof.get("ex_proto") == "crossover":
+                    # 試作 2: 渡り線の中央の十字。直線 2 本だけの交差（カーブなし）を十字の 1・2 に入れる。T字は通常のまま
+                    if base_name == "nsew":
+                        rails = [straight(S, N), straight(W, E)]
+                elif prof.get("ex_proto"):
+                    # 試作: ex 画像の形を 1・2 の枠で見る。T字の 1 は Y字（両側のカーブだけ、直線なし）、2 は通常のまま。
+                    # 十字の 1・2 は三方分岐（東西の直線 + 東へ開く／西へ開く両側のカーブ）
+                    if base_name == "nsew":
+                        rails = [straight(W, E)] + ([arc_ne, arc_se] if k == 0 else [arc_nw, arc_sw])
+                    elif k == 0:
+                        rails = list(arcs)
+                jobs[(2 + k, 10 + col)] = (f"{base_name}{k + 1}", full, None, rails)
     # dat オフセット -64,-32 と対応。持ち分は地面の菱形のまま（新描画位置は絵が 4px 下だが、持ち分を 4 行下げると、
     # 手前のタイルへはみ出した 2〜4 行目を手前の地面が消し、どのつなぎ目にも草の線が出た）
     cy = GROUND_CY
@@ -1392,6 +1458,10 @@ def track_sheet(profile="new"):
     parts = TRACK_PARTS + TRACK_EXTRAS
     if "only" in prof:
         jobs = {k: v for k, v in jobs.items() if v[0] in prof["only"]}
+    if "walls" in prof:
+        # 側壁・高架の版は近い斜めの絵を持たない。本体は、近い斜めの絵が無い way の近い斜めを「1 タイルに 2 本の way」で作るので、
+        # 奥の線を back、手前の線を front の版にでき、2 本の間に壁が立たない（絵があると十字 1 本の way になり、両方が同じ版になる）
+        jobs = {k: v for k, v in jobs.items() if not v[0].startswith("close")}
     # 坂のタイルから始まる橋の端（Start・Start2）: 平らな橋の絵の下に、坂の地面までの躯体を足す。
     # 本体の slope_t::north は南が高い坂で、そのとき Start[N] が使われる（東西も同じく、名前と反対の側が高い）
     grounds = {}
@@ -1410,19 +1480,24 @@ def track_sheet(profile="new"):
     if prof.get("snow"):
         variants.append((block, "_snow", SNOW_SKIN, tuple(g for g in groups if g != "weathering")))
     for row0, suffix, skin, grp in variants:
-        for pos, (name, paths, slope) in jobs.items():
+        for pos, (name, paths, slope, *rails) in jobs.items():
             clear_models()
             # 画面で横向きの斜め（nw・se）は下げ幅を半分にする（datum_move の div）。斜めは横幅も細くする
-            div = 2 if name in ("diag_nw", "diag_se") else 1
-            widths = {"gauge": DIAG_RAIL, "bed": DIAG_BALLAST} if name.startswith("diag_") else None
-            obs = assemble(parts, paths, prof["datums"], slope, widths=widths, div=div, groups=grp,
-                           ends=name in ("s", "w", "n", "e"), skin=skin)
+            div = 2 if name in ("diag_nw", "diag_se", "close1") else 1
+            widths = {"gauge": DIAG_RAIL, "bed": DIAG_BALLAST} if name.startswith(("diag_", "close")) else None
+            kw = dict(widths=widths, div=div, groups=grp, ends=name in ("s", "w", "n", "e"), skin=skin)
+            if rails:
+                # 分岐の絵: 走行面（rail の基準面の部品）だけを分岐の経路で作る
+                obs = (assemble([p for p in parts if p.datum != "rail"], paths, prof["datums"], slope, **kw)
+                       + assemble([p for p in parts if p.datum == "rail"], rails[0], prof["datums"], slope, **kw))
+            else:
+                obs = assemble(parts, paths, prof["datums"], slope, **kw)
             # 側壁のバリエーション（複線以上を並べて作るとき用）: back はカメラから遠い側の壁だけ、front は近い側の壁だけ
             side = prof.get("walls", "both")
             # 手前/奥を分ける向き: T字は、まっすぐ通る線路（東西か南北）に対して手前か奥かで決める（分岐の向きで壁が変わる）。
             #   南北の線路は東が手前、東西の線路は南が手前。それ以外はカメラの向き（NEAR_AXIS）
             axis = {"nse": Vector((1, 0, 0)), "nsw": Vector((1, 0, 0)),
-                    "new": Vector((0, -1, 0)), "sew": Vector((0, -1, 0))}.get(name, NEAR_AXIS)
+                    "new": Vector((0, -1, 0)), "sew": Vector((0, -1, 0))}.get(_junction(name), NEAR_AXIS)
             origin = Vector((0, 0, 0)) if len(paths) > 1 else None
             near = near_camera(obs, axis, origin=origin)
             keep = {"both": lambda ob: True, "center": lambda ob: False,
@@ -1433,6 +1508,12 @@ def track_sheet(profile="new"):
             for ob in [ob for ob in walls if ob not in kept]:
                 obs.remove(ob)
                 bpy.data.objects.remove(ob, do_unlink=True)
+            if side in ("back", "center") and name.startswith("diag_"):
+                # back・center の斜めは橋脚を描かない。手前にいつも front の線があり、その橋脚で足りる。
+                # 描くと、画面で横向きの斜めでは柱の上が手前の線の床に重なって暗い点線に見えた
+                for ob in [ob for ob in obs if ob.name.startswith("pier")]:
+                    obs.remove(ob)
+                    bpy.data.objects.remove(ob, do_unlink=True)
             mask_slope = slope
             kb = (widths or {}).get("bed", 1.0)
             end_walls = [ob for ob in kept if ob.name.startswith("endw")]
@@ -1456,7 +1537,8 @@ def track_sheet(profile="new"):
                         bpy.data.objects.remove(ob, do_unlink=True)
                     obs = [build_base([], paths, kb, prof["datums"]["bed"], slope, div, bmat)]
                 else:
-                    obs.append(build_base(kept, paths, kb, prof["datums"]["bed"], slope, div, bmat))
+                    open_cut = _diag_open_cut(kept, paths[0]) if name.startswith("diag_") else None
+                    obs.append(build_base(kept, paths, kb, prof["datums"]["bed"], slope, div, bmat, extra_cut=open_cut))
                 if name in grounds:
                     obs.append(build_start_body(paths[0], grounds[name], prof["datums"]["bed"], _M_BASE))
                     mask_slope = grounds[name]  # 持ち分を、坂の地面まで下へ広げる
@@ -1511,7 +1593,7 @@ def track_sheet(profile="new"):
         cells[(0, 1)] = cells[(0, 2)]  # カーソルは ns と同じ絵
 
     rows = block * (2 if prof.get("snow") else 1)
-    make_sheet(cells, rows, 10, os.path.join(SRC, prof["sheet"] + ".png"))
+    make_sheet(cells, rows, 15 if any(c >= 10 for _, c in cells) else 10, os.path.join(SRC, prof["sheet"] + ".png"))
 
 
 ICON = 32
@@ -1774,12 +1856,23 @@ if __name__ == "__main__":
     setup_scene()
     print(f"[info] ortho={ORTHO:.4f} px/unit={PX_PER_UNIT:.4f} height_step={H:.4f}")
     targets = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["track", "track_old", "road", "expressway", "tollbooth"]
+    known = {"track", "track_old", "track_trial", "track_ex_proto", "track_ex_proto2", "track_bridge", "track_tunnel",
+             "icons", "road", "expressway", "tollbooth"}
+    known |= {f"track_{w}_{v}" for w in ("wall", "elev") for v in ("single", "back", "center", "front")}
+    unknown = [t for t in targets if t not in known]
+    if unknown:
+        # 名前の打ち間違いで何も描かずに正常終了しないように止める（render_parallel.py が失敗として拾う）
+        raise SystemExit(f"[render] unknown target: {' '.join(unknown)}")
     if "track" in targets:
         track_sheet("new")
     if "track_old" in targets:
         track_sheet("old")
     if "track_trial" in targets:
         track_sheet("trial")
+    if "track_ex_proto" in targets:
+        track_sheet("ex_proto")
+    if "track_ex_proto2" in targets:
+        track_sheet("ex_proto2")
     if "track_bridge" in targets:
         track_sheet("bridge")
     for _variant in ("single", "back", "center", "front"):

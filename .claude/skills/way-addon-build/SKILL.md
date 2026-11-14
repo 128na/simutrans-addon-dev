@@ -35,6 +35,7 @@ description: Simutrans の way 系アドオン（線路・道路・側壁・高�
 | `TRACK_PROFILES` | アドオンごとの設定（シート名・基準面・使う `group`・`walls`・`snow`・`front_row`・`lower`・`band`） |
 
 - 部品を足すときは、乗る基準面を選ぶ。部品ごとに位置を足し引きしない
+- 描き直すときは `python -X utf8 blender/render_parallel.py [--jobs 8] <対象>...` で、シートごとに別の Blender のプロセスで同時に描く。同時に動かすのは 8 まで（ユーザーと決めた上限）。1 つのプロセスは CPU をほとんど使わないので、並べるほど速い。対象の名前は `render.py` の対象（`track_wall_back` など）で、知らない名前は失敗になる。ログは `work/render_<対象>.log`
 - dat は手で書かず `python -X utf8 blender/track_dat.py` で書き出す。シートの行の並びは
   「奥の絵 4 行 →（手前の絵 4 行）→ 雪の奥の絵 4 行 →（雪の手前の絵 4 行）」
 
@@ -45,11 +46,12 @@ description: Simutrans の way 系アドオン（線路・道路・側壁・高�
 | 部品の出方 | `BPOC_DEBUG_COLORS=1 blender ... render.py -- <シート>` → `work/debug/` のセルを見る |
 | 全方位の表示 | `bash ingame/full_check.sh`（`ingame/full.nut` のレイアウト。way ごとに 5 か所を並べる） |
 | 複線・行き止まりの並び・高架・橋・トンネル | `ingame/wall.nut`・`elev.nut`・`bridge.nut`・`tunnel.nut` |
+| 近い斜め（1 タイルずらした斜め 2 本） | `ingame/close_diag.nut` を `flat2` の x=105 から右に流す。全版の南東・北東の組を並べる。決まりはリファレンスの 5・6 章 |
 | 雪 | `flat_snow.sve` で起動して同じ見本を流す |
 | 本体が変わっていないこと | 描き直して前のシートと全画素を比べる |
 | アイコンだけ直したとき | `blender/icons_only.py`（絵のセルを描き直さない） |
 | 車両との重なり | ユーザーに手で編成を走らせてもらう |
-| 分岐の絵（OTRP の switch 画像） | T字を作り、タイルの詳細で選択肢を順に選んで絵が変わるかを見る。キーと絵の対応・スクリプトでの選び方はリファレンスの 9 章 |
+| 分岐の絵（OTRP の switch 画像） | 固定の道具がある OTRP のビルドで `ingame/switch_check.sh` を回す（空の平らなマップ `flat2` で起動し、`ingame/switch_all.nut` で線路の全アドオンの標準・選択 1・選択 2 と自動選択の 8 通りを敷く）。自動選択は分岐のカーブが隣のカーブへなめらかにつながるか、固定は選択ごとに絵が変わるかを見る。手で見るなら T字を作り、タイルの詳細で選択肢を順に選ぶ。キーと絵の対応・曲がる側はリファレンスの 9 章 |
 
 ## 4. 作業の注意
 
