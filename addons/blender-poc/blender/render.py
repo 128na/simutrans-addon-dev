@@ -322,6 +322,14 @@ class Part:
     tall: bool = False   # 高さのある部品。タイルちょうどに切り、持ち分を上へ広げた層として別に描く（render_layers）
     ground: bool = False  # 坂のタイルだけで作り、坂を当てた後に地面（z=0）より下を切り上げる（坂の下を埋める躯体）
     corridor: float = 0.0  # 分岐・十字で、ほかの経路の通り道（中心からこの幅）に入る部分を削る（側壁が線路を横切らないように）
+    # 道路の部品（where="tile"・"line"）。tile はタイルに 1 枚の板で、shape(tile, k) を受ける。line は白線 1 本ごとで、shape(path, u, lw, k)
+    carve: Callable = None  # tile の板から、全部の経路に沿って車道を抜く。carve(tile, k) は抜く半幅（k を掛ける前）
+    transfer: bool = False  # 抜いた切り口に型の材質を移す（縁石の立ち上がり）
+
+
+def make_material(spec):
+    """部品の材質: material() の引数の組か、材質を返す関数（まだらの材質など）。"""
+    return spec() if callable(spec) else material(*spec)
 
 
 def _bed_shape(path, k):
@@ -475,49 +483,81 @@ def datum_move(datum, slope=None, div=1):
     return px * ((d - ground) / c + ground)
 
 
-def assemble(parts, paths, datums=FLAT, slope=None, clip=True, widths=None, div=1, groups=("body",), ends=False, skin=None):
+@dataclass
+class RoadTile:
+    """道路の 1 タイル分の作り（where="tile"・"line" の部品が受ける）。paths は車道の中心線、lines は (path, u) か (path, u, "dash") の白線。
+    corners は歩道の角を丸くするタイルの角、size は板の大きさ（アイコンは道路に沿った帯）、hw・curb_w は車道の半幅と縁石の上面の幅"""
+    paths: list
+    lines: list = ()
+    corners: tuple = ()
+    size: tuple = (TILE + 4, TILE + 4)
+    hw: float = 0.0
+    curb_w: float = 0.0
+
+    def line_paths(self):
+        """白線を (経路, 横位置, 幅) に開く。点線は SIS に合わせて太め（約2px の四角）の短い経路に分ける。"""
+        out = []
+        for path, u, *kind in self.lines:
+            if kind and kind[0] == "dash":
+                out += [(d, u, LINE_W * 2) for d in dashes(path, dash=0.45)]
+            else:
+                out.append((path, u, LINE_W))
+        return out
+
+
+def _carve(ob, tile, w, k, transfer, mat):
+    """板 ob から、車道の型（全部の経路に沿った半幅 w の帯 + 角を丸くする扇形の残り）を抜く。"""
+    prof = [(-w * k, -1.0), (w * k, -1.0), (w * k, 1.0), (-w * k, 1.0)]
+    geo = [sweep(p, prof) for p in tile.paths]
+    # 角を丸くする: 歩道の角の四角から扇形を除いた部分も抜く
+    geo += [corner_piece(c, TILE / 2 - w) for c in tile.corners]
+    cutter = mesh_object("cut", *merge(geo), mat)
+    cutter.hide_render = True
+    # sweep の面の向きは経路の向きで変わるので、外向きにそろえる（Boolean が効かなくなる）
+    recalc_normals(cutter)
+    boolean(ob, cutter, transfer=transfer)
+    bpy.data.objects.remove(cutter, do_unlink=True)
+
+
+def _part_objects(part, paths, widths, skin, tile):
+    """部品の物を作る（作った順に (番号, 物) を返す）。tile は道路の板・白線の部品が受ける RoadTile。"""
+    k = widths.get(part.width, 1.0)
+    mat = make_material(skin.get(part.name, part.material))
+    if part.where == "tile":
+        ob = mesh_object(part.name, *part.shape(tile, k), mat)
+        if part.carve:
+            _carve(ob, tile, part.carve(tile, k), k, part.transfer, mat)
+        return [(0, ob)]
+    if part.where == "line":
+        return [(i, mesh_object(f"{part.name}{i}", *part.shape(path, u, lw, k), mat))
+                for i, (path, u, lw) in enumerate(tile.line_paths())]
+    raise ValueError(part.where)
+
+
+def assemble(parts, paths, datums=FLAT, slope=None, clip=True, widths=None, div=1, groups=("body",), ends=False, skin=None,
+             tile=None, half=None, half_over=None):
     """部品を経路ごとに作り、乗っている基準面の分だけ動かし、slope(x,y)->z で傾け、タイルの外を切り落とす。
     widths は横幅の倍率（Part.width → 倍率。無いものは 1）。ends は経路の始点が行き止まりの端か（where="end" の部品を作る）。
-    skin は材質の差し替え（部品の名前 → material() の引数。雪など）。"""
+    skin は材質の差し替え（部品の名前 → 材質。雪など）。
+    道路: tile（RoadTile）を渡すと、where="tile" の板と "line" の白線を先に作る（板・白線・経路の部品の順）。
+    half は斜めのタイルで残す半分を決める経路（切り抜いた後に、角の側の帯だけを残す。half_over は中心線を越えて残す幅）"""
     skin = skin or {}
     widths = widths or {}
     moves = {k: datum_move(d, slope, div) for k, d in datums.items()}
     obs = []
+    for part in parts:
+        if tile is not None and part.where in ("tile", "line") and part.group in groups:
+            for i, ob in _part_objects(part, paths, widths, skin, tile):
+                obs += _place(ob, part, i, paths, widths, moves)
     for i, path in enumerate(paths):
         for part in parts:
-            if part.group not in groups or (part.where == "end" and not ends) or (part.ground and not slope):
+            if part.where in ("tile", "line") or part.group not in groups or (part.where == "end" and not ends)                     or (part.ground and not slope):
                 continue
             geo = part.shape(path, widths.get(part.width, 1.0))
             if geo is None:
                 continue
-            ob = mesh_object(f"{part.name}{i}", *geo, material(*skin.get(part.name, part.material)))
-            ob["pname"], ob["pi"], ob["cut"] = part.name, i, False
-            area = sum(f.area for f in ob.data.polygons)
-            if part.corridor and len(paths) > 1:
-                # ほかの経路の通り道に入る部分を削る。残るのは、通り道の集まりの外側の縁に立つ壁だけ。
-                # 経路どうしが接する所（タイルの辺の近く）では、二つの経路の壁が同じ位置に重なる。先の経路の壁を残し、
-                # 後の経路の壁は、先の経路の壁の位置まで含めて削る（重なった切れ端が、奥/手前の版で余分な壁として残った）
-                k = widths.get(part.width, 1.0)
-                narrow, wide = part.corridor * k - 0.02, (part.corridor + WALL_W) * k + 0.02
-                band = lambda w: [(-w, -1.0), (w, -1.0), (w, 3.0), (-w, 3.0)]
-                cutter = mesh_object("corridor", *merge([sweep(q, band(wide if j < i else narrow))
-                                                         for j, q in enumerate(paths) if j != i]),
-                                     material(*part.material))
-                recalc_normals(cutter)
-                boolean(ob, cutter)
-                bpy.data.objects.remove(cutter, do_unlink=True)
-                if not ob.data.polygons:
-                    bpy.data.objects.remove(ob, do_unlink=True)
-                    continue
-                ob["cut"] = sum(f.area for f in ob.data.polygons) < area * 0.98  # 通り道で一部が削られた壁
-            # 動かすのは坂を当てて切り抜く前（切り抜きの余白より動く量が大きいので、後だと端が欠ける）
-            move = moves[part.datum]
-            if move is not None:
-                for v in ob.data.vertices:
-                    v.co += move
-            ob["tall"] = part.tall
-            ob["ground"] = part.ground
-            obs.append(ob)
+            ob = mesh_object(f"{part.name}{i}", *geo, make_material(skin.get(part.name, part.material)))
+            obs += _place(ob, part, i, paths, widths, moves)
     for ob in obs:
         if slope:
             apply_slope(ob, slope)
@@ -529,7 +569,45 @@ def assemble(parts, paths, datums=FLAT, slope=None, clip=True, widths=None, div=
             clip_to_tile(ob, TALL_PAD if ob.get("tall") else CLIP_PAD)
             if ob.get("tall"):
                 open_ends(ob, TALL_PAD)
+    if half is not None:
+        keeper = mesh_object("half", *half_tile(half, DIAG_OVERFILL if half_over is None else half_over),
+                             material("road_curb", (0.62, 0.61, 0.59)))
+        keeper.hide_render = True
+        for ob in obs:
+            boolean(ob, keeper, op="INTERSECT")
+        bpy.data.objects.remove(keeper, do_unlink=True)
     return obs
+
+
+def _place(ob, part, i, paths, widths, moves):
+    """作った物に印を付け、分岐で通り道を削り、基準面の分だけ動かす。返すのは [物]（削って消えたら []）。"""
+    ob["pname"], ob["pi"], ob["cut"] = part.name, i, False
+    area = sum(f.area for f in ob.data.polygons)
+    if part.corridor and len(paths) > 1:
+        # ほかの経路の通り道に入る部分を削る。残るのは、通り道の集まりの外側の縁に立つ壁だけ。
+        # 経路どうしが接する所（タイルの辺の近く）では、二つの経路の壁が同じ位置に重なる。先の経路の壁を残し、
+        # 後の経路の壁は、先の経路の壁の位置まで含めて削る（重なった切れ端が、奥/手前の版で余分な壁として残った）
+        k = widths.get(part.width, 1.0)
+        narrow, wide = part.corridor * k - 0.02, (part.corridor + WALL_W) * k + 0.02
+        band = lambda w: [(-w, -1.0), (w, -1.0), (w, 3.0), (-w, 3.0)]
+        cutter = mesh_object("corridor", *merge([sweep(q, band(wide if j < i else narrow))
+                                                 for j, q in enumerate(paths) if j != i]),
+                             make_material(part.material))
+        recalc_normals(cutter)
+        boolean(ob, cutter)
+        bpy.data.objects.remove(cutter, do_unlink=True)
+        if not ob.data.polygons:
+            bpy.data.objects.remove(ob, do_unlink=True)
+            return []
+        ob["cut"] = sum(f.area for f in ob.data.polygons) < area * 0.98  # 通り道で一部が削られた壁
+    # 動かすのは坂を当てて切り抜く前（切り抜きの余白より動く量が大きいので、後だと端が欠ける）
+    move = moves[part.datum]
+    if move is not None:
+        for v in ob.data.vertices:
+            v.co += move
+    ob["tall"] = part.tall
+    ob["ground"] = part.ground
+    return [ob]
 
 
 def _arc_circle(path):
@@ -826,79 +904,50 @@ def dashes(path, dash=0.6, period=1.6):
     return out
 
 
+# 道路の材質（まだらの材質は関数で渡す。make_material）
+_M_ROAD_ASPHALT = lambda: noisy_material("road_asphalt", (0.013, 0.0135, 0.015), (0.028, 0.029, 0.031), scale=60, rough=0.9)
+# 高速道路は SIS に合わせて暗く青みのあるアスファルト（平均 20,20,27）。照り返しを切らないと空の色が映って明るくなる
+_M_EXPWY_ASPHALT = lambda: noisy_material("expwy_asphalt", (0.0027, 0.0027, 0.004), (0.016, 0.016, 0.023), scale=60,
+                                          rough=0.9, spec=0.0)
+_M_CURB = ("road_curb", (0.62, 0.61, 0.59))
+_M_PAVING = lambda: noisy_material("road_paving", (0.025, 0.035, 0.02), (0.26, 0.31, 0.22), scale=35)
+_M_LINE = ("road_line", (0.95, 0.95, 0.95), 0.6, 0.0, 0.6)
+
+
+def _line_shape(path, u, lw, k):
+    w = lw / 2
+    u *= k
+    return sweep(path, [(u - w, 0.0), (u + w, 0.0), (u + w, 0.012), (u - w, 0.012)])
+
+
+# 道路の部品（作る順 = 重なりの下から）。どれも路面の基準面（bed）に乗り、横幅の倍率は "road"（斜めは ROAD_DIAG）。
+#   asphalt: タイル全面の路面 / curb: 歩道の高さの板から車道を抜く（切り口が縁石の立ち上がり）/ paving: 歩道の石畳（縁石の上面の幅だけ広く抜く）
+#   line: 白線（RoadTile.lines の 1 本ごと）
+# 歩道は全面の板から車道を抜いて作るので、分岐の口やカーブの外側も自然に埋まる。高速道路は group "sidewalk" を使わない
+ROAD_PARTS = (
+    Part("asphalt", "bed", "road", _M_ROAD_ASPHALT, lambda t, k: box(0, 0, -0.02, *t.size, 0.04), where="tile"),
+    Part("curb", "bed", "road", _M_CURB, lambda t, k: box(0, 0, SIDEWALK_H / 2, *t.size, SIDEWALK_H), "sidewalk", "tile",
+         carve=lambda t, k: t.hw, transfer=True),
+    Part("paving", "bed", "road", _M_PAVING, lambda t, k: box(0, 0, SIDEWALK_H + 0.01, *t.size, 0.02), "sidewalk", "tile",
+         carve=lambda t, k: t.hw + t.curb_w / k),
+    Part("line", "bed", "road", _M_LINE, _line_shape, where="line"),
+)
+# 道路の描き分け（ROAD_PROFILES）: skin は部品の材質の差し替え（高速道路のアスファルト）、groups は使う部品のまとまり
+ROAD_PROFILES = {
+    "street": {"sheet": "road", "prefix": "road_", "groups": ("body", "sidewalk"), "skin": {}},
+    "expressway": {"sheet": "expressway", "prefix": "expwy_", "groups": ("body",), "skin": {"asphalt": _M_EXPWY_ASPHALT}},
+}
+
+
 def build_road(paths, lines, slope=None, scale=1.0, clip=True, size=TILE + 4, corners=(), half=None, hw=ROAD_HW,
-               sidewalk=True, curb_w=CURB_W, half_over=DIAG_OVERFILL):
-    """道路を作る。paths は車道の中心線（複数で分岐・十字）、lines は (path, u) か (path, u, "dash") の白線。
-    歩道は全面の板から車道を抜いて作るので、分岐の口やカーブの外側も自然に埋まる。
+               sidewalk=True, curb_w=CURB_W, half_over=DIAG_OVERFILL, groups=None, skin=None, datums=FLAT, div=1):
+    """道路を部品（ROAD_PARTS）の組み立てで作る。paths は車道の中心線（複数で分岐・十字）、lines は (path, u) か (path, u, "dash") の白線。
     corners は歩道の角を丸くするタイルの角、half は斜めのタイルで残す半分を決める経路。
-    sidewalk=False（高速道路）は歩道・縁石を作らず、タイル全面をアスファルトにする。"""
-    if sidewalk:
-        m_asphalt = noisy_material("road_asphalt", (0.013, 0.0135, 0.015), (0.028, 0.029, 0.031), scale=60, rough=0.9)
-    else:
-        # 高速道路は SIS に合わせて暗く青みのあるアスファルト（平均 20,20,27）
-        m_asphalt = noisy_material("expwy_asphalt", (0.0027, 0.0027, 0.004), (0.016, 0.016, 0.023), scale=60,
-                                   rough=0.9, spec=0.0)
-    m_curb = material("road_curb", (0.62, 0.61, 0.59))
-    m_paving = noisy_material("road_paving", (0.025, 0.035, 0.02), (0.26, 0.31, 0.22), scale=35)
-    m_line = material("road_line", (0.95, 0.95, 0.95), rough=0.6, emit=0.6)
-    bx, by = size if isinstance(size, tuple) else (size, size)  # 板の大きさ（アイコンは道路に沿った帯）
-
-    def cutter(name, w):
-        prof = [(-w * scale, -1.0), (w * scale, -1.0), (w * scale, 1.0), (-w * scale, 1.0)]
-        parts = [sweep(p, prof) for p in paths]
-        # 角を丸くする: 歩道の角の四角から扇形を除いた部分も抜く
-        parts += [corner_piece(c, TILE / 2 - w) for c in corners]
-        ob = mesh_object(name, *merge(parts), m_curb)
-        ob.hide_render = True
-        # sweep の面の向きは経路の向きで変わるので、外向きにそろえる（Boolean が効かなくなる）
-        recalc_normals(ob)
-        return ob
-
-    asphalt = mesh_object("asphalt", *box(0, 0, -0.02, bx, by, 0.04), m_asphalt)
-    obs = [asphalt]
-    if sidewalk:
-        obs += build_sidewalk(bx, by, scale, hw, curb_w, cutter, m_curb, m_paving)
-    line_paths = []
-    for path, u, *kind in lines:
-        if kind and kind[0] == "dash":
-            # 点線は SIS に合わせて太め（約2px の四角）
-            line_paths += [(d, u, LINE_W * 2) for d in dashes(path, dash=0.45)]
-        else:
-            line_paths.append((path, u, LINE_W))
-    for i, (path, u, lw) in enumerate(line_paths):
-        w = lw / 2
-        u *= scale
-        prof = [(u - w, 0.0), (u + w, 0.0), (u + w, 0.012), (u - w, 0.012)]
-        obs.append(mesh_object(f"line{i}", *sweep(path, prof), m_line))
-    finish_road(obs, slope, clip, half, m_curb, half_over)
-
-
-def build_sidewalk(bx, by, scale, hw, curb_w, cutter, m_curb, m_paving):
-    """全面の板から車道を抜いて、縁石と歩道を作る。"""
-    curb = mesh_object("curb", *box(0, 0, SIDEWALK_H / 2, bx, by, SIDEWALK_H), m_curb)
-    paving = mesh_object("paving", *box(0, 0, SIDEWALK_H + 0.01, bx, by, 0.02), m_paving)
-    cut_road = cutter("cut_road", hw)
-    cut_curb = cutter("cut_curb", hw + curb_w / scale)
-    # 車道の切り口（縁石の立ち上がり）は縁石の色にする
-    boolean(curb, cut_road, transfer=True)
-    boolean(paving, cut_curb)
-    for ob in (cut_road, cut_curb):
-        bpy.data.objects.remove(ob, do_unlink=True)
-    return [curb, paving]
-
-
-def finish_road(obs, slope, clip, half, m_curb, half_over=DIAG_OVERFILL):
-    for ob in obs:
-        if slope:
-            apply_slope(ob, slope)
-        if clip:
-            clip_to_tile(ob)
-    if half is not None:
-        keeper = mesh_object("half", *half_tile(half, half_over), m_curb)
-        keeper.hide_render = True
-        for ob in obs:
-            boolean(ob, keeper, op="INTERSECT")
-        bpy.data.objects.remove(keeper, do_unlink=True)
+    sidewalk=False（高速道路）は歩道・縁石を作らず、タイル全面をアスファルトにする（groups・skin を渡すとそちらが優先）。"""
+    prof = ROAD_PROFILES["street" if sidewalk else "expressway"]
+    tile = RoadTile(paths, lines, corners, size if isinstance(size, tuple) else (size, size), hw, curb_w)
+    return assemble(ROAD_PARTS, paths, datums, slope, clip, {"road": scale}, div,
+                    groups or prof["groups"], skin=dict(prof["skin"], **(skin or {})), tile=tile, half=half, half_over=half_over)
 
 
 # 高速道路（SIS_E_RG1-1_01S に合わせる）: 白線の位置は一般道と同じで、歩道が無くタイル全面がアスファルト
