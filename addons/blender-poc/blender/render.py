@@ -144,9 +144,12 @@ def noisy_material(name, rgb_a, rgb_b, scale=40.0, rough=0.8, emit=0.0, spec=Non
 
 # 確認用の色: 環境変数 BPOC_DEBUG_COLORS=1 で、灰色ばかりの部品を見分けやすい色に替える。シートは work/debug/ に書く（src は変えない）
 DEBUG_COLORS = {"ballast": (0.85, 0.75, 0.10), "sleeper": (0.95, 0.95, 0.95), "rail": (0.02, 0.02, 0.02),
-                "wall": (0.90, 0.05, 0.05), "base": (0.05, 0.25, 0.90), "rust": (0.9, 0.3, 0.0),
-                "rail_top": (0.0, 0.9, 0.9), "stop_post": (0.5, 0.0, 0.5), "base_open": (0.05, 0.75, 0.25)}
+                "wall": (0.90, 0.05, 0.05), "base": (0.05, 0.25, 0.90), "track_rust0": (0.9, 0.5, 0.2),
+                "track_rust1": (0.9, 0.3, 0.0), "track_oil": (0.5, 0.0, 0.6), "track_sleeper_rust": (0.0, 0.9, 0.9),
+                "stop_post": (0.5, 0.0, 0.5), "base_open": (0.05, 0.75, 0.25)}
 DEBUG = os.environ.get("BPOC_DEBUG_COLORS") == "1"
+# 試しに描くとき: BPOC_ONLY=ns,diag_nw,up12 で線路のシートのセルを絞る。シートは src ではなく work/only/ に書く（src は変えない）
+ONLY = tuple(c for c in os.environ.get("BPOC_ONLY", "").split(",") if c)
 
 
 def material(name, rgb, rough=0.8, metal=0.0, emit=0.0, special=None):
@@ -326,6 +329,7 @@ class Part:
     carve: Callable = None  # tile の板から、全部の経路に沿って車道を抜く。carve(tile, k) は抜く半幅（k を掛ける前）
     transfer: bool = False  # 抜いた切り口に型の材質を移す（縁石の立ち上がり）
     thick: float = 0.0      # 側壁の厚み（corridor で後の経路の壁を削る幅に足す。0 は線路の WALL_W）
+    centre: bool = True     # 手前/奥を決める重心（near_camera）に数えるか
 
 
 def make_material(spec):
@@ -378,7 +382,6 @@ def _strip_shape(u0, u1, z, th=0.004):
     return shape
 
 
-_M_STEEL = ("rail_top", (0.78, 0.79, 0.80), 0.25, 0.9)
 # 立体パーツ・汚れ（TRACK_PROFILES の groups で選ぶ。本体のシートには入れていない）
 TRACK_EXTRAS = (
     # 車止め: 柱2本 + 横木（赤）+ 中央の白い印
@@ -390,10 +393,98 @@ TRACK_EXTRAS = (
          "structure", "end"),
     Part("stop_beam", "rail", "gauge", ("stop_beam", (0.75, 0.10, 0.08)), _stop_shape(1.7, 0.36, RAIL_Z0 + 0.68), "structure", "end"),
     Part("stop_mark", "rail", "gauge", ("stop_mark", (0.92, 0.92, 0.90)), _stop_shape(0.5, 0.38, RAIL_Z0 + 0.68, sx=0.22), "structure", "end"),
-    # さび色: レールの両脇の道床に鉄粉が散る。レールの頭は車輪で磨かれて光る
-    Part("rust", "rail", "gauge", ("rust", (0.47, 0.31, 0.21)), _strip_shape(RAIL_IN - 0.24, RAIL_OUT + 0.24, BALLAST_H), "weathering"),
-    Part("rail_top", "rail", "gauge", _M_STEEL, _strip_shape(RAIL_IN - 0.03, RAIL_OUT + 0.03, RAIL_Z1, 0.02), "weathering"),
+    # 汚れ（group "weathering"）は下の TRACK_WEAR から足す
 )
+def track_noise(name, lo, hi, scale):
+    """線路の汚れ・くすみの材質: 2 色のまだら。模様はワールドの位置で決める（T字・十字で経路ごとの帯が重なっても同じ模様になり、ちらつかない）。"""
+    def make():
+        m = noisy_material(name, lo, hi, scale=scale, rough=0.9)
+        nt = m.node_tree
+        if not any(n.type == "TEX_COORD" for n in nt.nodes):
+            tc = nt.nodes.new("ShaderNodeTexCoord")
+            nt.links.new(tc.outputs["Object"], next(n for n in nt.nodes if n.type == "TEX_NOISE").inputs["Vector"])
+        return m
+    if DEBUG and name in DEBUG_COLORS:
+        return (name, DEBUG_COLORS[name])
+    return make
+
+
+def _mix(a, b, t):
+    return tuple(x + (y - x) * t for x, y in zip(a, b))
+
+
+WEAR_END_TRIM = 0.5  # 汚れの帯の、タイルの中で終わる端（行き止まり）を詰める長さ（走行面は道床より約 2px 手前にずれ、端が道床からはみ出した）
+
+
+def _trim_inner_ends(path, d=WEAR_END_TRIM):
+    """経路の端のうちタイルの中にあるもの（行き止まり）を d だけ詰める。タイルの外へ延ばした端はそのまま。"""
+    inside = lambda p: max(abs(p.x), abs(p.y)) < TILE / 2 - 0.01
+    out = [Vector(p) for p in path]
+    for rev in (False, True):
+        if rev:
+            out.reverse()
+        if inside(out[0]) and len(out) > 1:
+            seg = out[1] - out[0]
+            out[0] = out[0] + seg.normalized() * min(d, seg.length * 0.9)
+    out.reverse()
+    return out
+
+
+def _wear_strip_shape(u0, u1, z, th):
+    """汚れの帯（_strip_shape と同じ形で、行き止まりの端を詰める）。"""
+    strip = _strip_shape(u0, u1, z, th)
+    return lambda path, k: strip(_trim_inner_ends(path), k)
+
+
+def _sleeper_patch_shape(u0, u1):
+    """まくらぎの上面の薄い板（経路の中心から u0〜u1、左右に 1 枚ずつ）。まくらぎと同じ間隔に並べる（間では浮かない）。"""
+    z = SLEEPER_Z + SLEEPER_H / 2 + 0.002
+
+    def shape(path, k):
+        out = []
+        for p, ang in along(path, 0.62, 0.31):
+            n = Vector((-math.sin(ang), math.cos(ang)))
+            for sg in (1, -1):
+                c = p + n * (sg * (u0 + u1) / 2 * k)
+                out.append(box(c.x, c.y, z, 0.24, (u1 - u0) * k, 0.004, rot=ang))
+        return merge(out) if out else None
+    return shape
+
+
+# 線路の汚れ（group "weathering"。道路の WEAR_LAYERS に当たる）: 形ではなく材質の違い。どれも走行面（rail）に乗せ、
+# 横位置はレールと同じ倍率（gauge）にする（汚れがレールと一緒に動き、画面でレールとずれない）。道床の上面より少し上の薄い帯で、
+# まくらぎの下に入る（まくらぎの間の道床にだけ見える）。層ごとに高さを少しずつ変えて重ねる（ちらつかない）
+#   rust0・rust1: レールの両脇の鉄粉。広く薄い帯の上に狭く濃い帯を重ねて縁をぼかす
+#   oil: レールの間の中ほどに落ちた油の暗い帯
+#   sleeper_rust: まくらぎの上面の、レールの締結の周りのさび（道床の帯とつながって、帯がまくらぎで途切れない）
+# まくらぎのくすみは材質の差し替え（TRACK_WEAR_SKIN）。雪の絵では、どれも雪の上の汚れ（灰色）に差し替える（TRACK_SNOW_WEAR_SKIN）
+_BALLAST_RGB = (0.42, 0.40, 0.37)
+_SLEEPER_RGB = (0.62, 0.61, 0.58)
+# さび色は赤みを抑えた茶色にする（赤みが強いと、坂の測り方 slope_measure.py がレール（赤 − 青の大きい行）と取り違えた）
+_RUST_LO, _RUST_HI = (0.26, 0.21, 0.16), (0.36, 0.30, 0.23)
+_OIL_LO, _OIL_HI = (0.06, 0.055, 0.05), (0.13, 0.12, 0.11)
+_DIRT_LO, _DIRT_HI = (0.36, 0.35, 0.34), (0.52, 0.51, 0.50)  # 雪の上の汚れ
+_SNOW_LO, _SNOW_HI = (0.70, 0.73, 0.78), (0.90, 0.93, 0.97)
+TRACK_WEAR = (  # (部品の名前, 経路の中心からの帯 (u0, u1), 汚れの 2 色, 道床の色からの寄せ具合, 雪の上での寄せ具合)
+    ("rust0", (RAIL_IN - 0.32, RAIL_OUT + 0.55), (_RUST_LO, _RUST_HI), 0.50, 0.25),
+    ("rust1", (RAIL_IN - 0.14, RAIL_OUT + 0.24), (_RUST_LO, _RUST_HI), 0.85, 0.40),
+    ("oil", (0.0, RAIL_IN - 0.12), (_OIL_LO, _OIL_HI), 0.70, 0.55),
+)
+TRACK_EXTRAS += tuple(Part(n, "rail", "gauge", track_noise(f"track_{n}", _mix(_BALLAST_RGB, lo, t), _mix(_BALLAST_RGB, hi, t), 3.0),
+                           _wear_strip_shape(u0, u1, BALLAST_H + 0.0015 * (i + 1), 0.001), "weathering", centre=False)
+                      for i, (n, (u0, u1), (lo, hi), t, _) in enumerate(TRACK_WEAR))
+TRACK_EXTRAS += (Part("sleeper_rust", "rail", "gauge",
+                      track_noise("track_sleeper_rust", _mix(_SLEEPER_RGB, _RUST_LO, 0.45), _mix(_SLEEPER_RGB, _RUST_HI, 0.30), 4.0),
+                      _sleeper_patch_shape(RAIL_IN - 0.16, RAIL_OUT + 0.16), "weathering", centre=False),)
+# 夏の絵のまくらぎのくすみ（weathering を使う版だけ）
+TRACK_WEAR_SKIN = {"sleeper": track_noise("track_sleeper_dull", (0.51, 0.50, 0.47), (0.62, 0.61, 0.58), 5.0)}
+# 雪の絵: 汚れの帯を、雪の色から灰色へ寄せた汚れた雪にする（列車の通る所は雪が汚れる。道路の車道を夏と同じにしたのに当たる）
+TRACK_SNOW_WEAR_SKIN = dict(
+    {n: track_noise(f"track_snow_{n}", _mix(_SNOW_LO, _DIRT_LO, ts), _mix(_SNOW_HI, _DIRT_HI, ts), 3.0)
+     for n, _, _, _, ts in TRACK_WEAR},
+    sleeper_rust=track_noise("track_snow_sleeper_rust", _mix((0.80, 0.84, 0.90), _DIRT_LO, 0.3), _mix((0.80, 0.84, 0.90), _DIRT_HI, 0.3), 4.0))
+
+
 # 側壁: 路盤の両脇に立つ壁（高さ 1.2 ≈ 画面で 9px）。道床と同じ基準面に乗り、横位置は道床の幅に合わせて動く
 # 高さのある部品の切り抜きの余白（約 1.5px）。0 だと、切り口の面（暗い）がタイルの境に縦線で見えた
 TALL_PAD = 0.15
@@ -630,6 +721,7 @@ def _place(ob, part, i, paths, widths, moves):
             v.co += move
     ob["tall"] = part.tall
     ob["ground"] = part.ground
+    ob["centre"] = part.centre
     return [ob]
 
 
@@ -781,7 +873,8 @@ NEAR_AXIS = Vector((1.0, -0.5, 0.0)).normalized()
 def near_camera(obs, axis=NEAR_AXIS, kind="tall", origin=None):
     """部品（kind="tall": 高さのある部品、それ以外は名前の頭）のうち、手前の側にあるもの（重心が、本体の重心より axis の向きにある）。
     origin を渡すと、本体の重心の代わりにその点から測る"""
-    ref = _centre([ob for ob in obs if not ob.get("tall")]) if origin is None else origin
+    # Part.centre が偽の部品（線路の汚れ）は数えない。頂点が多く、重心がずれて手前/奥の判定が変わった（カーブの壁の版が入れ替わった）
+    ref = _centre([ob for ob in obs if not ob.get("tall") and ob.get("centre", True)]) if origin is None else origin
     pick = (lambda ob: ob.get("tall")) if kind == "tall" else (lambda ob: ob.name.startswith(kind))
     return [ob for ob in obs if pick(ob) and (_centre([ob]) - ref).dot(axis) > 0.3]
 
@@ -1029,7 +1122,6 @@ SNOW_LAYERS = (  # (部品の名前, 雪を抜く半幅, 路面の色から雪�
     # 雪と見分けられなかった（2026-11-15）。厚みも白線（0.012）より薄くする
     ("snowbank", EDGE_LINE + 0.35, None, 0.0, 0.0115),
 )
-_SNOW_LO, _SNOW_HI = (0.70, 0.73, 0.78), (0.90, 0.93, 0.97)
 
 
 def _slush_material(tag, lo, hi, t, spec=None):
@@ -1686,19 +1778,20 @@ def make_sheet(cells, rows, cols, out):
 #   old: 旧描画位置（レールが高い。古い pak128・SIS）
 # iss と SIS を比べると、どの方位でもレールが画面上で 4〜4.5px 違うだけだった
 TRACK_PROFILES = {
-    "new": {"sheet": "track", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)}, "snow": True},
-    "old": {"sheet": "track_old", "spill": 0, "datums": FLAT, "snow": True},
-    # 試作: 新に、車止め・さび色・雪の絵を足したもの（本体のシートの検証を崩さないよう、別のアドオンにする）
+    "new": {"sheet": "track", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)}, "snow": True,
+            "groups": ("body", "weathering")},
+    "old": {"sheet": "track_old", "spill": 0, "datums": FLAT, "snow": True, "groups": ("body", "weathering")},
+    # 試作: 新に、車止め・汚れ・雪の絵を足したもの（車止めを試す別のアドオン）
     "trial": {"sheet": "track_trial", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
               "groups": ("body", "structure", "weathering"), "snow": True},
     # 試作: 新に側壁を足したもの。カメラに近い側の壁は手前の絵（frontimage。下の 4 行に同じ並び）
     # 試作: 橋（obj=bridge）。直線と坂（橋の端）だけを描き、床版・側壁（欄干）を足す。橋脚は別のセル
     "bridge": {"sheet": "track_bridge", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
-               "groups": ("body", "wall", "base", "ramp"), "front_row": 4, "snow": True, "solid": True, "band": "bridge",
+               "groups": ("body", "wall", "base", "ramp", "weathering"), "front_row": 4, "snow": True, "solid": True, "band": "bridge",
                "only": ("ns", "ew", "up12", "up9", "up3", "up6", "up2_12", "up2_9", "up2_3", "up2_6"), "piers": True,
                "starts": True},
     "wall_single": {"sheet": "track_wall_single", "spill": 1, "datums": {"bed": Datum(2, 1), "rail": Datum(4, 1)},
-                    "groups": ("body", "wall", "base", "structure"), "front_row": 4, "snow": True, "walls": "both"},
+                    "groups": ("body", "wall", "base", "structure", "weathering"), "front_row": 4, "snow": True, "walls": "both"},
 }
 # 側壁と基盤のバリエーション: 両側（単線用）・back（奥だけ）・center（壁なし。中線）・front（手前だけ）。
 # 基盤は、壁のある側は壁まで、壁のない側はタイルの端まで
@@ -1707,7 +1800,7 @@ for _variant in ("back", "center", "front"):
 # 高架（dat の system_type=1）: 側壁の 4 つの版に橋脚を足し、持ち分を床の ELEV_STEPS 段（16px × 段数）下まで広げる
 for _variant, _walls in (("single", "both"), ("back", "back"), ("center", "center"), ("front", "front")):
     TRACK_PROFILES[f"elev_{_variant}"] = dict(TRACK_PROFILES["wall_single"], sheet=f"track_elev_{_variant}", walls=_walls,
-                                               groups=("body", "wall", "base", "structure", "pier"), lower=ELEV_LOWER,
+                                               groups=("body", "wall", "base", "structure", "pier", "weathering"), lower=ELEV_LOWER,
                                                band="elevated")
 # 試作: ex 画像（Y字・三方分岐）が使えたらどう見えるかを、switch 画像の 1・2 の枠に入れて見る（別のアドオン。雪なし）
 TRACK_PROFILES["ex_proto"] = dict(TRACK_PROFILES["new"], sheet="track_ex_proto", ex_proto=True, snow=False)
@@ -1759,6 +1852,14 @@ def trim_end_walls(kept, paths, k, move, wu=None, ww=None, zr=(-2, 2)):
     for ob in end_walls:
         boolean(ob, cutter)
     bpy.data.objects.remove(cutter, do_unlink=True)
+
+
+def track_skin(groups, snow=False):
+    """線路の材質の差し替え: 雪（SNOW_SKIN）と、汚れを使う版のまくらぎのくすみ・雪の上の汚れ。"""
+    wear = "weathering" in groups
+    if snow:
+        return dict(SNOW_SKIN, **(TRACK_SNOW_WEAR_SKIN if wear else {}))
+    return dict(TRACK_WEAR_SKIN) if wear else None
 
 
 def track_sheet(profile="new"):
@@ -1841,6 +1942,8 @@ def track_sheet(profile="new"):
     parts = TRACK_PARTS + TRACK_EXTRAS
     if "only" in prof:
         jobs = {k: v for k, v in jobs.items() if v[0] in prof["only"]}
+    if ONLY:
+        jobs = {k: v for k, v in jobs.items() if v[0] in ONLY + ("ns",)}  # ns はカーソルにも使うのでいつも描く
     if "walls" in prof:
         # 側壁・高架の版は近い斜めの絵を持たない。本体は、近い斜めの絵が無い way の近い斜めを「1 タイルに 2 本の way」で作るので、
         # 奥の線を back、手前の線を front の版にでき、2 本の間に壁が立たない（絵があると十字 1 本の way になり、両方が同じ版になる）
@@ -1856,12 +1959,12 @@ def track_sheet(profile="new"):
                 jobs[(3, col)] = (f"{pre}_{d}", [straight(S, N) if d in "ns" else straight(W, E)], None)
                 grounds[f"{pre}_{d}"] = (lambda f, n: lambda x, y: n * H * (f(x, y) - 1))(high[d], steps)
     groups = prof.get("groups", ("body",))
-    # 雪の絵は下の 4 行に同じ並びで置く（dat の image[..][1]）。汚れは雪に隠れるので入れない
+    # 雪の絵は下の 4 行に同じ並びで置く（dat の image[..][1]）。汚れは、雪の絵では雪の上の汚れ（灰色）に差し替える
     # 行の並び: 奥の絵 4 行 →（手前の絵 4 行）→ 雪の奥の絵 4 行 →（雪の手前の絵 4 行）
     block = 8 if "front_row" in prof else 4
-    variants = [(0, "", None, groups)]
+    variants = [(0, "", track_skin(groups), groups)]
     if prof.get("snow"):
-        variants.append((block, "_snow", SNOW_SKIN, tuple(g for g in groups if g != "weathering")))
+        variants.append((block, "_snow", track_skin(groups, snow=True), groups))
     for row0, suffix, skin, grp in variants:
         for pos, (name, paths, slope, *rails) in jobs.items():
             clear_models()
@@ -1938,7 +2041,7 @@ def track_sheet(profile="new"):
         cells[(0, 0)] = render_icon("track_trial_icon", 0.5, shift=(-0.14, 0.2), label="100", style="track", badge="T")
         # カーソル: 直線の絵の上に、最高速度を書く（アイコンと同じ色の札）
         clear_models()
-        assemble(parts, [straight(S, N)], prof["datums"], groups=groups)
+        assemble(parts, [straight(S, N)], prof["datums"], groups=groups, skin=track_skin(groups))
         cells[(0, 1)] = render_cursor("track_trial_cursor", "100", "track")
     elif "walls" in prof or "band" in prof:
         # 側壁のバリエーションは右下の印（S・B・C・F）、橋は下の帯で区別する
@@ -2163,7 +2266,9 @@ def tunnel_sheet(kind="track"):
                 build_road([path], [(path, -EDGE_LINE), (path, 0.0), (path, EDGE_LINE)], sidewalk=False, skin=skin,
                            groups=grp + ROAD_SNOW_GROUPS if skin else grp)
             else:
-                assemble(TRACK_PARTS, [path], prof["datums"], skin=skin)
+                # 線路の本体と同じく汚れを入れる（雪の絵は雪の上の汚れ）
+                grp = prof["groups"]
+                assemble(TRACK_PARTS + TRACK_EXTRAS, [path], prof["datums"], groups=grp, skin=track_skin(grp, snow=bool(skin)))
                 # 穴の内側: 床（基盤と同じ材質）と暗い左右の壁だけを置く（線路は床の上に見える。箱で埋めると線路まで隠れた）
                 # 床はタイルの幅いっぱい（躯体の下は隠れる。口の辺では、隣の側壁つきの線路の基盤と 1 行重なってすき間を埋める）
                 floor = mesh_object("floor", *box(c.x, c.y, 0.005, a1 - a0, TILE, 0.01, rot=rot),
@@ -2240,6 +2345,8 @@ if __name__ == "__main__":
             if f.endswith(".dat"):
                 shutil.copy(os.path.join(SRC, f), dbg)
         SRC = dbg
+    if ONLY:
+        SRC = os.path.join(WORK, "only")
     os.makedirs(WORK, exist_ok=True)
     os.makedirs(SRC, exist_ok=True)
     setup_scene()
