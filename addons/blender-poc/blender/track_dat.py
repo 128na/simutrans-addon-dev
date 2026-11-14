@@ -45,14 +45,25 @@ def way(name, sheet, comment, front=False, snow=True, elevated=False):
     open(os.path.join(SRC, sheet + ".dat"), "w", encoding="utf8", newline="\n").write("\n".join(out) + "\n")
 
 
-def road(sheet, front=False):
-    """道路・高速道路の dat を、自分の dat の [0] の行から書き直す（高速道路のカーブは斜めの絵を指すので、線路の割り当ては使わない）。
+def road(sheet, front=False, src=None, name=None, comment=None, elevated=False):
+    """道路・高速道路の dat を、dat の [0] の行から書き直す（高速道路のカーブは斜めの絵を指すので、線路の割り当ては使わない）。
+    src を渡すと、その dat（例: expressway.dat）の設定と割り当てを元に、名前 name・シート sheet の版を作る（側壁・高架）。
     行の並びは線路と同じ: 奥の絵 4 行 →（手前の絵 4 行）→ 雪の奥の絵 4 行 →（雪の手前の絵 4 行）"""
-    head, imgs = template(sheet + ".dat")
+    head, imgs = template(src or sheet + ".dat")
+    if src:
+        base_sheet = src[:-4]
+        base_name = next(l[5:] for l in head if l.startswith("name="))
+        head = [comment if l.startswith("#") and comment else l.replace(base_name, name).replace(base_sheet + ".", sheet + ".")
+                for l in head]
+        head = [l for i, l in enumerate(head) if not (l.startswith("#") and i and head[i - 1].startswith("#") and comment)]
+    if elevated:
+        head = [l.replace("system_type=0", "system_type=1") for l in head]
     out = list(head)
     block = 8 if front else 4
     for season, base in ((0, 0), (1, block)):
         for key, idx, r, c, off in imgs:
+            if front and idx.startswith("[close"):
+                continue  # 側壁・高架の版は近い斜めの絵を持たない（線路と同じ）
             out.append(f"{key}{idx}[{season}]={sheet}.{r + base}.{c}{off}")
             if front:
                 out.append(f"front{key}{idx}[{season}]={sheet}.{r + base + 4}.{c}{off}")
@@ -137,3 +148,6 @@ if __name__ == "__main__":
     tunnel()
     road("road")
     road("expressway")
+    for side, ja in (("single", "両側（単独用）"), ("back", "奥だけ"), ("center", "なし（中の車線用）"), ("front", "手前だけ")):
+        road(f"expressway_wall_{side}", front=True, src="expressway.dat", name=f"bpoc_expressway_wall_{side}",
+             comment=f"# Blender 検証用の高速道路: 側壁 {ja}。カメラに近い側の壁は手前の絵（front...）、雪は [1]")
