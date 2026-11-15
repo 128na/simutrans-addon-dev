@@ -1,7 +1,7 @@
 """つなぎ目の確認: シートのセルを、ゲームと同じ位置・順番でタイルに並べて重ねる（ゲームを起動せずにバリを見る）。
 
 使い方（アドオンのディレクトリで）:
-    blender -b --factory-startup --python blender/compose.py -- road work/compose_road.png [倍率] [all|diag|slope|loop]
+    blender -b --factory-startup --python ../../tools/blender/compose.py -- road work/compose_road.png [倍率] [all|diag|slope|loop]
 
 並べ方は Simutrans と同じ: マップ (i, j)（i が東、j が南）、高さ z のタイルを画面 ((i-j)*64, (i+j)*32 - z*16) に置き、
 奥（i+j が小さい）から順に描く。#E7FFFF は透明。背景は草の色にして、透けた画素が緑で見えるようにする。
@@ -13,7 +13,11 @@ import bpy
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from render import CELL, SRC, TRANSPARENT  # noqa: E402
+from sheetlib import CELL, SRC, TRANSPARENT  # noqa: E402
+# アドオンごとの対応表（シート名・名前の接頭辞）は、アドオンの blender/addon_config.py から読む（tools/README.md）
+sys.path.insert(0, os.path.join(os.getcwd(), "blender"))
+import addon_config  # noqa: E402
+
 
 GRASS = (70, 130, 40)
 
@@ -105,7 +109,7 @@ if __name__ == "__main__":
     name, out_path = args[0], args[1]
     scale = int(args[2]) if len(args) > 2 else 1
     layout = LAYOUTS[args[3] if len(args) > 3 else "all"]
-    img = compose(load(os.path.join(SRC, name + ".png")), layout, IMG_EXPWY if name == "expressway" else IMG)
+    img = compose(load(os.path.join(SRC, name + ".png")), layout, IMG_EXPWY if name in addon_config.DIAG_CURVE_SHEETS else IMG)
     img = img.repeat(scale, 0).repeat(scale, 1)
     h, w, _ = img.shape
     o = bpy.data.images.new("o", w, h)

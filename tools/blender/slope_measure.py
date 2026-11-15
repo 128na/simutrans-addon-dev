@@ -1,7 +1,7 @@
 """ゲームの画面で、直線の線路タイル（平地・坂・急坂）ごとに、道床の縁とレールの位置を測る。坂でレールが道床の片側に寄っていないかを手本と比べる。
 
 使い方（アドオンのディレクトリで。ふつうは ingame/steep_check.sh から呼ぶ）:
-    blender -b --factory-startup --python blender/slope_measure.py -- 画面.png タイル一覧.txt x,y（jump したタイル） [出力.png]
+    blender -b --factory-startup --python ../../tools/blender/slope_measure.py -- 画面.png タイル一覧.txt x,y（jump したタイル） [出力.png]
 
 タイル一覧は1行に「x y z 坂 向き 名前」（seam_judge.py と同じ）。向きが ns・ew の2方向だけのタイルを測る。
 測り方:
@@ -27,7 +27,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from compose import IMG, load  # noqa: E402
 from ingame_diff import TRANSPARENT, candidates, cell  # noqa: E402
-from seam_judge import BITS, HEIGHT_PX, SHEETS, Tile  # noqa: E402
+from seam_judge import BITS, HEIGHT_PX, PREFIX, SHEETS, Tile  # noqa: E402
 
 SMAX = 30   # 断面を取る範囲（画面の縦 ±px）
 TOP, BOTTOM = 45, 25  # 画面の上の道具の列と、下の帯の高さ
@@ -46,7 +46,7 @@ def locate(game, tiles, jx, jy):
     """このアドオンの平らなタイルのセルを見当の位置に置き、画面といちばん合うずれ（横 ±2、縦 ±130）。"""
     pieces = []
     for t in tiles:
-        if not t.name.startswith("bpoc_") or t.slope:
+        if not t.name.startswith(PREFIX) or t.slope:
             continue
         keys = candidates(0, sum(BITS[d] for d in t.dirs), IMG)
         if len(keys) != 1:
@@ -112,7 +112,7 @@ def measure(game, t, origin):
     prof = {i: px[sel & (k == i)].mean(0) for i in range(top, bot + 1)}
     if DUMP:
         print(f"   断面 {t.name}({t.x},{t.y}) " + " ".join(f"{i:+d}:{int(v[0])},{int(v[1])},{int(v[2])}" for i, v in sorted(prof.items())))
-    kind = "red" if t.name.startswith("bpoc_") else "bright"
+    kind = "red" if t.name.startswith(PREFIX) else "bright"
     rl = rails(prof, top, bot, kind)
     sleeper = None
     if rl:
@@ -196,7 +196,7 @@ def main():
     results, marks = [], []
     for t, r in rows:
         tag = f"{t.name}({t.x},{t.y}) 坂{t.slope} {''.join(t.dirs)}"
-        if steep(t) and not t.name.startswith("bpoc_"):
+        if steep(t) and not t.name.startswith(PREFIX):
             print(f"[slope] {tag}: 手本の急坂は測らない（Rail_100 には急坂の絵が無く、1段の坂の絵が出る）")
             continue
         if r is None:
@@ -207,7 +207,7 @@ def main():
         line = f"[slope] {tag}: 道床 {r['top']:+.1f}〜{r['bot']:+.1f}（中心 {cb:+.2f}）"
         if not r["rails"]:
             print(line + " レールが見つからない")
-            if t.slope and t.name.startswith("bpoc_"):
+            if t.slope and t.name.startswith(PREFIX):
                 results.append(False)
             continue
         cr = sum(r["rails"]) / 2
@@ -224,7 +224,7 @@ def main():
             if f["sleeper"] and r["sleeper"] is not None:
                 ok = ok and r["sleeper"] >= f["sleeper"] * MIN_SLEEPER
                 line += f"・濃淡 {r['sleeper'] / f['sleeper']:.2f}倍"
-            if t.name.startswith("bpoc_"):
+            if t.name.startswith(PREFIX):
                 line += " OK" if ok else " NG"
                 results.append(ok)
         print(line)
@@ -251,6 +251,6 @@ def main():
 
 
 SHEET_CACHE = {}
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.getcwd()  # アドオンのディレクトリ
 if __name__ == "__main__":
     main()

@@ -1,7 +1,7 @@
 """ゲーム画面と、シートのセルを同じ位置・順番で貼った「予想図」を比べ、違う画素に印を付ける。
 
 使い方（アドオンのディレクトリで）:
-    blender -b --factory-startup --python blender/ingame_diff.py -- 画面.png シート名 タイル一覧.txt 出力.png x,y（jump したタイル）
+    blender -b --factory-startup --python ../../tools/blender/ingame_diff.py -- 画面.png シート名 タイル一覧.txt 出力.png x,y（jump したタイル）
 
 タイル一覧は ingame/tiles.nut で書き出す（1行に x y z 坂 向き）。画面は等倍（gui.set_zoom(3)）で撮る。
 予想図は画面の地面の上にセルを貼ったもの。セルの透明な画素は画面のまま残す。
@@ -18,7 +18,8 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from compose import IMG, IMG_EXPWY, load  # noqa: E402
-from render import CELL, TRANSPARENT  # noqa: E402
+from sheetlib import CELL, TRANSPARENT  # noqa: E402
+from compose import addon_config  # noqa: E402
 
 THRESH = 40
 BITS = {"n": 1, "e": 2, "s": 4, "w": 8}
@@ -89,9 +90,8 @@ def main():
     # 撮る前に gui.jump で画面の中央へ動かしたタイル。位置合わせの見当に使う
     jx, jy = (int(v) for v in args[4].split(","))
     game = load(shot).astype(int)
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    sheet = load(os.path.join(root, "src", name + ".png"))
-    img = IMG_EXPWY if name == "expressway" else IMG
+    sheet = load(os.path.join(os.getcwd(), "src", name + ".png"))
+    img = IMG_EXPWY if name in addon_config.DIAG_CURVE_SHEETS else IMG
     tiles = []
     for line in open(tiles_path, encoding="utf8"):
         p = line.split()

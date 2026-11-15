@@ -2,7 +2,7 @@
 
 使い方（アドオンのディレクトリで）:
     git show HEAD:addons/blender-poc/src/track.png > work/before_track.png
-    blender -b --factory-startup --python blender/sheet_diff.py -- work/before_track.png src/track.png
+    blender -b --factory-startup --python ../../tools/blender/sheet_diff.py -- work/before_track.png src/track.png
 
 透過の範囲が変わったセルだけを出し、最後に合計を出す。環境変数 ALL=1 で、色だけが変わったセルも出す。
 汚れのように色だけを意図して変えたときは、透過の範囲の差が 0 であることを見る（輪郭が変わっていない）。

@@ -1,9 +1,9 @@
 """シートを Blender の別々のプロセスで同時に描く（Blender は使わず、ふつうの Python で動かす）。
 
 使い方（アドオンのディレクトリで）:
-    python -X utf8 blender/render_parallel.py [--jobs 8] [--blender D:\\bin\\blender\\blender.exe] 対象1 対象2 ...
+    python -X utf8 ../../tools/blender/render_parallel.py [--jobs 8] [--entry blender/render.py] [--blender D:\\bin\\blender\\blender.exe] 対象1 対象2 ...
 
-対象は render.py の対象と同じ名前（track・track_wall_back など）。対象ごとに 1 プロセスで、同時に動かすのは --jobs 個まで（既定 8）。
+対象は --entry の入口（既定 blender/render.py）の対象と同じ名前（track・track_wall_back など）。アドオンのディレクトリで動かす。対象ごとに 1 プロセスで、同時に動かすのは --jobs 個まで（既定 8）。
 1 プロセスの描画は小さな絵の繰り返しで CPU をほとんど使わないので、シートを分けて同時に描くと速い
 （13 枚で 1 プロセスなら 40 分ほど、7 プロセスに分けた残り 7 枚は約 5 分。2026-11-14）。
 ログは work/render_<対象>.log。終わったら、失敗した対象（終了コードが 0 でないか、ログに Traceback がある）を出して 1 で終わる。
@@ -14,10 +14,11 @@ import subprocess
 import sys
 import time
 
-HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+HERE = os.getcwd()  # アドオンのディレクトリ
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--jobs", type=int, default=8)
+ap.add_argument("--entry", default=os.path.join("blender", "render.py"), help="アドオンの入口（アドオンのディレクトリからの相対）")
 ap.add_argument("--blender", default=r"D:\bin\blender\blender.exe")
 ap.add_argument("targets", nargs="+")
 args = ap.parse_args()
@@ -29,7 +30,7 @@ while queue or running:
     while queue and len(running) < args.jobs:
         t = queue.pop(0)
         log = open(os.path.join(HERE, "work", f"render_{t}.log"), "w", encoding="utf8")
-        cmd = [args.blender, "-b", "--factory-startup", "--python", "blender/render.py", "--", t]
+        cmd = [args.blender, "-b", "--factory-startup", "--python", args.entry, "--", t]
         running[t] = (subprocess.Popen(cmd, cwd=HERE, stdout=log, stderr=subprocess.STDOUT), log)
     for t, (p, log) in list(running.items()):
         if p.poll() is not None:

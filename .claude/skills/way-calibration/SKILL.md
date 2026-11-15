@@ -28,13 +28,13 @@ description: 線路・道路などの way アドオンの描画位置とタイ�
 
 | 段階 | ツール | 何を自動で出すか |
 |---|---|---|
-| 手本を測る | `blender/ref_measure.py` | 手本の画像（pak128 のソース・iss の元絵・自分のシート）で、直線・斜めの線が理想の位置から何 px ずれているか。直線のレールの行（明るさの断面） |
-| 手本との比較 | `blender/check.py` | 自分のシートと iss の画像の、描画範囲と重心のずれ |
-| ゲームなしの合成 | `blender/compose.py` | シートのセルをゲームと同じ位置・順番で並べた図（`diag`・`loop`・`slope`）。段・草の尖りを目で見る前段 |
-| ゲームとの差分 | `ingame/all_dirs.nut` → `ingame/capture_check.sh` → `blender/ingame_diff.py` | 見本 6 か所の、ゲームの画面と予想図の違い（`[diff]` px）と、形の欠け・出っ張りの候補（`[shape]` の座標） |
-| 他のアドオンとのつなぎ目 | `ingame/seam.nut`（線路）・`ingame/road_seam.nut`（道路）→ `ingame/seam_check.sh` → `blender/seam_judge.py` | 継ぎ目ごとの合否（`[seam] OK/NG`）と、継ぎ目の草・中心のずれ・幅の差・模様のずれの値、継ぎ目の拡大図 |
-| 坂・急坂 | `ingame/steep.nut` → `ingame/steep_check.sh` → `blender/slope_measure.py` | 坂のタイルごとの合否（`[slope] OK/NG`）。レールの中心 − 道床の中心（寄り）が平地と同じか、まくらぎが見えるか（濃淡）。急坂の十字の `[diff]` |
-| 目で確かめる | `blender/zoom.py` | 指定した座標の周りを拡大して並べる。その画素に紫の印を付ける |
+| 手本を測る | `tools/blender/ref_measure.py` | 手本の画像（pak128 のソース・iss の元絵・自分のシート）で、直線・斜めの線が理想の位置から何 px ずれているか。直線のレールの行（明るさの断面） |
+| 手本との比較 | `tools/blender/check.py` | 自分のシートと iss の画像の、描画範囲と重心のずれ |
+| ゲームなしの合成 | `tools/blender/compose.py` | シートのセルをゲームと同じ位置・順番で並べた図（`diag`・`loop`・`slope`）。段・草の尖りを目で見る前段 |
+| ゲームとの差分 | `ingame/all_dirs.nut` → `ingame/capture_check.sh` → `tools/blender/ingame_diff.py` | 見本 6 か所の、ゲームの画面と予想図の違い（`[diff]` px）と、形の欠け・出っ張りの候補（`[shape]` の座標） |
+| 他のアドオンとのつなぎ目 | `ingame/seam.nut`（線路）・`ingame/road_seam.nut`（道路）→ `ingame/seam_check.sh` → `tools/blender/seam_judge.py` | 継ぎ目ごとの合否（`[seam] OK/NG`）と、継ぎ目の草・中心のずれ・幅の差・模様のずれの値、継ぎ目の拡大図 |
+| 坂・急坂 | `ingame/steep.nut` → `ingame/steep_check.sh` → `tools/blender/slope_measure.py` | 坂のタイルごとの合否（`[slope] OK/NG`）。レールの中心 − 道床の中心（寄り）が平地と同じか、まくらぎが見えるか（濃淡）。急坂の十字の `[diff]` |
+| 目で確かめる | `tools/blender/zoom.py` | 指定した座標の周りを拡大して並べる。その画素に紫の印を付ける |
 
 Blender は `blender -b --factory-startup --python <script> -- <引数>` で動かす。使い方は各スクリプトの冒頭の説明にある。
 
@@ -71,7 +71,7 @@ Blender は `blender -b --factory-startup --python <script> -- <引数>` で動�
 
 1. `seam.nut`・`road_seam.nut` で「相手 → 自分 → 相手」の順に 1 本につないで敷く。ゲームを再起動したら流し直す。
 2. `bash ingame/seam_check.sh` を回す（`BASES="名前:y"`・`KINDS` で絞れる）。
-   直線（東西・南北）・斜め・坂を撮り、`blender/seam_judge.py` が継ぎ目ごとに `[seam] OK/NG` を出す。
+   直線（東西・南北）・斜め・坂を撮り、`tools/blender/seam_judge.py` が継ぎ目ごとに `[seam] OK/NG` を出す。
    見るのは次の三つ。
    - 継ぎ目の草: 継ぎ目の線の上で、両側の帯の内側にある草の画素
    - 中心のずれ: 両側の帯の縁から出す段
@@ -115,7 +115,7 @@ Blender は `blender -b --factory-startup --python <script> -- <引数>` で動�
 - 道路・高速道路の急坂（`steep_check.sh` は線路だけ。レールの色で位置を出しているので、白線で測る形に直せば使える）
 - 坂の十字の、坂の斜め隣の角のタイル。坂は地面を後から描くが、予想図はそれを再現していないので、`[diff]` が出てもゲームの画面が正しいことがある
 - レールや白線の色・太さ・間隔の見た目（手本と並べて見る）
-- 夜の見え方・特殊色（`blender/special.py`・`special_preview.py`）
+- 夜の見え方・特殊色（`tools/blender/special.py`・`special_preview.py`）
 - アドオン固有の部品（料金所の屋根のはみ出し、歩道の角など）
 
 ## つまずきやすい所

@@ -1,7 +1,7 @@
 """描画位置の検証: Blender の出力と iss の既存画像で、セル内の描画範囲を比べる。
 
 使い方（アドオンのディレクトリで）:
-    blender -b --factory-startup --python blender/check.py -- <iss の線路画像>
+    blender -b --factory-startup --python ../../tools/blender/check.py -- <iss の線路画像>
 """
 import os
 import sys
@@ -9,7 +9,7 @@ import sys
 import bpy
 import numpy as np
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.getcwd()  # アドオンのディレクトリ
 WORK = os.path.join(ROOT, "work")
 CELL = 256
 

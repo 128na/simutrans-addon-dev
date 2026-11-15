@@ -12,7 +12,9 @@ import sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import render as R  # noqa: E402
+import render  # noqa: E402（入口。import しても描かない）
+
+R = render.R
 
 os.makedirs(R.WORK, exist_ok=True)
 R.setup_scene()
