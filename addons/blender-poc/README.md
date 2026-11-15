@@ -9,7 +9,7 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 
 | ファイル | 内容 |
 |---|---|
-| `blender/render.py` | このアドオンのシートの入口。描き分け（`TRACK_PROFILES`・`ROAD_PROFILES`）・シート名・料金所を持ち、描画の道具（`tools/blender/sheetlib.py`）で形状を組み立てて描画し、シート画像を作る |
+| `blender/render.py` | このアドオンのシートの入口。描き分け（`TRACK_PROFILES`・`ROAD_PROFILES`）・シート名・料金所を持ち、描画の道具（`tools/blender/sheetlib/`）で形状を組み立てて描画し、シート画像を作る |
 | `blender/addon_config.py` | `tools/blender` の判定・比較の道具が読む設定（道の名前・接頭辞・シート名） |
 | `tools/blender/check.py` | 描画位置の検証。タイル菱形の位置と、iss の既存画像との描画範囲を比べる |
 | `blender/preview.py` | 確認用の拡大画像 `work/preview.png` を作る |
@@ -34,7 +34,7 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 | `ingame/switch_all.nut` | 分岐の絵（OTRP の switch 画像）を線路の 11 アドオンで全部見る見本。空の平らなマップ（`flat2.sve`）に way ごとに 1 行、標準・選択 1・選択 2 に固定した T字と十字、自動選択の 8 通りを名札つきで敷く |
 | `ingame/switch_ex_shapes.nut` | ex 画像（Y字分岐・三方・渡り線）を本体が自動で選ぶ線路の形を、`flat2.sve` の y=130 から下に敷く。既定は `bpoc_track`（絵は通常のまま）。先頭の `WAY` を `bpoc_track_ex_proto`、`OX` を 100 にすると、試作の way で敷いて分岐の絵を固定する |
 | `ingame/close_diag.nut` | 近い斜め（1 タイルずらして並べた斜め 2 本）の見本。`flat2.sve` の x=105 から右に、線路の全版（壁なし 3 種・側壁・高架の 2 本と 3 本）と道路・高速道路の南東・北東の組を名札つきで敷く |
-| `tools/blender/render_parallel.py` | シートを Blender の別々のプロセスで同時に描く（`--jobs` 既定 8）。ふつうの Python で動かす |
+| `tools/blender/render_parallel.py` | シートを Blender の別々のプロセスで同時に描く（`--jobs` 既定は `sheet_settings.JOBS` = 16）。ふつうの Python で動かす |
 | `ingame/switch_auto.nut` | 自動選択の 8 通りだけを `bpoc_track` で敷く（`flat.sve` の y=120） |
 | `ingame/switch_check.sh` | 分岐の絵を手で確かめる準備。pak を入れ、固定の道具がある OTRP のビルドを MCP つきで `flat2` で起動し、`switch_all.nut` を敷く（`GAME_DIR=… EXE=… bash ingame/switch_check.sh`） |
 | `ingame/wall.nut`・`elev.nut`・`bridge.nut`・`tunnel.nut`・`trial.nut` | 側壁・高架・橋・トンネル・試作の見本（複線の並び、行き止まり、橋の端、坑口） |
@@ -290,7 +290,7 @@ SIS の道路8種（一般道 50/70/80km/h、高速 80/100/120/999km/h）の直�
 - 坂の付け根の緑の線: 本体（OTRP 版）は坂のタイルの地面を物と一緒に後から描き、奥のタイルの線路の端の画素を上書きする
   （`boden/grund.cc` の `draw_as_obj`）。手前のタイルの絵がその画素を描いていないと地面が見える
 
-2つ目と3つ目は描き方を変えて直した（`render.py` の `render_cell`）:
+2つ目と3つ目は描き方を変えて直した（`tools/blender/sheetlib/cells.py` の `render_cell`）:
 
 - 形はタイルより `CLIP_PAD = 0.6` だけ大きく切り抜いて描く。境の画素も、隣とつながった形で画素全体の色になる
 - 画素ごとに、どのタイルの絵に残すか（持ち分）を決め、ほかは透明にする。決め方は次の節の「地面の菱形で持ち分を決める」
@@ -318,7 +318,7 @@ SIS の道路8種（一般道 50/70/80km/h、高速 80/100/120/999km/h）の直�
 奥のタイルの絵が手前のタイルの地面の菱形に入った画素は、手前の地面で必ず上書きされる。
 なので画素の持ち分は、ワールド座標ではなく **画面上の地面の菱形** で決めるのが正しい:
 
-- `render.py` の `_ground_mask` で、セルの中の地面の菱形を計算で塗る（中心 y=`GROUND_CY = 127`、画素の中心が菱形の中なら持ち分）。
+- `tools/blender/sheetlib/cells.py` の `_ground_mask` で、セルの中の地面の菱形を計算で塗る（中心 y=`GROUND_CY = 127`、画素の中心が菱形の中なら持ち分）。
   坂は四隅の高さを反映した四角形にする。菱形の中の画素だけ残し、外は透明にする（隣のタイルの持ち分）
 - 重ねる幅（以前の `OWN_MARGIN`・`DIAG_WIDE_*`）はやめた。Blender で地面を描いて持ち分にする案は、1px ずれて 1タイル約60px 違った
 - 坂の形: 形をタイルの範囲で切ってから高さを足す（`apply_slope`）。タイルの外へ坂を延ばすと、付け根で段差になっていた
@@ -339,7 +339,7 @@ SIS の道路8種（一般道 50/70/80km/h、高速 80/100/120/999km/h）の直�
 ## 特殊色（プレーヤーカラー・夜に光る色）
 
 Simutrans の特殊色は 31 色（本体 `descriptor/image.cc` の `rgbtab`）。makeobj は RGB が完全に一致した画素だけを特殊色にする
-（`descriptor/writer/image_writer.cc`）。一覧は `render.py` の `SPECIAL`。
+（`descriptor/writer/image_writer.cc`）。一覧は `tools/blender/sheetlib/core.py` の `SPECIAL`。
 
 ### 意図しない特殊色を消す
 
@@ -960,7 +960,7 @@ pak128 の高架は、本体の既定で床が地面の 2 段上になる（`way
 橋脚が 1 段ぶんしかなく、床の下で宙に浮いていたので直した。
 
 - 線路の高架 4 版（`track_elev_*`）と高速道路の高架 4 版（`expressway_elev_*`）の橋脚を、床の下から 2 段下の地面までにした。
-  段数は `render.py` の `ELEV_STEPS`（2）にまとめ、持ち分を下へ広げる行数（`lower`）も `ELEV_LOWER`（16 × 段数 = 32）から出す
+  段数は `tools/blender/sheetlib/wall_parts.py` の `ELEV_STEPS`（2）にまとめ、持ち分を下へ広げる行数（`lower`）も `ELEV_LOWER`（16 × 段数 = 32）から出す
 - ゲーム内（`flat_512.sve`、`ingame/elev.nut`・`ingame/expwy_elev.nut`）: 線路・高速道路とも、橋脚が地面まで届いた
   （`docs/elev_pier_2steps.png`・`docs/expwy_elev_pier_2steps.png`）
 - 橋の橋脚（`piers` のセル）は 1 段のまま。本体が段ごとに積むので、2 段の高さの橋（急坂の端の谷。`ingame/bridge.nut` の y=108）でも地面まで届いた（`docs/bridge_pier_2steps.png`）

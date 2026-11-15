@@ -4,7 +4,7 @@
 アドオンごとの設定（`TRACK_PROFILES`・`ROAD_PROFILES` への登録、シート名と描く関数の対応）を渡して `run_targets` を呼ぶ。
 設定の分け方は tools/README.md を参照。
 
-モジュール（上から順に、下は上を import する。逆はしない）:
+モジュール（import の向きは下から上へ。逆はしない。track_parts は wall_parts も import する）:
     core         設定値・シーン・材質・形の部品・基準面と部品の型
     track_parts  線路の部品（道床・まくらぎ・レール・車止め・汚れ）
     wall_parts   壁・基盤・橋・高架の橋脚（線路と道路で共通）

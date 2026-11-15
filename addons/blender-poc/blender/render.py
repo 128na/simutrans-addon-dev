@@ -2,7 +2,7 @@
 
     blender -b --factory-startup --python blender/render.py [-- 対象名 ...]
 
-描画の道具は tools/blender/sheetlib.py。ここには blender-poc のシートの設定（描き分け・シート名・料金所）だけを置く
+描画の道具は tools/blender/sheetlib/。ここには blender-poc のシートの設定（描き分け・シート名・料金所）だけを置く
 （共通とアドオンの設定の分け方は tools/README.md）。
 
 出力:

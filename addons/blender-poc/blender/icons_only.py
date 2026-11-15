@@ -3,7 +3,7 @@
 使い方（アドオンのディレクトリで）:
     blender -b --factory-startup --python blender/icons_only.py
 
-アイコンの決まり（render.py の ICON_STYLES・ICON_BANDS・ICON_BADGE）だけを変えたときに使う。
+アイコンの決まり（tools/blender/sheetlib/sheetlib.py の ICON_STYLES・ICON_BANDS・ICON_BADGE）だけを変えたときに使う。
 対象は、側壁（track_wall_*）・高架（track_elev_*）・橋（track_bridge）のシート。
 """
 import os

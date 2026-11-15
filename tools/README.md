@@ -11,7 +11,7 @@
 ```powershell
 cd addons\blender-poc
 D:\bin\blender\blender.exe -b --factory-startup --python blender/render.py -- track      # アドオンの入口
-python -X utf8 ..\..\tools\blender\render_parallel.py --jobs 8 track track_old          # 入口の対象を別プロセスで並列に
+python -X utf8 ..\..\tools\blender\render_parallel.py --jobs 16 track track_old          # 入口の対象を別プロセスで並列に
 D:\bin\blender\blender.exe -b --factory-startup --python ..\..\tools\blender\compose.py -- road work\compose_road.png
 ```
 
@@ -27,7 +27,7 @@ D:\bin\blender\blender.exe -b --factory-startup --python ..\..\tools\blender\com
 | `addons/<アドオン>/blender/` のそのほか | アドオンの dat の書き出し（`track_dat.py` など）・アドオン固有の確認（`preview.py`・`icons_only.py`）。dat の中身はアドオンの値なので共通には置かない |
 | `addons/<アドオン>/ingame/` | ゲームで見本を敷くスクリプト。アドオンの名前（`bpoc_*` など）を使うのでアドオンに置く |
 
-- `sheetlib.py` の `TRACK_PROFILES`・`ROAD_PROFILES` は、入口が登録する。共通の描画が名前で引くのは `TRACK_PROFILES["new"]`（トンネル）と `ROAD_PROFILES["street"]`・`["expressway"]`（道路の部品の選択）。アドオンはこの名前で登録する
+- `sheetlib` の `TRACK_PROFILES`・`ROAD_PROFILES` は、入口が登録する。共通の描画が名前で引くのは `TRACK_PROFILES["new"]`（トンネル）と `ROAD_PROFILES["street"]`・`["expressway"]`（道路の部品の選択）。アドオンはこの名前で登録する
 - アドオンのディレクトリは、道具が `os.getcwd()` で決める。アドオンの外では動かさない
 - 入口が `tools/blender` を探す相対パスは、`addons/<アドオン>/blender/` から見た `../../../tools/blender`
 

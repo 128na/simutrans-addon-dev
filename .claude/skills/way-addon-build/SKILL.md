@@ -19,7 +19,7 @@ description: Simutrans の way 系アドオン（線路・道路・側壁・高�
 5. **本体のシートを崩さない。** 試すものは別のアドオン（別のシート・dat）にする。本体を描き直したら、前のシートと全画素を比べる
 6. **分かったことを書き分ける。** 決まりはリファレンスへ、経緯は `docs/records/` へ、手順が変わったらこのスキルへ
 
-## 2. どこを直すか（描画の道具は `tools/blender/sheetlib.py`、アドオンごとの設定は `addons/<アドオン>/blender/render.py`）
+## 2. どこを直すか（描画の道具は `tools/blender/sheetlib/`、アドオンごとの設定は `addons/<アドオン>/blender/render.py`）
 
 絵の元は 3D ファイルではなくスクリプトで、毎回形を組み立てて撮る。
 
