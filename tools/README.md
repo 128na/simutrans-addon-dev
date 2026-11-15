@@ -36,8 +36,8 @@ D:\bin\blender\blender.exe -b --factory-startup --python ..\..\tools\blender\com
 塗り（材質・汚れ・雪）を見る前に、部品の配置・組み合わせ・タイルどうしの接合を確かめるためのモード（[ADR 0005](../docs/adr/0005-ami-render-tool-conventions.md)）。
 
 ```powershell
-cd addonslender-poc
-$env:SHEET_LAYOUT = "1"; D:inlenderlender.exe -b --factory-startup --python blender/render.py -- track_wall_single
+cd addons\blender-poc
+$env:SHEET_LAYOUT = "1"; D:\bin\blender\blender.exe -b --factory-startup --python blender/render.py -- track_wall_single
 ```
 
 - 部品ごとに単色で、光の当たり方に関わらず一様に塗る。色の割り当ては `sheetlib/layout_colors.py`。部品を足したらそこにも足す（無いと `[layout] 色が未登録の部品` と出て、名前から決めた色で描く）
