@@ -59,6 +59,18 @@ function single(name, ox, oy, slopes) {
   return s;
 }
 
+// (x,y) の線路の版が w でなければ報告する（高架は地面より上にあるので、高さ 0〜4 を探す）
+function expect(x, y, w) {
+  for (local z = 0; z <= 4; z++) {
+    local t = tile_x(x, y, z);
+    if (!t.is_valid()) continue;
+    local o = t.find_object(mo_way);
+    if (o == null) continue;
+    return o.get_desc().get_name() == w.get_name() ? "" : "check " + x + "," + y + "=[" + o.get_desc().get_name() + ", want " + w.get_name() + "]\n";
+  }
+  return "check " + x + "," + y + "=[no way]\n";
+}
+
 // 3 車線の組（back・center・front）の区画（29x14）。原点 (ox,oy) から:
 //   東西の直線 (0,0)-(6,2) / 南北の直線 (9,0)-(11,6) / 直角カーブ (13,0)-(20,7) / 斜め 右下がり (22,0)〜 /
 //   奥向き・手前向きの T字 back (0,10)・front (10,10) / 近い斜め back (20,9)〜 と front (21,9)〜
@@ -73,15 +85,18 @@ function lanes(prefix, ox, oy) {
   s += r("ns b", command_x.build_way(pl, c(9, 0), c(9, 6), B, true));
   s += r("ns c", command_x.build_way(pl, c(10, 0), c(10, 6), C, true));
   s += r("ns f", command_x.build_way(pl, c(11, 0), c(11, 6), F, true));
-  // 直角カーブ（wall.nut と同じ）: 外側の線は角から先を front に、内側の線は back に切り替える
+  // 直角カーブ（wall.nut と同じ）: 外側の線は角から先を front に、内側の線は back に切り替える。
+  // つなぎ（join）を後から敷くと、角の手前のタイルまで join の版に置き換わる（back と front が逆に見える）。
+  // join を先に敷き、角の手前のタイルを直線の版で上書きする。最後に角と手前の版を確かめる
+  s += r("L outer join", command_x.build_way(pl, c(19, 0), c(20, 0), F, true));
   s += r("L outer ew", command_x.build_way(pl, c(13, 0), c(19, 0), B, true));
   s += r("L outer ns", command_x.build_way(pl, c(20, 0), c(20, 7), F, true));
-  s += r("L outer join", command_x.build_way(pl, c(19, 0), c(20, 0), F, true));
   s += r("L mid", command_x.build_way(pl, c(13, 1), c(19, 1), C, true));
   s += r("L mid2", command_x.build_way(pl, c(19, 1), c(19, 7), C, true));
+  s += r("L inner join", command_x.build_way(pl, c(17, 2), c(18, 2), B, true));
   s += r("L inner ew", command_x.build_way(pl, c(13, 2), c(17, 2), F, true));
   s += r("L inner ns", command_x.build_way(pl, c(18, 2), c(18, 7), B, true));
-  s += r("L inner join", command_x.build_way(pl, c(17, 2), c(18, 2), B, true));
+  foreach (e in [[19, 0, B], [20, 0, F], [17, 2, F], [18, 2, B]]) s += expect(ox + e[0], oy + e[1], e[2]);
   // 斜め（右下がりは東寄りが手前）
   s += r("st f", stair(F, ox + 24, oy + 0, 4, 1));
   s += r("st c", stair(C, ox + 23, oy + 1, 4, 1));
