@@ -601,11 +601,11 @@ def track_sheet(profile="new"):
         cells[(0, 1)] = render_cursor("track_trial_cursor", "100", "track")
     elif "walls" in prof or "band" in prof:
         # 側壁のバリエーションは右下の印（S・B・C・F）、橋は下の帯で区別する
-        cells[(0, 0)] = render_icon(prof["sheet"] + "_icon", 0.5, shift=(-0.14, 0.2), label="100", style="track",
+        cells[(0, 0)] = render_icon(prof["sheet"] + "_icon", 0.5, shift=(-0.14, 0.2), label=prof.get("label", "100"), style="track",
                                     badge=ICON_BADGE.get(prof.get("walls")), band=prof.get("band"))
         cells[(0, 1)] = cells[(0, 2)]
     else:
-        cells[(0, 0)] = render_icon("track_icon", 0.5, shift=(-0.14, 0.2), label="100")
+        cells[(0, 0)] = render_icon("track_icon", 0.5, shift=(-0.14, 0.2), label=prof.get("label", "100"))
         cells[(0, 1)] = cells[(0, 2)]  # カーソルは ns と同じ絵
 
     rows = block * (2 if prof.get("snow") else 1)
