@@ -130,7 +130,7 @@ def tollbooth_sheet():
     build_tollbooth(0)
     cells[(0, 4)] = R.render_icon("tollbooth_icon", 1.25, shift=(0.0, 0.2))
     cells[(0, 5)] = cells[(0, 0)]  # カーソルは向き0と同じ絵
-    R.make_sheet(cells, 1, 6, os.path.join(R.SRC, "tollbooth.png"))
+    R.make_sheet(cells, 1, 6, R.sheet_path("tollbooth.png"))
 
 # ---------------------------------------------------------------- 対象（シート名 → 描く関数）
 

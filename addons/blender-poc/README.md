@@ -39,7 +39,7 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 | `ingame/switch_check.sh` | 分岐の絵を手で確かめる準備。pak を入れ、固定の道具がある OTRP のビルドを MCP つきで `flat2` で起動し、`switch_all.nut` を敷く（`GAME_DIR=… EXE=… bash ingame/switch_check.sh`） |
 | `ingame/wall.nut`・`elev.nut`・`bridge.nut`・`tunnel.nut`・`trial.nut` | 側壁・高架・橋・トンネル・試作の見本（複線の並び、行き止まり、橋の端、坑口） |
 | `ingame/track_review.nut` | 線路の確認用パターン。線路の全種類と手本の Rail_100 を名札つきで `flat_512.sve` の温暖側・降雪側に敷く（「線路の確認用パターン」の節） |
-| `tools/blender/sheet_diff.py` | 前と後のシートを比べ、透過の範囲（輪郭）と色の差をセルごとに出す。`ALL=1` で色だけ変わったセルも出す。描き直す前のシートを `BPOC_ONLY`（描くセルを絞る。シートは `work/only/`）の結果と比べるのにも使う |
+| `tools/blender/sheet_diff.py` | 前と後のシートを比べ、透過の範囲（輪郭）と色の差をセルごとに出す。`ALL=1` で色だけ変わったセルも出す。描き直す前のシートを `SHEET_ONLY`（描くセルを絞る。シートは `work/only/`）の結果と比べるのにも使う |
 | `ingame/train.nut` | 車両を走らせる確認（未完成。ダイヤの設定が通らない） |
 | `src/track_wall_*.dat`・`track_elev_*.dat` | 側壁付きの線路・高架。`single`（両側の壁）・`back`（奥だけ）・`center`（なし）・`front`（手前だけ） |
 | `src/track_bridge.dat`・`track_tunnel.dat`・`track_trial.dat` | 橋、トンネル、試作（車止め） |
@@ -66,10 +66,10 @@ cd src; makeobj pak256 ..\dist\bpoc.pak track.dat track_old.dat track_trial.dat 
 
 iss と同じく `pak256` で 256px セルとして切り出す（ゲームは pak128）。
 
-一部のシートだけ描き直すときは、シートごとに別のプロセスで同時に描く（同時に 8 まで）:
+一部のシートだけ描き直すときは、シートごとに別のプロセスで同時に描く（同時に動かす数は `--jobs`。既定は `tools/blender/sheet_settings.py` の `JOBS`、環境変数 `SHEET_JOBS`）:
 
 ```powershell
-python -X utf8 ../../tools/blender/render_parallel.py --jobs 8 track track_old track_wall_back track_elev_back
+python -X utf8 ../../tools/blender/render_parallel.py --jobs 16 track track_old track_wall_back track_elev_back
 ```
 
 1 プロセスは CPU をほとんど使わず、13 枚を 1 プロセスで描くと 40 分ほどかかった。壁あり・高架の 6 枚は 8 並列で約 5 分（2026-11-14）。
@@ -781,10 +781,10 @@ pak に入れるときの `makeobj` の引数は、上の「ビルド」の行�
 - 分岐で二つの経路の壁が同じ位置に重なる所は、先の経路の壁だけを残す（後の経路の壁は、先の壁の位置まで含めて削る）。
   重なった切れ端が、奥/手前の版で余分な壁として残っていた
 
-**確認用の色**: 環境変数 `BPOC_DEBUG_COLORS=1` を付けて `render.py` を動かすと、部品を見分けやすい色で描く
-（道床: 黄、まくらぎ: 白、レール: 黒、壁: 赤、基盤: 青、壁のない側の基盤: 緑）。シートと dat は `work/debug/` に書き、`src/` は変えない。
-ゲームで見るときは `work/debug/` で `makeobj` を回す。今回の T字と斜めの作り分けは、この色でセルを見て確かめた。
-汚れの入った線路は、まくらぎを材質の差し替え（`TRACK_WEAR_SKIN`）で描くので、この色でも白にならずまだらになる。`BPOC_ONLY` と一緒に付けると、出力先は `work/only/` になり dat は写さない（2026-11-15）
+**レイアウト検証用モード**: 環境変数 `SHEET_LAYOUT=1` を付けて `render.py` を動かすと、部品ごとに見分けやすい単色で描く
+（色の割り当ては `tools/blender/sheetlib/layout_colors.py`。部品を足したらそこにも足す）。光の当たり方に関わらず一様な色になる。
+シートと dat は `work/layout/` に書き、`src/` は変えない。ゲームで見るときは `work/layout/` で `makeobj` を回す。
+`SHEET_ONLY` と一緒に付けても出力先は `work/layout/`（2026-11-15。前は `BPOC_DEBUG_COLORS` で、道床・まくらぎ・レール・壁・基盤の 3〜6 色だけだった）
 
 ゲームで確かめた（`ingame/wall.nut`。`docs/trial_wall_diag.png`・`docs/trial_wall_tee.png`）:
 - 斜めの 3 線（奥+中+手前。縦向き・横向き）: 基盤が 1 枚につながり、外側の縁に壁が続く

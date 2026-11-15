@@ -3,7 +3,7 @@
 側壁付きの線路（`bpoc_track_wall_{single,back,center,front}`）・高架（`bpoc_track_elev_{...}`）・橋（`bpoc_track_bridge`）を「できた」と言うための条件。
 道路・高速道路は「9. 道路・高速道路」にまとめた。
 直すたびにこの表で確かめ、条件が増えたらここに足す。確かめ方の「見本」は `ingame/` のスクリプト、
-「色」は確認用の色（`BPOC_DEBUG_COLORS=1`。壁: 赤、基盤: 青、道床: 黄）でセルを見ること。
+「色」はレイアウト検証用モード（`SHEET_LAYOUT=1`。部品ごとの単色。壁: 赤、基盤: 青、道床: 黄）でセルを見ること。
 
 状態: ○ ゲームで確かめた / △ セルの絵で確かめた（ゲームは未確認）/ × 未対応 / ？ 未確認
 
@@ -139,7 +139,7 @@ way のアドオンは、絵が 28 種類ある（`image` 16・`imageup` 4・`im
 ## 確かめ方の手順
 
 1. `python -X utf8 blender/track_dat.py`（dat を書き出す）
-2. `BPOC_DEBUG_COLORS=1` を付けて `blender/render.py -- <シート名>` を動かし、`work/debug/` のシートのセルを見る（壁・基盤の出方）
+2. `SHEET_LAYOUT=1` を付けて `blender/render.py -- <シート名>` を動かし、`work/layout/` のシートのセルを見る（壁・基盤の出方）
 3. 通常の色で描き直し、`makeobj` で pak を作ってゲームに入れる
 4. `flat.sve` で `bash ingame/full_check.sh` を回し、`work/full/<way>.png` を 1 枚ずつ見る（全方位の表示確認）。
    複線・行き止まりの並び・橋・高架・トンネルは `ingame/wall.nut`・`elev.nut`・`bridge.nut`・`tunnel.nut` を流して撮る

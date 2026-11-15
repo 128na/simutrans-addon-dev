@@ -19,7 +19,8 @@ D:\bin\blender\blender.exe -b --factory-startup --python ..\..\tools\blender\com
 
 | どこ | 置くもの |
 |---|---|
-| `tools/blender/sheetlib.py` | 描画の共通部分。カメラ・基準面（`Datum`）・部品（`Part`）・組み立て（`assemble`）・材質・線路と道路の形・壁・高架・橋・トンネル・セルの描画・シート化・アイコン・特殊色。シート名や部品の組み合わせは持たない |
+| `tools/blender/sheetlib/` | 描画の共通部分（パッケージ）。部品をそれが表す物ごとに分けてある: `core`（設定値・シーン・材質・形の部品・基準面 `Datum` と部品 `Part` の型）、`track_parts`（線路: 道床・まくらぎ・レール・車止め・汚れ）、`wall_parts`（壁・基盤・橋・高架の橋脚。線路と道路で共通）、`road_parts`（道路: 路面・縁石・歩道・白線・車線・汚れ・雪）、`assemble`（部品を経路ごとに組み立てる）、`cells`（セルの描画・特殊色・シート化）、`sheetlib`（線路・道路・トンネル・アイコンのシートと `run_targets`）。シート名や、部品をどの版に使うかは持たない |
+| `tools/blender/sheet_settings.py` | 設定値: 並列数（`JOBS`、環境変数 `SHEET_JOBS`）・Blender の場所（`SHEET_BLENDER`）・モード（`SHEET_LAYOUT`・`SHEET_ONLY`）。Blender を使わないので `render_parallel.py` も読む |
 | `tools/blender/` のそのほか | 判定・比較・確認の道具（`compose`・`ingame_diff`・`seam_judge`・`slope_measure`・`sheet_diff`・`special`・`special_preview`・`zoom`・`hcat`・`ref_measure`・`check`）と並列描画（`render_parallel`） |
 | `addons/<アドオン>/blender/render.py` | アドオンのシートの入口。`sys.path` に `tools/blender` を足して `sheetlib` を import し、描き分け（`R.TRACK_PROFILES`・`R.ROAD_PROFILES` への登録）と、対象名 → 描く関数の対応（`SHEETS`）を決めて `R.run_targets(SHEETS, 既定の対象)` を呼ぶ |
 | `addons/<アドオン>/blender/addon_config.py` | 判定・比較の道具が読む設定。`PREFIX`（ゲームのタイル一覧でこのアドオンの道を見分ける名前の接頭辞）・`SHEETS`（道の名前 → シート名）・`DIAG_CURVE_SHEETS`（カーブに斜めの絵を使うシート） |
@@ -29,3 +30,16 @@ D:\bin\blender\blender.exe -b --factory-startup --python ..\..\tools\blender\com
 - `sheetlib.py` の `TRACK_PROFILES`・`ROAD_PROFILES` は、入口が登録する。共通の描画が名前で引くのは `TRACK_PROFILES["new"]`（トンネル）と `ROAD_PROFILES["street"]`・`["expressway"]`（道路の部品の選択）。アドオンはこの名前で登録する
 - アドオンのディレクトリは、道具が `os.getcwd()` で決める。アドオンの外では動かさない
 - 入口が `tools/blender` を探す相対パスは、`addons/<アドオン>/blender/` から見た `../../../tools/blender`
+
+## レイアウト検証用モード
+
+塗り（材質・汚れ・雪）を見る前に、部品の配置・組み合わせ・タイルどうしの接合を確かめるためのモード（[ADR 0005](../docs/adr/0005-ami-render-tool-conventions.md)）。
+
+```powershell
+cd addonslender-poc
+$env:SHEET_LAYOUT = "1"; D:inlenderlender.exe -b --factory-startup --python blender/render.py -- track_wall_single
+```
+
+- 部品ごとに単色で、光の当たり方に関わらず一様に塗る。色の割り当ては `sheetlib/layout_colors.py`。部品を足したらそこにも足す（無いと `[layout] 色が未登録の部品` と出て、名前から決めた色で描く）
+- シートと dat は `work/layout/` に書く。`src/` は変えない
+- 通常の出力は変わらない（モードを付けたときだけ働く）
