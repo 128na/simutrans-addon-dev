@@ -234,3 +234,17 @@ ex 画像を持つ way だけが対象。形は blender-poc の見本（`ingame/
 - 列車の予約で switch 画像に切り替わる処理は、ex 画像のタイルでは働かない（`schiene_t::reserve` の `!get_is_ex_image()`）。
 - ダイアログの選択肢 3・4 の名前（`gui/ground_info.cc` の「Y-junction」「Double crossover」）は、`128na/simutrans` の改修（2026-11-14）で付けた仮のもの。線路の十字の 3・4 は自動では使われないので、名前は見直す余地がある。
 - 敷くときの癖: スクリプトの `build_way` で、カーブになったタイルから 3 本目を足すと、タイルの向きが崩れた（つながらない絵になる）。両側を先に 1 本で通してから枝を足すと正しく敷ける（`OTRPv64_3.exe`、2026-11-14）。
+
+### 9.5 本家での読み込み
+
+- 分岐の絵（26 枚の way）と近い斜め（`diagonal[close1]`・`[close2]`）を持つ blender-poc の `bpoc.pak` は、本家 125.0.1 で動いた（ユーザーが確かめた。2026-11-15）。本家では分岐の絵が使われないだけ
+
+## 10. way-object（壁などを way に重ねる物）
+
+| こと | 決まり | 確かめた場所 |
+|---|---|---|
+| 絵のキー | `backimage`・`frontimage`（16 方向）、`backimageup`・`frontimageup`（`[3]` `[6]` `[9]` `[12]`）、`backimageup2`・`frontimageup2`、`backdiagonal`・`frontdiagonal` | `descriptor/writer/way_obj_writer.cc` |
+| 雪の絵 | キーが無い（way の `[1]` に当たるものが無い） | 同上 |
+| 近い斜めの絵 | 本体は読む（`get_back_close_diagonal_image_id` など。絵があるときだけ、十字のタイルで使う）。makeobj（60.12）の書く側のキーの表（`ribi_codes`、`-`〜`nsew2` の 26 個）に close が無く、書けない | `descriptor/way_obj_desc.h`・`descriptor/reader/way_obj_reader.cc`・`obj/wayobj.cc`・`descriptor/writer/way_obj_writer.cc`（OTRP、2026-11-15） |
+| 1 タイルに置ける数 | waytype ごとに 1 つ。tram は track と同じに数える。同じ waytype の別の way-object を置くと、前のものを置き換える（遅い物を速い物で置き換える設定のときは、速さで決まる）。架線も `waytype=track` の way-object なので、線路の壁と架線は同じタイルに両方は置けない | `boden/grund.cc` の `grund_t::get_wayobj`、`obj/wayobj.cc` の `wayobj_t::extend_wayobj` |
+| 手本 | iss の線路の壁は、架線の way-object に入っている（`../iss/src/way-object/rail/catenary_new.dat` の `iss_ot_new_position_catenary_{single,back,center,front}`。`own_waytype=electrified_track`）。道路の壁と中央分離帯も、1 つにまとめた way-object がある（`way-object/road/wall_with_center_divider.dat`）。道路の側壁は way-object（`../iss/src/way-object/road/wall_1.dat`。`waytype=road`・`own_waytype=road`・`topspeed=65535`）。橋脚（`util/pier/ground`、`waytype=tram_track`）と歩道（`util/sidewalk`、`waytype=water`）は、別の waytype の way を隣や下のタイルに敷く | `../iss/src/`（2026-11-15） |
