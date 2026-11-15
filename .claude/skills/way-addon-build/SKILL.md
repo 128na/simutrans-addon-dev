@@ -49,6 +49,7 @@ description: Simutrans の way 系アドオン（線路・道路・側壁・高�
 | 複線・行き止まりの並び・高架・橋・トンネル | `ingame/wall.nut`・`elev.nut`・`bridge.nut`・`tunnel.nut` |
 | 近い斜め（1 タイルずらした斜め 2 本） | `ingame/close_diag.nut` を `flat2` の x=105 から右に流す。全版の南東・北東の組を並べる。決まりはリファレンスの 5・6 章 |
 | 雪 | `flat_512.sve` の降雪側（x=256〜）に同じ見本を流す（古い見本は `flat_snow.sve`） |
+| 線路・道路の全種類をまとめて見る | `flat_512.sve` で `ingame/track_review.nut`（線路）・`ingame/road_review.nut`（道路）を流す。温暖側と降雪側に同じ並びで敷かれる。座標は README の「確認用パターン」の節 |
 | 本体が変わっていないこと | 描き直して前のシートと全画素を比べる（`blender/sheet_diff.py`。前のシートは `git show HEAD:<パス>` で取り出す）。汚れのように色を意図して変えたときは、透過の範囲（輪郭）の差が 0 であることを見る |
 | アイコンだけ直したとき | `blender/icons_only.py`（絵のセルを描き直さない） |
 | 車両との重なり | ユーザーに手で編成を走らせてもらう |
