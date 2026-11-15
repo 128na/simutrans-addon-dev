@@ -44,11 +44,13 @@ description: Simutrans の way 系アドオン（線路・道路・側壁・高�
 | 何を | どうやって |
 |---|---|
 | 部品の出方 | `BPOC_DEBUG_COLORS=1 blender ... render.py -- <シート>` → `work/debug/` のセルを見る |
+| 形や色を試すとき | `BPOC_ONLY=ew,nse,diag_nw blender ... render.py -- <シート>` で線路のシートのセルを絞って描く（`ns` はいつも入る）。シートは `work/only/` に書かれ、`src/` は変わらない |
 | 全方位の表示 | `bash ingame/full_check.sh`（`ingame/full.nut` のレイアウト。way ごとに 5 か所を並べる。`WAYS` で way を、`OY` で並べ始める行を選ぶ。保存データの空いている行に合わせる） |
 | 複線・行き止まりの並び・高架・橋・トンネル | `ingame/wall.nut`・`elev.nut`・`bridge.nut`・`tunnel.nut` |
 | 近い斜め（1 タイルずらした斜め 2 本） | `ingame/close_diag.nut` を `flat2` の x=105 から右に流す。全版の南東・北東の組を並べる。決まりはリファレンスの 5・6 章 |
 | 雪 | `flat_512.sve` の降雪側（x=256〜）に同じ見本を流す（古い見本は `flat_snow.sve`） |
-| 本体が変わっていないこと | 描き直して前のシートと全画素を比べる |
+| 線路・道路の全種類をまとめて見る | `flat_512.sve` で `ingame/track_review.nut`（線路）・`ingame/road_review.nut`（道路）を流す。温暖側と降雪側に同じ並びで敷かれる。座標は README の「確認用パターン」の節 |
+| 本体が変わっていないこと | 描き直して前のシートと全画素を比べる（`blender/sheet_diff.py`。前のシートは `git show HEAD:<パス>` で取り出す）。色を意図して変えたときの見方は `ACCEPTANCE.md` の 5-3 |
 | アイコンだけ直したとき | `blender/icons_only.py`（絵のセルを描き直さない） |
 | 車両との重なり | ユーザーに手で編成を走らせてもらう |
 | 分岐の絵（OTRP の switch 画像） | 固定の道具がある OTRP のビルドで `ingame/switch_check.sh` を回す（空の平らなマップ `flat2` で起動し、`ingame/switch_all.nut` で線路の全アドオンの標準・選択 1・選択 2 と自動選択の 8 通りを敷く）。自動選択は分岐のカーブが隣のカーブへなめらかにつながるか、固定は選択ごとに絵が変わるかを見る。手で見るなら T字を作り、タイルの詳細で選択肢を順に選ぶ。キーと絵の対応・曲がる側はリファレンスの 9 章 |
