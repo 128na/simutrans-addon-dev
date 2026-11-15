@@ -73,15 +73,16 @@ function lanes(prefix, ox, oy) {
   s += r("ns b", command_x.build_way(pl, c(9, 0), c(9, 6), B, true));
   s += r("ns c", command_x.build_way(pl, c(10, 0), c(10, 6), C, true));
   s += r("ns f", command_x.build_way(pl, c(11, 0), c(11, 6), F, true));
-  // 直角カーブ（wall.nut と同じ）: 外側の線は角から先を front に、内側の線は back に切り替える
+  // 直角カーブ（wall.nut と同じ）: 外側の線は角から先を front に、内側の線は back に切り替える。
+  // つなぎ（join）は先に敷く。後から敷くと角の手前のタイルまで join の版に置き換わる（docs/reference/way-addon.md の 6 章）
+  s += r("L outer join", command_x.build_way(pl, c(19, 0), c(20, 0), F, true));
   s += r("L outer ew", command_x.build_way(pl, c(13, 0), c(19, 0), B, true));
   s += r("L outer ns", command_x.build_way(pl, c(20, 0), c(20, 7), F, true));
-  s += r("L outer join", command_x.build_way(pl, c(19, 0), c(20, 0), F, true));
   s += r("L mid", command_x.build_way(pl, c(13, 1), c(19, 1), C, true));
   s += r("L mid2", command_x.build_way(pl, c(19, 1), c(19, 7), C, true));
+  s += r("L inner join", command_x.build_way(pl, c(17, 2), c(18, 2), B, true));
   s += r("L inner ew", command_x.build_way(pl, c(13, 2), c(17, 2), F, true));
   s += r("L inner ns", command_x.build_way(pl, c(18, 2), c(18, 7), B, true));
-  s += r("L inner join", command_x.build_way(pl, c(17, 2), c(18, 2), B, true));
   // 斜め（右下がりは東寄りが手前）
   s += r("st f", stair(F, ox + 24, oy + 0, 4, 1));
   s += r("st c", stair(C, ox + 23, oy + 1, 4, 1));

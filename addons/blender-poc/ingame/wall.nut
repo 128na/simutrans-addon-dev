@@ -84,14 +84,21 @@ out += r("st back", stair(pl, wb, 20, 207, 5, 1));
 out += r("st2 back", stair(pl, wb, 20, 227, 5, -1));
 out += r("st2 none", stair(pl, wn, 21, 228, 5, -1));
 out += r("st2 front", stair(pl, wf, 22, 229, 5, -1));
-// 直角カーブの 3 線（x=100〜, y=20〜）: 東西の区間は北が奥、南北の区間は西が奥なので、外側の線路は角から先を front に、内側の線路は back に切り替える
+// 直角カーブの 3 線（x=100〜, y=20〜）: 東西の区間は北が奥、南北の区間は西が奥なので、外側の線路は角から先を front に、内側の線路は back に切り替える。
+// つなぎ（join）は先に敷く。後から敷くと角の手前のタイルまで join の版に置き換わる（docs/reference/way-addon.md の 6 章）
+out += r("L outer join", command_x.build_way(pl, coord3d(106, 20, 0), coord3d(107, 20, 0), wf, true));
 out += r("L outer ew", command_x.build_way(pl, coord3d(100, 20, 0), coord3d(106, 20, 0), wb, true));
 out += r("L outer ns", command_x.build_way(pl, coord3d(107, 20, 0), coord3d(107, 27, 0), wf, true));
-out += r("L outer join", command_x.build_way(pl, coord3d(106, 20, 0), coord3d(107, 20, 0), wf, true));
 out += r("L mid", command_x.build_way(pl, coord3d(100, 21, 0), coord3d(106, 21, 0), wn, true));
 out += r("L mid2", command_x.build_way(pl, coord3d(106, 21, 0), coord3d(106, 27, 0), wn, true));
+out += r("L inner join", command_x.build_way(pl, coord3d(104, 22, 0), coord3d(105, 22, 0), wb, true));
 out += r("L inner ew", command_x.build_way(pl, coord3d(100, 22, 0), coord3d(104, 22, 0), wf, true));
 out += r("L inner ns", command_x.build_way(pl, coord3d(105, 22, 0), coord3d(105, 27, 0), wb, true));
-out += r("L inner join", command_x.build_way(pl, coord3d(104, 22, 0), coord3d(105, 22, 0), wb, true));
+// 角と手前のタイルの版を確かめる（違えば check を返す）
+foreach (e in [[106, 20, wb], [107, 20, wf], [104, 22, wf], [105, 22, wb]]) {
+  local o = tile_x(e[0], e[1], 0).find_object(mo_way);
+  local n = o == null ? "no way" : o.get_desc().get_name();
+  if (n != e[2].get_name()) out += "check " + e[0] + "," + e[1] + "=[" + n + ", want " + e[2].get_name() + "]\n";
+}
 gui.close_all_windows();
 return out;
