@@ -37,6 +37,8 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 | `ingame/switch_auto.nut` | 自動選択の 8 通りだけを `bpoc_track` で敷く（`flat.sve` の y=120） |
 | `ingame/switch_check.sh` | 分岐の絵を手で確かめる準備。pak を入れ、固定の道具がある OTRP のビルドを MCP つきで `flat2` で起動し、`switch_all.nut` を敷く（`GAME_DIR=… EXE=… bash ingame/switch_check.sh`） |
 | `ingame/wall.nut`・`elev.nut`・`bridge.nut`・`tunnel.nut`・`trial.nut` | 側壁・高架・橋・トンネル・試作の見本（複線の並び、行き止まり、橋の端、坑口） |
+| `ingame/track_review.nut` | 線路の確認用パターン。線路の全種類と手本の Rail_100 を名札つきで `flat_512.sve` の温暖側・降雪側に敷く（「線路の確認用パターン」の節） |
+| `blender/sheet_diff.py` | 前と後のシートを比べ、透過の範囲（輪郭）と色の差をセルごとに出す。`ALL=1` で色だけ変わったセルも出す。描き直す前のシートを `BPOC_ONLY`（描くセルを絞る。シートは `work/only/`）の結果と比べるのにも使う |
 | `ingame/train.nut` | 車両を走らせる確認（未完成。ダイヤの設定が通らない） |
 | `src/track_wall_*.dat`・`track_elev_*.dat` | 側壁付きの線路・高架。`single`（両側の壁）・`back`（奥だけ）・`center`（なし）・`front`（手前だけ） |
 | `src/track_bridge.dat`・`track_tunnel.dat`・`track_trial.dat` | 橋、トンネル、試作（車止め） |
@@ -780,7 +782,8 @@ pak に入れるときの `makeobj` の引数は、上の「ビルド」の行�
 
 **確認用の色**: 環境変数 `BPOC_DEBUG_COLORS=1` を付けて `render.py` を動かすと、部品を見分けやすい色で描く
 （道床: 黄、まくらぎ: 白、レール: 黒、壁: 赤、基盤: 青、壁のない側の基盤: 緑）。シートと dat は `work/debug/` に書き、`src/` は変えない。
-ゲームで見るときは `work/debug/` で `makeobj` を回す。今回の T字と斜めの作り分けは、この色でセルを見て確かめた
+ゲームで見るときは `work/debug/` で `makeobj` を回す。今回の T字と斜めの作り分けは、この色でセルを見て確かめた。
+汚れの入った線路は、まくらぎを材質の差し替え（`TRACK_WEAR_SKIN`）で描くので、この色でも白にならずまだらになる。`BPOC_ONLY` と一緒に付けると、出力先は `work/only/` になり dat は写さない（2026-11-15）
 
 ゲームで確かめた（`ingame/wall.nut`。`docs/trial_wall_diag.png`・`docs/trial_wall_tee.png`）:
 - 斜めの 3 線（奥+中+手前。縦向き・横向き）: 基盤が 1 枚につながり、外側の縁に壁が続く
@@ -972,7 +975,8 @@ pak128 の高架は、本体の既定で床が地面の 2 段上になる（`way
   - `oil`: レールの間の中ほどの油の暗い帯
   - `sleeper_rust`: まくらぎの上面の、締結の周りのさび（道床の帯とつながる）
   - まくらぎのくすみ: まくらぎの材質の差し替え（`TRACK_WEAR_SKIN`）
-- 色の模様はワールドの位置で決める（`track_noise`）。T字・十字で経路ごとの帯が重なっても同じ模様になり、ちらつかない
+- 試作にあった、レールの頭を明るい鋼の色にする部品（`rail_top`）と古いさび色はやめ、上の帯に置き換えた
+- 色の模様は部品の位置で決める（`track_noise`。Texture Coordinate の Object。部品の原点はどれも 0 なので、ワールドの位置と同じになる）。T字・十字で経路ごとの帯が重なっても同じ模様になり、ちらつかない
 - 雪の絵: 汚れの帯を、雪の色から灰色へ寄せた「汚れた雪」に差し替える（`TRACK_SNOW_WEAR_SKIN`）。列車の通るレールの周りだけ雪が汚れる。
   道路で車道を除雪して夏と同じにしたのに当たる（道路は車道が汚れたまま見え、線路は道床が雪に埋もれるので、汚れも雪の上に出す）
 - 直したこと:

@@ -73,7 +73,7 @@ function expect(x, y, w) {
 
 // 3 車線の組（back・center・front）の区画（29x14）。原点 (ox,oy) から:
 //   東西の直線 (0,0)-(6,2) / 南北の直線 (9,0)-(11,6) / 直角カーブ (13,0)-(20,7) / 斜め 右下がり (22,0)〜 /
-//   奥向き・手前向きの T字 back (0,10)・front (10,10) / 近い斜め back (20,9)〜 と front (21,9)〜
+//   奥向き・手前向きの T字 back (0,9)-(8,13)・front (10,9)-(18,13) / 近い斜め back (20,9)〜 と front (21,9)〜
 function lanes(prefix, ox, oy) {
   local B = way(prefix + "back"), C = way(prefix + "center"), F = way(prefix + "front");
   local c = function(x, y) { return coord3d(ox + x, oy + y, 0); };

@@ -25,7 +25,7 @@ def load(p):
 b, n = load(a[0]), load(a[1])
 if b.shape != n.shape:
     print("[diff] size differs", b.shape, n.shape)
-    sys.exit(0)
+    sys.exit(1)
 key = lambda x: (x[..., 0] == 231) & (x[..., 1] == 255) & (x[..., 2] == 255)
 kb, kn = key(b), key(n)
 col = (np.abs(b - n).max(-1) > 0) & ~kb & ~kn

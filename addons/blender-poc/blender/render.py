@@ -396,7 +396,7 @@ TRACK_EXTRAS = (
     # 汚れ（group "weathering"）は下の TRACK_WEAR から足す
 )
 def track_noise(name, lo, hi, scale):
-    """線路の汚れ・くすみの材質: 2 色のまだら。模様はワールドの位置で決める（T字・十字で経路ごとの帯が重なっても同じ模様になり、ちらつかない）。"""
+    """線路の汚れ・くすみの材質: 2 色のまだら。模様は部品の位置（Object 座標。部品の原点はどれも 0 なのでワールドの位置と同じ）で決める（T字・十字で経路ごとの帯が重なっても同じ模様になり、ちらつかない）。"""
     def make():
         m = noisy_material(name, lo, hi, scale=scale, rough=0.9)
         nt = m.node_tree
