@@ -106,13 +106,13 @@ CC BY 4.0。
 アドオンのディレクトリ（`addons/ami/`）で、描画の道具は `tools/` にある（[tools/README.md](../../tools/README.md)）。
 
 ```powershell
-D:inlenderlender.exe -b --factory-startup --python blender/render.py   # シートを src/ へ（対象を絞るなら末尾に -- ami_rail_ballast）
+D:\bin\blender\blender.exe -b --factory-startup --python blender/render.py   # シートを src/ へ（対象を絞るなら末尾に -- ami_rail_ballast）
 python -X utf8 blender/ami_dat.py                                              # dat を src/ へ
 python -X utf8 build.py                                                        # makeobj で dist/ へ
 ```
 
 - `build.py` は、全部入りのまとめ `dist/ami.pak` と、種類別の `ami_rail.pak`（線路）・`ami_tram.pak`（路面軌道）・`ami_road.pak`（道路）・`ami_extra.pak`（付属）を作る。dat が無い種類は作らない。makeobj の出力に警告かエラーがあれば止まる
-- シートを複数描くときは `python -X utf8 ..\..	oolslenderender_parallel.py <対象>...`。レイアウト検証用モードは `SHEET_LAYOUT=1`（`work/layout/` に書く）
+- シートを複数描くときは `python -X utf8 ..\..\tools\blender\render_parallel.py <対象>...`。レイアウト検証用モードは `SHEET_LAYOUT=1`（`work/layout/` に書く）
 - `src/`（dat とシート）はコミットする。`dist/` と `work/` はコミットしない
 - 設定は `blender/render.py`（描き分け・シート名）、`blender/ami_dat.py`（dat と値）、`blender/addon_config.py`（判定の道具が読む対応表）
 

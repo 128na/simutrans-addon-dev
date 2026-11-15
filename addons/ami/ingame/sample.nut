@@ -1,6 +1,6 @@
 // AMI の見本（雛形）: 絵を作った way を、直線・カーブ・T字・十字・斜め・坂の十字の並びで敷く。
 // 検証用の flat_512.sve に、温暖側 (20,20) と降雪側 (276,20) の 2 か所へ同じ並びで敷く（降雪側は雪の絵が出る）。
-// way は WAYS の順に、SPACING タイルずつ南へずらして 1 本ずつ敷く。名札（ASCII）付き。dat の無い way は飛ばす（WAYS に足すだけで増える）。
+// way は WAYS の順に、SPACING タイルずつ南へずらして 1 本ずつ敷く。名札（ASCII）付き。見つからない way は失敗として報告する（WAYS には dat と pak を作った way だけを足す）。
 // 使い方: ゲームを -mcp-port 47123 で起動し、flat_512 を開いて
 //   python <mcp_client.py> --port 47123 --timeout 300 --run-squirrel "$(cat ingame/sample.nut)"
 // 返り値の先頭が ok なら全部敷けた。失敗した所は「名前 場所=[…]」で続く。
