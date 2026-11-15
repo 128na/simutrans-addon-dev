@@ -9,36 +9,37 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 
 | ファイル | 内容 |
 |---|---|
-| `blender/render.py` | Blender をコマンドで動かし、形状をスクリプトで組み立てて描画し、シート画像を作る |
-| `blender/check.py` | 描画位置の検証。タイル菱形の位置と、iss の既存画像との描画範囲を比べる |
+| `blender/render.py` | このアドオンのシートの入口。描き分け（`TRACK_PROFILES`・`ROAD_PROFILES`）・シート名・料金所を持ち、描画の道具（`tools/blender/sheetlib/`）で形状を組み立てて描画し、シート画像を作る |
+| `blender/addon_config.py` | `tools/blender` の判定・比較の道具が読む設定（道の名前・接頭辞・シート名） |
+| `tools/blender/check.py` | 描画位置の検証。タイル菱形の位置と、iss の既存画像との描画範囲を比べる |
 | `blender/preview.py` | 確認用の拡大画像 `work/preview.png` を作る |
-| `blender/compose.py` | つなぎ目の確認。シートのセルをゲームと同じ位置・順番で並べた画像を作る |
-| `blender/ingame_diff.py` | ゲームの画面と、シートのセルを同じ順に貼った予想図を画素単位で比べる |
-| `blender/ref_measure.py` | 手本の画像（pak128 のソース・iss の元絵・このアドオンのシート）で、直線・斜めが理想の位置から何 px ずれているかと、直線のレールの行を測る |
-| `blender/zoom.py` | 画像の指定した座標の周りを拡大して並べる（ツールが出した候補を目で確かめる） |
+| `tools/blender/compose.py` | つなぎ目の確認。シートのセルをゲームと同じ位置・順番で並べた画像を作る |
+| `tools/blender/ingame_diff.py` | ゲームの画面と、シートのセルを同じ順に貼った予想図を画素単位で比べる |
+| `tools/blender/ref_measure.py` | 手本の画像（pak128 のソース・iss の元絵・このアドオンのシート）で、直線・斜めが理想の位置から何 px ずれているかと、直線のレールの行を測る |
+| `tools/blender/zoom.py` | 画像の指定した座標の周りを拡大して並べる（ツールが出した候補を目で確かめる） |
 | `ingame/sis_check.sh` | SIS・pak128 標準の道路とのつなぎ目を MCP で撮る（`ingame/road_seam.nut` を敷いた後） |
 | `ingame/slope_ref.nut` | 手本どうしの継ぎ目: `seam.nut` の坂と同じ並びを x=156 に Rail_100 だけで敷く。こちらの継ぎ目と同じ判定にかけて比べる |
-| `ingame/seam_check.sh` | 他のアドオン・pak128 標準とのつなぎ目を撮り、`blender/seam_judge.py` で継ぎ目ごとに合否を出す（`seam.nut`・`road_seam.nut` を敷いた後） |
-| `blender/seam_judge.py` | 他のアドオンとの継ぎ目の判定。継ぎ目の草・帯の中心のずれ・模様（レール・白線）のずれを測る |
+| `ingame/seam_check.sh` | 他のアドオン・pak128 標準とのつなぎ目を撮り、`tools/blender/seam_judge.py` で継ぎ目ごとに合否を出す（`seam.nut`・`road_seam.nut` を敷いた後） |
+| `tools/blender/seam_judge.py` | 他のアドオンとの継ぎ目の判定。継ぎ目の草・帯の中心のずれ・模様（レール・白線）のずれを測る |
 | `ingame/steep.nut` | 坂の十字の見本: 線路（新・旧）と Rail_100 の急坂（2段の坂）、Rail_100 の1段の坂を y=60 に敷く |
-| `ingame/steep_check.sh` | 坂・急坂の十字を撮り、`blender/slope_measure.py` で坂のタイルごとに合否を出す。このアドオンの線路は `ingame_diff.py` の差分も出す（`steep.nut` を敷いた後） |
-| `blender/slope_measure.py` | 坂の線路の判定。直線のタイル（平地・坂・急坂）ごとに道床の縁・レールの位置・まくらぎの濃淡を測り、レールが道床の中ほどにあるかを平地と比べる |
+| `ingame/steep_check.sh` | 坂・急坂の十字を撮り、`tools/blender/slope_measure.py` で坂のタイルごとに合否を出す。このアドオンの線路は `ingame_diff.py` の差分も出す（`steep.nut` を敷いた後） |
+| `tools/blender/slope_measure.py` | 坂の線路の判定。直線のタイル（平地・坂・急坂）ごとに道床の縁・レールの位置・まくらぎの濃淡を測り、レールが道床の中ほどにあるかを平地と比べる |
 | `ingame/capture_check.sh` | 4種類 × 6か所を MCP で撮り、`ingame_diff.py` で比べる（ゲームを MCP ポート付きで起動しておく） |
-| `blender/special.py` | 特殊色の検査。シートに特殊色が何 px、どのセルにあるかを数える |
-| `blender/special_preview.py` | 特殊色の見え方の再現（昼・会社の色を変えたとき・夜）|
+| `tools/blender/special.py` | 特殊色の検査。シートに特殊色が何 px、どのセルにあるかを数える |
+| `tools/blender/special_preview.py` | 特殊色の見え方の再現（昼・会社の色を変えたとき・夜）|
 | `blender/track_dat.py` | 線路の dat をまとめて書き出す（手前の絵 `front...` と雪 `[1]` の行を、シートの行の並びどおりに付ける） |
 | `blender/icons_only.py` | 線路のシートのアイコンだけを描き直して差し替える |
-| `blender/hcat.py` | ゲームの画面を横に並べて 1 枚にする |
+| `tools/blender/hcat.py` | ゲームの画面を横に並べて 1 枚にする |
 | `ingame/full.nut`・`ingame/full_check.sh` | 全方位の表示確認。way の絵 28 種類を周りとつながった形で出す最小のレイアウトを敷き、way ごとに 5 か所を撮って並べる |
 | `ingame/switch_all.nut` | 分岐の絵（OTRP の switch 画像）を線路の 11 アドオンで全部見る見本。空の平らなマップ（`flat2.sve`）に way ごとに 1 行、標準・選択 1・選択 2 に固定した T字と十字、自動選択の 8 通りを名札つきで敷く |
 | `ingame/switch_ex_shapes.nut` | ex 画像（Y字分岐・三方・渡り線）を本体が自動で選ぶ線路の形を、`flat2.sve` の y=130 から下に敷く。既定は `bpoc_track`（絵は通常のまま）。先頭の `WAY` を `bpoc_track_ex_proto`、`OX` を 100 にすると、試作の way で敷いて分岐の絵を固定する |
 | `ingame/close_diag.nut` | 近い斜め（1 タイルずらして並べた斜め 2 本）の見本。`flat2.sve` の x=105 から右に、線路の全版（壁なし 3 種・側壁・高架の 2 本と 3 本）と道路・高速道路の南東・北東の組を名札つきで敷く |
-| `blender/render_parallel.py` | シートを Blender の別々のプロセスで同時に描く（`--jobs` 既定 8、上限 8）。ふつうの Python で動かす |
+| `tools/blender/render_parallel.py` | シートを Blender の別々のプロセスで同時に描く（`--jobs` 既定は `sheet_settings.JOBS` = 16）。ふつうの Python で動かす |
 | `ingame/switch_auto.nut` | 自動選択の 8 通りだけを `bpoc_track` で敷く（`flat.sve` の y=120） |
 | `ingame/switch_check.sh` | 分岐の絵を手で確かめる準備。pak を入れ、固定の道具がある OTRP のビルドを MCP つきで `flat2` で起動し、`switch_all.nut` を敷く（`GAME_DIR=… EXE=… bash ingame/switch_check.sh`） |
 | `ingame/wall.nut`・`elev.nut`・`bridge.nut`・`tunnel.nut`・`trial.nut` | 側壁・高架・橋・トンネル・試作の見本（複線の並び、行き止まり、橋の端、坑口） |
 | `ingame/track_review.nut` | 線路の確認用パターン。線路の全種類と手本の Rail_100 を名札つきで `flat_512.sve` の温暖側・降雪側に敷く（「線路の確認用パターン」の節） |
-| `blender/sheet_diff.py` | 前と後のシートを比べ、透過の範囲（輪郭）と色の差をセルごとに出す。`ALL=1` で色だけ変わったセルも出す。描き直す前のシートを `BPOC_ONLY`（描くセルを絞る。シートは `work/only/`）の結果と比べるのにも使う |
+| `tools/blender/sheet_diff.py` | 前と後のシートを比べ、透過の範囲（輪郭）と色の差をセルごとに出す。`ALL=1` で色だけ変わったセルも出す。描き直す前のシートを `SHEET_ONLY`（描くセルを絞る。シートは `work/only/`）の結果と比べるのにも使う |
 | `ingame/train.nut` | 車両を走らせる確認（未完成。ダイヤの設定が通らない） |
 | `src/track_wall_*.dat`・`track_elev_*.dat` | 側壁付きの線路・高架。`single`（両側の壁）・`back`（奥だけ）・`center`（なし）・`front`（手前だけ） |
 | `src/track_bridge.dat`・`track_tunnel.dat`・`track_trial.dat` | 橋、トンネル、試作（車止め） |
@@ -65,10 +66,10 @@ cd src; makeobj pak256 ..\dist\bpoc.pak track.dat track_old.dat track_trial.dat 
 
 iss と同じく `pak256` で 256px セルとして切り出す（ゲームは pak128）。
 
-一部のシートだけ描き直すときは、シートごとに別のプロセスで同時に描く（同時に 8 まで）:
+一部のシートだけ描き直すときは、シートごとに別のプロセスで同時に描く（同時に動かす数は `--jobs`。既定は `tools/blender/sheet_settings.py` の `JOBS`、環境変数 `SHEET_JOBS`）:
 
 ```powershell
-python -X utf8 blender/render_parallel.py --jobs 8 track track_old track_wall_back track_elev_back
+python -X utf8 ../../tools/blender/render_parallel.py --jobs 16 track track_old track_wall_back track_elev_back
 ```
 
 1 プロセスは CPU をほとんど使わず、13 枚を 1 プロセスで描くと 40 分ほどかかった。壁あり・高架の 6 枚は 8 並列で約 5 分（2026-11-14）。
@@ -76,7 +77,7 @@ python -X utf8 blender/render_parallel.py --jobs 8 track track_old track_wall_ba
 位置の検証:
 
 ```powershell
-D:\bin\blender\blender.exe -b --factory-startup --python blender/check.py -- ..\..\..\iss\src\way\rail\standard_slab.png
+D:\bin\blender\blender.exe -b --factory-startup --python ../../tools/blender/check.py -- ..\..\..\iss\src\way\rail\standard_slab.png
 ```
 
 ## 描画の決まりごと
@@ -289,11 +290,11 @@ SIS の道路8種（一般道 50/70/80km/h、高速 80/100/120/999km/h）の直�
 - 坂の付け根の緑の線: 本体（OTRP 版）は坂のタイルの地面を物と一緒に後から描き、奥のタイルの線路の端の画素を上書きする
   （`boden/grund.cc` の `draw_as_obj`）。手前のタイルの絵がその画素を描いていないと地面が見える
 
-2つ目と3つ目は描き方を変えて直した（`render.py` の `render_cell`）:
+2つ目と3つ目は描き方を変えて直した（`tools/blender/sheetlib/cells.py` の `render_cell`）:
 
 - 形はタイルより `CLIP_PAD = 0.6` だけ大きく切り抜いて描く。境の画素も、隣とつながった形で画素全体の色になる
 - 画素ごとに、どのタイルの絵に残すか（持ち分）を決め、ほかは透明にする。決め方は次の節の「地面の菱形で持ち分を決める」
-- 確認用の合成: `blender/compose.py` でシートのセルをゲームと同じ位置・順番に並べる（`docs/compose_*.png`）。
+- 確認用の合成: `tools/blender/compose.py` でシートのセルをゲームと同じ位置・順番に並べる（`docs/compose_*.png`）。
   ゲーム画面にセルを当てはめると、計算どおりの位置で一致した
 - ゲーム内（等倍、`gui.set_zoom(3)`）: 斜めの縁石・白線は段差なくつながった（`docs/seam_fix_road.png`）。
   坂の付け根は緑の線が消え、合成との違いは道床の縁の1px が数か所だけ（`docs/seam_fix_slope_diff.png`。左 ゲーム、中 合成、右 違う画素を紫）
@@ -317,7 +318,7 @@ SIS の道路8種（一般道 50/70/80km/h、高速 80/100/120/999km/h）の直�
 奥のタイルの絵が手前のタイルの地面の菱形に入った画素は、手前の地面で必ず上書きされる。
 なので画素の持ち分は、ワールド座標ではなく **画面上の地面の菱形** で決めるのが正しい:
 
-- `render.py` の `_ground_mask` で、セルの中の地面の菱形を計算で塗る（中心 y=`GROUND_CY = 127`、画素の中心が菱形の中なら持ち分）。
+- `tools/blender/sheetlib/cells.py` の `_ground_mask` で、セルの中の地面の菱形を計算で塗る（中心 y=`GROUND_CY = 127`、画素の中心が菱形の中なら持ち分）。
   坂は四隅の高さを反映した四角形にする。菱形の中の画素だけ残し、外は透明にする（隣のタイルの持ち分）
 - 重ねる幅（以前の `OWN_MARGIN`・`DIAG_WIDE_*`）はやめた。Blender で地面を描いて持ち分にする案は、1px ずれて 1タイル約60px 違った
 - 坂の形: 形をタイルの範囲で切ってから高さを足す（`apply_slope`）。タイルの外へ坂を延ばすと、付け根で段差になっていた
@@ -327,8 +328,8 @@ SIS の道路8種（一般道 50/70/80km/h、高速 80/100/120/999km/h）の直�
 確かめ方（ゲームの画面と、シートのセルを同じ順に貼った予想図を画素単位で比べる）:
 
 - `ingame/capture_check.sh`: 線路（新・旧）・道路・高速道路の6か所（行き止まり・輪・分岐・斜め2系統・坂の十字）を
-  MCP で等倍に撮り、周りのタイルの一覧（位置・高さ・坂・向き）を書き出し、`blender/ingame_diff.py` で比べる
-- `blender/ingame_diff.py`: 違う画素の数と、形の欠け・出っ張りの候補（上下左右の覆われ方が周りと違う画素）を出す
+  MCP で等倍に撮り、周りのタイルの一覧（位置・高さ・坂・向き）を書き出し、`tools/blender/ingame_diff.py` で比べる
+- `tools/blender/ingame_diff.py`: 違う画素の数と、形の欠け・出っ張りの候補（上下左右の覆われ方が周りと違う画素）を出す
 - 結果: 4種類 × 6か所の 24 枚すべてで、ゲームと予想図の違いは 0px。
   ただし 0px は「ゲーム = 予想図」を示すだけで、予想図そのものの段は見つけられない。形の候補のうち左右対になって出た所
   （`expressway_dg2` の (189,416)・(450,416) など）を「角」と判断したが誤りで、次の節の段だった
@@ -338,15 +339,15 @@ SIS の道路8種（一般道 50/70/80km/h、高速 80/100/120/999km/h）の直�
 ## 特殊色（プレーヤーカラー・夜に光る色）
 
 Simutrans の特殊色は 31 色（本体 `descriptor/image.cc` の `rgbtab`）。makeobj は RGB が完全に一致した画素だけを特殊色にする
-（`descriptor/writer/image_writer.cc`）。一覧は `render.py` の `SPECIAL`。
+（`descriptor/writer/image_writer.cc`）。一覧は `tools/blender/sheetlib/core.py` の `SPECIAL`。
 
 ### 意図しない特殊色を消す
 
 - 描画結果の画素が偶然特殊色と一致したら、RGB を 1 ずつ上げてずらす（`finalize`。iss の `handleReplaceSpecialColor` と同じ）
-- ずらした先がまた特殊色になる色は無い（`blender/special.py` で確認）
+- ずらした先がまた特殊色になる色は無い（`tools/blender/special.py` で確認）
 - 不具合を1つ直した: 色を `R*65536+G*256+B` の整数にするとき int16 で計算していて桁あふれし、見逃しと誤検出が起きていた。
   int32 に直す前は `road.png` に灰色の特殊色が 14px 残っていた（灰 2 が 10px、灰 3 が 4px。夜も暗くならない灰色として表示される）。直したあとは全シートで 0px
-- 確認: `D:\bin\blender\blender.exe -b --factory-startup --python blender/special.py -- src/track.png src/road.png ...`
+- 確認: `D:\bin\blender\blender.exe -b --factory-startup --python ../../tools/blender/special.py -- src/track.png src/road.png ...`
   （シートごと・特殊色の種類ごと・セルごとの画素数を出す）
 
 ### 意図して特殊色を入れる
@@ -362,7 +363,7 @@ Simutrans の特殊色は 31 色（本体 `descriptor/image.cc` の `rgbtab`）�
   安全島の両端の照明灯 = 黄色の光、ブースの上のランプ = 赤と緑の光
 - 確認画像: `docs/special_tollbooth.png`（上: シート、下: 特殊色の画素。紫 = プレーヤーカラー、黒 = 光る色）
 - 見え方の再現: `docs/special_preview.png`（上から 昼 / 会社の色を赤橙に変えたとき / 夜）。
-  本体 `display/simgraph16.cc` の `calc_base_pal_from_night_shift` と同じ式で色を置き換えた（`blender/special_preview.py`）
+  本体 `display/simgraph16.cc` の `calc_base_pal_from_night_shift` と同じ式で色を置き換えた（`tools/blender/special_preview.py`）
 
 ### 確かめたこと・残り
 
@@ -471,7 +472,7 @@ python <simutrans>\.agents\skills\simutrans-mcp-gui-debug\scripts\mcp_client.py 
 
 ### 他のアドオンとのつなぎ目の自動判定（2026-11-13）
 
-`ingame/seam_check.sh` → `blender/seam_judge.py`。相手のタイルとこのアドオンのタイルが道でつながる辺（継ぎ目）ごとに、両側の道の帯を測って比べる。
+`ingame/seam_check.sh` → `tools/blender/seam_judge.py`。相手のタイルとこのアドオンのタイルが道でつながる辺（継ぎ目）ごとに、両側の道の帯を測って比べる。
 
 - 継ぎ目の草: 継ぎ目の線（±1px）の上で、両側の帯の縁より 2px 内側にある草の画素。草は「緑が赤・青より 12 以上、青より 40 以上大きい」色
   （歩道の緑がかった敷石は、緑が青より 16〜24 大きいだけなので草にしない）
@@ -549,7 +550,7 @@ Rail_100 の平地（奥）→ こちらの坂の継ぎ目で、`seam_judge.py` 
 ゲームで新描画位置の線路の坂の十字を見ると、坂のタイルでレールが道床の片側に寄り、急坂（2段の坂）の手前側ではまくらぎが見えなかった
 （`docs/track_slope_steep.png` の左、`docs/track_slope_single.png` の左）。
 
-測り方（`ingame/steep_check.sh` → `blender/slope_measure.py`）: 坂の十字を撮り、直線のタイルごとに、地面（坂ならその面）の中心線から
+測り方（`ingame/steep_check.sh` → `tools/blender/slope_measure.py`）: 坂の十字を撮り、直線のタイルごとに、地面（坂ならその面）の中心線から
 画面の縦に何 px の所に道床の縁とレールがあるかを測る。「寄り」はレールの中心 − 道床の中心。「まくらぎの濃淡」はレールの間の画素の
 明るさの幅（85% の値 − 15% の値）で、平地の同じ向きのタイルの何倍かを見る。
 
@@ -780,10 +781,10 @@ pak に入れるときの `makeobj` の引数は、上の「ビルド」の行�
 - 分岐で二つの経路の壁が同じ位置に重なる所は、先の経路の壁だけを残す（後の経路の壁は、先の壁の位置まで含めて削る）。
   重なった切れ端が、奥/手前の版で余分な壁として残っていた
 
-**確認用の色**: 環境変数 `BPOC_DEBUG_COLORS=1` を付けて `render.py` を動かすと、部品を見分けやすい色で描く
-（道床: 黄、まくらぎ: 白、レール: 黒、壁: 赤、基盤: 青、壁のない側の基盤: 緑）。シートと dat は `work/debug/` に書き、`src/` は変えない。
-ゲームで見るときは `work/debug/` で `makeobj` を回す。今回の T字と斜めの作り分けは、この色でセルを見て確かめた。
-汚れの入った線路は、まくらぎを材質の差し替え（`TRACK_WEAR_SKIN`）で描くので、この色でも白にならずまだらになる。`BPOC_ONLY` と一緒に付けると、出力先は `work/only/` になり dat は写さない（2026-11-15）
+**レイアウト検証用モード**: 環境変数 `SHEET_LAYOUT=1` を付けて `render.py` を動かすと、部品ごとに見分けやすい単色で描く
+（色の割り当ては `tools/blender/sheetlib/layout_colors.py`。部品を足したらそこにも足す）。光の当たり方に関わらず一様な色になる。
+シートと dat は `work/layout/` に書き、`src/` は変えない。ゲームで見るときは `work/layout/` で `makeobj` を回す。
+`SHEET_ONLY` と一緒に付けても出力先は `work/layout/`（2026-11-15。前は `BPOC_DEBUG_COLORS` で、道床・まくらぎ・レール・壁・基盤の 3〜6 色だけだった）
 
 ゲームで確かめた（`ingame/wall.nut`。`docs/trial_wall_diag.png`・`docs/trial_wall_tee.png`）:
 - 斜めの 3 線（奥+中+手前。縦向き・横向き）: 基盤が 1 枚につながり、外側の縁に壁が続く
@@ -959,7 +960,7 @@ pak128 の高架は、本体の既定で床が地面の 2 段上になる（`way
 橋脚が 1 段ぶんしかなく、床の下で宙に浮いていたので直した。
 
 - 線路の高架 4 版（`track_elev_*`）と高速道路の高架 4 版（`expressway_elev_*`）の橋脚を、床の下から 2 段下の地面までにした。
-  段数は `render.py` の `ELEV_STEPS`（2）にまとめ、持ち分を下へ広げる行数（`lower`）も `ELEV_LOWER`（16 × 段数 = 32）から出す
+  段数は `tools/blender/sheetlib/wall_parts.py` の `ELEV_STEPS`（2）にまとめ、持ち分を下へ広げる行数（`lower`）も `ELEV_LOWER`（16 × 段数 = 32）から出す
 - ゲーム内（`flat_512.sve`、`ingame/elev.nut`・`ingame/expwy_elev.nut`）: 線路・高速道路とも、橋脚が地面まで届いた
   （`docs/elev_pier_2steps.png`・`docs/expwy_elev_pier_2steps.png`）
 - 橋の橋脚（`piers` のセル）は 1 段のまま。本体が段ごとに積むので、2 段の高さの橋（急坂の端の谷。`ingame/bridge.nut` の y=108）でも地面まで届いた（`docs/bridge_pier_2steps.png`）
@@ -985,7 +986,7 @@ pak128 の高架は、本体の既定で床が地面の 2 段上になる（`way
   - 走行面は道床より約 2px 手前にずれるので、行き止まりで帯の端が道床の外へはみ出した（約 14px）。タイルの中で終わる端を 0.5 詰める（`_trim_inner_ends`）
   - さび色の赤みが強いと、坂の測り方（`slope_measure.py`。レールを「赤 − 青」の大きい行で探す）がさびをレールと取り違え、急坂 4 タイルのうち 2 つが不合格になった。赤みを抑えた茶色にした
 - 確かめたこと（`flat_512.sve`、`OTRPv64_3.exe`）:
-  - 輪郭: 汚れを足す前のシートとセルごとに透過の範囲を比べ（`blender/sheet_diff.py`）、本体・旧・側壁・高架・橋・トンネル・ex の試作で差 0px。変わったのは色だけ。
+  - 輪郭: 汚れを足す前のシートとセルごとに透過の範囲を比べ（`tools/blender/sheet_diff.py`）、本体・旧・側壁・高架・橋・トンネル・ex の試作で差 0px。変わったのは色だけ。
     試作 `track_trial` だけ行き止まりで 8〜10px 違う（前の試作のさび色が道床の端からはみ出していた分が無くなった）
   - `seam_check.sh`（旧と SIS、新と Rail_100）: 不合格は前からの 1 か所（Rail_100 の直線とこちらのカーブの内側の角の草 2px）だけ。模様のずれは -0.4〜-0.7px で、前の記録（-0.6〜-0.9px）と同じ程度
   - `capture_check.sh`（新・旧）: 全 12 か所で予想図との差 0px

@@ -27,6 +27,6 @@ for w in $WAYS; do
     $M --capture "$OUT/shots/${w}_$k.png" >/dev/null 2>&1
     files="$files $OUT/shots/${w}_$k.png"
   done
-  "$B" -b --factory-startup --python blender/hcat.py -- "$OUT/$w.png" $files >/dev/null 2>&1
+  "$B" -b --factory-startup --python ../../tools/blender/hcat.py -- "$OUT/$w.png" $files >/dev/null 2>&1
   echo "[full] $OUT/$w.png"
 done

@@ -1,9 +1,9 @@
 """他のアドオン（SIS・pak128 標準など）とのつなぎ目を、ゲームの画面から判定する。
 
 使い方（アドオンのディレクトリで。ふつうは ingame/seam_check.sh から呼ぶ）:
-    blender -b --factory-startup --python blender/seam_judge.py -- 画面.png タイル一覧.txt 出力.png x,y（jump したタイル）
+    blender -b --factory-startup --python ../../tools/blender/seam_judge.py -- 画面.png タイル一覧.txt 出力.png x,y（jump したタイル）
 
-タイル一覧は1行に「x y z 坂 向き 名前」。名前が bpoc_ で始まるタイルがこのアドオンの道で、それ以外が相手の道。
+タイル一覧は1行に「x y z 坂 向き 名前」。名前が addon_config.PREFIX（blender-poc は bpoc_）で始まるタイルがこのアドオンの道で、それ以外が相手の道。
 相手とこのアドオンのタイルが道でつながっている辺（継ぎ目）ごとに、両側の道の帯を測って比べる:
 - 縁: 継ぎ目から 4〜20px（曲がりは 3〜10px）離れた所で、道の中心線から、両側の道の向きの平均に直角な向きへ、草でない画素が続く範囲。
   両側の中央値の差から「中心のずれ」（段）と「幅の差」を出す。幅の差は道の作りの違いなので、合否には使わない
@@ -21,7 +21,7 @@ import bpy
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from compose import IMG, IMG_EXPWY, load  # noqa: E402
+from compose import IMG, IMG_EXPWY, addon_config, load  # noqa: E402
 from ingame_diff import TRANSPARENT, candidates, cell  # noqa: E402
 
 TOL_CENTER = float(os.environ.get("SEAM_TOL_CENTER", "1.0"))
@@ -30,7 +30,8 @@ TOL_WIDTH = float(os.environ.get("SEAM_TOL_WIDTH", "3"))
 # 継ぎ目の草を数えるのは、両側の帯の縁から何 px 内側まで（縁の角の 1px の尖りは数えない）
 GRASS_MARGIN = 2
 MIN_CORR = 0.5
-SHEETS = {"bpoc_track": "track", "bpoc_track_old": "track_old", "bpoc_road": "road", "bpoc_expressway": "expressway"}
+SHEETS = addon_config.SHEETS  # 道の名前 → シート名（アドオンの設定）
+PREFIX = addon_config.PREFIX
 STEP = {"n": (0, -1), "e": (1, 0), "s": (0, 1), "w": (-1, 0)}
 OPP = {"n": "s", "s": "n", "e": "w", "w": "e"}
 BITS = {"n": 1, "e": 2, "s": 4, "w": 8}
@@ -158,14 +159,13 @@ def main():
         if len(p) == 6:
             t = Tile(*(int(v) for v in p[:5]), p[5])
             tiles[(t.x, t.y)] = t
-    mine_names = {t.name for t in tiles.values() if t.name.startswith("bpoc_")}
+    mine_names = {t.name for t in tiles.values() if t.name.startswith(PREFIX)}
     if len(mine_names) != 1:
         print(f"[seam] このアドオンの道が {sorted(mine_names)}（1種類でない）")
         return
     name = mine_names.pop()
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    sheet = load(os.path.join(root, "src", SHEETS[name] + ".png"))
-    img = IMG_EXPWY if name == "bpoc_expressway" else IMG
+    sheet = load(os.path.join(os.getcwd(), "src", SHEETS[name] + ".png"))
+    img = IMG_EXPWY if SHEETS[name] in addon_config.DIAG_CURVE_SHEETS else IMG
 
     # 見当: jump したタイルのセルの左上が (192, 256)（ingame_diff.py と同じ）
     def cell_pos(t):

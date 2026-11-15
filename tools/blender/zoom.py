@@ -1,7 +1,7 @@
 """画像（ゲームの画面・合成図）の指定した点の周りを切り出して拡大し、横に並べる。点の画素は紫に印を付ける。
 
 使い方（アドオンのディレクトリで）:
-    blender -b --factory-startup --python blender/zoom.py -- 入力.png 出力.png 半径 倍率 x,y [x,y ...]
+    blender -b --factory-startup --python ../../tools/blender/zoom.py -- 入力.png 出力.png 半径 倍率 x,y [x,y ...]
 
     例: ingame_diff.py が出した形の候補の座標を、6倍で見る
     blender ... -- work/check/track_dg2.png work/zoom.png 24 6 73,388 566,388

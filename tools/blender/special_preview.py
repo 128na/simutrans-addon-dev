@@ -1,7 +1,7 @@
 """特殊色の見え方の再現: シートの1行目のセルを「昼」「会社の色を変えたとき」「夜」で並べた画像を作る。
 
 使い方（アドオンのディレクトリで）:
-    blender -b --factory-startup --python blender/special_preview.py -- src/tollbooth.png 4 docs/special_preview.png
+    blender -b --factory-startup --python ../../tools/blender/special_preview.py -- src/tollbooth.png 4 docs/special_preview.png
 
 色の置き換えは Simutrans 本体 display/simgraph16.cc の calc_base_pal_from_night_shift と同じ式
 （夜の段階 4、light_level 0）。ゲーム内の色は RGB555/565 に丸められるので、細かい値は少し違う。
@@ -13,7 +13,7 @@ import bpy
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from render import SPECIAL, CELL, TRANSPARENT  # noqa: E402
+from sheetlib import SPECIAL, CELL, TRANSPARENT  # noqa: E402
 
 # special_pal の 5 番目の段（赤橙）。会社の色をこれに変えたときの見え方にする
 RED = [(86, 32, 14), (110, 40, 16), (134, 48, 18), (158, 57, 20), (182, 65, 22), (206, 74, 24), (230, 82, 26), (255, 91, 28)]

@@ -1,7 +1,7 @@
 """手本の絵（pak128 標準・iss・SIS などの元画像、またはこのアドオンのシート）で、線路・道路がタイルのどこに描かれているかを測る。
 
 使い方（アドオンのディレクトリで）:
-    blender -b --factory-startup --python blender/ref_measure.py -- 画像.png セルの大きさ 向き=行.列 [向き=行.列 ...]
+    blender -b --factory-startup --python ../../tools/blender/ref_measure.py -- 画像.png セルの大きさ 向き=行.列 [向き=行.列 ...]
 
     例: pak128 標準の Rail_100（128px セル）
     blender ... -- ../../../pak128/infrastructure/rail_tracks/rail_100_tracks.png 128 ew=1.6 ns=1.5 sw=4.1 ne=3.6 nw=4.0 se=3.7

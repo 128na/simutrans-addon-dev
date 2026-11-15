@@ -15,11 +15,11 @@ description: Simutrans の way 系アドオン（線路・道路・側壁・高�
 2. **手本を先に見る。** pak128 のソース（`../pak128/`）と iss（`../iss/src/`、ビルド済みは `../iss/release/pak128/`）の絵と dat を、作る前に見る
 3. **本体のソースで決まりを確かめる。** dat のキー・絵の番号・建設の条件は `../simutrans/descriptor/`・`bauer/`・`script/api/` を読む。
    リファレンスに無い決まりを確かめたら、リファレンスの表に足す
-4. **確認用の色でセルを見る → ゲームで見る。** `BPOC_DEBUG_COLORS=1` で部品を色分けして描き（`work/debug/`）、形が合ってから通常の色で描いてゲームに入れる
+4. **確認用の色でセルを見る → ゲームで見る。** `SHEET_LAYOUT=1` で部品ごとの単色（レイアウト検証用モード）で描き（`work/layout/`）、形が合ってから通常の色で描いてゲームに入れる
 5. **本体のシートを崩さない。** 試すものは別のアドオン（別のシート・dat）にする。本体を描き直したら、前のシートと全画素を比べる
 6. **分かったことを書き分ける。** 決まりはリファレンスへ、経緯は `docs/records/` へ、手順が変わったらこのスキルへ
 
-## 2. どこを直すか（`addons/blender-poc/blender/render.py`）
+## 2. どこを直すか（描画の道具は `tools/blender/sheetlib/`、アドオンごとの設定は `addons/<アドオン>/blender/render.py`）
 
 絵の元は 3D ファイルではなくスクリプトで、毎回形を組み立てて撮る。
 
@@ -35,7 +35,7 @@ description: Simutrans の way 系アドオン（線路・道路・側壁・高�
 | `TRACK_PROFILES` | アドオンごとの設定（シート名・基準面・使う `group`・`walls`・`snow`・`front_row`・`lower`・`band`） |
 
 - 部品を足すときは、乗る基準面を選ぶ。部品ごとに位置を足し引きしない
-- 描き直すときは `python -X utf8 blender/render_parallel.py [--jobs 8] <対象>...` で、シートごとに別の Blender のプロセスで同時に描く。同時に動かすのは 8 まで（ユーザーと決めた上限）。1 つのプロセスは CPU をほとんど使わないので、並べるほど速い。対象の名前は `render.py` の対象（`track_wall_back` など）で、知らない名前は失敗になる。ログは `work/render_<対象>.log`
+- 描き直すときは `python -X utf8 ../../tools/blender/render_parallel.py [--jobs 16] <対象>...` で、シートごとに別の Blender のプロセスで同時に描く。同時に動かす数は `--jobs`（既定は `tools/blender/sheet_settings.py` の `JOBS`）。1 つのプロセスは CPU をほとんど使わないので、並べるほど速い。対象の名前は `render.py` の対象（`track_wall_back` など）で、知らない名前は失敗になる。ログは `work/render_<対象>.log`
 - dat は手で書かず `python -X utf8 blender/track_dat.py` で書き出す。シートの行の並びは
   「奥の絵 4 行 →（手前の絵 4 行）→ 雪の奥の絵 4 行 →（雪の手前の絵 4 行）」
 
@@ -43,14 +43,14 @@ description: Simutrans の way 系アドオン（線路・道路・側壁・高�
 
 | 何を | どうやって |
 |---|---|
-| 部品の出方 | `BPOC_DEBUG_COLORS=1 blender ... render.py -- <シート>` → `work/debug/` のセルを見る |
-| 形や色を試すとき | `BPOC_ONLY=ew,nse,diag_nw blender ... render.py -- <シート>` で線路のシートのセルを絞って描く（`ns` はいつも入る）。シートは `work/only/` に書かれ、`src/` は変わらない |
+| 部品の出方 | `SHEET_LAYOUT=1 blender ... render.py -- <シート>` → `work/layout/` のセルを見る（部品ごとの色は `sheetlib/layout_colors.py`） |
+| 形や色を試すとき | `SHEET_ONLY=ew,nse,diag_nw blender ... render.py -- <シート>` で線路のシートのセルを絞って描く（`ns` はいつも入る）。シートは `work/only/` に書かれ、`src/` は変わらない |
 | 全方位の表示 | `bash ingame/full_check.sh`（`ingame/full.nut` のレイアウト。way ごとに 5 か所を並べる。`WAYS` で way を、`OY` で並べ始める行を選ぶ。保存データの空いている行に合わせる） |
 | 複線・行き止まりの並び・高架・橋・トンネル | `ingame/wall.nut`・`elev.nut`・`bridge.nut`・`tunnel.nut` |
 | 近い斜め（1 タイルずらした斜め 2 本） | `ingame/close_diag.nut` を `flat2` の x=105 から右に流す。全版の南東・北東の組を並べる。決まりはリファレンスの 5・6 章 |
 | 雪 | `flat_512.sve` の降雪側（x=256〜）に同じ見本を流す（古い見本は `flat_snow.sve`） |
 | 線路・道路の全種類をまとめて見る | `flat_512.sve` で `ingame/track_review.nut`（線路）・`ingame/road_review.nut`（道路）を流す。温暖側と降雪側に同じ並びで敷かれる。座標は README の「確認用パターン」の節 |
-| 本体が変わっていないこと | 描き直して前のシートと全画素を比べる（`blender/sheet_diff.py`。前のシートは `git show HEAD:<パス>` で取り出す）。色を意図して変えたときの見方は `ACCEPTANCE.md` の 5-3 |
+| 本体が変わっていないこと | 描き直して前のシートと全画素を比べる（`tools/blender/sheet_diff.py`。前のシートは `git show HEAD:<パス>` で取り出す）。色を意図して変えたときの見方は `ACCEPTANCE.md` の 5-3 |
 | アイコンだけ直したとき | `blender/icons_only.py`（絵のセルを描き直さない） |
 | 車両との重なり | ユーザーに手で編成を走らせてもらう |
 | 分岐の絵（OTRP の switch 画像） | 固定の道具がある OTRP のビルドで `ingame/switch_check.sh` を回す（空の平らなマップ `flat2` で起動し、`ingame/switch_all.nut` で線路の全アドオンの標準・選択 1・選択 2 と自動選択の 8 通りを敷く）。自動選択は分岐のカーブが隣のカーブへなめらかにつながるか、固定は選択ごとに絵が変わるかを見る。手で見るなら T字を作り、タイルの詳細で選択肢を順に選ぶ。キーと絵の対応・曲がる側はリファレンスの 9 章 |

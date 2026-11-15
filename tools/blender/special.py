@@ -1,7 +1,7 @@
 """特殊色の検査: シート画像に特殊色がどれだけ含まれるかを、種類・セルごとに数える。
 
 使い方（アドオンのディレクトリで）:
-    blender -b --factory-startup --python blender/special.py -- src/track.png src/tollbooth.png ...
+    blender -b --factory-startup --python ../../tools/blender/special.py -- src/track.png src/tollbooth.png ...
 
 意図しない特殊色は render.py の後処理で 1 ずらして消している。ここで 0 になっていれば消えている。
 意図して入れた特殊色（材質に special を付けたもの）は、入れたセルにだけ出ていればよい。
@@ -13,7 +13,7 @@ import bpy
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from render import SPECIAL, SPECIAL_COLORS, CELL  # noqa: E402
+from sheetlib import SPECIAL, SPECIAL_COLORS, CELL  # noqa: E402
 
 # 後処理の「1ずらす」が別の特殊色に当たらないこと
 for r, g, b in SPECIAL_COLORS:

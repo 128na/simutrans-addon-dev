@@ -1,6 +1,6 @@
 """画面のスクリーンショットを横に並べて 1 枚にする（上のツールバーと下の状態行は切る）。
 
-使い方: blender -b --factory-startup --python blender/hcat.py -- 出力.png 入力1.png 入力2.png ...
+使い方: blender -b --factory-startup --python ../../tools/blender/hcat.py -- 出力.png 入力1.png 入力2.png ...
 """
 import os
 import sys
