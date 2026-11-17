@@ -39,11 +39,15 @@ _REPLACE = {
     "oil": dataclasses.replace(next(p for p in R.TRACK_EXTRAS if p.name == "oil"), shape=R.centre_strip_shape(OIL_U, OIL_Z, OIL_TH)),
 }
 
+# 行き止まりのレールの終点（車止めの位置）: 閉じた側のタイルの端から、タイル 1 辺のこの割合の所（ユーザーの指摘、2026-11-17。
+# blender-poc はタイルの中心 = 0.5）。道床はタイルの端まで
+END_FROM_EDGE = 0.25
+
 R.TRACK_PROFILES.update({
     # diag_curves: カーブを斜めの絵で表す（pak128 標準の線路と同じ。T字・十字・分岐の絵も斜めの直線）。buffer: 行き止まりの車止め
     "rail_ballast": {"sheet": "ami_rail_ballast", "spill": 1, "datums": _DATUMS, "snow": True,
                      "groups": ("body", "weathering", "buffer"), "label": "160", "skin": {"ballast": _BALLAST_STONE},
-                     "replace": _REPLACE, "diag_curves": True},
+                     "replace": _REPLACE, "diag_curves": True, "end_from_edge": END_FROM_EDGE},
 })
 
 # ---------------------------------------------------------------- 対象（シート名 → 描く関数）

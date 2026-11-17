@@ -32,7 +32,7 @@ description: Simutrans の way 系アドオン（線路・道路・側壁・高�
 | `build_base` | 基盤。タイル全面の板から、残した壁の外側だけを削る |
 | `render_layers` | 高さのある部品を別の層として描き、カメラに近い側を手前の絵に分ける |
 | `_ground_mask`・`rise`・`open_ends`・`solid`・`lower`・`spill`・`NEAR_AXIS` | 持ち分（リファレンスの 2 章）を実装している所 |
-| `TRACK_PROFILES` | アドオンごとの設定（シート名・基準面・使う `group`・`walls`・`snow`・`front_row`・`lower`・`band`・`skin`（夏の絵だけの材質の差し替え）・`replace`（部品の形の差し替え）・`diag_curves`（カーブを斜めの絵で表す）） |
+| `TRACK_PROFILES` | アドオンごとの設定（シート名・基準面・使う `group`・`walls`・`snow`・`front_row`・`lower`・`band`・`skin`（夏の絵だけの材質の差し替え）・`replace`（部品の形の差し替え）・`diag_curves`（カーブを斜めの絵で表す）・`end_from_edge`（行き止まりのレールの終点の位置）） |
 
 - 部品を足すときは、乗る基準面を選ぶ。部品ごとに位置を足し引きしない
 - 描き直すときは `python -X utf8 ../../tools/blender/render_parallel.py [--jobs 16] <対象>...` で、シートごとに別の Blender のプロセスで同時に描く。同時に動かす数は `--jobs`（既定は `tools/blender/sheet_settings.py` の `JOBS`）。1 つのプロセスは CPU をほとんど使わないので、並べるほど速い。対象の名前は `render.py` の対象（`track_wall_back` など）で、知らない名前は失敗になる。ログは `work/render_<対象>.log`

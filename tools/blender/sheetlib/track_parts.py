@@ -230,7 +230,7 @@ def bed_to_edge_shape(path, k):
     （道床がレールの末端より奥まで続く）。1 タイルだけの軌道（両端がタイルの中）と、通り抜ける経路はそのまま。"""
     if len(path) >= 2 and _inner(path[0]) and not _inner(path[-1]):
         d = (path[1] - path[0]).normalized()
-        reach = TILE / 2 / max(abs(d.x), abs(d.y))  # 始点（中心）から逆向きのタイルの端まで
+        reach = (TILE / 2 + Vector((path[0].x, path[0].y)).dot(d.to_2d())) / max(abs(d.x), abs(d.y))  # 始点から逆向きのタイルの端まで
         path = [path[0] - d * (reach + 0.5)] + list(path)
     return _bed_shape(path, k)
 

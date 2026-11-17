@@ -491,6 +491,14 @@ def track_sheet(profile="new"):
                     elif k == 0:
                         rails = list(arcs)
                 jobs[(2 + k, 10 + col)] = (f"{base_name}{k + 1}", full, None, rails)
+    # prof["end_from_edge"]（無くてよい）: 行き止まりのレールの終点を、閉じた側のタイルの端からタイル 1 辺のこの割合の所にする
+    # （無ければタイルの中心。車止め・まくらぎ・汚れの帯は終点＝経路の始点に合わせて動く）
+    if "end_from_edge" in prof:
+        back = TILE * (0.5 - prof["end_from_edge"])
+        for pos, (name, paths, slope, *rest) in list(jobs.items()):
+            if name in ("s", "w", "n", "e"):
+                p0, p1 = paths[0]
+                jobs[pos] = (name, [[p0 - (p1 - p0).normalized() * back, p1]], slope, *rest)
     # dat オフセット -64,-32 と対応。持ち分は地面の菱形のまま（新描画位置は絵が 4px 下だが、持ち分を 4 行下げると、
     # 手前のタイルへはみ出した 2〜4 行目を手前の地面が消し、どのつなぎ目にも草の線が出た）
     cy = GROUND_CY
