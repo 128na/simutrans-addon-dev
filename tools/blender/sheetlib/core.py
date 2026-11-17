@@ -462,8 +462,17 @@ def clip_to_tile(ob, pad=CLIP_PAD):
     mod.operation = "INTERSECT"
     mod.solver = "EXACT"
     mod.object = _clipper
-    bpy.context.view_layer.objects.active = ob
-    bpy.ops.object.modifier_apply(modifier=mod.name)
+    _apply_modifier(ob, mod)
+
+
+def _apply_modifier(ob, mod):
+    """モディファイアを適用する。bpy.ops.object.modifier_apply の代わり
+    （ops は呼ぶたびにシーン全体の更新が走り、物が多いほど遅い）。評価した形を新しいメッシュにして差し替える"""
+    me = bpy.data.meshes.new_from_object(ob.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+    old = ob.data
+    ob.modifiers.remove(mod)
+    ob.data = me
+    bpy.data.meshes.remove(old)
 
 
 def boolean(ob, cutter, op="DIFFERENCE", transfer=False):
@@ -474,8 +483,7 @@ def boolean(ob, cutter, op="DIFFERENCE", transfer=False):
     mod.use_self = True  # 型が重なり合う（分岐・十字）ときも抜けるように
     if transfer:
         mod.material_mode = "TRANSFER"
-    bpy.context.view_layer.objects.active = ob
-    bpy.ops.object.modifier_apply(modifier=mod.name)
+    _apply_modifier(ob, mod)
 
 
 def prism(pts, z0=-1.0, z1=1.0):
