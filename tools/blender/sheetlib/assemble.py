@@ -16,6 +16,7 @@ from .core import (  # noqa: F401
     FLAT,
     PATH_EXT,
     TILE,
+    WIDEN_PAD,
     apply_slope,
     boolean,
     box,
@@ -144,6 +145,10 @@ def assemble(parts, paths, datums=FLAT, slope=None, clip=True, widths=None, div=
             # 斜めの部分（path_opts）の壁は、タイルの辺の外へ残さない。経路をタイルの外へ長く延ばしてあり、辺の外に残った壁の切れ端が
             # 直線の壁の上へ 2px はみ出した（T字・十字の直線の側の壁。AMI #16 の指摘）。隣は直線のタイルで、その壁が辺まで来る
             pad = (0.0 if ob.get("diag") else tall_pad) if ob.get("tall") else CLIP_PAD
+            if ob.get("widen") and ob.get("k", 1.0) < 0.99:
+                # 斜めのタイルの架線の梁は、タイルの角を通って隣の斜めのタイルの梁とつながる。角でちょうど切ると、角の手前で
+                # 梁の幅が楔形に細って消え、隙間が見えた（2026-11-18）。角の先まで残し、どこまで描くかは持ち分（左右へ 1 列広げる）で決める
+                pad = max(pad, WIDEN_PAD)
             clip_to_tile(ob, pad)
             if ob.get("tall"):
                 open_ends(ob, pad)
@@ -210,6 +215,7 @@ def _place(ob, part, i, paths, widths, moves, widths_of=None):
     ob["centre"] = part.centre
     ob["front"] = part.front
     ob["thin"] = part.thin
+    ob["widen"] = part.widen
     return [ob]
 
 

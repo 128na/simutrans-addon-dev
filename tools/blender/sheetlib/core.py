@@ -327,6 +327,8 @@ class Part:
     centre: bool = True     # 手前/奥を決める重心（near_camera）に数えるか
     front: bool = False     # 高さのある部品を、位置に関わらず手前の絵（車両より後に描く）に描く（架線の梁・トロリ線。render_layers）
     thin: bool = False      # 1px ほどの細い部品。高さのある部品の層で、半透明の画素を THIN_ALPHA 以上なら残す（架線の線。render_layers）
+    widen: bool = False     # 斜めのタイルで角の先まで切り残し（WIDEN_PAD。assemble）、高さのある部品の層で持ち分を左右へ 1 列広げて描く
+                            # （タイルの角をまたいで隣の斜めのタイルとつながる架線の梁。render_layers）
 
 
 def layout_material(name):
@@ -450,6 +452,9 @@ _clippers = {}
 # 形はタイルより少し大きく切り抜いておく（タイルの端の画素も、隣とつながった形で描くため）。
 # どの画素を残すかは render_cell の「持ち分マスク」で決める
 CLIP_PAD = 0.6
+
+# 斜めのタイルで Part.widen の部品（架線の梁）を切り抜く余白（タイルの角の先まで残す。assemble）
+WIDEN_PAD = 0.3
 
 
 def clip_to_tile(ob, pad=CLIP_PAD):

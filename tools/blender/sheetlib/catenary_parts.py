@@ -8,7 +8,8 @@
   （single は両側、back は奥、front は手前、center は無し。select_walls）
 - 梁（cat_beam）: 柱の上を、線路を横切る向きに渡す。壁のある側は壁の外の面で止め、壁の無い側はタイルの端まで延ばす
   （隣の線の梁とつながる。trim_catenary）。center は梁だけ
-- 吊り金具（cat_hanger）: 梁からちょう架線・トロリ線を吊る
+- 吊り金具（cat_hanger）: 梁からちょう架線を吊る 1px の縦線
+- ハンガー（cat_dropper）: ちょう架線からトロリ線へ下ろす 1px の縦線。タイルの中に等間隔（画面の横 16px ごと）
 - トロリ線（cat_wire）・ちょう架線（cat_messenger）: 経路に沿う上下 2 本の線。分岐・十字では全部の経路に張る。
   1px ほどの細い線なので Part.thin（高さのある部品の層で、半透明の画素も THIN_ALPHA 以上なら残す）
 
@@ -53,8 +54,15 @@ CAT_POLE_U = WALL_U + WALL_W / 2  # 柱の横位置（経路の中心から。�
 CAT_BEAM_H = 0.35        # 梁の高さ（上端は柱の上端にそろえる）
 CAT_BEAM_T = 0.25        # 梁の、線路に沿う向きの厚み
 CAT_BEAM_REACH = TILE    # 梁の、経路から横への長さ（直線。タイルの外は切り抜きで落とす）
-CAT_BEAM_REACH_DIAG = TILE / (2 * math.sqrt(2))  # 斜めの梁の長さ（タイルの角と中心まで。近い斜めの隣の線の梁と中心でつながる）
-CAT_HANGER_S = 0.25      # 吊り金具の太さ（細いと半透明の画素を捨てる処理で途切れる）
+# 斜めの梁の長さ（タイルの角と中心まで。近い斜めの隣の線の梁と中心でつながる）。中心でちょうど止めると、輪郭の画素を捨てる処理で
+# 両側が 1〜3px ずつ欠けて、近い斜めの複線の梁の間に隙間が見えた（2026-11-18）。中心の先へ CAT_BEAM_OVERLAP_DIAG だけ重ねる
+CAT_BEAM_OVERLAP_DIAG = 0.5
+CAT_BEAM_REACH_DIAG = TILE / (2 * math.sqrt(2)) + CAT_BEAM_OVERLAP_DIAG
+# 吊り金具（梁からちょう架線へ下ろす）とハンガー（ちょう架線からトロリ線へ下ろす）は、画面で 1px の縦線（Part.thin）。
+# 画面の横の位置を画素の中心に乗せる（_snap_x）。pak128 の架線は、直線で画面の横 16px ごとにハンガーがある（2026-11-18 に測った）
+CAT_HANGER_PX = 1.0      # 吊り金具・ハンガーの、画面での太さ（px）
+CAT_DROPPER_N = 4        # 直線の 1 タイルのハンガーの数（タイルの長さの 1/4 ずつ。画面の横 16px ごと）
+CAT_DROPPER_N_DIAG = 4   # 画面で横向きの斜めの 1 タイルのハンガーの数（同じく画面の横 16px ごと）。画面で縦向きの斜めは、2 本の線が重なるので無し
 
 # 架線の部品が使う高さの範囲（render_layers の持ち分を上へ広げる行数を決める。柱の上端 + 余白）
 CAT_RISE = int(math.ceil(CAT_POLE_TOP * 7.84)) + 6
@@ -100,27 +108,71 @@ def _beam_shape(path, k):
     return box(p.x, p.y, CAT_POLE_TOP - CAT_BEAM_H / 2, CAT_BEAM_T, 2 * reach, CAT_BEAM_H, rot=math.atan2(d.y, d.x))
 
 
+def _screen_vertical(d):
+    """平面の向き d が、画面で縦向き（sw・ne の斜め）か。画面の横の位置は x + y で決まる（カメラは Z 45°）。"""
+    return abs(d.x + d.y) < 1e-6 * d.length
+
+
+def _line_z(path, k, z):
+    """線の下の面の高さ（画面で横向きの斜めは半画素上げる。_line_shape）。"""
+    if _diag(k) and not _screen_vertical(path[-1] - path[0]):
+        return z + CAT_DIAG_SHIFT_Z
+    return z
+
+
+def _snap_x(p):
+    """平面の点 p を、画面の横で画素の中心に来るよう、画面の右（平面の (1, 1) の向き）へ 1 画素未満ずらす。
+    セルの中心（平面の原点）は画素の境にある（CELL が偶数）。"""
+    sx = (p.x + p.y) / math.sqrt(2) * PX_PER_UNIT
+    s = ((0.5 - sx) % 1.0) / PX_PER_UNIT / math.sqrt(2)
+    return Vector((p.x + s, p.y + s))
+
+
+def _thin_post(p, d, z0, z1):
+    """画面で 1px（CAT_HANGER_PX）の縦線になる細い角柱。p は平面の点、d は経路の向き。"""
+    r = Vector((1, 1)).normalized()
+    n = Vector((d.y, -d.x))
+    side = CAT_HANGER_PX / (PX_PER_UNIT * (abs(d.dot(r)) + abs(n.dot(r))))
+    c = _snap_x(p)
+    return box(c.x, c.y, (z0 + z1) / 2, side, side, z1 - z0, rot=math.atan2(d.y, d.x))
+
+
 def _hanger_shape(path, k):
-    """吊り金具: 梁の下の面からトロリ線の上の面まで、経路の中心に下がる。"""
+    """吊り金具: 梁の下の面からちょう架線まで、経路の中心に下がる。"""
     p, d = _anchor(path)
-    z0, z1 = CAT_WIRE_Z + CAT_WIRE_H, CAT_POLE_TOP - CAT_BEAM_H
-    return box(p.x, p.y, (z0 + z1) / 2, CAT_HANGER_S, CAT_HANGER_S, z1 - z0, rot=math.atan2(d.y, d.x))
+    return _thin_post(p, d, _line_z(path, k, CAT_MESSENGER_Z), CAT_POLE_TOP - CAT_BEAM_H)
+
+
+def _dropper_shape(path, k):
+    """ハンガー: ちょう架線からトロリ線へ下ろす縦線。タイルの中を等間隔に、経路のある所だけ。
+    画面で縦向きの斜めは 2 本の線が重なって見えるので作らない（pak128 も無い）。"""
+    p, d = _anchor(path)
+    if _diag(k) and _screen_vertical(d):
+        return None
+    n, length = (CAT_DROPPER_N_DIAG, TILE / math.sqrt(2)) if _diag(k) else (CAT_DROPPER_N, TILE)
+    along = [(Vector((q.x, q.y)) - p).dot(d) for q in path]
+    lo, hi = min(along), max(along)
+    z0 = _line_z(path, k, CAT_WIRE_Z)
+    z1 = _line_z(path, k, CAT_MESSENGER_Z) + CAT_WIRE_H
+    posts = []
+    for i in range(n):
+        o = (i + 0.5) * length / n - length / 2
+        c = p + d * o
+        if lo - 1e-6 <= o <= hi + 1e-6 and max(abs(c.x), abs(c.y)) <= TILE / 2:
+            posts.append(_thin_post(c, d, z0, z1))
+    return merge(posts) if posts else None
 
 
 def _line_shape(z):
     """架線の線（トロリ線・ちょう架線）: 経路の中心に沿う細い角棒。下の面が z。"""
     def shape(path, k, z=z):
         u = CAT_WIRE_W / 2
-        if _diag(k):
-            d = path[-1] - path[0]
-            if abs(d.x + d.y) < 1e-6 * d.length:
-                # 画面で縦向きの斜め: 画面の右（平面の (1, 1) の向き）へ半画素ずらす
-                u = CAT_WIRE_W_DIAG / 2
-                s = CAT_DIAG_SHIFT / math.sqrt(2)
-                path = [p + Vector((s, s, 0)[:len(p)]) for p in path]
-            else:
-                # 画面で横向きの斜め: 線の中心が画素の境に来て 2 行になったので、上へ半画素ずらす
-                z += CAT_DIAG_SHIFT_Z
+        z = _line_z(path, k, z)  # 画面で横向きの斜め: 線の中心が画素の境に来て 2 行になったので、上へ半画素ずらす
+        if _diag(k) and _screen_vertical(path[-1] - path[0]):
+            # 画面で縦向きの斜め: 画面の右（平面の (1, 1) の向き）へ半画素ずらす
+            u = CAT_WIRE_W_DIAG / 2
+            s = CAT_DIAG_SHIFT / math.sqrt(2)
+            path = [p + Vector((s, s, 0)[:len(p)]) for p in path]
         return sweep(path, [(-u, z), (u, z), (u, z + CAT_WIRE_H), (-u, z + CAT_WIRE_H)])
     return shape
 
@@ -128,8 +180,9 @@ def _line_shape(z):
 CATENARY_PARTS = (
     Part("cat_poleL", "bed", "bed", _M_POLE, _pole_shape(-1), "catenary_support", tall=True),
     Part("cat_poleR", "bed", "bed", _M_POLE, _pole_shape(1), "catenary_support", tall=True),
-    Part("cat_beam", "bed", "bed", _M_BEAM, _beam_shape, "catenary_support", tall=True, front=True),
-    Part("cat_hanger", "bed", "bed", _M_BEAM, _hanger_shape, "catenary_support", tall=True, front=True),
+    Part("cat_beam", "bed", "bed", _M_BEAM, _beam_shape, "catenary_support", tall=True, front=True, widen=True),
+    Part("cat_hanger", "bed", "bed", _M_WIRE, _hanger_shape, "catenary_support", tall=True, front=True, thin=True),
+    Part("cat_dropper", "bed", "bed", _M_WIRE, _dropper_shape, "catenary", tall=True, front=True, thin=True),
     Part("cat_wire", "bed", "bed", _M_WIRE, _line_shape(CAT_WIRE_Z), "catenary", tall=True, front=True, thin=True),
     Part("cat_messenger", "bed", "bed", _M_WIRE, _line_shape(CAT_MESSENGER_Z), "catenary", tall=True, front=True, thin=True),
 )
