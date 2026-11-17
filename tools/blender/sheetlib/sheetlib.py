@@ -1,5 +1,5 @@
 """シートの組み立て（線路・道路・トンネル・アイコン）と、入口から呼ぶ run_targets（共通の描画の道具 sheetlib の一部。tools/README.md）。"""
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Callable
 import math
 import os
@@ -44,6 +44,7 @@ from .core import (  # noqa: F401
     straight,
 )
 from .track_parts import (  # noqa: F401
+    bed_fill_shape,
     DIAG_BALLAST,
     DIAG_RAIL,
     TRACK_EXTRAS,
@@ -495,7 +496,17 @@ def track_sheet(profile="new"):
     cy = GROUND_CY
     set_anchor(128 + BALLAST_DY)
     cells = {}
-    parts = TRACK_PARTS + TRACK_EXTRAS
+    # prof["replace"]（無くてよい）: 部品の名前 → 差し替える部品（形だけを変える。名前は同じにして、材質の差し替えと汚れの色をそのまま使う）
+    parts = tuple(prof.get("replace", {}).get(p.name, p) for p in TRACK_PARTS + TRACK_EXTRAS)
+    # prof["diag_curves"]（無くてよい）: pak128 標準の線路と同じく、カーブを斜めの絵で表す。カーブのセルは描かず（dat が斜めのセルを指す）、
+    # T字・十字・分岐の絵のカーブを、同じ 2 辺をつなぐ斜めの直線にする。斜めの部分は斜めのセルと同じ幅・下げ幅で作り、隣の斜めのタイルとつなぐ
+    diag_of = {}
+    if prof.get("diag_curves"):
+        diag_paths = {id(arc_sw): ("diag_sw", straight(S, W, ext=2.5)), id(arc_nw): ("diag_nw", straight(N, W, ext=2.5)),
+                      id(arc_ne): ("diag_ne", straight(N, E, ext=2.5)), id(arc_se): ("diag_se", straight(S, E, ext=2.5))}
+        swap = lambda ps: [diag_paths[id(p)][1] if id(p) in diag_paths else p for p in ps]
+        jobs = {k: (v[0], swap(v[1]), v[2], *[swap(r) for r in v[3:]]) for k, v in jobs.items() if not v[0].startswith("curve_")}
+        diag_of = {id(p): n for n, p in diag_paths.values()}
     if "only" in prof:
         jobs = {k: v for k, v in jobs.items() if v[0] in prof["only"]}
     if ONLY:
@@ -530,12 +541,28 @@ def track_sheet(profile="new"):
             div = 2 if name in ("diag_nw", "diag_se", "close1") else 1
             widths = {"gauge": DIAG_RAIL, "bed": DIAG_BALLAST} if name.startswith(("diag_", "close")) else None
             kw = dict(widths=widths, div=div, groups=grp, ends=name in ("s", "w", "n", "e"), skin=skin)
+
+            def build(ps, pths):
+                # diag_curves の斜めの部分は、斜めのセルと同じ幅・下げ幅で別に組む
+                axis = [p for p in pths if id(p) not in diag_of]
+                out = assemble(ps, axis, prof["datums"], slope, **kw) if axis else []
+                for p in pths:
+                    if id(p) in diag_of:
+                        dn = diag_of[id(p)]
+                        out += assemble(ps, [p], prof["datums"], slope, **dict(kw, widths={"gauge": DIAG_RAIL, "bed": DIAG_BALLAST},
+                                                                                div=2 if dn in ("diag_nw", "diag_se") else 1))
+                bed = [p for p in ps if p.name == "ballast"]
+                if bed and len(axis) < len(pths):
+                    # 直線と斜めの道床の間にできる三角のすき間を、道床の上面の凸包で埋める（pak128 標準の T字・十字と同じ）
+                    fill = replace(bed[0], shape=bed_fill_shape(pths, {i: DIAG_BALLAST for i in diag_of}))
+                    out += assemble([fill], pths[:1], prof["datums"], slope, **dict(kw, widths=None))
+                return out
             if rails:
                 # 分岐の絵: 走行面（rail の基準面の部品）だけを分岐の経路で作る
-                obs = (assemble([p for p in parts if p.datum != "rail"], paths, prof["datums"], slope, **kw)
-                       + assemble([p for p in parts if p.datum == "rail"], rails[0], prof["datums"], slope, **kw))
+                obs = (build([p for p in parts if p.datum != "rail"], paths)
+                       + build([p for p in parts if p.datum == "rail"], rails[0]))
             else:
-                obs = assemble(parts, paths, prof["datums"], slope, **kw)
+                obs = build(parts, paths)
             side = prof.get("walls", "both")
             kept = select_walls(obs, name, paths, side)
             if side in ("back", "center") and name.startswith("diag_"):

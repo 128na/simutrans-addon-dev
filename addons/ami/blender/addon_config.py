@@ -7,4 +7,4 @@ PREFIX = "ami_"
 SHEETS = {"ami_rail_ballast": "ami_rail_ballast"}
 
 # カーブに斜めの絵を使うシート（道路は作るステップで足す）
-DIAG_CURVE_SHEETS = set()
+DIAG_CURVE_SHEETS = {"ami_rail_ballast"}

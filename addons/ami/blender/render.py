@@ -9,6 +9,7 @@
     src/ami_rail_ballast.png  在来線（バラスト軌道）の通常の版。形は blender-poc の線路と同じで、夏の道床を砕石のまだらにした
     work/                     セルごとの生の描画結果（確認用）
 """
+import dataclasses
 import os
 import sys
 
@@ -28,9 +29,21 @@ BALLAST_STONE_HI = (0.52, 0.495, 0.46)
 BALLAST_GRAIN = 6.0  # まだらの細かさ（ノイズの Scale。部品の座標 1 単位 ≈ 9px なので、粒は 1〜2px）
 _BALLAST_STONE = R.track_noise("ami_ballast_stone", BALLAST_STONE_LO, BALLAST_STONE_HI, BALLAST_GRAIN)
 
+# 形の差し替え（blender-poc の線路から変えたもの。ユーザーの指摘、2026-11-17）:
+#   ballast: 行き止まりで、道床をレールの末端より奥（タイルの端）まで敷く
+#   oil: レールの間の油の帯を中心をまたぐ 1 本にする（2 本に分けた形は、行き止まりで切り抜きにより消え、まくらぎが白く見えた）
+OIL_U = R.RAIL_IN - 0.12           # 油の帯の半幅（blender-poc の oil と同じ）
+OIL_Z, OIL_TH = R.BALLAST_H + 0.0015 * 3, 0.001  # 高さは blender-poc の 3 層目と同じ
+_REPLACE = {
+    "ballast": dataclasses.replace(next(p for p in R.TRACK_PARTS if p.name == "ballast"), shape=R.bed_to_edge_shape),
+    "oil": dataclasses.replace(next(p for p in R.TRACK_EXTRAS if p.name == "oil"), shape=R.centre_strip_shape(OIL_U, OIL_Z, OIL_TH)),
+}
+
 R.TRACK_PROFILES.update({
+    # diag_curves: カーブを斜めの絵で表す（pak128 標準の線路と同じ。T字・十字・分岐の絵も斜めの直線）。buffer: 行き止まりの車止め
     "rail_ballast": {"sheet": "ami_rail_ballast", "spill": 1, "datums": _DATUMS, "snow": True,
-                     "groups": ("body", "weathering"), "label": "160", "skin": {"ballast": _BALLAST_STONE}},
+                     "groups": ("body", "weathering", "buffer"), "label": "160", "skin": {"ballast": _BALLAST_STONE},
+                     "replace": _REPLACE, "diag_curves": True},
 })
 
 # ---------------------------------------------------------------- 対象（シート名 → 描く関数）

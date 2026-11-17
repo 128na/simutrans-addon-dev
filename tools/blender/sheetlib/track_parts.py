@@ -219,6 +219,137 @@ TRACK_SNOW_WEAR_SKIN = dict(
     sleeper_rust=track_noise("track_snow_sleeper_rust", _mix((0.80, 0.84, 0.90), _DIRT_LO, 0.3), _mix((0.80, 0.84, 0.90), _DIRT_HI, 0.3), 4.0))
 
 
+# ---------------------------------------------------------------- 差し替え用の形（TRACK_PROFILES の "replace" で使う。本体の部品は変えない）
+
+def _inner(p):
+    return max(abs(p.x), abs(p.y)) < TILE / 2 - 0.01
+
+
+def bed_to_edge_shape(path, k):
+    """道床の形（_bed_shape と同じ断面）。行き止まりの経路（始点だけがタイルの中）では、始点を経路の逆向きにタイルの端まで延ばす
+    （道床がレールの末端より奥まで続く）。1 タイルだけの軌道（両端がタイルの中）と、通り抜ける経路はそのまま。"""
+    if len(path) >= 2 and _inner(path[0]) and not _inner(path[-1]):
+        d = (path[1] - path[0]).normalized()
+        reach = TILE / 2 / max(abs(d.x), abs(d.y))  # 始点（中心）から逆向きのタイルの端まで
+        path = [path[0] - d * (reach + 0.5)] + list(path)
+    return _bed_shape(path, k)
+
+
+def bed_fill_shape(paths, widths_by_id):
+    """道床の上面（経路から BALLAST の上の幅）の、タイルの中の部分の凸包を、地面から上面の少し下までの板にする。
+    widths_by_id は経路の id → 横幅の倍率（斜めの部分）。T字・十字で直線と斜めの道床の間にできるすき間を埋める。"""
+    top = BALLAST[2][0]
+    lim = TILE / 2 + 1e-4
+
+    def shape(path, k):
+        pts = []
+        for p in paths:
+            w = top * widths_by_id.get(id(p), 1.0)
+            for a, b in zip(p[:-1], p[1:]):
+                a, b = Vector((a.x, a.y)), Vector((b.x, b.y))
+                n = (b - a).normalized()
+                n = Vector((n.y, -n.x))
+                steps = max(1, int((b - a).length / 0.05))
+                for i in range(steps + 1):
+                    q = a.lerp(b, i / steps)
+                    if max(abs(q.x), abs(q.y)) <= lim:
+                        pts += [q + n * w, q - n * w]
+        pts = sorted({(round(q.x, 4), round(q.y, 4)) for q in pts})
+        if len(pts) < 3:
+            return None
+
+        def half(seq):
+            h = []
+            for q in seq:
+                while len(h) >= 2 and ((h[-1][0] - h[-2][0]) * (q[1] - h[-2][1]) - (h[-1][1] - h[-2][1]) * (q[0] - h[-2][0])) <= 0:
+                    h.pop()
+                h.append(q)
+            return h
+        hull = half(pts)[:-1] + half(pts[::-1])[:-1]  # 反時計回り
+        z0, z1 = 0.001, BALLAST_H - 0.003
+        m = len(hull)
+        verts = [Vector((x, y, z0)) for x, y in hull] + [Vector((x, y, z1)) for x, y in hull]
+        faces = [tuple(range(m - 1, -1, -1)), tuple(range(m, 2 * m))] + [(i, (i + 1) % m, m + (i + 1) % m, m + i) for i in range(m)]
+        return verts, faces
+    return shape
+
+
+def centre_strip_shape(u, z, th):
+    """経路の中心をまたぐ 1 本の薄い帯（-u〜u）。行き止まりの端は汚れの帯と同じだけ詰める。
+    _strip_shape(0, u) は中心で 2 本が辺を分け合い、行き止まりでは切り抜きで消えた（2026-11-17、AMI の在来線）"""
+    def shape(path, k):
+        return sweep(_trim_inner_ends(path), [(-u * k, z), (u * k, z), (u * k, z + th), (-u * k, z + th)])
+    return shape
+
+
+# ---------------------------------------------------------------- 車止め（group "buffer"。where="end"。AMI の在来線）
+# 形は鉄道模型の車止めの写真から書き起こした（ユーザーから受け取った画像、2026-11-17。リポジトリには入れない）:
+# レールの上を横切る低い台座、両側のレールの外から奥へ斜めに立ち上がる脚 2 本、上の受けの箱、レールの間の緩衝板、
+# 奥の中央に立つ柱と、その上の標識灯の箱。全体は黒、灯は光る色。座標は行き止まりの端（経路の始点）から線路の側へ t、横へ u、高さ z
+BUFFER_BEAM = dict(t=0.30, st=0.28, su=1.30, z0=RAIL_Z1, sz=0.12)          # 台座（レールの上を横切る）
+BUFFER_LEG = dict(t0=1.05, u0=0.62, t1=0.30, u1=0.32, z1=0.95, w=0.11)     # 斜めの脚（下の端 → 上の端）
+BUFFER_HEAD = dict(t=0.28, st=0.30, su=0.80, z=0.98, sz=0.24)               # 受けの箱
+BUFFER_PLATE = dict(t=0.62, st=0.06, su=0.46, z0=RAIL_Z1, z1=0.88)          # 緩衝板（レールの間に立つ）
+BUFFER_POST = dict(t=-0.12, s=0.14, z0=RAIL_Z0, z1=1.55)                     # 柱（奥の中央）
+BUFFER_LAMP = dict(t=-0.12, s=0.34, z0=1.50, sz=0.32)                        # 標識灯の箱
+BUFFER_LAMP_FACE = dict(st=0.02, s=0.26, sz=0.24)                           # 灯の光る面（箱の線路の側の面に貼る）
+_M_BUFFER = ("buffer", (0.04, 0.04, 0.045), 0.6)
+_M_BUFFER_LAMP = ("buffer_lamp", (0.95, 0.93, 0.85), 0.5, 0.0, 0.0, "light_white")
+
+
+def _end_frame(path):
+    """行き止まりの端の座標系: 始点・線路の向き d・横の向き n（sweep と同じ向き）。"""
+    p0 = Vector((path[0].x, path[0].y))
+    d = (Vector((path[1].x, path[1].y)) - p0).normalized()
+    return p0, d, Vector((d.y, -d.x))
+
+
+def _buffer_box(t, u, z, st, su, sz):
+    def shape(path, k):
+        p0, d, n = _end_frame(path)
+        c = p0 + d * t + n * (u * k)
+        return box(c.x, c.y, z, st, su * k, sz, rot=math.atan2(d.y, d.x))
+    return shape
+
+
+def _buffer_legs(path, k):
+    """斜めの脚 2 本: レールの外の下の端から、奥（端の側）の上の端へ立ち上がる角柱。"""
+    p0, d, n = _end_frame(path)
+    g, out = BUFFER_LEG, []
+    for s in (1, -1):
+        a = p0 + d * g["t0"] + n * (s * g["u0"] * k)
+        b = p0 + d * g["t1"] + n * (s * g["u1"] * k)
+        h = g["w"] / 2
+        verts = [Vector((q.x + n.x * su * h, q.y + n.y * su * h, z + sz * h))
+                 for q, z in ((a, RAIL_Z0 + h), (b, g["z1"])) for su, sz in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+        out.append((verts, [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]))
+    return merge(out)
+
+
+TRACK_EXTRAS += (
+    Part("buffer_beam", "rail", "gauge", _M_BUFFER,
+         _buffer_box(BUFFER_BEAM["t"], 0, BUFFER_BEAM["z0"] + BUFFER_BEAM["sz"] / 2, BUFFER_BEAM["st"], BUFFER_BEAM["su"], BUFFER_BEAM["sz"]),
+         "buffer", "end"),
+    Part("buffer_leg", "rail", "gauge", _M_BUFFER, _buffer_legs, "buffer", "end"),
+    Part("buffer_head", "rail", "gauge", _M_BUFFER,
+         _buffer_box(BUFFER_HEAD["t"], 0, BUFFER_HEAD["z"] + BUFFER_HEAD["sz"] / 2, BUFFER_HEAD["st"], BUFFER_HEAD["su"], BUFFER_HEAD["sz"]),
+         "buffer", "end"),
+    Part("buffer_plate", "rail", "gauge", _M_BUFFER,
+         _buffer_box(BUFFER_PLATE["t"], 0, (BUFFER_PLATE["z0"] + BUFFER_PLATE["z1"]) / 2, BUFFER_PLATE["st"], BUFFER_PLATE["su"],
+                     BUFFER_PLATE["z1"] - BUFFER_PLATE["z0"]), "buffer", "end"),
+    Part("buffer_post", "rail", "gauge", _M_BUFFER,
+         _buffer_box(BUFFER_POST["t"], 0, (BUFFER_POST["z0"] + BUFFER_POST["z1"]) / 2, BUFFER_POST["s"], BUFFER_POST["s"],
+                     BUFFER_POST["z1"] - BUFFER_POST["z0"]), "buffer", "end"),
+    Part("buffer_lamp", "rail", "gauge", _M_BUFFER,
+         _buffer_box(BUFFER_LAMP["t"], 0, BUFFER_LAMP["z0"] + BUFFER_LAMP["sz"] / 2, BUFFER_LAMP["s"], BUFFER_LAMP["s"], BUFFER_LAMP["sz"]),
+         "buffer", "end"),
+    Part("buffer_light", "rail", "gauge", _M_BUFFER_LAMP,
+         _buffer_box(BUFFER_LAMP["t"] + (BUFFER_LAMP["s"] + BUFFER_LAMP_FACE["st"]) / 2, 0,
+                     BUFFER_LAMP["z0"] + BUFFER_LAMP["sz"] / 2, BUFFER_LAMP_FACE["st"], BUFFER_LAMP_FACE["s"], BUFFER_LAMP_FACE["sz"]),
+         "buffer", "end"),
+)
+
+
 TRACK_EXTRAS += tuple(Part(name, "bed", "bed", _M_WALL, _wall_shape(s), "wall", tall=True, corridor=WALL_U)
                       for name, s in (("wallL", -1), ("wallR", 1)))
 
