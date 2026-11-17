@@ -695,6 +695,7 @@ def track_sheet(profile="new"):
         wcells[(0, 0)] = render_icon(wall_sheet + "_icon", 0.5, shift=(-0.14, 0.2), label="W", style="track",
                                      badge=ICON_BADGE.get(prof.get("walls")))
         ns = wcells.get((0, 2)) or wcells.get((WALL_FRONT_ROW, 2))  # front の版の直線は手前の絵だけ
+        ns = ns or wcells.get((0, 5))  # 側壁の無い版（center）は、行き止まりの端の壁の絵をカーソルにする
         if ns:
             wcells[(0, 1)] = ns
         make_sheet(wcells, 2 * WALL_FRONT_ROW, 15 if any(c >= 10 for _, c in wcells) else 10, os.path.join(SRC, wall_sheet + ".png"))

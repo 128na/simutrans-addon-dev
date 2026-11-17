@@ -53,7 +53,7 @@ AMI の初版を「できた」と言うための条件。blender-poc の [ACCEP
 | # | 条件 | 状態 | 確かめ方 |
 |---|---|---|---|
 | 5-1 | 歩道の way を道路の隣のタイルに敷くと、縁石が道路とつながる | × | |
-| 5-2 | 壁・橋脚・歩道が別の pak にあり、配布に同梱される | △（線路の壁だけ。`ami_extra.pak` にある。橋脚・歩道・配布の同梱は未対応） | `python -X utf8 build.py` の出力（`ami_extra.pak` に `ami_wall_*` の dat 4 つ） |
+| 5-2 | 壁・橋脚・歩道が別の pak にあり、配布に同梱される | △（線路の壁だけ。`ami_extra.pak` にある。橋脚・歩道・配布の同梱は未対応） | `python -X utf8 build.py` の出力（`ami_extra.pak` に `ami_wall_*` の dat 5 つ（4 版と close）） |
 
 ## 6. 配布
 
