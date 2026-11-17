@@ -209,6 +209,7 @@ def _place(ob, part, i, paths, widths, moves, widths_of=None):
     ob["ground"] = part.ground
     ob["centre"] = part.centre
     ob["front"] = part.front
+    ob["thin"] = part.thin
     return [ob]
 
 

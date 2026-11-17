@@ -19,7 +19,7 @@ D:\bin\blender\blender.exe -b --factory-startup --python ..\..\tools\blender\com
 
 | どこ | 置くもの |
 |---|---|
-| `tools/blender/sheetlib/` | 描画の共通部分（パッケージ）。部品をそれが表す物ごとに分けてある: `core`（設定値・シーン・材質・形の部品・基準面 `Datum` と部品 `Part` の型）、`track_parts`（線路: 道床・まくらぎ・レール・車止め・汚れ）、`wall_parts`（壁・基盤・橋・高架の橋脚。線路と道路で共通）、`catenary_parts`（架線: 柱・梁・吊り金具・トロリ線）、`road_parts`（道路: 路面・縁石・歩道・白線・車線・汚れ・雪）、`assemble`（部品を経路ごとに組み立てる）、`cells`（セルの描画・特殊色・シート化）、`sheetlib`（線路・道路・トンネル・アイコンのシートと `run_targets`）。シート名や、部品をどの版に使うかは持たない |
+| `tools/blender/sheetlib/` | 描画の共通部分（パッケージ）。部品をそれが表す物ごとに分けてある: `core`（設定値・シーン・材質・形の部品・基準面 `Datum` と部品 `Part` の型）、`track_parts`（線路: 道床・まくらぎ・レール・車止め・汚れ）、`wall_parts`（壁・基盤・橋・高架の橋脚。線路と道路で共通）、`catenary_parts`（架線: 柱・梁・吊り金具・トロリ線・ちょう架線）、`road_parts`（道路: 路面・縁石・歩道・白線・車線・汚れ・雪）、`assemble`（部品を経路ごとに組み立てる）、`cells`（セルの描画・特殊色・シート化）、`sheetlib`（線路・道路・トンネル・アイコンのシートと `run_targets`）。シート名や、部品をどの版に使うかは持たない |
 | `tools/blender/sheet_settings.py` | 設定値: 並列数（`JOBS`、環境変数 `SHEET_JOBS`）・Blender の場所（`SHEET_BLENDER`）・モード（`SHEET_LAYOUT`・`SHEET_ONLY`）。Blender を使わないので `render_parallel.py` も読む |
 | `tools/blender/` のそのほか | 判定・比較・確認の道具（`profile_sheet`（描画の時間の内訳を測る）・`compose`・`ingame_diff`・`seam_judge`・`slope_measure`・`sheet_diff`・`special`・`special_preview`・`zoom`・`hcat`・`ref_measure`・`check`）と並列描画（`render_parallel`） |
 | `addons/<アドオン>/blender/render.py` | アドオンのシートの入口。`sys.path` に `tools/blender` を足して `sheetlib` を import し、描き分け（`R.TRACK_PROFILES`・`R.ROAD_PROFILES` への登録）と、対象名 → 描く関数の対応（`SHEETS`）を決めて `R.run_targets(SHEETS, 既定の対象)` を呼ぶ |
@@ -32,11 +32,12 @@ D:\bin\blender\blender.exe -b --factory-startup --python ..\..\tools\blender\com
   - `wall_sheet`: 壁を way の絵に描かず、このシート名の壁の way-object のシートに描く。上 4 行が奥、下 4 行（`WALL_FRONT_ROW` から）が手前の絵。`diag_curves` と一緒に使える（斜めの部品は `assemble` の `path_opts` で、直線と斜めの部品を 1 回でまとめて切り分ける）
   - `curve_cells`: `diag_curves` でも、カーブのセルを斜めの形で別に描く（斜めのタイルの切り抜き `_diag_open_cut` をかけない）
   - `wall_sheet` の坂のセルは、壁をタイルの外へ `SLOPE_WALL_PAD` だけ残し、壁の持ち分を左右へ 1 列広げる（坂の上の平らなタイルの壁との 1px のすき間を埋める）。`path_opts` の組み立てでは、ほかの経路の通り道で壁を削るのは、その経路が壁の側にあるときだけにし、斜めの部分の壁はタイルの辺で切る
-- 架線（AMI の架線つきの壁。#17）: 部品は `sheetlib/catenary_parts.py`（柱・梁・吊り金具・トロリ線。名前は `cat_` で始まる）。`groups` に `catenary`（トロリ線）と `catenary_support`（柱・梁・吊り金具）を足した版が作る
+- 架線（AMI の架線つきの壁。#17）: 部品は `sheetlib/catenary_parts.py`（柱・梁・吊り金具・トロリ線・ちょう架線。名前は `cat_` で始まる）。`groups` に `catenary`（線）と `catenary_support`（柱・梁・吊り金具）を足した版が作る
   - `select_walls` は架線の部品を壁に数えない。柱は壁と同じ決め方で残すか消し（`center` は無し）、梁・トロリ線はいつも残す。`catenary_support` は経路が 1 本のセルだけに作る
   - 梁は `trim_catenary` で、残した側壁の外側を削る（壁の無い側はタイルの端まで延びて、隣の線の梁とつながる）
   - `Part.front` の部品（梁・吊り金具・トロリ線）は、位置に関わらず手前の絵（`frontimage`）に描く（`render_layers`）
-  - 細い部品は、画面で 2px ちょうどだと画素の境にまたがって半透明の 2 列になり、高さのある部品の層で半透明の画素を捨てる処理（不透明度 250 未満）で消える。画面で縦向きの斜めのトロリ線がそうなったので、斜めだけ太くした（`CAT_WIRE_W_DIAG`。2026-11-18）
+  - 細い部品（`Part.thin`。架線のトロリ線・ちょう架線）: 1px ほどの線は、全部の画素が半透明になり、高さのある部品の層で半透明の画素を捨てる処理（不透明度 250 未満）で消える。`render_layers` は細い部品だけをもう 1 回描き、捨てた画素のうち不透明度 `THIN_ALPHA`（128）以上の所を不透明にして足す（細い部品のある層だけ、1 回多く描く）
+  - それでも、線の中心が画素の境に来ると半透明の 2 列（2 行）に分かれて、太く見えるか消える。斜めの線は半画素ずらして画素の中心に乗せる（`CAT_DIAG_SHIFT`・`CAT_DIAG_SHIFT_Z`）。直線は傾き 2:1 なので、太さ（`CAT_WIRE_W`・`CAT_WIRE_H`）で 1 行に 2px ずつの階段になるようにした。上下 2 本の線は、間をちょうど 4px（`H / 4`）にして、画素への乗り方をそろえる（2026-11-18）
   - 高さのある部品の層は、架線を足した版と壁だけの版で、壁の画素が減らないことを確かめた（レイアウト検証用モードのシートで、壁だけの版の不透明な画素が透明になった所は 0。変わった画素は架線と重なる所か、架線と壁の境の混ざった色。2026-11-18）
   - 描き分けのキー: `rise`（高さのある部品の持ち分を上へ広げる行数。既定は壁の `WALL_RISE`。架線は `CAT_RISE`）、`wall_only`（way のシートを書かず、壁の way-object のシートだけを書く。`sheet` は作業ファイルの名前にだけ使うので、同じ way の別の対象と違う名前にする）、`wall_label`（壁の way-object のアイコンの文字。既定は `W`）
 - アドオンのディレクトリは、道具が `os.getcwd()` で決める。アドオンの外では動かさない

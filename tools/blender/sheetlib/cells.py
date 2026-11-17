@@ -17,6 +17,7 @@ from .core import (  # noqa: F401
     SPECIAL,
     SPECIAL_COLORS,
     TILE,
+    THIN_ALPHA,
     TRANSPARENT,
     WORK,
     near_camera,
@@ -236,6 +237,16 @@ def render_layers(name, obs, split, exits, slope, cy, spill, rise, solid=False, 
         im = load_rgba8(render_cell(name + suffix)).copy()
         # 輪郭の半透明の画素は捨てる（色が暗く出て、壁の上の縁とタイルの境に黒い点線が見えた）
         im[..., 3] = np.where(m & (im[..., 3] >= 250), 255, 0)
+        thin = [ob for ob in objs if ob.get("thin")]
+        if thin:
+            # 細い部品（架線の線）だけを描き直し、捨てた画素のうち THIN_ALPHA 以上覆われた所を不透明にして足す
+            # （1px ほどの線は、全部の画素が半透明になって消えるため。2026-11-18）
+            for ob in tall:
+                ob.hide_render = ob not in thin
+            th = load_rgba8(render_cell(name + suffix + "_thin"))
+            fill = m & (im[..., 3] == 0) & (th[..., 3] >= THIN_ALPHA)
+            im[fill, :3] = th[fill, :3]
+            im[fill, 3] = 255
         return im
 
     back = layer([ob for ob in tall if ob not in front], "_tallb")

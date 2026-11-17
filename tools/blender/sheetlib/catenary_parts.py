@@ -8,17 +8,20 @@
   （single は両側、back は奥、front は手前、center は無し。select_walls）
 - 梁（cat_beam）: 柱の上を、線路を横切る向きに渡す。壁のある側は壁の外の面で止め、壁の無い側はタイルの端まで延ばす
   （隣の線の梁とつながる。trim_catenary）。center は梁だけ
-- 吊り金具（cat_hanger）: 梁からトロリ線を吊る
-- トロリ線（cat_wire）: 経路に沿う。分岐・十字では全部の経路に張る
+- 吊り金具（cat_hanger）: 梁からちょう架線・トロリ線を吊る
+- トロリ線（cat_wire）・ちょう架線（cat_messenger）: 経路に沿う上下 2 本の線。分岐・十字では全部の経路に張る。
+  1px ほどの細い線なので Part.thin（高さのある部品の層で、半透明の画素も THIN_ALPHA 以上なら残す）
 
 柱・梁・吊り金具（group "catenary_support"）は経路が 1 本のセルだけに作る（track_sheet。分岐・十字に経路ごとの門ができないように）。
-トロリ線（group "catenary"）は全部のセルに作る。梁・吊り金具・トロリ線は、車両より手前の絵（Part.front）に描く。
+線（group "catenary"）は全部のセルに作る。梁・吊り金具・線は、車両より手前の絵（Part.front）に描く。
 """
 import math
 
 from mathutils import Vector
 
 from .core import (  # noqa: F401
+    H,
+    PX_PER_UNIT,
     Part,
     TILE,
     box,
@@ -31,14 +34,19 @@ from .wall_parts import (  # noqa: F401
     WALL_W,
 )
 
-# 高さは路盤（道床の基準面）から。部品の座標 1 単位は、画面の縦で約 7.8px（H = 16px が 1 段）。
-# 手本の iss の架線（../iss/src/way-object/rail/catenary_new.dat）は、柱の上端が地面から約 41px、トロリ線が約 27px（2026-11-18 に測った）
-CAT_WIRE_Z = 3.5         # トロリ線の下の面（約 27px）
-CAT_WIRE_W = 0.22        # トロリ線の太さ（横・縦とも約 2px。細いと半透明の画素を捨てる処理で途切れる）
-CAT_WIRE_H = 0.25
-# 画面で縦向きの斜め（sw・ne）では、トロリ線の横幅だけが画面の幅になる。2px ちょうどだと画素の境にまたがって半透明の 2 列になり、
-# 半透明の画素を捨てる処理で消えた（2026-11-18）。斜めは太くする
-CAT_WIRE_W_DIAG = 0.34
+# 高さは路盤（道床の基準面）から。部品の座標 1 単位は、画面の縦で約 7.8px（H = 16px が 1 段）、横で約 9.05px（PX_PER_UNIT）。
+# 線は pak128 の架線（infrastructure/catenary_all の classic_catenary）と同じく上下 2 本: 上がちょう架線、下がトロリ線。
+# pak128 はタイルの中心で地面から下 約 24px・上 約 28px、どちらも 1px（2026-11-18 に測った。way-addon.md の 10 章）
+CAT_WIRE_Z = 3.0         # トロリ線（下の線）の下の面（線の中ほどで約 24px）
+CAT_MESSENGER_Z = CAT_WIRE_Z + H / 4  # ちょう架線（上の線）の下の面（トロリ線のちょうど 4px 上。画素への乗り方を下の線とそろえる）
+# 線の太さ。直線は線が画面で 2:1 に傾くので、横幅と縦の厚みの両方が画面の縦の太さになる。合わせて約 1px（1 行に 2px ずつの階段）
+CAT_WIRE_W = 0.05        # 線の横幅
+CAT_WIRE_H = 0.09        # 線の縦の厚み
+# 斜めの線は、線の中心が画素の境に来て、1px の線が半透明の 2 列（2 行）になった（2026-11-18）。半画素ずらして画素の中心に乗せる
+# 画面で縦向きの斜め（sw・ne）は、線の横幅だけが画面の幅になる
+CAT_WIRE_W_DIAG = 0.12   # 画面で縦向きの斜めの線の横幅（約 1px）
+CAT_DIAG_SHIFT = 0.5 / PX_PER_UNIT  # 画面で縦向きの斜めの線を、画面の右へずらす量（半画素）
+CAT_DIAG_SHIFT_Z = H / 32  # 画面で横向きの斜め（nw・se）の線を上げる量（半画素）
 CAT_POLE_TOP = 5.2       # 柱の上端（約 41px）
 CAT_POLE_S = 0.35        # 柱の太さ（約 3px）
 CAT_POLE_U = WALL_U + WALL_W / 2  # 柱の横位置（経路の中心から。壁の厚みの真ん中）
@@ -99,10 +107,22 @@ def _hanger_shape(path, k):
     return box(p.x, p.y, (z0 + z1) / 2, CAT_HANGER_S, CAT_HANGER_S, z1 - z0, rot=math.atan2(d.y, d.x))
 
 
-def _wire_shape(path, k):
-    """トロリ線: 経路の中心に沿う細い角棒。"""
-    u = (CAT_WIRE_W_DIAG if _diag(k) else CAT_WIRE_W) / 2
-    return sweep(path, [(-u, CAT_WIRE_Z), (u, CAT_WIRE_Z), (u, CAT_WIRE_Z + CAT_WIRE_H), (-u, CAT_WIRE_Z + CAT_WIRE_H)])
+def _line_shape(z):
+    """架線の線（トロリ線・ちょう架線）: 経路の中心に沿う細い角棒。下の面が z。"""
+    def shape(path, k, z=z):
+        u = CAT_WIRE_W / 2
+        if _diag(k):
+            d = path[-1] - path[0]
+            if abs(d.x + d.y) < 1e-6 * d.length:
+                # 画面で縦向きの斜め: 画面の右（平面の (1, 1) の向き）へ半画素ずらす
+                u = CAT_WIRE_W_DIAG / 2
+                s = CAT_DIAG_SHIFT / math.sqrt(2)
+                path = [p + Vector((s, s, 0)[:len(p)]) for p in path]
+            else:
+                # 画面で横向きの斜め: 線の中心が画素の境に来て 2 行になったので、上へ半画素ずらす
+                z += CAT_DIAG_SHIFT_Z
+        return sweep(path, [(-u, z), (u, z), (u, z + CAT_WIRE_H), (-u, z + CAT_WIRE_H)])
+    return shape
 
 
 CATENARY_PARTS = (
@@ -110,7 +130,8 @@ CATENARY_PARTS = (
     Part("cat_poleR", "bed", "bed", _M_POLE, _pole_shape(1), "catenary_support", tall=True),
     Part("cat_beam", "bed", "bed", _M_BEAM, _beam_shape, "catenary_support", tall=True, front=True),
     Part("cat_hanger", "bed", "bed", _M_BEAM, _hanger_shape, "catenary_support", tall=True, front=True),
-    Part("cat_wire", "bed", "bed", _M_WIRE, _wire_shape, "catenary", tall=True, front=True),
+    Part("cat_wire", "bed", "bed", _M_WIRE, _line_shape(CAT_WIRE_Z), "catenary", tall=True, front=True, thin=True),
+    Part("cat_messenger", "bed", "bed", _M_WIRE, _line_shape(CAT_MESSENGER_Z), "catenary", tall=True, front=True, thin=True),
 )
 
 

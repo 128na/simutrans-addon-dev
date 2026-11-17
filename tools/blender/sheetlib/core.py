@@ -45,6 +45,9 @@ TRANSPARENT = (231, 255, 255)   # #E7FFFF
 
 ALPHA_THRESHOLD = 25            # iss と同じ: これ未満は透過色にする
 
+# 細い部品（Part.thin）を、高さのある部品の層で残す不透明度（これ以上覆われた画素を不透明にする。cells.render_layers）
+THIN_ALPHA = 128
+
 # 特殊色（Simutrans 本体 descriptor/image.cc の rgbtab と同じ順）。makeobj は RGB が完全に一致した画素だけを特殊色にする
 def _hex(*v):
     return [((x >> 16) & 255, (x >> 8) & 255, x & 255) for x in v]
@@ -323,6 +326,7 @@ class Part:
     thick: float = 0.0      # 側壁の厚み（corridor で後の経路の壁を削る幅に足す。0 は線路の WALL_W）
     centre: bool = True     # 手前/奥を決める重心（near_camera）に数えるか
     front: bool = False     # 高さのある部品を、位置に関わらず手前の絵（車両より後に描く）に描く（架線の梁・トロリ線。render_layers）
+    thin: bool = False      # 1px ほどの細い部品。高さのある部品の層で、半透明の画素を THIN_ALPHA 以上なら残す（架線の線。render_layers）
 
 
 def layout_material(name):
