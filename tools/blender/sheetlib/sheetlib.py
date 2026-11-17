@@ -518,7 +518,9 @@ def track_sheet(profile="new"):
     # 雪の絵は下の 4 行に同じ並びで置く（dat の image[..][1]）。汚れは、雪の絵では雪の上の汚れ（灰色）に差し替える
     # 行の並び: 奥の絵 4 行 →（手前の絵 4 行）→ 雪の奥の絵 4 行 →（雪の手前の絵 4 行）
     block = 8 if "front_row" in prof else 4
-    variants = [(0, "", track_skin(groups), groups)]
+    # prof["skin"]（無くてよい）は夏の絵だけの材質の差し替え（部品の名前 → 材質）。雪の絵は雪の材質のまま
+    summer = dict(track_skin(groups) or {}, **prof.get("skin", {})) or None
+    variants = [(0, "", summer, groups)]
     if prof.get("snow"):
         variants.append((block, "_snow", track_skin(groups, snow=True), groups))
     for row0, suffix, skin, grp in variants:
