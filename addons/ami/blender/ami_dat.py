@@ -3,7 +3,13 @@
 値（速度・費用・維持費・登場年）は VALUES が持つ。README の「値の一覧」と同じにする。
 まだ絵を作っていない way は BUILT に入れない（dat も pak も作らない）。シートの行の並びは
     夏の絵 4 行（奥の絵）→ 雪の絵 4 行
-で、無壁の線路の並び。カーブは斜めの絵（DIAG_CURVES）を指す。壁・高架・橋の版（手前の絵の行を持つ）は、それぞれのステップで足す。
+で、無壁の線路の並び。カーブは斜めの絵（DIAG_CURVES）を指す。高架・橋の版は、それぞれのステップで足す。
+
+基盤の版の way（ami_rail_ballast_base_<版>）は通常の版と同じ並びで、近い斜めの絵を持たない（本体が分け合うタイルに 2 本の way を置き、
+奥の線と手前の線を別の版にできる。docs/reference/way-addon.md の 6 章）。壁の way-object（ami_wall_rail_<版>）のシートは
+    奥の絵 4 行（backimage）→ 手前の絵 4 行（frontimage）
+で、セルの位置は way と同じ。雪の絵は無い（way-object に雪のキーが無い）。ami_wall_rail_close は近い斜めの分け合うタイル用で、
+back と front のシートの斜めのセルを指す（README の「壁の敷き方」）。
 """
 import os
 
@@ -42,6 +48,25 @@ CURVE_TO_DIAG = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
 
 # 絵を作った way（名前 → シート名）。dat と pak を作る
 BUILT = {"ami_rail_ballast": "ami_rail_ballast"}
+BASE_VARIANTS = ("single", "back", "center", "front")
+for _v in BASE_VARIANTS:
+    BUILT[f"ami_rail_ballast_base_{_v}"] = f"ami_rail_ballast_base_{_v}"
+    VALUES[f"ami_rail_ballast_base_{_v}"] = VALUES["ami_rail_ballast"]
+    # 基盤の版はカーブのセル（行 2 の列 5〜8）を斜めの形で描く（render.py の curve_cells）。斜めのセルとは基盤の削り方だけが違う:
+    # 斜めのセルは近い斜めの分け合うタイルのために、壁の無い側を 2 本の真ん中で削る。カーブ（斜めが続かない曲がり）は削らない
+NO_CLOSE = {f"ami_rail_ballast_base_{_v}" for _v in BASE_VARIANTS}  # 近い斜めの絵を持たない way
+
+# ---------------------------------------------------------------- 壁の way-object（線路用、壁だけ。架線つきは別のステップ）
+# 値は仮（README の「今の決まりごと」）。topspeed は架線でない way-object では列車の速さを縛らない（本体は電化した編成にだけ
+# max_wayobj_speed を当てる。vehicle/simvehicle.cc）。同じ waytype の way-object は、遅い物を速い物で置き換える（Ctrl なし。
+# obj/wayobj.cc の extend_wayobj）ので、close だけ 1 速くして、back・front を敷き直しても close が残るようにする
+WALL_VALUES = dict(cost=3000, maintenance=60, intro_year=1900, topspeed=1000)
+WALL_CLOSE_TOPSPEED = WALL_VALUES["topspeed"] + 1
+WALLS = {f"ami_wall_rail_{_v}": f"ami_wall_rail_{_v}" for _v in ("single", "back", "front")}
+WALL_FRONT_ROW = 4  # 壁のシートの手前の絵の行（sheetlib の WALL_FRONT_ROW と同じ）
+WAYOBJ_KEYS = {"image": "image", "imageup": "imageup", "imageup2": "imageup2", "diagonal": "diagonal"}  # way のキー → way-object の back/front の後ろ
+# 近い斜めの分け合うタイル用: 斜めの向きごとに、タイルの角の側の壁を持つ版のシート（back は nw・sw、front は ne・se。README の「壁の敷き方」）
+CLOSE_FROM = {"[nw]": "ami_wall_rail_back", "[sw]": "ami_wall_rail_back", "[ne]": "ami_wall_rail_front", "[se]": "ami_wall_rail_front"}
 
 
 def dat_text(name, sheet):
@@ -65,9 +90,47 @@ def dat_text(name, sheet):
     ]
     for season in (0, 1):
         for key, idx, row, col in IMAGES:
+            if name in NO_CLOSE and idx.startswith("[close"):
+                continue
             if key == "image" and sheet in DIAG_CURVES and idx in CURVE_TO_DIAG:
                 row, col = CURVE_TO_DIAG[idx]
             out.append(f"{key}{idx}[{season}]={sheet}.{row + season * SNOW_ROWS}.{col},-64,-32")
+    return NL.join(out) + NL
+
+
+def wall_dat_text(name, sheet, close=False):
+    """壁の way-object の dat。セルは way と同じ位置（分岐の絵・近い斜めは持たない。壁は通常の T字・十字と同じ）。
+    カーブは way と同じく斜めのセルを指す。close は近い斜めの分け合うタイル用（斜めとカーブのキーだけ、CLOSE_FROM のシートを指す）"""
+    v = WALL_VALUES
+    out = [
+        f"# AMI: {name}（CC BY 4.0）。線路の壁の way-object（壁だけ、架線なし）。シートは blender/render.py が描く",
+        "obj=way-object",
+        f"name={name}",
+        "copyright=AMI (CC BY 4.0)",
+        f"intro_year={v['intro_year']}",
+        "intro_month=1",
+        "retire_year=2999",
+        "retire_month=1",
+        "waytype=track",
+        "own_waytype=track",
+        f"cost={v['cost']}",
+        f"maintenance={v['maintenance']}",
+        f"topspeed={WALL_CLOSE_TOPSPEED if close else v['topspeed']}",
+        f"icon=> {sheet}.0.0",
+        f"cursor={sheet}.0.1,-64,-32",
+    ]
+    for key, idx, row, col in IMAGES:
+        if key not in WAYOBJ_KEYS or idx.startswith("[close") or idx[1:-1].endswith(("1", "2")) and key == "image":
+            continue
+        if key == "image" and idx in CURVE_TO_DIAG:
+            row, col = CURVE_TO_DIAG[idx]
+        src = sheet
+        if close:
+            if not ((key == "diagonal" or key == "image") and idx in CLOSE_FROM):
+                continue
+            src = CLOSE_FROM[idx]
+        for side, dr in (("back", 0), ("front", WALL_FRONT_ROW)):
+            out.append(f"{side}{WAYOBJ_KEYS[key]}{idx}={src}.{row + dr}.{col},-64,-32")
     return NL.join(out) + NL
 
 
@@ -77,6 +140,13 @@ def main():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(dat_text(name, sheet))
         print(f"[dat] {name}.dat")
+    for name, sheet in WALLS.items():
+        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
+            f.write(wall_dat_text(name, sheet))
+        print(f"[dat] {name}.dat")
+    with open(os.path.join(SRC, "ami_wall_rail_close.dat"), "w", encoding="utf8", newline=NL) as f:
+        f.write(wall_dat_text("ami_wall_rail_close", "ami_wall_rail_back", close=True))
+    print("[dat] ami_wall_rail_close.dat")
 
 
 if __name__ == "__main__":
