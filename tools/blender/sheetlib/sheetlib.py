@@ -364,6 +364,10 @@ ICON_BADGE = {"both": "S", "back": "B", "center": "C", "front": "F"}  # アイ�
 
 WALL_RISE = 11  # 側壁の高さ（画面の px。持ち分を上へ広げる行数）
 
+# 壁を way-object に分ける版（TRACK_PROFILES の wall_sheet）の、壁のシートの行の並び: 奥の絵（dat の backimage）4 行 → 手前の絵（frontimage）4 行。
+# セルの位置は way のシートと同じ。way-object には雪の絵が無いので、雪の行は無い
+WALL_FRONT_ROW = 4
+
 # datums: 基準面ごとの下げ幅（Datum(drop, ground)）。絵の基準位置は両方とも BALLAST_DY（地面の菱形より 1px 上 = 旧の位置）。
 # ground: 下げ幅のうち、地面の上での位置のずれにあたる px（datum_move）。新は道床の輪郭が地面の菱形の中心線より 1px 下
 # （道床を 2px 下げ、基準位置 BALLAST_DY が 1px 上）。レールも同じ 1px（4px 下げ、うち 3px はレールの高さと基準位置の分）。
@@ -376,14 +380,15 @@ WALL_RISE = 11  # 側壁の高さ（画面の px。持ち分を上へ広げる�
 BALLAST_DY = -1
 
 
-def select_walls(obs, name, paths, side, wall_names=None):
+def select_walls(obs, name, paths, side, wall_names=None, origin=None):
     """側壁のバリエーション（複線以上を並べて作るとき用）: back はカメラから遠い側の壁だけ、front は近い側の壁だけ、center は無し。
     残さない壁は消して obs から外し、残した壁（高さのある部品）を返す。行き止まりの端の壁は、壁のある版ならいつも残す。
     手前/奥を分ける向き: T字は、まっすぐ通る道（東西か南北）に対して手前か奥かで決める（分岐の向きで壁が変わる）。
-    南北の道は東が手前、東西の道は南が手前。それ以外はカメラの向き（NEAR_AXIS）"""
+    南北の道は東が手前、東西の道は南が手前。それ以外はカメラの向き（NEAR_AXIS）。origin を渡すと、手前/奥をその点から測る"""
     axis = {"nse": Vector((1, 0, 0)), "nsw": Vector((1, 0, 0)),
             "new": Vector((0, -1, 0)), "sew": Vector((0, -1, 0))}.get(_junction(name), NEAR_AXIS)
-    origin = Vector((0, 0, 0)) if len(paths) > 1 else None
+    if origin is None and len(paths) > 1:
+        origin = Vector((0, 0, 0))
     near = near_camera(obs, axis, origin=origin)
     keep = {"both": lambda ob: True, "center": lambda ob: False,
             "front": lambda ob: ob in near, "back": lambda ob: ob not in near}[side]
@@ -398,7 +403,7 @@ def select_walls(obs, name, paths, side, wall_names=None):
 def trim_end_walls(kept, paths, k, move, wu=None, ww=None, zr=(-2, 2)):
     """行き止まりの端の壁から、残した側壁の外側を削る（側壁のある側は側壁で止まる）。move は路盤の基準面の動き。zr は _beyond_prisms と同じ"""
     end_walls = [ob for ob in kept if ob.name.startswith("endw")]
-    sides = _beyond_prisms([ob for ob in kept if not ob.name.startswith("endw")], paths, k, wu, ww, zr)
+    sides = _beyond_prisms([ob for ob in kept if not ob.name.startswith("endw")], paths, k, wu, ww, zr, ref_move=move)
     if not (end_walls and sides):
         return
     cutter = mesh_object("endcut", *merge(sides), material(*_M_WALL))
@@ -508,13 +513,20 @@ def track_sheet(profile="new"):
     parts = tuple(prof.get("replace", {}).get(p.name, p) for p in TRACK_PARTS + TRACK_EXTRAS)
     # prof["diag_curves"]（無くてよい）: pak128 標準の線路と同じく、カーブを斜めの絵で表す。カーブのセルは描かず（dat が斜めのセルを指す）、
     # T字・十字・分岐の絵のカーブを、同じ 2 辺をつなぐ斜めの直線にする。斜めの部分は斜めのセルと同じ幅・下げ幅で作り、隣の斜めのタイルとつなぐ
+    # 壁の版でも使える: 直線と斜めの部分を 1 回の assemble で組み、斜めの部分だけ横幅の倍率と下げ幅を変える（path_opts）ので、
+    # 壁の添字（pi）・分岐の通り道の削り（corridor）・基盤の削り（_beyond_prisms）が全部の経路で合う
     diag_of = {}
-    assert not (prof.get("diag_curves") and prof.get("walls")), "diag_curves は壁の版と併用できない（斜めを別の assemble にするので、壁の添字と corridor の削りが合わない）"
     if prof.get("diag_curves"):
         diag_paths = {id(arc_sw): ("diag_sw", straight(S, W, ext=2.5)), id(arc_nw): ("diag_nw", straight(N, W, ext=2.5)),
                       id(arc_ne): ("diag_ne", straight(N, E, ext=2.5)), id(arc_se): ("diag_se", straight(S, E, ext=2.5))}
         swap = lambda ps: [diag_paths[id(p)][1] if id(p) in diag_paths else p for p in ps]
-        jobs = {k: (v[0], swap(v[1]), v[2], *[swap(r) for r in v[3:]]) for k, v in jobs.items() if not v[0].startswith("curve_")}
+        # prof["curve_cells"]（無くてよい）: カーブのセルも斜めの形で描く（基盤の版。dat の image[sw] などがこのセルを指す）。
+        # 斜めのセルとの違いは、基盤の壁の無い側を削らないことだけ（_diag_open_cut は近い斜めの分け合うタイル用）。
+        # 複線の直角の曲がりでは、内側の線のカーブのタイルの外側半分が、外側の線の直線の基盤とつながる（削ると草の三角が残った）
+        fresh = {"curve_sw": (S, W), "curve_nw": (N, W), "curve_ne": (N, E), "curve_se": (S, E)}
+        jobs = {k: ((v[0], [straight(*fresh[v[0]], ext=2.5)], v[2]) if v[0].startswith("curve_") else
+                    (v[0], swap(v[1]), v[2], *[swap(r) for r in v[3:]]))
+                for k, v in jobs.items() if prof.get("curve_cells") or not v[0].startswith("curve_")}
         diag_of = {id(p): n for n, p in diag_paths.values()}
     if "only" in prof:
         jobs = {k: v for k, v in jobs.items() if v[0] in prof["only"]}
@@ -538,6 +550,10 @@ def track_sheet(profile="new"):
     # 雪の絵は下の 4 行に同じ並びで置く（dat の image[..][1]）。汚れは、雪の絵では雪の上の汚れ（灰色）に差し替える
     # 行の並び: 奥の絵 4 行 →（手前の絵 4 行）→ 雪の奥の絵 4 行 →（雪の手前の絵 4 行）
     block = 8 if "front_row" in prof else 4
+    # prof["wall_sheet"]（無くてよい）: 壁を way の絵に焼き込まず、この名前の way-object のシートに分ける（AMI の基盤の版と壁。ADR 0003）。
+    # way のシートには壁を除いた本体（基盤は壁の位置で止まる）を、壁のシートには壁だけを描く
+    wall_sheet = prof.get("wall_sheet")
+    wcells = {}
     # prof["skin"]（無くてよい）は夏の絵だけの材質の差し替え（部品の名前 → 材質）。雪の絵は雪の材質のまま
     summer = dict(track_skin(groups) or {}, **prof.get("skin", {})) or None
     variants = [(0, "", summer, groups)]
@@ -546,22 +562,20 @@ def track_sheet(profile="new"):
     for row0, suffix, skin, grp in variants:
         for pos, (name, paths, slope, *rails) in jobs.items():
             clear_models()
-            # 画面で横向きの斜め（nw・se）は下げ幅を半分にする（datum_move の div）。斜めは横幅も細くする
-            div = 2 if name in ("diag_nw", "diag_se", "close1") else 1
-            widths = {"gauge": DIAG_RAIL, "bed": DIAG_BALLAST} if name.startswith(("diag_", "close")) else None
+            # 画面で横向きの斜め（nw・se）は下げ幅を半分にする（datum_move の div）。斜めは横幅も細くする。
+            # diag_curves のカーブのセル（curve_cells）は斜めのセルと同じ形
+            shape = name.replace("curve_", "diag_") if diag_of and name.startswith("curve_") else name
+            div = 2 if shape in ("diag_nw", "diag_se", "close1") else 1
+            widths = {"gauge": DIAG_RAIL, "bed": DIAG_BALLAST} if shape.startswith(("diag_", "close")) else None
             kw = dict(widths=widths, div=div, groups=grp, ends=name in ("s", "w", "n", "e"), skin=skin)
 
             def build(ps, pths):
-                # diag_curves の斜めの部分は、斜めのセルと同じ幅・下げ幅で別に組む
-                axis = [p for p in pths if id(p) not in diag_of]
-                out = assemble(ps, axis, prof["datums"], slope, **kw) if axis else []
-                for p in pths:
-                    if id(p) in diag_of:
-                        dn = diag_of[id(p)]
-                        out += assemble(ps, [p], prof["datums"], slope, **dict(kw, widths={"gauge": DIAG_RAIL, "bed": DIAG_BALLAST},
-                                                                                div=2 if dn in ("diag_nw", "diag_se") else 1))
+                # diag_curves の斜めの部分は、斜めのセルと同じ幅・下げ幅で組む（同じ assemble の中で、経路ごとに変える）
+                opts = {i: ({"gauge": DIAG_RAIL, "bed": DIAG_BALLAST}, 2 if diag_of[id(p)] in ("diag_nw", "diag_se") else 1)
+                        for i, p in enumerate(pths) if id(p) in diag_of}
+                out = assemble(ps, pths, prof["datums"], slope, **dict(kw, path_opts=opts or None))
                 bed = [p for p in ps if p.name == "ballast"]
-                if bed and len(axis) < len(pths):
+                if bed and opts:
                     # 直線と斜めの道床の間にできる三角のすき間を、道床の上面の凸包で埋める（pak128 標準の T字・十字と同じ）
                     fill = replace(bed[0], shape=bed_fill_shape(pths, {i: DIAG_BALLAST for i in diag_of}))
                     out += assemble([fill], pths[:1], prof["datums"], slope, **dict(kw, widths=None))
@@ -573,7 +587,10 @@ def track_sheet(profile="new"):
             else:
                 obs = build(parts, paths)
             side = prof.get("walls", "both")
-            kept = select_walls(obs, name, paths, side)
+            # 行き止まりの終点をタイルの中心から動かした版（end_from_edge）は、本体の重心が開いた側へ寄り、側壁の手前/奥の判定が
+            # ずれた（タイルの端まで延ばした手前の側壁が奥の絵になった）。手前/奥をタイルの中心から測る
+            origin = Vector((0, 0, 0)) if "end_from_edge" in prof and name in ("s", "w", "n", "e") else None
+            kept = select_walls(obs, name, paths, side, origin=origin)
             if side in ("back", "center") and name.startswith("diag_"):
                 # back・center の斜めは橋脚を描かない。手前にいつも front の線があり、その橋脚で足りる。
                 # 描くと、画面で横向きの斜めでは柱の上が手前の線の床に重なって暗い点線に見えた
@@ -597,10 +614,20 @@ def track_sheet(profile="new"):
                     obs.append(build_start_body(paths[0], grounds[name], prof["datums"]["bed"], _M_BASE))
                     mask_slope = grounds[name]  # 持ち分を、坂の地面まで下へ広げる
             cname = f"{prof['sheet']}{suffix}_{name}"
-            if any(ob.get("tall") for ob in obs):
+            if wall_sheet and any(ob.get("tall") for ob in obs):
+                # 壁を way-object に分ける版: 本体（壁なし）は way のシート、壁は way-object のシート（夏の絵だけ）へ
+                body, wback, wfront = render_layers(cname, obs, True, exits_of(name), mask_slope, cy, prof["spill"], WALL_RISE,
+                                                    prof.get("solid", False), prof.get("lower", 0), separate=True,
+                                                    tall_layers=row0 == 0, origin=origin)
+                cells[(pos[0] + row0, pos[1])] = body
+                if wback:
+                    wcells[pos] = wback
+                if wfront:
+                    wcells[(pos[0] + WALL_FRONT_ROW, pos[1])] = wfront
+            elif any(ob.get("tall") for ob in obs):
                 cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, True, exits_of(name), mask_slope, cy,
                                                                       prof["spill"], WALL_RISE, prof.get("solid", False),
-                                                                      prof.get("lower", 0))
+                                                                      prof.get("lower", 0), origin=origin)
                 if front:
                     cells[(pos[0] + row0 + prof["front_row"], pos[1])] = front
             else:
@@ -648,6 +675,16 @@ def track_sheet(profile="new"):
 
     rows = block * (2 if prof.get("snow") else 1)
     make_sheet(cells, rows, 15 if any(c >= 10 for _, c in cells) else 10, os.path.join(SRC, prof["sheet"] + ".png"))
+    if wall_sheet:
+        # 壁の way-object のアイコン（仮の絵。way と同じ絵に、印と W を書く）とカーソル（直線の奥の壁）
+        clear_models()
+        assemble(TRACK_PARTS, [straight((0, -12), (0, 12), ext=0.6)], clip=False)
+        wcells[(0, 0)] = render_icon(wall_sheet + "_icon", 0.5, shift=(-0.14, 0.2), label="W", style="track",
+                                     badge=ICON_BADGE.get(prof.get("walls")))
+        ns = wcells.get((0, 2)) or wcells.get((WALL_FRONT_ROW, 2))  # front の版の直線は手前の絵だけ
+        if ns:
+            wcells[(0, 1)] = ns
+        make_sheet(wcells, 2 * WALL_FRONT_ROW, 15 if any(c >= 10 for _, c in wcells) else 10, os.path.join(SRC, wall_sheet + ".png"))
 
 
 ICON = 32
