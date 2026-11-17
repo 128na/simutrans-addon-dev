@@ -9,6 +9,7 @@
     src/ami_rail_ballast.png  在来線（バラスト軌道）の通常の版。形は blender-poc の線路と同じで、夏の道床を砕石のまだらにした
     src/ami_rail_ballast_base_<版>.png  基盤の版（single・back・center・front）の way。基盤は壁の位置で止まる
     src/ami_wall_rail_<版>.png  壁の way-object（4 版。center は行き止まりの端の壁だけ）。上 4 行が奥（back）、下 4 行が手前（front）の絵
+    src/ami_wall_rail_<版>_catenary.png  架線つきの壁の way-object（4 版。center は架線と行き止まりの端の壁だけ）。行の並びは壁と同じ
     work/                     セルごとの生の描画結果（確認用）
 """
 import dataclasses
@@ -74,6 +75,19 @@ for _v, _walls in BASE_VARIANTS.items():
         # カーブのセルを斜めの形で描き、基盤の壁の無い側を削らない（複線の直角の曲がりで、内側の線の外側半分を埋める）
         curve_cells=True)
 
+# ---------------------------------------------------------------- 架線つきの壁の way-object（ADR 0003。#17）
+# 壁の way-object に架線（柱・梁・吊り金具・トロリ線。tools/blender/sheetlib/catenary_parts.py）を足した版（ami_wall_rail_<版>_catenary）。
+# center は壁が無く、架線（梁・トロリ線）と行き止まりの端の壁だけ。寸法は catenary_parts の CAT_* にまとめた（値は仮。README の「架線の作り」）。
+# 壁は基盤の版と同じ形で描き（groups も同じにする。手前/奥の分け方が本体の重心で決まるため）、way のシートは書かない（wall_only。
+# way は基盤の版の対象が書く）。sheet は作業ファイルの名前だけに使い、基盤の版と分ける（同時に描いても work/ のセルが混ざらない）
+CATENARY_LABEL = "E"  # 架線つきの壁のアイコンの文字（仮。アイコンはステップ 13 でまとめて作る）
+for _v in BASE_VARIANTS:
+    _base = R.TRACK_PROFILES[f"rail_ballast_base_{_v}"]
+    R.TRACK_PROFILES[f"rail_ballast_base_{_v}_catenary"] = dict(
+        _base, sheet=f"ami_rail_ballast_base_{_v}_cat", wall_sheet=f"ami_wall_rail_{_v}_catenary",
+        groups=_base["groups"] + ("catenary", "catenary_support"), snow=False, wall_only=True, rise=R.CAT_RISE,
+        wall_label=CATENARY_LABEL)
+
 # ---------------------------------------------------------------- 対象（シート名 → 描く関数）
 # 基盤の版の対象は、way のシートと壁の way-object のシートを 1 つのプロセスで描く
 
@@ -82,6 +96,8 @@ SHEETS = {
 }
 for _v in BASE_VARIANTS:
     SHEETS[f"ami_rail_ballast_base_{_v}"] = lambda v=_v: R.track_sheet(f"rail_ballast_base_{v}")
+for _v in BASE_VARIANTS:
+    SHEETS[f"ami_wall_rail_{_v}_catenary"] = lambda v=_v: R.track_sheet(f"rail_ballast_base_{v}_catenary")
 
 if __name__ == "__main__":
     R.run_targets(SHEETS, list(SHEETS))

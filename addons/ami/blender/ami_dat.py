@@ -10,6 +10,9 @@
     奥の絵 4 行（backimage）→ 手前の絵 4 行（frontimage）
 で、セルの位置は way と同じ。雪の絵は無い（way-object に雪のキーが無い）。ami_wall_rail_close は近い斜めの分け合うタイル用で、
 back と front のシートの斜めのセルを指す（README の「壁の敷き方」）。
+
+架線つきの壁の way-object（ami_wall_rail_<版>_catenary）は壁と同じ並びで、own_waytype=electrified_track（電化）。
+ami_wall_rail_close_catenary は、近い斜めの分け合うタイル用で、back と front の架線つきのシートの斜めのセルを指す。
 """
 import os
 
@@ -69,6 +72,15 @@ WAYOBJ_KEYS = {"image": "image", "imageup": "imageup", "imageup2": "imageup2", "
 # 近い斜めの分け合うタイル用: 斜めの向きごとに、タイルの角の側の壁を持つ版のシート（back は nw・sw、front は ne・se。README の「壁の敷き方」）
 CLOSE_FROM = {"[nw]": "ami_wall_rail_back", "[sw]": "ami_wall_rail_back", "[ne]": "ami_wall_rail_front", "[se]": "ami_wall_rail_front"}
 
+# ---------------------------------------------------------------- 架線つきの壁の way-object（線路用、電化。#17）
+# 値は仮（README の「架線の作り」）。架線の way-object の topspeed は、電化した編成の速さを縛る（本体の max_wayobj_speed）ので、
+# いちばん速い線路（高速線 480 km/h）より大きくする。壁だけの版（1000・close 1001）より速くして、壁の上に敷くと架線つきに置き換わる
+# （逆に、架線つきの上に壁だけの版を敷いても置き換わらない。外してから敷く）。close は 1 速くする（壁だけの版と同じ理由）
+CATENARY_VALUES = dict(cost=4000, maintenance=100, intro_year=1900, topspeed=1100)
+CATENARY_CLOSE_TOPSPEED = CATENARY_VALUES["topspeed"] + 1
+CATENARY = {f"ami_wall_rail_{_v}_catenary": f"ami_wall_rail_{_v}_catenary" for _v in BASE_VARIANTS}
+CLOSE_FROM_CATENARY = {k: v + "_catenary" for k, v in CLOSE_FROM.items()}
+
 
 def dat_text(name, sheet):
     v = VALUES[name]
@@ -99,12 +111,16 @@ def dat_text(name, sheet):
     return NL.join(out) + NL
 
 
-def wall_dat_text(name, sheet, close=False):
+def wall_dat_text(name, sheet, close=False, catenary=False):
     """壁の way-object の dat。セルは way と同じ位置（分岐の絵・近い斜めは持たない。壁は通常の T字・十字と同じ）。
-    カーブは way と同じく斜めのセルを指す。close は近い斜めの分け合うタイル用（斜めとカーブのキーだけ、CLOSE_FROM のシートを指す）"""
-    v = WALL_VALUES
+    カーブは way と同じく斜めのセルを指す。close は近い斜めの分け合うタイル用（斜めとカーブのキーだけ、CLOSE_FROM のシートを指す）。
+    catenary は架線つき（電化。own_waytype=electrified_track、値は CATENARY_VALUES、close は CLOSE_FROM_CATENARY のシート）"""
+    v = CATENARY_VALUES if catenary else WALL_VALUES
+    close_top = CATENARY_CLOSE_TOPSPEED if catenary else WALL_CLOSE_TOPSPEED
+    close_from = CLOSE_FROM_CATENARY if catenary else CLOSE_FROM
+    kind = "架線つき（電化）" if catenary else "壁だけ、架線なし"
     out = [
-        f"# AMI: {name}（CC BY 4.0）。線路の壁の way-object（壁だけ、架線なし）。シートは blender/render.py が描く",
+        f"# AMI: {name}（CC BY 4.0）。線路の壁の way-object（{kind}）。シートは blender/render.py が描く",
         "obj=way-object",
         f"name={name}",
         "copyright=AMI (CC BY 4.0)",
@@ -113,10 +129,10 @@ def wall_dat_text(name, sheet, close=False):
         "retire_year=2999",
         "retire_month=1",
         "waytype=track",
-        "own_waytype=track",
+        f"own_waytype={'electrified_track' if catenary else 'track'}",
         f"cost={v['cost']}",
         f"maintenance={v['maintenance']}",
-        f"topspeed={WALL_CLOSE_TOPSPEED if close else v['topspeed']}",
+        f"topspeed={close_top if close else v['topspeed']}",
         f"icon=> {sheet}.0.0",
         f"cursor={sheet}.0.1,-64,-32",
     ]
@@ -127,9 +143,9 @@ def wall_dat_text(name, sheet, close=False):
             row, col = CURVE_TO_DIAG[idx]
         src = sheet
         if close:
-            if not ((key == "diagonal" or key == "image") and idx in CLOSE_FROM):
+            if not ((key == "diagonal" or key == "image") and idx in close_from):
                 continue
-            src = CLOSE_FROM[idx]
+            src = close_from[idx]
         for side, dr in (("back", 0), ("front", WALL_FRONT_ROW)):
             out.append(f"{side}{WAYOBJ_KEYS[key]}{idx}={src}.{row + dr}.{col},-64,-32")
     return NL.join(out) + NL
@@ -148,6 +164,13 @@ def main():
     with open(os.path.join(SRC, "ami_wall_rail_close.dat"), "w", encoding="utf8", newline=NL) as f:
         f.write(wall_dat_text("ami_wall_rail_close", "ami_wall_rail_back", close=True))
     print("[dat] ami_wall_rail_close.dat")
+    for name, sheet in CATENARY.items():
+        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
+            f.write(wall_dat_text(name, sheet, catenary=True))
+        print(f"[dat] {name}.dat")
+    with open(os.path.join(SRC, "ami_wall_rail_close_catenary.dat"), "w", encoding="utf8", newline=NL) as f:
+        f.write(wall_dat_text("ami_wall_rail_close_catenary", "ami_wall_rail_back_catenary", close=True, catenary=True))
+    print("[dat] ami_wall_rail_close_catenary.dat")
 
 
 if __name__ == "__main__":
