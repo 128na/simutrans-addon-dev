@@ -322,6 +322,7 @@ class Part:
     transfer: bool = False  # 抜いた切り口に型の材質を移す（縁石の立ち上がり）
     thick: float = 0.0      # 側壁の厚み（corridor で後の経路の壁を削る幅に足す。0 は線路の WALL_W）
     centre: bool = True     # 手前/奥を決める重心（near_camera）に数えるか
+    front: bool = False     # 高さのある部品を、位置に関わらず手前の絵（車両より後に描く）に描く（架線の梁・トロリ線。render_layers）
 
 
 def layout_material(name):

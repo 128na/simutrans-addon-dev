@@ -226,6 +226,9 @@ def render_layers(name, obs, split, exits, slope, cy, spill, rise, solid=False, 
         wide[:, :-1] |= m[:, 1:]
         m = wide
     front = near_camera(obs, origin=origin) if split else []
+    if split:
+        # Part.front の部品（架線の梁・トロリ線）は、位置に関わらず手前の絵にする（車両の上に描く）
+        front += [ob for ob in tall if ob.get("front") and ob not in front]
 
     def layer(objs, suffix):
         for ob in tall:
