@@ -509,6 +509,7 @@ def track_sheet(profile="new"):
     # prof["diag_curves"]（無くてよい）: pak128 標準の線路と同じく、カーブを斜めの絵で表す。カーブのセルは描かず（dat が斜めのセルを指す）、
     # T字・十字・分岐の絵のカーブを、同じ 2 辺をつなぐ斜めの直線にする。斜めの部分は斜めのセルと同じ幅・下げ幅で作り、隣の斜めのタイルとつなぐ
     diag_of = {}
+    assert not (prof.get("diag_curves") and prof.get("walls")), "diag_curves は壁の版と併用できない（斜めを別の assemble にするので、壁の添字と corridor の削りが合わない）"
     if prof.get("diag_curves"):
         diag_paths = {id(arc_sw): ("diag_sw", straight(S, W, ext=2.5)), id(arc_nw): ("diag_nw", straight(N, W, ext=2.5)),
                       id(arc_ne): ("diag_ne", straight(N, E, ext=2.5)), id(arc_se): ("diag_se", straight(S, E, ext=2.5))}
