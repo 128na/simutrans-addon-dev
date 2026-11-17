@@ -254,14 +254,20 @@ def road_sheet(style="street"):
             # 上の方が削れずに残り、壁の手前に路面が出て躯体にかぶさった（2026-11-15、ゲームで確認）
             beyond = _beyond_prisms(kept, paths, kl, EXPWY_WALL_U, EXPWY_WALL_W, ROAD_CUT_Z)
             if beyond:
-                cutter = mesh_object("roadcut", *merge(beyond), material(*_M_BASE))
-                recalc_normals(cutter)
+                # 抜く形（壁の外側の角柱）は 1 つずつ順に抜く（まとめると自己交差して use_self が要り遅い。assemble._carve と同じ）
+                cutters = []
+                for piece in beyond:
+                    c = mesh_object("roadcut", *merge([piece]), material(*_M_BASE))
+                    recalc_normals(c)
+                    cutters.append(c)
                 for ob in [ob for ob in obs if not ob.get("tall") and not ob.get("pname", "").startswith("pier")]:
-                    boolean(ob, cutter)
+                    for cutter in cutters:
+                        boolean(ob, cutter, use_self=False)
                     if not ob.data.polygons:
                         obs.remove(ob)
                         bpy.data.objects.remove(ob, do_unlink=True)
-                bpy.data.objects.remove(cutter, do_unlink=True)
+                for c in cutters:
+                    bpy.data.objects.remove(c, do_unlink=True)
             if slope and prof.get("bridge"):
                 # 端の坂の躯体は、assemble が上面を地面より少し上（0.02）に止めるので、坂の下の端で路面（上面 0）より上に出て
                 # 路面にはみ出して見えた（2026-11-15、ゲームで確認）。上面を路面の少し下に下げる
