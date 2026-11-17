@@ -62,7 +62,8 @@ NO_CLOSE = {f"ami_rail_ballast_base_{_v}" for _v in BASE_VARIANTS}  # 近い斜�
 # obj/wayobj.cc の extend_wayobj）ので、close だけ 1 速くして、back・front を敷き直しても close が残るようにする
 WALL_VALUES = dict(cost=3000, maintenance=60, intro_year=1900, topspeed=1000)
 WALL_CLOSE_TOPSPEED = WALL_VALUES["topspeed"] + 1
-WALLS = {f"ami_wall_rail_{_v}": f"ami_wall_rail_{_v}" for _v in ("single", "back", "front")}
+# center は側壁が無く、行き止まりの端の壁だけ（ほかのキーの絵は空。架線つきの版で center も要るので 4 版にそろえる）
+WALLS = {f"ami_wall_rail_{_v}": f"ami_wall_rail_{_v}" for _v in BASE_VARIANTS}
 WALL_FRONT_ROW = 4  # 壁のシートの手前の絵の行（sheetlib の WALL_FRONT_ROW と同じ）
 WAYOBJ_KEYS = {"image": "image", "imageup": "imageup", "imageup2": "imageup2", "diagonal": "diagonal"}  # way のキー → way-object の back/front の後ろ
 # 近い斜めの分け合うタイル用: 斜めの向きごとに、タイルの角の側の壁を持つ版のシート（back は nw・sw、front は ne・se。README の「壁の敷き方」）

@@ -16,7 +16,7 @@
 //   G 近い斜め: (22,0) から南東へ・(22,18) から北東へ、1 タイルずらした斜め 2 本    … diagonal[close1] [close2]
 //   I 十字の分岐の絵を固定: (2,14) を選択 1・(8,14) を選択 2                       … image[nsew1] [nsew2]（固定の道具がある OTRP だけ）
 //   H 分岐の自動選択 8 通り: y=22 の行に x=3 から 8 ずつ                          … image[nse1]〜[sew2]
-// 基盤の版（WALLED）も同じ並びで、同じ版の壁の way-object を同じ経路に重ねる（center は壁なし）。G は敷かない（近い斜めは区画 W）。
+// 基盤の版（WALLED）も同じ並びで、同じ版の壁の way-object を同じ経路に重ねる（center の壁は行き止まりの端の壁だけ）。G は敷かない（近い斜めは区画 W）。
 //
 // 区画 W（複線と壁の組。WAYS と WALLED の区画の後。原点は (ox, oy + (WAYS と WALLED の数) * SPACING)）:
 //   W1 複線の輪: 外 (0,0)-(12,9)・内 (1,1)-(11,8)。辺ごとに奥の線は back、手前の線は front。カーブ（斜めの絵）のタイルは南北の辺と同じ版
@@ -26,7 +26,7 @@
 local WAYS = ["ami_rail_ballast"];
 // [基盤の版の way, 壁の way-object（null は壁なし）]
 local WALLED = [["ami_rail_ballast_base_single", "ami_wall_rail_single"], ["ami_rail_ballast_base_back", "ami_wall_rail_back"],
-                ["ami_rail_ballast_base_center", null], ["ami_rail_ballast_base_front", "ami_wall_rail_front"]];
+                ["ami_rail_ballast_base_center", "ami_wall_rail_center"], ["ami_rail_ballast_base_front", "ami_wall_rail_front"]];
 local W_AREA = [24, 18];  // 区画 W の大きさ（降雪の塗り直しに使う）
 local ORIGINS = [[20, 20], [276, 20]];
 local SNOW = 1;          // ORIGINS の何番目を降雪に塗り直すか
@@ -150,7 +150,7 @@ function lay(name, wall, ox, oy) {
 function lay_pairs(ox, oy) {
   local wd = {}, od = {};
   foreach (v in ["single", "back", "center", "front"]) wd[v] <- way_desc_x("ami_rail_ballast_base_" + v);
-  foreach (v in ["single", "back", "front", "close"]) od[v] <- wayobj_desc_x("ami_wall_rail_" + v);
+  foreach (v in ["single", "back", "center", "front", "close"]) od[v] <- wayobj_desc_x("ami_wall_rail_" + v);
   local c = function(x, y) { return coord3d(ox + x, oy + y, 0); };
   local way = function(v, x0, y0, x1, y1) { return command_x.build_way(pl, c(x0, y0), c(x1, y1), wd[v], true); };
   local obj = function(v, x0, y0, x1, y1) { return command_x.build_wayobj(pl, c(x0, y0), c(x1, y1), od[v]); };
@@ -188,7 +188,7 @@ function lay_pairs(ox, oy) {
   // W3
   foreach (k, v in ["back", "center", "front"]) {
     s += r("W3 way", way(v, 0, 12 + k, 3, 12 + k));
-    if (v != "center") s += r("W3 wall", obj(v, 0, 12 + k, 3, 12 + k));
+    s += r("W3 wall", obj(v, 0, 12 + k, 3, 12 + k));
   }
   return s;
 }

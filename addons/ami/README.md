@@ -18,11 +18,11 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 | way（通常の版） | `ami_tram`・`ami_rail_ballast`・`ami_rail_slab`・`ami_road_local`・`ami_road_general`・`ami_road_expressway` |
 | 基盤・高架の版 | `<way の名前>_base_<版>`・`<way の名前>_elev_<版>`（版は `single`・`back`・`center`・`front`） |
 | 橋・トンネル | `<way の名前>_bridge`・`<way の名前>_tunnel` |
-| 線路の壁 | `ami_wall_rail_<版>`（`single`・`back`・`front`）、架線つきは `ami_wall_rail_<版>_catenary`（`center` は架線だけ）。近い斜めの分け合うタイル用に `ami_wall_rail_close`（仮。下の「壁の敷き方」） |
+| 線路の壁 | `ami_wall_rail_<版>`（`single`・`back`・`center`・`front`。`center` は行き止まりの端の壁だけ）、架線つきは `ami_wall_rail_<版>_catenary`（`center` は架線だけ）。近い斜めの分け合うタイル用に `ami_wall_rail_close`（仮。下の「壁の敷き方」） |
 | 道路の壁 | `ami_wall_road_<版>`（`single`・`back`・`front`） |
 | 橋脚・歩道 | `ami_pier_rail`・`ami_pier_road`・`ami_sidewalk` |
 
-dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（`single`・`back`・`front`）・`ami_wall_rail_close`。
+dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_close`。
 
 ### 線路（新描画位置）
 
@@ -87,7 +87,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 ### 版の並び
 
 - 4 版は `single`（両側に壁）・`back`（奥だけ）・`center`（なし）・`front`（手前だけ）。iss・SIS と同じ並べ方
-- 基盤の版: 基盤が壁の位置で止まる。同じ版の壁の way-object と組で使う（`center` は way-object なし）
+- 基盤の版: 基盤が壁の位置で止まる。同じ版の壁の way-object と組で使う（`center` の way-object は行き止まりの端の壁だけ）
 - 高架の版: 床と床の下の躯体だけ。橋脚は描かない
 - 橋: 欄干を描かない。壁の way-object を重ねる
 - 分岐の絵（OTRP の switch 画像、1・2 の 10 枚）は全部の way に入れる。近い斜めは壁の無い way に入れる
@@ -95,11 +95,12 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 ### 壁の敷き方（在来線、#16）
 
-基盤の版の way（`ami_rail_ballast_base_<版>`）を敷き、同じ経路に同じ版の壁の way-object（`ami_wall_rail_<版>`）を重ねる。`center` は壁を重ねない。
+基盤の版の way（`ami_rail_ballast_base_<版>`）を敷き、同じ経路に同じ版の壁の way-object（`ami_wall_rail_<版>`）を重ねる。`center` の壁の way-object（`ami_wall_rail_center`）は側壁が無く、行き止まりの端の壁だけを持つ（ユーザーの指摘、2026-11-17。架線つきの版では `center` も架線の部品を持つので、壁の way-object も 4 版にそろえた）。
 
 - 絵の作り: 基盤の版の way は、通常の版の道床の下に基盤を敷き、壁のある側は壁の位置で、壁の無い側はタイルの端で止める。壁は way の絵に描かず、壁の way-object のシートに描く（`blender/render.py` の `BASE_VARIANTS`、`tools/blender/sheetlib` の `wall_sheet`）。壁のシートは上 4 行が奥（`backimage` など、車両より先に描く）、下 4 行が手前（`frontimage` など、車両より後に描く）。カメラに近い壁が手前の絵になる
-- 行き止まり: 側壁を閉じた側のタイルの端まで延ばし、端の壁をタイルの端に立てる（ユーザーの指摘、2026-11-17）。レールの終点と車止めは通常の版と同じ（`END_FROM_EDGE`）。`center` には端の壁も無い
+- 行き止まり: 側壁を閉じた側のタイルの端まで延ばし、端の壁をタイルの端に立てる（ユーザーの指摘、2026-11-17）。レールの終点と車止めは通常の版と同じ（`END_FROM_EDGE`）。`center` も端の壁はある
 - カーブ: 通常の版と同じく斜めの絵で表す。ただし基盤の版は、カーブのセルを斜めのタイルと別に描き、基盤の壁の無い側を削らない（複線の直角の曲がりで、内側の線の外側に草が三角に出たため。`curve_cells`）
+- 継ぎ目（ユーザーの指摘、2026-11-17）: 坂の壁は、上がった側の端の最後の 1 列が欠けて、坂の上の十字・T字の壁との間に 1px のすき間が出た。坂のセルだけ、壁をタイルの外へ長めに残し、持ち分を左右へ 1 列広げた。T字・十字では、斜めの部分の通り道が反対側の壁（直線の側の壁）の端まで削り、隣の直線との継ぎ目に 1px の縦線が出た。斜めの部分の通り道は、その部分がある側の壁だけを削り、斜めの部分の壁はタイルの辺で切る（`tools/blender/sheetlib` の `assemble`）
 - 奥と手前の決め方（POC の C5）: 版の「奥」「手前」は、南北の線なら西が奥・東が手前、東西の線なら北が奥・南が手前。カーブ・T字・十字のタイルは南北の線（T字は通り抜ける線）の版に合わせる。複線の輪では、角のタイルを南北の辺と同じ版で敷く（`sample.nut` の区画 W1）。斜めのタイルでは、奥の版は `nw`・`sw` の壁がタイルの角の側、`ne`・`se` の壁が中心の側に立つ（手前の版はその逆）
 - 近い斜め（POC の C2）: 1 タイルに way-object は waytype ごとに 1 つなので、分け合うタイル（way が 2 本）には `back` と `front` を両方は置けない。分け合うタイルには、`back`・`front` を敷いた後に `ami_wall_rail_close` を 1 タイルずつ重ねる。OTRP は分け合うタイルの way-object 1 つで 2 本の線を、それぞれの斜めの絵で描く（`../simutrans` の `obj/wayobj.cc` の `two_legs`）。`ami_wall_rail_close` は `nw`・`sw` の線に `back` の壁、`ne`・`se` の線に `front` の壁の絵を使うので、近い斜めの複線は西の線（x の小さい方）を `back`、東の線を `front` にする。速さの値を `back`・`front` より 1 大きくしてあり、後から重ねると置き換わる（同じ速さの way-object を重ねても、前の版のまま向きだけ足される。`obj/wayobj.cc` の `extend_wayobj`）。置き換えると、隣のタイルの壁が分け合うタイルの側へつながらなくなる（前の way-object が消えるときに隣の向きを外し、新しい方はつなぎ直さない。`~wayobj_t`）。`close` を置いた後に、`back`・`front` を同じ経路にもう一度敷く（`close` の方が速いので、分け合うタイルは `close` のまま）
 - 値（仮）: 壁の way-object は費用 3000・維持費 60・登場 1900、速さ 1000（`blender/ami_dat.py` の `WALL_VALUES`）。架線ではない（`own_waytype=track`）ので、速さの値は列車の速さを縛らない
@@ -109,7 +110,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 | もの | 作り | 名前（仮） |
 |---|---|---|
-| 線路の壁と架線 | way-object。架線つき（電化）の `single`・`back`・`center`（架線だけ）・`front` と、壁だけの `single`・`back`・`front` | `ami_wall_rail_*`・`ami_wall_rail_*_catenary` |
+| 線路の壁と架線 | way-object。架線つき（電化）の `single`・`back`・`center`（架線だけ）・`front` と、壁だけの `single`・`back`・`center`（行き止まりの端の壁だけ）・`front` | `ami_wall_rail_*`・`ami_wall_rail_*_catenary` |
 | 道路の壁 | way-object。`single`・`back`・`front` | `ami_wall_road_*` |
 | 橋脚 | 高架の真下の地面に敷く、別の waytype の way。線路用と道路用 | `ami_pier_rail`・`ami_pier_road` |
 | 歩道 | 道路の隣のタイルに敷く、別の waytype の way | `ami_sidewalk` |
@@ -170,7 +171,7 @@ GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe bash ingame/sample_check.sh
 - 基盤の版は `WALLED` に way と壁の組で足す（同じ区画の並びで、壁を同じ経路に重ねる。近い斜めの区画 G は敷かない）。複線と壁の組（輪・近い斜め・行き止まりの並び）は区画 W。`[check]` の行に、区画 W の角と分け合うタイルの way と壁の名前を出す（`(2)` は way が 2 本）
 - 撮るのは `bash ingame/sample_capture.sh`（`work/sample/` に温暖側・降雪側の区画ごと）。レイアウト検証用モードの pak は `PAK=work/layout/dist/ami.pak` で入れ、`OUT=work/sample_layout` で撮る。終わったら `dist/ami.pak` を入れ直す
 - 同じポートでゲームが動いていると、`sample_check.sh` は止まる（他のゲームに見本を流さない）。閉じるのは自分で起動したゲームだけ
-- 確認画像は `docs/`。在来線の通常の版は `rail_ballast_*.png`（温暖側・降雪側の見本、レイアウト検証用モードの見本、行き止まりの拡大、T字・十字・分岐のセル、道床の色の前後。2026-11-17）。基盤の版と壁は `rail_base_*.png`（区画 W1〜W3 と、back・front の輪と十字。`layout` はレイアウト検証用モード。2026-11-17）
+- 確認画像は `docs/`。在来線の通常の版は `rail_ballast_*.png`（温暖側・降雪側の見本、レイアウト検証用モードの見本、行き止まりの拡大、T字・十字・分岐のセル、道床の色の前後。2026-11-17）。基盤の版と壁は `rail_base_*.png`（区画 W1〜W3 と、back・front の輪と十字。`layout` はレイアウト検証用モード。`fix_*` は継ぎ目を直した前後の拡大（`_before` が前）。2026-11-17）
 - 保存・ロードやダイアログの見た目はスクリプトで確かめられないので、ユーザーが見る
 
 塗りを実装する前に、レイアウト検証用モード（部品ごとに画像で見分けやすい単色で塗る）で、部品の配置とタイルどうしの接合を確かめる（[ADR 0005](../../docs/adr/0005-ami-render-tool-conventions.md)）。
