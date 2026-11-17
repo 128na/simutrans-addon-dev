@@ -7,6 +7,7 @@ src/ の dat から、全部入りのまとめ（dist/ami.pak）と、種類別�
     dist/ami_extra.pak  付属（壁・橋脚・歩道: ami_wall_*・ami_pier_*・ami_sidewalk*）
 dat が 1 つも無い種類の pak は作らない。makeobj の出力に WARNING か ERROR があれば、出力を見せて 1 で終わる（ACCEPTANCE 1-5）。
 dat は先に blender/ami_dat.py で書き出す。画像（シート）は blender/render.py で描く。
+SHEET_LAYOUT=1 を付けると、work/layout/ のシートと dat から work/layout/dist/ に作る（レイアウト検証用モード。ADR 0005）。
 """
 import glob
 import os
@@ -14,8 +15,11 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SRC = os.path.join(HERE, "src")
-DIST = os.path.join(HERE, "dist")
+# SHEET_LAYOUT=1 のときは、レイアウト検証用モードのシートと dat（render.py が work/layout/ に書く）から、
+# work/layout/dist/ に pak を作る（ゲームで部品の配置と接合を見るため。src/・dist/ は変えない）
+LAYOUT = os.environ.get("SHEET_LAYOUT") == "1"
+SRC = os.path.join(HERE, "work", "layout") if LAYOUT else os.path.join(HERE, "src")
+DIST = os.path.join(SRC, "dist") if LAYOUT else os.path.join(HERE, "dist")
 PAKSET = "pak256"  # 256px のセルとして切り出す（ゲームは pak128）。iss・blender-poc と同じ
 
 KINDS = {

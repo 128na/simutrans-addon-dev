@@ -9,8 +9,12 @@ EXE=${EXE:?EXE を指定する（例: OTRPv64_3.exe）}
 SAVE=${SAVE:-flat_512}
 PORT=${PORT:-47123}
 M="python ${MCP_CLIENT:-E:/addon_dev/simutrans/.agents/skills/simutrans-mcp-gui-debug/scripts/mcp_client.py} --port $PORT"
+# PAK で入れる pak を替えられる（レイアウト検証用モードは PAK=work/layout/dist/ami.pak。終わったら dist/ami.pak を入れ直す）
+PAK=${PAK:-dist/ami.pak}
 
-cp dist/ami.pak "$GAME_DIR/addons/pak128/ami.pak" || exit 1
+# 同じポートで別のゲームが動いていたら、そこへ見本を流さないように止める
+$M --run-squirrel "return 1;" > /dev/null 2>&1 && { echo "[sample] ポート $PORT で既にゲームが動いている（PORT を替えるか、そのゲームを閉じる）"; exit 1; }
+cp "$PAK" "$GAME_DIR/addons/pak128/ami.pak" || exit 1
 (cd "$GAME_DIR" && "./$EXE" -objects pak128/ -addons -load "$SAVE" -mcp-port "$PORT" > /dev/null 2>&1 &)
 for i in $(seq 1 60); do $M --run-squirrel "return 1;" > /dev/null 2>&1 && break; sleep 2; done
 echo "[sample] $($M --run-squirrel "$(cat ingame/sample.nut)" --timeout 300)"
