@@ -73,12 +73,15 @@ def _carve(ob, tile, w, k, transfer, mat, turns=False):
     geo = [sweep(p, prof) for p in list(tile.paths) + (list(tile.turns) if turns else [])]
     # 角を丸くする: 歩道の角の四角から扇形を除いた部分も抜く
     geo += [corner_piece(c, TILE / 2 - w) for c in tile.corners]
-    cutter = mesh_object("cut", *merge(geo), mat)
-    cutter.hide_render = True
-    # sweep の面の向きは経路の向きで変わるので、外向きにそろえる（Boolean が効かなくなる）
-    recalc_normals(cutter)
-    boolean(ob, cutter, transfer=transfer)
-    bpy.data.objects.remove(cutter, do_unlink=True)
+    # 型は 1 つずつ順に抜く。まとめて 1 つの形にすると、分岐・十字で帯どうしが重なって自己交差になり、use_self=True（遅い）が要る。
+    # 1 つの帯・扇形は自分と重ならないので use_self=False で足り、結果は同じ絵で速い
+    for g in geo:
+        cutter = mesh_object("cut", *merge([g]), mat)
+        cutter.hide_render = True
+        # sweep の面の向きは経路の向きで変わるので、外向きにそろえる（Boolean が効かなくなる）
+        recalc_normals(cutter)
+        boolean(ob, cutter, transfer=transfer, use_self=False)
+        bpy.data.objects.remove(cutter, do_unlink=True)
 
 
 def _part_objects(part, paths, widths, skin, tile):
