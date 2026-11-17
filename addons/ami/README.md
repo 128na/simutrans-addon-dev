@@ -2,7 +2,7 @@
 
 pak128 用のインフラアドオン集。絵は Blender のスクリプトで描く（作り方は [blender-poc](../blender-poc/README.md) で確かめたもの）。
 
-**今は骨組みまで。** 描画から pak までを、在来線の通常の版（絵は blender-poc の線路と同じ仮の絵）で通した（[#14](https://github.com/128na/simutrans-addon-dev/issues/14)）。下の表の残りは作る予定のもの（開発ステップの一覧は [#27](https://github.com/128na/simutrans-addon-dev/issues/27)）。範囲と作りを決めた理由は次の ADR にある。
+**今あるのは在来線の通常の版（`ami_rail_ballast`）だけ。** 描画から pak までの骨組み（[#14](https://github.com/128na/simutrans-addon-dev/issues/14)）の上に、在来線の壁の無い通常の版を仕上げた（[#15](https://github.com/128na/simutrans-addon-dev/issues/15)。全方位・分岐の絵・近い斜め・雪・汚れ）。下の表の残りは作る予定のもの（開発ステップの一覧は [#27](https://github.com/128na/simutrans-addon-dev/issues/27)）。範囲と作りを決めた理由は次の ADR にある。
 
 - [ADR 0002](../../docs/adr/0002-ami-scope.md): 範囲・対象・ライセンス・配布
 - [ADR 0003](../../docs/adr/0003-ami-walls-base-piers-as-separate-objects.md): 壁・基盤・橋脚・歩道の分け方
@@ -31,6 +31,31 @@ dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）�
 | 路面軌道（tram、コンクリートで固めた線路） | 60 km/h | `ami_tram` | 通常だけ（壁・高架・橋・トンネルなし） |
 | 在来線（バラスト軌道） | 160 km/h | `ami_rail_ballast` | 通常・基盤 4 版・高架 4 版・橋・トンネル |
 | 高速線（スラブ軌道） | 480 km/h | `ami_rail_slab` | 同上 |
+
+#### 在来線の手本（blender-poc の線路）
+
+在来線（バラスト軌道）の手本は、[blender-poc](../blender-poc/README.md) の線路（新描画位置の `bpoc_track`）と、カーブ・分岐の作りは pak128 標準の線路（`Rail_100` など）。
+道床・まくらぎ・レールの寸法、基準面の下げ幅、持ち分、汚れ・雪は POC の線路を写した。POC で合わせた直線・斜め・坂の位置（手本とのつなぎ目）は測り直していない。
+
+AMI として変えた点（2026-11-17。後半はユーザーの見た目の指摘から）:
+
+- 名前・値: `ami_rail_ballast`、160 km/h（値は下の「今の決まりごと」）。アイコンの数字も 160
+- 道床の色: POC は一色の灰色だった。夏の絵では、2 色のまだらにして砕石の粒に見せた（`blender/render.py` の `BALLAST_STONE_*`・`BALLAST_GRAIN`）。平均の色は POC と同じにした（汚れの帯の色が道床の色から混ぜてあり、坂の測り方がレールを赤みで探すため）。雪の絵は POC と同じ
+- カーブ: pak128 標準の線路と同じく、曲線ではなく斜めの絵で表す（dat の `image[sw]` などが `diagonal` と同じセルを指す。シートのカーブのセルは描かない）。T字・十字と分岐の絵（switch 画像 1・2）も、カーブの代わりに同じ 2 辺をつなぐ斜めの直線にした。斜めの部分は斜めのタイルと同じ幅・下げ幅で作り、直線と斜めの道床の間のすき間は道床の上面の凸包で埋める（`tools/blender/sheetlib` の `diag_curves`）
+- 行き止まり: レールを POC（タイルの中心まで）より延ばし、閉じた側のタイルの端からタイル 1 辺の 1/4 の所を終点にした（`blender/render.py` の `END_FROM_EDGE`）。道床は終点より奥、タイルの端まで敷く。レールの末端に車止めを置く（下の「車止めの手本」）
+- 行き止まりのまくらぎが直線より白く見えた: レールの間の油の帯を 2 本に分けて作っていて、中心で辺を分け合う形が、行き止まりのタイルでは切り抜きで消えていた（油の帯が無いぶん白く見えた）。油の帯を中心をまたぐ 1 本にした。blender-poc の線路にも同じ欠けがある（POC のシートは変えないので直していない）
+
+#### 車止めの手本（ユーザーから受け取った画像、2026-11-17）
+
+画像は出典の権利が分からないので、リポジトリに入れず、形だけを書き起こす（鉄道模型の車止めの写真）。
+
+- 全体は黒。線路の終端に置く
+- 線路を横切る低い台座が、レールの上と両側に渡る
+- 両側のレールの外から奥へ、斜めの脚が 2 本立ち上がり、上で小さな箱（受け）につながる。レールの間に、細い緩衝板が 1 枚立つ
+- 受けの奥の中央に四角い柱が 1 本立ち、上に箱形の標識灯（白〜橙に光る面、十字の模様）が付く
+- 道床（灰色の砕石）は車止めのさらに奥まで続き、タイルの端で終わる
+
+絵では、台座・斜めの脚 2 本・受けの箱・緩衝板・柱・標識灯の箱に単純にした（`tools/blender/sheetlib/track_parts.py` の `BUFFER_*`、部品のまとまり `buffer`）。灯の面は夜に光る特殊色（`light_white`）。十字の模様は大きさが数 px なので描いていない。
 
 #### 見た目の手本（ユーザーから受け取った画像、2026-11-15）
 
@@ -113,6 +138,8 @@ python -X utf8 build.py                                                        #
 
 - `build.py` は、全部入りのまとめ `dist/ami.pak` と、種類別の `ami_rail.pak`（線路）・`ami_tram.pak`（路面軌道）・`ami_road.pak`（道路）・`ami_extra.pak`（付属）を作る。dat が無い種類は作らない。makeobj の出力に警告かエラーがあれば止まる
 - シートを複数描くときは `python -X utf8 ..\..\tools\blender\render_parallel.py <対象>...`。レイアウト検証用モードは `SHEET_LAYOUT=1`（`work/layout/` に書く）
+- レイアウト検証用モードの pak は `SHEET_LAYOUT=1` で描いた後、`SHEET_LAYOUT=1 python -X utf8 build.py`（`work/layout/dist/` に作る）
+- 同じシートの通常の描画とレイアウト検証用の描画を同時に動かさない。セルごとの生の絵（`work/<シート>_<セル>.png`）の名前が同じで、互いのセルを取り込んだシートができた（2026-11-17）
 - `src/`（dat とシート）はコミットする。`dist/` と `work/` はコミットしない
 - 設定は `blender/render.py`（描き分け・シート名）、`blender/ami_dat.py`（dat と値）、`blender/addon_config.py`（判定の道具が読む対応表）
 
@@ -126,6 +153,11 @@ GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe bash ingame/sample_check.sh
 ```
 
 - `dist/ami.pak` をゲームの `addons/pak128/` に写し、OTRP を MCP つきで起動して `ingame/sample.nut` を流す。見本は温暖側 (20,20) と降雪側 (276,20) に敷く。絵を作った way は `sample.nut` の `WAYS` に足す
+- 見本は way の全部の絵を、周りとつながった形で出す（行き止まり・1 タイル・斜め・輪と十字・坂・急坂・近い斜め・十字の分岐の固定・分岐の自動選択 8 通り。区画の表は `sample.nut` の冒頭）。降雪側は敷いた後に一帯を降雪に塗り直す
+- 返り値の `[check]` の行に、近い斜めの分け合うタイルが way 1 本か（`two_ways=false` なら近い斜めの絵が使われている）と、分岐の絵を固定する道具があるかを出す
+- 撮るのは `bash ingame/sample_capture.sh`（`work/sample/` に温暖側・降雪側の区画ごと）。レイアウト検証用モードの pak は `PAK=work/layout/dist/ami.pak` で入れ、`OUT=work/sample_layout` で撮る。終わったら `dist/ami.pak` を入れ直す
+- 同じポートでゲームが動いていると、`sample_check.sh` は止まる（他のゲームに見本を流さない）。閉じるのは自分で起動したゲームだけ
+- 確認画像は `docs/`。在来線の通常の版は `rail_ballast_*.png`（温暖側・降雪側の見本、レイアウト検証用モードの見本、行き止まりの拡大、T字・十字・分岐のセル、道床の色の前後。2026-11-17）
 - 保存・ロードやダイアログの見た目はスクリプトで確かめられないので、ユーザーが見る
 
 塗りを実装する前に、レイアウト検証用モード（部品ごとに画像で見分けやすい単色で塗る）で、部品の配置とタイルどうしの接合を確かめる（[ADR 0005](../../docs/adr/0005-ami-render-tool-conventions.md)）。
@@ -145,5 +177,7 @@ GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe bash ingame/sample_check.sh
 
 ## 残っていること
 
+- 壁（#16）: 行き止まりの端の壁は、タイルの末端に立てる（ユーザーの指摘、2026-11-17）。壁の way-object を作るときに決める
+- 路面軌道（#23）のカーブは今の曲線のままでよい（ユーザーの指摘、2026-11-17）。斜めの絵にするのは在来線（と、作るときに決める高速線）
 - 路面軌道を tram（道路に重ねる）にすると、写真のような縁石と柵で分けた専用の軌道には見えない。どちらに寄せるかは、路面軌道を作るステップ（#23）で絵を見て決める
 - できたと言う条件は [ACCEPTANCE.md](ACCEPTANCE.md)

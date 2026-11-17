@@ -3,7 +3,7 @@
 値（速度・費用・維持費・登場年）は VALUES が持つ。README の「値の一覧」と同じにする。
 まだ絵を作っていない way は BUILT に入れない（dat も pak も作らない）。シートの行の並びは
     夏の絵 4 行（奥の絵）→ 雪の絵 4 行
-で、blender-poc の `track_dat.py` が書く無壁の線路と同じ。壁・高架・橋の版（手前の絵の行を持つ）は、それぞれのステップで足す。
+で、無壁の線路の並び。カーブは斜めの絵（DIAG_CURVES）を指す。壁・高架・橋の版（手前の絵の行を持つ）は、それぞれのステップで足す。
 """
 import os
 
@@ -35,6 +35,11 @@ VALUES = {
     "ami_road_expressway": dict(waytype="road", speed=360, cost=20000, maintenance=500, intro_year=1990),
 }
 
+# カーブを斜めの絵で表すシート（pak128 標準の線路と同じ。dat の image[sw]・[nw]・[ne]・[se] が diagonal と同じセルを指す。
+# シートのカーブのセル（行 2 の列 5〜8）は描かない。render.py の diag_curves と同じにする）
+DIAG_CURVES = {"ami_rail_ballast"}
+CURVE_TO_DIAG = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
+
 # 絵を作った way（名前 → シート名）。dat と pak を作る
 BUILT = {"ami_rail_ballast": "ami_rail_ballast"}
 
@@ -60,6 +65,8 @@ def dat_text(name, sheet):
     ]
     for season in (0, 1):
         for key, idx, row, col in IMAGES:
+            if key == "image" and sheet in DIAG_CURVES and idx in CURVE_TO_DIAG:
+                row, col = CURVE_TO_DIAG[idx]
             out.append(f"{key}{idx}[{season}]={sheet}.{row + season * SNOW_ROWS}.{col},-64,-32")
     return NL.join(out) + NL
 
