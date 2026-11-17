@@ -7,6 +7,8 @@
 
 出力:
     src/ami_rail_ballast.png  在来線（バラスト軌道）の通常の版。形は blender-poc の線路と同じで、夏の道床を砕石のまだらにした
+    src/ami_rail_ballast_base_<版>.png  基盤の版（single・back・center・front）の way。基盤は壁の位置で止まる
+    src/ami_wall_rail_<版>.png  壁の way-object（4 版。center は行き止まりの端の壁だけ）。上 4 行が奥（back）、下 4 行が手前（front）の絵
     work/                     セルごとの生の描画結果（確認用）
 """
 import dataclasses
@@ -50,11 +52,36 @@ R.TRACK_PROFILES.update({
                      "replace": _REPLACE, "diag_curves": True, "end_from_edge": END_FROM_EDGE},
 })
 
+# ---------------------------------------------------------------- 基盤の版と壁の way-object（ADR 0003。#16）
+# 基盤の版の way（ami_rail_ballast_base_<版>）は、通常の版の道床の下に基盤を敷き、基盤は壁の位置で止まる（壁の無い側はタイルの端まで）。
+# 壁そのものは way の絵に描かず、同じ版の壁の way-object（ami_wall_rail_<版>）のシートに描く（sheetlib の wall_sheet）。
+# 版の値は sheetlib の walls（both = single）。center は側壁が無く、壁の way-object は行き止まりの端の壁だけ
+# （ユーザーの指摘、2026-11-17。架線つきの版では center も架線の部品を持つので、壁の way-object も同じ 4 版にそろえる）
+BASE_VARIANTS = {"single": "both", "back": "back", "center": "center", "front": "front"}
+
+# 行き止まりの壁はタイルの末端まで（ユーザーの指摘、2026-11-17）: 側壁を閉じた側のタイルの端まで延ばし、端の壁をタイルの端に立てる。
+# レールの終点と車止めは END_FROM_EDGE のまま（タイルの中）
+_EDGE_WALLS = {n: dataclasses.replace(p, shape=R.to_edge_shape(p.shape))
+               for p in R.TRACK_EXTRAS for n in ("wallL", "wallR") if p.name == n}
+_EDGE_WALLS["endw"] = dataclasses.replace(next(p for p in R.TRACK_EXTRAS if p.name == "endw"), name="endw_edge",
+                                          shape=R.end_wall_edge_shape())
+
+for _v, _walls in BASE_VARIANTS.items():
+    R.TRACK_PROFILES[f"rail_ballast_base_{_v}"] = dict(
+        R.TRACK_PROFILES["rail_ballast"], sheet=f"ami_rail_ballast_base_{_v}", walls=_walls,
+        groups=("body", "base", "weathering", "buffer", "wall"),
+        replace=dict(_REPLACE, **_EDGE_WALLS), wall_sheet=f"ami_wall_rail_{_v}",
+        # カーブのセルを斜めの形で描き、基盤の壁の無い側を削らない（複線の直角の曲がりで、内側の線の外側半分を埋める）
+        curve_cells=True)
+
 # ---------------------------------------------------------------- 対象（シート名 → 描く関数）
+# 基盤の版の対象は、way のシートと壁の way-object のシートを 1 つのプロセスで描く
 
 SHEETS = {
     "ami_rail_ballast": lambda: R.track_sheet("rail_ballast"),
 }
+for _v in BASE_VARIANTS:
+    SHEETS[f"ami_rail_ballast_base_{_v}"] = lambda v=_v: R.track_sheet(f"rail_ballast_base_{v}")
 
 if __name__ == "__main__":
     R.run_targets(SHEETS, list(SHEETS))

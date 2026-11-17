@@ -21,7 +21,10 @@ from .core import (  # noqa: F401
     sweep,
 )
 from .wall_parts import (  # noqa: F401
+    END_WALL_SPAN,
+    WALL_H,
     WALL_U,
+    WALL_W,
     _M_BASE,
     _M_WALL,
     _end_wall_shape,
@@ -233,6 +236,39 @@ def bed_to_edge_shape(path, k):
         reach = (TILE / 2 + Vector((path[0].x, path[0].y)).dot(d.to_2d())) / max(abs(d.x), abs(d.y))  # 始点から逆向きのタイルの端まで
         path = [path[0] - d * (reach + 0.5)] + list(path)
     return _bed_shape(path, k)
+
+
+def _edge_reach(path):
+    """行き止まりの経路（始点だけがタイルの中）の始点から、経路の逆向きにタイルの端までの距離と向き。それ以外は None。"""
+    if len(path) >= 2 and _inner(path[0]) and not _inner(path[-1]):
+        d = (path[1] - path[0]).normalized()
+        return (TILE / 2 + Vector((path[0].x, path[0].y)).dot(d.to_2d())) / max(abs(d.x), abs(d.y)), d
+    return None
+
+
+def to_edge_shape(shape):
+    """形 shape(path, k) を、行き止まりの経路では始点をタイルの端まで延ばして作る（側壁を、レールの末端より奥のタイルの端まで立てる）。
+    延ばすのはタイルの端まで（外へ出さない。端の壁 end_wall_edge_shape の外の面と同じ所で止まる）"""
+    def f(path, k):
+        e = _edge_reach(path)
+        if e is not None:
+            reach, d = e
+            path = [path[0] - d * reach] + list(path)
+        return shape(path, k)
+    return f
+
+
+def end_wall_edge_shape(ww=None, wh=None):
+    """行き止まりの端の壁を、閉じた側のタイルの端に立てる（外の面がタイルの端）。レールの終点（車止め）はタイルの中のまま。
+    幅はタイルいっぱいに作り、側壁のある側は後で削る（trim_end_walls。_end_wall と同じ）。部品の名前は endw_edge にする（_beyond_prisms が奥を削らない）"""
+    ww, wh = ww or WALL_W, wh or WALL_H
+
+    def shape(path, k):
+        e = _edge_reach(path)
+        reach, d = e if e is not None else (0.0, (path[1] - path[0]).normalized())
+        c = path[0] - d * (reach - ww / 2)
+        return box(c.x, c.y, wh / 2, ww, END_WALL_SPAN, wh, rot=math.atan2(d.y, d.x))
+    return shape
 
 
 def bed_fill_shape(paths, widths_by_id):

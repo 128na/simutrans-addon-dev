@@ -187,17 +187,27 @@ def render_cell(name, exits=None, slope=None, side=None, cy=GROUND_CY, spill=0, 
     return path
 
 
-def render_layers(name, obs, split, exits, slope, cy, spill, rise, solid=False, lower=0, side=None):
+def render_layers(name, obs, split, exits, slope, cy, spill, rise, solid=False, lower=0, side=None, separate=False, tall_layers=True,
+                  origin=None):
     """高さのある部品（tall）を別の層として描いて重ねる。返すのは（奥の絵のパス, 手前の絵のパス または None）。
     - 本体: 持ち分（地面の範囲）で切る
     - 高さのある部品: 持ち分を上へ rise 行広げた範囲で切る（奥のタイルの絵の上に出る。建物と同じ）
     - split なら、カメラに近い側の部品は手前の絵（dat の frontimage。車両の上に描かれる）に分ける
-    side は本体の持ち分を菱形の半分にする（道路の斜め。_ground_mask）。高さのある部品の持ち分は菱形全体のまま（形のほうで帯に切ってある）"""
+    side は本体の持ち分を菱形の半分にする（道路の斜め。_ground_mask）。高さのある部品の持ち分は菱形全体のまま（形のほうで帯に切ってある）。
+    separate なら重ねずに（本体の絵のパス, 高さのある部品の奥の絵のパス または None, 手前の絵のパス または None）を返す
+    （壁を way-object に分ける版。本体は way の絵、壁は way-object の絵になる。本体の絵は持ち分と特殊色を make_sheet が当てる）。
+    tall_layers が偽なら、高さのある部品は描かない（separate の雪の絵。way-object には雪の絵が無い）。
+    origin は手前/奥を測る点（near_camera。無ければ本体の重心）"""
     tall = [ob for ob in obs if ob.get("tall")]
     body = [ob for ob in obs if not ob.get("tall")]
     for ob in tall:
         ob.hide_render = True
-    img = load_rgba8(render_cell(name, exits, slope=slope, side=side, cy=cy, spill=spill, solid=solid, lower=lower)).copy()
+    body_path = render_cell(name, exits, slope=slope, side=side, cy=cy, spill=spill, solid=solid, lower=lower)
+    if separate and not tall_layers:
+        for ob in obs:
+            ob.hide_render = False
+        return body_path, None, None
+    img = load_rgba8(body_path).copy()
     own = load_rgba8(os.path.join(WORK, name + "_own.png"))[..., 0] >= 128
     img[..., 3] = np.where(own, img[..., 3], 0)
     for ob in body:
@@ -208,7 +218,14 @@ def render_layers(name, obs, split, exits, slope, cy, spill, rise, solid=False, 
     base = m.copy()
     for k in range(1, rise + 1):
         m[:-k] |= base[k:]
-    front = near_camera(obs) if split else []
+    if separate and slope:
+        # 壁を way-object に分ける版の坂: 持ち分を左右へ 1 列広げる。坂の上がった側の端で壁の最後の 1 列が切れ、
+        # 隣の平らなタイル（十字など）の壁との間に 1px のすき間が出た（AMI #16 の指摘、2026-11-17）
+        wide = m.copy()
+        wide[:, 1:] |= m[:, :-1]
+        wide[:, :-1] |= m[:, 1:]
+        m = wide
+    front = near_camera(obs, origin=origin) if split else []
 
     def layer(objs, suffix):
         for ob in tall:
@@ -219,6 +236,18 @@ def render_layers(name, obs, split, exits, slope, cy, spill, rise, solid=False, 
         return im
 
     back = layer([ob for ob in tall if ob not in front], "_tallb")
+    if separate:
+        out = [body_path, None, None]
+        for k, (objs, im, suffix) in enumerate(((None, back, "_wback"), (front, None, "_wfront"))):
+            if objs is not None and not objs:
+                continue
+            im = layer(objs, "_tallf") if im is None else im
+            if im[..., 3].any():
+                out[1 + k] = os.path.join(WORK, name + suffix + ".png")
+                save_rgba(out[1 + k], im)
+        for ob in obs:
+            ob.hide_render = False
+        return tuple(out)
     a = back[..., 3:4].astype(np.float32) / 255
     img[..., :3] = (back[..., :3] * a + img[..., :3] * (1 - a)).astype(np.uint8)
     img[..., 3] = np.maximum(img[..., 3], back[..., 3])
