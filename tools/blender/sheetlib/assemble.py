@@ -97,12 +97,13 @@ def _part_objects(part, paths, widths, skin, tile):
 
 
 def assemble(parts, paths, datums=FLAT, slope=None, clip=True, widths=None, div=1, groups=("body",), ends=False, skin=None,
-             tile=None, half=None, half_over=None, path_opts=None):
+             tile=None, half=None, half_over=None, path_opts=None, tall_pad=TALL_PAD):
     """部品を経路ごとに作り、乗っている基準面の分だけ動かし、slope(x,y)->z で傾け、タイルの外を切り落とす。
     widths は横幅の倍率（Part.width → 倍率。無いものは 1）。ends は経路の始点が行き止まりの端か（where="end" の部品を作る）。
     skin は材質の差し替え（部品の名前 → 材質。雪など）。
     道路: tile（RoadTile）を渡すと、where="tile" の板と "line" の白線を先に作る（板・白線・経路の部品の順）。
     half は斜めのタイルで残す半分を決める経路（切り抜いた後に、角の側の帯だけを残す。half_over は中心線を越えて残す幅）。
+    tall_pad は高さのある部品をタイルの辺の外へ残す幅。
     path_opts（無くてよい）は経路の添字 → (widths, div)。その経路だけ横幅の倍率と下げ幅を変える（カーブを斜めの絵で表す T字・十字の
     斜めの部分。diag_curves）。1 回の組み立てで全部の経路を作るので、部品の添字（pi）と分岐の通り道の削り（corridor）は全部の経路で合う"""
     skin = skin or {}
@@ -137,9 +138,12 @@ def assemble(parts, paths, datums=FLAT, slope=None, clip=True, widths=None, div=
                     # 底は地面に、上面は地面より少し上に（厚みが 0 になると切り抜きで形が消える）
                     v.co.z = 0.0 if v.co.z < -10 else max(v.co.z, 0.02)
         if clip:
-            clip_to_tile(ob, TALL_PAD if ob.get("tall") else CLIP_PAD)
+            # 斜めの部分（path_opts）の壁は、タイルの辺の外へ残さない。経路をタイルの外へ長く延ばしてあり、辺の外に残った壁の切れ端が
+            # 直線の壁の上へ 2px はみ出した（T字・十字の直線の側の壁。AMI #16 の指摘）。隣は直線のタイルで、その壁が辺まで来る
+            pad = (0.0 if ob.get("diag") else tall_pad) if ob.get("tall") else CLIP_PAD
+            clip_to_tile(ob, pad)
             if ob.get("tall"):
-                open_ends(ob, TALL_PAD)
+                open_ends(ob, pad)
     if half is not None:
         keeper = mesh_object("half", *half_tile(half, DIAG_OVERFILL if half_over is None else half_over),
                              material("road_curb", (0.62, 0.61, 0.59)))
@@ -168,16 +172,22 @@ def _place(ob, part, i, paths, widths, moves, widths_of=None):
         narrow = lambda j: part.corridor * kj(j) - 0.02
         wide = lambda j: (part.corridor + (part.thick or WALL_W)) * kj(j) + 0.02
         band = lambda w: [(-w, -1.0), (w, -1.0), (w, 3.0), (-w, 3.0)]
-        geo = [sweep(q, band(wide(j) if j < i else narrow(j))) for j, q in enumerate(paths) if j != i]
+        others = [j for j in range(len(paths)) if j != i]
+        if mixed and part.tall:
+            # 壁は、ほかの経路のうちタイルの中でこの壁の側にあるものの通り道でだけ削る。斜めの部分の経路はタイルの外へ長く
+            # 延ばしてあり、その通り道が反対側の壁の端まで削って、切れ端が 1px の縦線で残った（T字の直線の側の壁。AMI #16 の指摘）
+            others = [j for j in others if _on_side(paths[j], paths[i], ob)]
+        geo = [sweep(paths[j], band(wide(j) if j < i else narrow(j))) for j in others]
         if mixed:
             # 経路の中心線の凸包（タイルの中）も削る。直線と斜めの部分の間（道床の凸包で埋めた所）に、直線の壁の切れ端が残った
             hull = _centre_hull(paths)
             if len(hull) >= 3:
                 geo.append(prism(hull, -1.0, 3.0))
-        cutter = mesh_object("corridor", *merge(geo), make_material(part.material, part.name))
-        recalc_normals(cutter)
-        boolean(ob, cutter)
-        bpy.data.objects.remove(cutter, do_unlink=True)
+        if geo:
+            cutter = mesh_object("corridor", *merge(geo), make_material(part.material, part.name))
+            recalc_normals(cutter)
+            boolean(ob, cutter)
+            bpy.data.objects.remove(cutter, do_unlink=True)
         if not ob.data.polygons:
             bpy.data.objects.remove(ob, do_unlink=True)
             return []
@@ -205,6 +215,44 @@ def _tile_area(ob):
     bpy.data.objects.remove(cp, do_unlink=True)
     bpy.data.meshes.remove(me)
     return area
+
+
+def _on_side(other, path, ob, eps=1e-3):
+    """経路 other のタイルの中の部分が、経路 path から見て物 ob（path の壁）と同じ側にあるか。
+    ob が path の中心線の上にあるとき（側が決まらない）は真"""
+    a, b = path[0], path[-1]
+    d = b - a
+    side = lambda x, y: d.x * (y - a.y) - d.y * (x - a.x)
+    vs = ob.data.vertices
+    cx, cy = sum(v.co.x for v in vs) / len(vs), sum(v.co.y for v in vs) / len(vs)
+    s = side(cx, cy)
+    if abs(s) < eps:
+        return True
+    return any(side(x, y) * s > eps * abs(s) for x, y in _clip_points([other]))
+
+
+def _clip_points(paths):
+    """経路の中心線をタイルの四角で切った線分の端点（(x, y) の並び）。"""
+    lim = TILE / 2
+    pts = []
+    for path in paths:
+        for a, b in zip(path[:-1], path[1:]):
+            d = b - a
+            t0, t1 = 0.0, 1.0
+            ok = True
+            for p, q in ((-d.x, a.x + lim), (d.x, lim - a.x), (-d.y, a.y + lim), (d.y, lim - a.y)):
+                if abs(p) < 1e-12:
+                    if q < 0:
+                        ok = False
+                    continue
+                r = q / p
+                if p < 0:
+                    t0 = max(t0, r)
+                else:
+                    t1 = min(t1, r)
+            if ok and t0 <= t1:
+                pts += [(a.x + d.x * t, a.y + d.y * t) for t in (t0, t1)]
+    return pts
 
 
 def _centre_hull(paths):

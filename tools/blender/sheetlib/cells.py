@@ -218,6 +218,13 @@ def render_layers(name, obs, split, exits, slope, cy, spill, rise, solid=False, 
     base = m.copy()
     for k in range(1, rise + 1):
         m[:-k] |= base[k:]
+    if separate and slope:
+        # 壁を way-object に分ける版の坂: 持ち分を左右へ 1 列広げる。坂の上がった側の端で壁の最後の 1 列が切れ、
+        # 隣の平らなタイル（十字など）の壁との間に 1px のすき間が出た（AMI #16 の指摘、2026-11-17）
+        wide = m.copy()
+        wide[:, 1:] |= m[:, :-1]
+        wide[:, :-1] |= m[:, 1:]
+        m = wide
     front = near_camera(obs, origin=origin) if split else []
 
     def layer(objs, suffix):

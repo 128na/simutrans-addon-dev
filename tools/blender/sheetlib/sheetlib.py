@@ -55,6 +55,7 @@ from .track_parts import (  # noqa: F401
 from .wall_parts import (  # noqa: F401
     PIER_L,
     PIER_W,
+    TALL_PAD,
     _M_BASE,
     _M_WALL,
 )
@@ -367,6 +368,8 @@ WALL_RISE = 11  # 側壁の高さ（画面の px。持ち分を上へ広げる�
 # 壁を way-object に分ける版（TRACK_PROFILES の wall_sheet）の、壁のシートの行の並び: 奥の絵（dat の backimage）4 行 → 手前の絵（frontimage）4 行。
 # セルの位置は way のシートと同じ。way-object には雪の絵が無いので、雪の行は無い
 WALL_FRONT_ROW = 4
+# その版の坂のセルで、壁をタイルの辺の外へ残す幅（高さのある部品の TALL_PAD の代わり）
+SLOPE_WALL_PAD = TALL_PAD * 2
 
 # datums: 基準面ごとの下げ幅（Datum(drop, ground)）。絵の基準位置は両方とも BALLAST_DY（地面の菱形より 1px 上 = 旧の位置）。
 # ground: 下げ幅のうち、地面の上での位置のずれにあたる px（datum_move）。新は道床の輪郭が地面の菱形の中心線より 1px 下
@@ -568,6 +571,10 @@ def track_sheet(profile="new"):
             div = 2 if shape in ("diag_nw", "diag_se", "close1") else 1
             widths = {"gauge": DIAG_RAIL, "bed": DIAG_BALLAST} if shape.startswith(("diag_", "close")) else None
             kw = dict(widths=widths, div=div, groups=grp, ends=name in ("s", "w", "n", "e"), skin=skin)
+            if prof.get("wall_sheet") and slope:
+                # 壁を way-object に分ける版の坂: 壁をタイルの外へ長めに残す。坂では基準面の動きが平地と違い、
+                # 上がった側の端の最後の列が欠けて、隣の平らなタイルの壁との間に 1px のすき間が出た（持ち分は render_layers で 1 列広げる）
+                kw["tall_pad"] = SLOPE_WALL_PAD
 
             def build(ps, pths):
                 # diag_curves の斜めの部分は、斜めのセルと同じ幅・下げ幅で組む（同じ assemble の中で、経路ごとに変える）
