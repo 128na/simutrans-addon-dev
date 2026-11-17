@@ -129,6 +129,7 @@
 ### 8.2 気づいた癖
 
 
+- Blender: Boolean の適用に `bpy.ops.object.modifier_apply` を直接使うと遅い（シーン更新で約 2 倍）。`boolean()` を通す。`use_self` は外せない（絵が壊れる）。詳細は `tools/README.md` の「描画が遅いとき」（2026-11-17）
 - Blender: 厚みが 0 になる形は、切り抜き（Boolean）で形ごと消える。地面に切り上げるときは上面を少し上で止める
 - Blender: 作った直後のカメラの `matrix_world` は更新されていない。向きは `rotation_euler.to_matrix()` から取る
 - ゲーム: 急坂のある所へ `gui.jump` すると、画面の縦の位置が見当から大きくずれる（急坂の十字で 64px）
