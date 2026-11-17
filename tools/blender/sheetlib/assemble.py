@@ -152,12 +152,18 @@ def _place(ob, part, i, paths, widths, moves):
         k = widths.get(part.width, 1.0)
         narrow, wide = part.corridor * k - 0.02, (part.corridor + (part.thick or WALL_W)) * k + 0.02
         band = lambda w: [(-w, -1.0), (w, -1.0), (w, 3.0), (-w, 3.0)]
-        cutter = mesh_object("corridor", *merge([sweep(q, band(wide if j < i else narrow))
-                                                 for j, q in enumerate(paths) if j != i]),
-                             make_material(part.material, part.name))
-        recalc_normals(cutter)
-        boolean(ob, cutter)
-        bpy.data.objects.remove(cutter, do_unlink=True)
+        # 他の経路の通り道は 1 本ずつ順に削る。まとめて 1 つの形にすると、分岐・十字で帯どうしが重なって自己交差になり、
+        # use_self=True（遅い）が要る。1 本の帯は自分と重ならないので use_self=False で足り、結果は同じ絵で速い（2026-11-17）
+        for j, q in enumerate(paths):
+            if j == i:
+                continue
+            cutter = mesh_object("corridor", *merge([sweep(q, band(wide if j < i else narrow))]),
+                                 make_material(part.material, part.name))
+            recalc_normals(cutter)
+            boolean(ob, cutter, use_self=False)
+            bpy.data.objects.remove(cutter, do_unlink=True)
+            if not ob.data.polygons:
+                break
         if not ob.data.polygons:
             bpy.data.objects.remove(ob, do_unlink=True)
             return []

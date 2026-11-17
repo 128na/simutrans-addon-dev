@@ -475,12 +475,14 @@ def _apply_modifier(ob, mod):
     bpy.data.meshes.remove(old)
 
 
-def boolean(ob, cutter, op="DIFFERENCE", transfer=False):
+def boolean(ob, cutter, op="DIFFERENCE", transfer=False, use_self=True):
+    """use_self は、削る形（や削られる形）が自分自身と重なっていても正しく抜く設定（遅い）。
+    形が自分と重ならないと分かっているときだけ False にする"""
     mod = ob.modifiers.new("bool", "BOOLEAN")
     mod.operation = op
     mod.solver = "EXACT"
     mod.object = cutter
-    mod.use_self = True  # 型が重なり合う（分岐・十字）ときも抜けるように
+    mod.use_self = use_self
     if transfer:
         mod.material_mode = "TRANSFER"
     _apply_modifier(ob, mod)
