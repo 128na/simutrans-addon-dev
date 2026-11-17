@@ -5,7 +5,7 @@
 import os
 
 # 並列で描くプロセスの数（render_parallel.py の --jobs の既定）。作業する PC（i9-12900F・メモリ 128GB）に合わせた値。
-# 1 プロセスは CPU をほとんど使わないので、コア数より多くしても速くなる。メモリは 1 プロセスあたり数百 MB
+# 12・16・24・28 で測ると 16 が最速（287 秒）で、それより増やしても速くならない（2026-11-17）。メモリは 1 プロセスあたり数百 MB
 JOBS = int(os.environ.get("SHEET_JOBS", "16"))
 
 # Blender の実行ファイル（render_parallel.py の --blender の既定）

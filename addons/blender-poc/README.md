@@ -72,7 +72,7 @@ iss と同じく `pak256` で 256px セルとして切り出す（ゲームは p
 python -X utf8 ../../tools/blender/render_parallel.py --jobs 16 track track_old track_wall_back track_elev_back
 ```
 
-1 プロセスは CPU をほとんど使わず、13 枚を 1 プロセスで描くと 40 分ほどかかった。壁あり・高架の 6 枚は 8 並列で約 5 分（2026-11-14）。
+全 28 枚を 16 並列で描くと約 5 分（287 秒。2026-11-17。12・24・28 並列は 335・348・313 秒で、16 より速くならない）。時間のほとんどは Boolean の演算で、どこで時間を使っているかは `tools/blender/profile_sheet.py` で測る（[記録](../../docs/records/2026-11-17_sheet-render-speed.md)）。
 
 位置の検証:
 
