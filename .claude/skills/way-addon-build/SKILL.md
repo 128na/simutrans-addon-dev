@@ -35,7 +35,7 @@ description: Simutrans の way 系アドオン（線路・道路・側壁・高�
 | `TRACK_PROFILES` | アドオンごとの設定（シート名・基準面・使う `group`・`walls`・`snow`・`front_row`・`lower`・`band`・`skin`（夏の絵だけの材質の差し替え）・`replace`（部品の形の差し替え）・`diag_curves`（カーブを斜めの絵で表す）・`end_from_edge`（行き止まりのレールの終点の位置）） |
 
 - 部品を足すときは、乗る基準面を選ぶ。部品ごとに位置を足し引きしない
-- 描き直すときは `python -X utf8 ../../tools/blender/render_parallel.py [--jobs 16] <対象>...` で、シートごとに別の Blender のプロセスで同時に描く。同時に動かす数は `--jobs`（既定は `tools/blender/sheet_settings.py` の `JOBS`）。1 つのプロセスは CPU をほとんど使わないので、並べるほど速い。対象の名前は `render.py` の対象（`track_wall_back` など）で、知らない名前は失敗になる。ログは `work/render_<対象>.log`
+- 描き直すときは `python -X utf8 ../../tools/blender/render_parallel.py [--jobs 16] <対象>...` で、シートごとに別の Blender のプロセスで同時に描く。同時に動かす数は `--jobs`（既定は `tools/blender/sheet_settings.py` の `JOBS`）。1 つのプロセスは Boolean の演算で CPU を使うので、並列は 16 までが目安（それ以上は速くならない）。Boolean を足すときは `bpy.ops.object.modifier_apply` を直接呼ばず `sheetlib` の `boolean()`（`_apply_modifier`）を使う（ops はシーン更新で倍遅い）。対象の名前は `render.py` の対象（`track_wall_back` など）で、知らない名前は失敗になる。ログは `work/render_<対象>.log`
 - dat は手で書かず `python -X utf8 blender/track_dat.py` で書き出す。シートの行の並びは
   「奥の絵 4 行 →（手前の絵 4 行）→ 雪の奥の絵 4 行 →（雪の手前の絵 4 行）」
 

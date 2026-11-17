@@ -73,12 +73,15 @@ def _carve(ob, tile, w, k, transfer, mat, turns=False):
     geo = [sweep(p, prof) for p in list(tile.paths) + (list(tile.turns) if turns else [])]
     # 角を丸くする: 歩道の角の四角から扇形を除いた部分も抜く
     geo += [corner_piece(c, TILE / 2 - w) for c in tile.corners]
-    cutter = mesh_object("cut", *merge(geo), mat)
-    cutter.hide_render = True
-    # sweep の面の向きは経路の向きで変わるので、外向きにそろえる（Boolean が効かなくなる）
-    recalc_normals(cutter)
-    boolean(ob, cutter, transfer=transfer)
-    bpy.data.objects.remove(cutter, do_unlink=True)
+    # 型は 1 つずつ順に抜く。まとめて 1 つの形にすると、分岐・十字で帯どうしが重なって自己交差になり、use_self=True（遅い）が要る。
+    # 1 つの帯・扇形は自分と重ならないので use_self=False で足り、結果は同じ絵で速い
+    for g in geo:
+        cutter = mesh_object("cut", *merge([g]), mat)
+        cutter.hide_render = True
+        # sweep の面の向きは経路の向きで変わるので、外向きにそろえる（Boolean が効かなくなる）
+        recalc_normals(cutter)
+        boolean(ob, cutter, transfer=transfer, use_self=False)
+        bpy.data.objects.remove(cutter, do_unlink=True)
 
 
 def _part_objects(part, paths, widths, skin, tile):
@@ -177,17 +180,21 @@ def _place(ob, part, i, paths, widths, moves, widths_of=None):
             # 壁は、ほかの経路のうちタイルの中でこの壁の側にあるものの通り道でだけ削る。斜めの部分の経路はタイルの外へ長く
             # 延ばしてあり、その通り道が反対側の壁の端まで削って、切れ端が 1px の縦線で残った（T字の直線の側の壁。AMI #16 の指摘）
             others = [j for j in others if _on_side(paths[j], paths[i], ob)]
-        geo = [sweep(paths[j], band(wide(j) if j < i else narrow(j))) for j in others]
+        # 他の経路の通り道は 1 本ずつ順に削る。まとめて 1 つの形にすると、分岐・十字で帯どうしが重なって自己交差になり、
+        # use_self=True（遅い）が要る。1 本の帯は自分と重ならないので use_self=False で足り、結果は同じ絵で速い（2026-11-17）
+        geo = [[sweep(paths[j], band(wide(j) if j < i else narrow(j)))] for j in others]
         if mixed:
             # 経路の中心線の凸包（タイルの中）も削る。直線と斜めの部分の間（道床の凸包で埋めた所）に、直線の壁の切れ端が残った
             hull = _centre_hull(paths)
             if len(hull) >= 3:
-                geo.append(prism(hull, -1.0, 3.0))
-        if geo:
-            cutter = mesh_object("corridor", *merge(geo), make_material(part.material, part.name))
+                geo.append([prism(hull, -1.0, 3.0)])
+        for g in geo:
+            cutter = mesh_object("corridor", *merge(g), make_material(part.material, part.name))
             recalc_normals(cutter)
-            boolean(ob, cutter)
+            boolean(ob, cutter, use_self=False)
             bpy.data.objects.remove(cutter, do_unlink=True)
+            if not ob.data.polygons:
+                break
         if not ob.data.polygons:
             bpy.data.objects.remove(ob, do_unlink=True)
             return []
