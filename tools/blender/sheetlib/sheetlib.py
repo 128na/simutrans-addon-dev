@@ -69,6 +69,7 @@ from .wall_parts import (  # noqa: F401
     PIER_SIZE,
     PIER_TOP_OVERLAP,
     PIER_GATE_BEAM_D,
+    PIER_GATE_BEAM_EMBED,
     PIER_GATE_POST,
     _M_PIER_BEAM,
     _M_PIER_POST,
@@ -900,11 +901,13 @@ _GATE_CENTER_FRONT = ("diag_nw",)
 
 def pier_gate_sheet(sheet, datums, label="G"):
     """門型の橋脚の way のシート（AMI。#18 の追加）。セルの位置・高さ・基準面・坂・持ち分は単柱の橋脚（pier_sheet）と同じ。
-    柱と梁の置き方は _gate_parts。梁の上端は単柱の橋脚の上端と同じ（躯体の下面より PIER_TOP_OVERLAP 上）で、深さは PIER_GATE_BEAM_D。
+    柱と梁の置き方は _gate_parts。梁と柱の上端は躯体の下面より PIER_GATE_BEAM_EMBED 上（躯体に食い込む）で、梁の深さは PIER_GATE_BEAM_D
+    （躯体の下面より下に見えるのは PIER_GATE_BEAM_SHOW）。
     作りは iss の橋脚 5・6（../iss/src/util/pier/ground/pier.dat の iss_wsg_pier5・6）に合わせる: 奥の絵（image）は全部の柱と梁、
     手前の絵（frontimage。乗り物の後に描く）は奥の角（北西）の柱と、経路より奥の中心の柱を除いたもの。手前の絵は行 PIER_GATE_FRONT_ROW〜"""
-    top, bottom = _pier_top_bottom()
-    btop, bbot = top, top - PIER_TOP_OVERLAP - PIER_GATE_BEAM_D
+    _top, bottom = _pier_top_bottom()
+    top = ELEV_STEPS * H - BASE_H - ELEV_BODY_D + PIER_GATE_BEAM_EMBED
+    btop, bbot = top, top - PIER_GATE_BEAM_D
     set_anchor(128 + BALLAST_DY)
 
     def build(name):

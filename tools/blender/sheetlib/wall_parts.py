@@ -101,10 +101,15 @@ _M_PIER = ("pier", (0.56, 0.56, 0.54))
 # 門型の橋脚の way（pier_gate_sheet）: 柱をタイルの角の近くに立て、柱の間を空けて上に梁を渡す。直下に並行する道路と、
 # タイルの中ほどを横切る道路のどちらも、柱の内側の面（中心から PIER_GATE_CLEAR）より内を通れる。
 #   PIER_GATE_POST: 柱の太さ（正方形の 1 辺）。柱はタイルの辺に面を合わせ（中心は辺から PIER_GATE_POST / 2 内）、隣のタイルの柱と背中合わせになる
-#   PIER_GATE_BEAM_D: 梁の深さ（上端は単柱の橋脚と同じく、躯体の下面より PIER_TOP_OVERLAP 上）
+#   PIER_GATE_BEAM_EMBED: 梁（と柱）の上端を、高架の躯体の下面より上へ食い込ませる高さ（躯体の深さ ELEV_BODY_D より小さく、躯体に隠れる。
+#     床より幅の広い梁の端は、躯体の横で食い込んだ分まで見える）
+#   PIER_GATE_BEAM_SHOW: 梁の、躯体の下面より下に見える厚み。高架下の通れる高さは 床の高さ − 基盤 − 躯体 − これ
+#   PIER_GATE_BEAM_D: 梁の深さ（上の 2 つの和）
 #   PIER_GATE_CLEAR: 柱の内側の面の、タイルの中心からの距離（道路が通れる半幅）
 PIER_GATE_POST = 1.0
-PIER_GATE_BEAM_D = 0.8
+PIER_GATE_BEAM_EMBED = 0.6
+PIER_GATE_BEAM_SHOW = 0.25
+PIER_GATE_BEAM_D = PIER_GATE_BEAM_EMBED + PIER_GATE_BEAM_SHOW
 PIER_GATE_CLEAR = 5.0 - PIER_GATE_POST   # TILE / 2 − 柱の太さ
 _M_PIER_POST = ("pier_post", (0.56, 0.56, 0.54))
 _M_PIER_BEAM = ("pier_beam", (0.52, 0.52, 0.50))
