@@ -1,4 +1,5 @@
-// 車両を走らせる確認（未完成: 車庫・駅・編成までは作れるが、ダイヤの設定 change_schedule が通らない）: 側壁付きの線路（single）に、車庫・駅 2 つ・編成 1 本を置いて往復させる。flat.sve で使う。
+// 車両を走らせる確認: 側壁付きの線路（single）に、車庫・駅 2 つ・編成 1 本を置いて往復させる。flat_512.sve で使う。
+// 検証用のフォルダの script/ が OTRP のものであること（本家のままだと schedule_entry_x が壊れ、change_schedule が失敗する。docs/records/2026-11-18_script-schedule-entry-stale-script-dir.md）。
 // 線路: (100,40) から東へ (112,40)、角を曲がって南へ (112,48)。車庫は (100,40)、駅は (103,40) と (112,46)。
 // 撮るときは gui.jump(coord3d(108, 42, 0))。
 function r(name, v) { return name + "=" + (v == null ? "ok" : "[" + v + "]") + "\n"; }
@@ -20,7 +21,9 @@ foreach (v in vehicle_desc_x.get_available_vehicles(wt_rail)) if (v.get_power() 
 s += "loco=" + loco.get_name() + "\n";
 depot.append_vehicle(pl, convoy_x(0), loco);
 local cnv = depot.get_convoy_list()[0];
-local sched = schedule_x(wt_rail, [schedule_entry_x(coord3d(103, 40, 0), 0, 0), schedule_entry_x(coord3d(112, 46, 0), 0, 0)]);
+local e1 = schedule_entry_x(coord3d(103, 40, 0), 0, 0);
+if (e1.x != 103) return s + "schedule_entry_x is broken: the game's script/ folder is not OTRP's\n";
+local sched = schedule_x(wt_rail, [e1, schedule_entry_x(coord3d(112, 46, 0), 0, 0)]);
 cnv.change_schedule(pl, sched);
 depot.start_convoy(pl, cnv);
 gui.close_all_windows();
