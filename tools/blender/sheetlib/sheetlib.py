@@ -45,6 +45,7 @@ from .core import (  # noqa: F401
     straight,
 )
 from .track_parts import (  # noqa: F401
+    BED_FILLS,
     bed_fill_shape,
     DIAG_BALLAST,
     DIAG_RAIL,
@@ -480,6 +481,27 @@ def track_skin(groups, snow=False):
     return dict(TRACK_WEAR_SKIN) if wear else None
 
 
+def track_profile_skin(prof, groups, snow=False):
+    """描き分けの材質: track_skin の結果に、夏の絵は prof["skin"]、雪の絵は prof["snow_skin"]（どちらも無くてよい）を重ねる。"""
+    return dict(track_skin(groups, snow) or {}, **prof.get("snow_skin" if snow else "skin", {})) or None
+
+
+def track_body_parts(prof):
+    """線路の本体の部品。prof["track_parts"]（無くてよい）があれば TRACK_PARTS を丸ごと置き換える。アイコンの線路もこの部品で描く。"""
+    return tuple(prof.get("track_parts", TRACK_PARTS))
+
+
+def track_sheet_parts(prof):
+    """シートに描く部品: 本体 + prof["parts"]（無くてよい。追加の部品）+ TRACK_EXTRAS。
+    prof["replace"]（無くてよい）: 部品の名前 → 差し替える部品（形だけを変える。名前は同じにして、材質の差し替えと汚れの色をそのまま使う）"""
+    swap = prof.get("replace", {})
+    return tuple(swap.get(p.name, p) for p in track_body_parts(prof) + tuple(prof.get("parts", ())) + TRACK_EXTRAS)
+
+
+# 斜めの部分の横幅の倍率（Part.width → 倍率）
+DIAG_WIDTHS = {"gauge": DIAG_RAIL, "bed": DIAG_BALLAST}
+
+
 def track_sheet(profile="new"):
     prof = TRACK_PROFILES[profile]
     half = TILE / 2
@@ -565,8 +587,13 @@ def track_sheet(profile="new"):
     cy = GROUND_CY
     set_anchor(128 + BALLAST_DY)
     cells = {}
-    # prof["replace"]（無くてよい）: 部品の名前 → 差し替える部品（形だけを変える。名前は同じにして、材質の差し替えと汚れの色をそのまま使う）
-    parts = tuple(prof.get("replace", {}).get(p.name, p) for p in TRACK_PARTS + TRACK_EXTRAS)
+    parts = track_sheet_parts(prof)
+    # prof["bed_fills"]（無くてよい）: 分岐のすき間を埋める層。部品の名前 → (上面の半幅, 板の下面の高さ, 板の上面の高さ)。書いた順に埋める。
+    # 無ければ道床（BED_FILLS）。指定した名前の部品が無いときは、埋める層が黙って消えないように止める
+    bed_fills = prof.get("bed_fills", BED_FILLS)
+    missing = [n for n in prof.get("bed_fills", ()) if not any(p.name == n for p in parts)]
+    if missing:
+        raise SystemExit(f"[track_sheet] {profile}: bed_fills の部品が無い: {' '.join(missing)}")
     # prof["diag_curves"]（無くてよい）: pak128 標準の線路と同じく、カーブを斜めの絵で表す。カーブのセルは描かず（dat が斜めのセルを指す）、
     # T字・十字・分岐の絵のカーブを、同じ 2 辺をつなぐ斜めの直線にする。斜めの部分は斜めのセルと同じ幅・下げ幅で作り、隣の斜めのタイルとつなぐ
     # 壁の版でも使える: 直線と斜めの部分を 1 回の assemble で組み、斜めの部分だけ横幅の倍率と下げ幅を変える（path_opts）ので、
@@ -613,11 +640,10 @@ def track_sheet(profile="new"):
     # （高架の版。壁は地上の版と同じ way-object を重ねるので、高架の対象では描かない。壁の層も描かない）
     write_walls = prof.get("write_walls", True)
     wcells = {}
-    # prof["skin"]（無くてよい）は夏の絵だけの材質の差し替え（部品の名前 → 材質）。雪の絵は雪の材質のまま
-    summer = dict(track_skin(groups) or {}, **prof.get("skin", {})) or None
-    variants = [(0, "", summer, groups)]
+    # prof["skin"]（無くてよい）は夏の絵だけ、prof["snow_skin"]（無くてよい）は雪の絵だけの材質の差し替え（部品の名前 → 材質）
+    variants = [(0, "", track_profile_skin(prof, groups), groups)]
     if prof.get("snow"):
-        variants.append((block, "_snow", track_skin(groups, snow=True), groups))
+        variants.append((block, "_snow", track_profile_skin(prof, groups, snow=True), groups))
     for row0, suffix, skin, grp in variants:
         for pos, (name, paths, slope, *rails) in jobs.items():
             clear_models()
@@ -625,7 +651,7 @@ def track_sheet(profile="new"):
             # diag_curves のカーブのセル（curve_cells）は斜めのセルと同じ形
             shape = name.replace("curve_", "diag_") if diag_of and name.startswith("curve_") else name
             div = 2 if shape in ("diag_nw", "diag_se", "close1") else 1
-            widths = {"gauge": DIAG_RAIL, "bed": DIAG_BALLAST} if shape.startswith(("diag_", "close")) else None
+            widths = DIAG_WIDTHS if shape.startswith(("diag_", "close")) else None
             # 架線の柱・梁（catenary_support）は経路が 1 本のセルだけに作る（分岐・十字に経路ごとの門を作らない。トロリ線は全部の経路）
             cell_grp = grp if len(paths) == 1 else tuple(g for g in grp if g != "catenary_support")
             kw = dict(widths=widths, div=div, groups=cell_grp, ends=name in ("s", "w", "n", "e"), skin=skin)
@@ -636,13 +662,17 @@ def track_sheet(profile="new"):
 
             def build(ps, pths):
                 # diag_curves の斜めの部分は、斜めのセルと同じ幅・下げ幅で組む（同じ assemble の中で、経路ごとに変える）
-                opts = {i: ({"gauge": DIAG_RAIL, "bed": DIAG_BALLAST}, 2 if diag_of[id(p)] in ("diag_nw", "diag_se") else 1)
+                opts = {i: (DIAG_WIDTHS, 2 if diag_of[id(p)] in ("diag_nw", "diag_se") else 1)
                         for i, p in enumerate(pths) if id(p) in diag_of}
                 out = assemble(ps, pths, prof["datums"], slope, **dict(kw, path_opts=opts or None))
-                bed = [p for p in ps if p.name == "ballast"]
-                if bed and opts:
-                    # 直線と斜めの道床の間にできる三角のすき間を、道床の上面の凸包で埋める（pak128 標準の T字・十字と同じ）
-                    fill = replace(bed[0], shape=bed_fill_shape(pths, {i: DIAG_BALLAST for i in diag_of}))
+                for pname, spec in bed_fills.items() if opts else ():
+                    layer = next((p for p in ps if p.name == pname), None)
+                    if layer is None:
+                        continue
+                    # 直線と斜めの層の間にできる三角のすき間を、層の上面の凸包で埋める（pak128 標準の T字・十字と同じ）。
+                    # 部品の名前のままにして、材質の差し替えとレイアウト検証用モードの色をそのまま使う
+                    k_diag = DIAG_WIDTHS.get(layer.width, 1.0)
+                    fill = replace(layer, shape=bed_fill_shape(pths, {i: k_diag for i in diag_of}, spec))
                     out += assemble([fill], pths[:1], prof["datums"], slope, **dict(kw, widths=None))
                 return out
             if rails:
@@ -742,7 +772,7 @@ def track_sheet(profile="new"):
 
     # アイコン: 線路を大きく斜めに通し、左上に最高速度を書く
     clear_models()
-    assemble(TRACK_PARTS, [straight((0, -12), (0, 12), ext=0.6)], clip=False)
+    assemble(track_body_parts(prof), [straight((0, -12), (0, 12), ext=0.6)], clip=False)
     if profile == "trial":
         cells[(0, 0)] = render_icon("track_trial_icon", 0.5, shift=(-0.14, 0.2), label="100", style="track", badge="T")
         # カーソル: 直線の絵の上に、最高速度を書く（アイコンと同じ色の札）
@@ -769,7 +799,7 @@ def track_sheet(profile="new"):
     if wall_sheet and write_walls:
         # 壁の way-object のアイコン（仮の絵。way と同じ絵に、印と W を書く）とカーソル（直線の奥の壁）
         clear_models()
-        assemble(TRACK_PARTS, [straight((0, -12), (0, 12), ext=0.6)], clip=False)
+        assemble(track_body_parts(prof), [straight((0, -12), (0, 12), ext=0.6)], clip=False)
         wcells[(0, 0)] = render_icon(wall_sheet + "_icon", 0.5, shift=(-0.14, 0.2), label=prof.get("wall_label", "W"), style="track",
                                      badge=ICON_BADGE.get(prof.get("walls")))
         ns = wcells.get((0, 2)) or wcells.get((WALL_FRONT_ROW, 2))  # front の版の直線は手前の絵だけ
@@ -1125,7 +1155,7 @@ def tunnel_sheet(kind="track", profile="new", sheet=None, label="100"):
     }
     prof = TRACK_PROFILES[profile]
     expwy = kind == "expressway"
-    parts = tuple(prof.get("replace", {}).get(p.name, p) for p in TRACK_PARTS + TRACK_EXTRAS)
+    parts = track_sheet_parts(prof)
     # 高速道路: iss の都市高速の坑口（tunnel/road。タイルいっぱいの箱と口の上の名板）が手本。穴は両側の壁の内側まで広げる。
     # 道路は地面の菱形より 1px 下に描く（ROAD_CY）。持ち分も同じだけ下げ、隣の道路と同じく spill は 0
     bore_w = EXPWY_WALL_U - 0.1 if expwy else TUNNEL_BORE[0]
@@ -1165,14 +1195,12 @@ def tunnel_sheet(kind="track", profile="new", sheet=None, label="100"):
             else:
                 # 線路の本体と同じく汚れを入れる（雪の絵は雪の上の汚れ）
                 grp = prof["groups"]
-                tskin = track_skin(grp, snow=bool(skin))
-                if not skin and "skin" in prof:
-                    tskin = dict(tskin or {}, **prof["skin"])  # 夏の絵だけの材質の差し替え（track_sheet と同じ）
+                tskin = track_profile_skin(prof, grp, snow=bool(skin))  # 夏・雪の材質の差し替えは track_sheet と同じ
                 assemble(parts, [path], prof["datums"], groups=grp, skin=tskin)
                 # 穴の内側: 床（基盤と同じ材質）と暗い左右の壁だけを置く（線路は床の上に見える。箱で埋めると線路まで隠れた）
                 # 床はタイルの幅いっぱい（躯体の下は隠れる。口の辺では、隣の側壁つきの線路の基盤と 1 行重なってすき間を埋める）
                 floor = mesh_object("floor", *box(c.x, c.y, 0.005, a1 - a0, TILE, 0.01, rot=rot),
-                                    material(*(skin or {}).get("base", _M_BASE)))
+                                    material(*(tskin or {}).get("base", _M_BASE)))
                 # 基盤と同じ基準面（bed）に乗せる。動かさないと、隣の線路の基盤より 2px 上で止まり、辺に 1 行のすき間が出た
                 mv = datum_move(prof["datums"]["bed"])
                 if mv is not None:
@@ -1208,7 +1236,7 @@ def tunnel_sheet(kind="track", profile="new", sheet=None, label="100"):
         build_road([long], [(long, -EDGE_LINE), (long, 0.0), (long, EDGE_LINE)], clip=False, size=(TILE, 26), sidewalk=False)
         cells[(0, 0)] = render_icon("expwy_tunnel_icon", 0.5, shift=(-0.14, 0.2), label="120", style="expressway", band="tunnel")
     else:
-        assemble(TRACK_PARTS, [long], clip=False)
+        assemble(track_body_parts(prof), [long], clip=False)
         cells[(0, 0)] = render_icon(f"{sheet}_icon" if sheet else "track_tunnel_icon", 0.5, shift=(-0.14, 0.2), label=label, style="track",
                                     band="tunnel")
     # カーソル: 口が手前を向いた坑口（BackImage[N]）の奥の絵に手前の絵（躯体）を重ねた 1 枚

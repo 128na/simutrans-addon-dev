@@ -272,10 +272,15 @@ def end_wall_edge_shape(ww=None, wh=None):
     return shape
 
 
-def bed_fill_shape(paths, widths_by_id):
-    """道床の上面（経路から BALLAST の上の幅）の、タイルの中の部分の凸包を、地面から上面の少し下までの板にする。
-    widths_by_id は経路の id → 横幅の倍率（斜めの部分）。T字・十字で直線と斜めの道床の間にできるすき間を埋める。"""
-    top = BALLAST[2][0]
+# 分岐のすき間埋めの既定（TRACK_PROFILES の "bed_fills"）: 部品の名前 → (上面の半幅, 板の下面の高さ, 板の上面の高さ)。
+# 道床の上面の幅で、地面の少し上から道床の上面の少し下まで
+BED_FILLS = {"ballast": (BALLAST[2][0], 0.001, BALLAST_H - 0.003)}
+
+
+def bed_fill_shape(paths, widths_by_id, fill=BED_FILLS["ballast"]):
+    """層の上面（経路から半幅 fill[0]）の、タイルの中の部分の凸包を、高さ fill[1]〜fill[2] の板にする。
+    widths_by_id は経路の id → 横幅の倍率（斜めの部分）。T字・十字で直線と斜めの層の間にできるすき間を埋める。"""
+    top, z0, z1 = fill
     lim = TILE / 2 + 1e-4
 
     def shape(path, k):
@@ -303,7 +308,6 @@ def bed_fill_shape(paths, widths_by_id):
                 h.append(q)
             return h
         hull = half(pts)[:-1] + half(pts[::-1])[:-1]  # 反時計回り
-        z0, z1 = 0.001, BALLAST_H - 0.003
         m = len(hull)
         verts = [Vector((x, y, z0)) for x, y in hull] + [Vector((x, y, z1)) for x, y in hull]
         faces = [tuple(range(m - 1, -1, -1)), tuple(range(m, 2 * m))] + [(i, (i + 1) % m, m + (i + 1) % m, m + i) for i in range(m)]
