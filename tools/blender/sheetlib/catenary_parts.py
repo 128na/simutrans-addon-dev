@@ -202,7 +202,8 @@ CATENARY_PARTS = (
 
 def beam_part(reach_diag):
     """斜めの梁の長さだけを変えた梁の部品（名前・材質は cat_beam のまま。TRACK_PROFILES の "replace" に渡す）。"""
-    return dataclasses.replace(CATENARY_PARTS[2], shape=beam_shape(reach_diag))
+    beam = next(p for p in CATENARY_PARTS if p.name == "cat_beam")
+    return dataclasses.replace(beam, shape=beam_shape(reach_diag))
 
 
 def is_catenary(ob):
