@@ -46,18 +46,20 @@ description: Simutrans の way 系アドオン（AMI・blender-poc の線路・�
 
 | もの | 役目 |
 |---|---|
-| `addons/ami/blender/render.py` | AMI のプロファイル（`TRACK_PROFILES`）と描く対象（`SHEETS`） |
+| `addons/ami/blender/catalog.py` | 軌道の種類の表（Blender を使わない）。way・基盤・高架・橋・トンネルの名前を導く |
+| `addons/ami/blender/render.py` | AMI のプロファイル（`TRACK_PROFILES`。種類ごとの設定は `TRACK_SETTINGS`）と描く対象（`SHEETS`） |
 | `addons/ami/blender/ami_dat.py` | dat の書き出しと値。dat は手で書かない |
 | `addons/ami/blender/addon_config.py` | 判定の道具が読む名前の対応 |
 | `addons/ami/build.py` | makeobj で pak を作る |
-| `addons/ami/ingame/sample.nut` | ゲームに敷く見本 |
+| `addons/ami/ingame/sample.nut` | ゲームに敷く見本。先頭の `TRACK` で軌道の種類を選ぶ |
 | `Datum(drop, ground)` | 基準面。`bed`（路盤）と `rail`（走行面）。描画位置のずれは部品ではなく基準面が持つ |
 | `Part` | 部品。基準面・横幅の倍率・材質・形・まとまり（`group`） |
 | `assemble` | 部品を経路ごとに作り、基準面の分だけ動かし、坂を当て、タイルの外を切る |
 | `build_base` | 基盤と高架の躯体。残した壁の外側を削る |
 | `render_layers` | 高さのある部品を別の層として描き、奥と手前の絵に分ける |
-| `TRACK_PROFILES` のキー | シート名・基準面・`groups`・`walls`・`snow`・`skin`・`replace` など。意味は `tools/README.md` と `track_sheet` の説明 |
+| `TRACK_PROFILES` のキー | シート名・基準面・`groups`・`walls`・`snow`・`skin`・`snow_skin`・`replace`・`track_parts`・`parts`・`bed_fills` など。意味は `tools/README.md` と `track_sheet` の説明 |
 
+- AMI の軌道の種類を足すときは、`catalog.py` の `TRACKS`、`render.py` の `TRACK_SETTINGS`（部品と材質は上のキーで渡す）、`ami_dat.py` の `VALUES` に足す。共有の壁・架線・橋脚は足さない
 - 部品を足すときは、乗る基準面を選ぶ。部品ごとに位置を足し引きしない
 - 寸法・色は名前の付いた定数にする（ADR 0005）
 - 共通部分を直したら、既存のアドオンのシートが変わらないことを確かめる

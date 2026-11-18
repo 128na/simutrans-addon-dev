@@ -28,6 +28,11 @@ D:\bin\blender\blender.exe -b --factory-startup --python ..\..\tools\blender\com
 | `addons/<アドオン>/ingame/` | ゲームで見本を敷くスクリプト。アドオンの名前（`bpoc_*` など）を使うのでアドオンに置く |
 
 - `sheetlib` の `TRACK_PROFILES`・`ROAD_PROFILES` は、入口が登録する。共通の描画が名前で引くのは `TRACK_PROFILES["new"]`（トンネル）と `ROAD_PROFILES["street"]`・`["expressway"]`（道路の部品の選択）。アドオンはこの名前で登録する
+- 線路の描き分けのうち、軌道の種類を増やすためのキー（#20 の前準備）。どれも無くてよく、無ければ今の線路と同じ絵になる。`replace`・`skin`・`groups` は今までどおり一緒に使える:
+  - `track_parts`: 本体の部品（既定 `TRACK_PARTS`）を丸ごと置き換える。`track_sheet`・`tunnel_sheet`・線路のアイコンは `track_body_parts(prof)` で本体の部品を引く（アイコンには `replace` を当てない）
+  - `parts`: 追加の部品。シートに描く部品は `track_sheet_parts(prof)` が決める（本体 + `parts` + `TRACK_EXTRAS` に `replace` を当てたもの）。アドオンの `R.TRACK_EXTRAS += ...` は `R` の名前を付け替えるだけで効かないので、このキーで渡す。足した部品の色は `sheetlib/layout_colors.py` に足す
+  - `bed_fills`: 分岐（`diag_curves` の T字・十字）の直線と斜めの間のすき間を埋める層。`{部品の名前: (上面の半幅, 板の下面の高さ, 板の上面の高さ)}` で、書いた順に埋める（複数の層を埋められる）。斜めの部分の横幅の倍率は、その部品の `width` で決まる。無ければ `BED_FILLS`（`ballast` だけ。`ballast` が無い部品の組では何も埋めない）。指定した名前の部品が無いときは止まる
+  - `snow_skin`: 雪の絵だけの材質の差し替え（部品の名前 → 材質）。`track_skin` の雪の結果に重ねる（`track_profile_skin`。夏の絵の `skin` と対）。`track_sheet` とトンネルの坑口の両方に効く
 - 線路の描き分けのうち、壁を way-object に分けるためのキー（AMI の基盤の版。#16）:
   - `wall_sheet`: 壁を way の絵に描かず、このシート名の壁の way-object のシートに描く。上 4 行が奥、下 4 行（`WALL_FRONT_ROW` から）が手前の絵。`diag_curves` と一緒に使える（斜めの部品は `assemble` の `path_opts` で、直線と斜めの部品を 1 回でまとめて切り分ける）
   - `curve_cells`: `diag_curves` でも、カーブのセルを斜めの形で別に描く（斜めのタイルの切り抜き `_diag_open_cut` をかけない）

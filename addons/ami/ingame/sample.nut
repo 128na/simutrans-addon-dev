@@ -1,7 +1,7 @@
 // AMI の見本: 絵を作った way の絵を、周りのタイルとつながった形で全部出す（全方位・分岐・近い斜め・坂・雪）。
 // 検証用の flat_512.sve に、温暖側 (20,20) と降雪側 (276,20) の 2 か所へ同じ並びで敷く。降雪側は敷いた後に一帯を降雪に塗り直す
 // （土地を上げたタイルは温暖に変わり、坂の道が雪の絵にならないため。docs/reference/way-addon.md の 8.2）。
-// way は WAYS の順に、SPACING タイルずつ南へずらして 1 本ずつ敷く。名札（ASCII）付き。見つからない way は失敗として報告する（WAYS には dat と pak を作った way だけを足す）。
+// way は WAYS の順に、SPACING タイルずつ南へずらして 1 本ずつ敷く。名札（ASCII）付き。見つからない way は失敗として報告する（TRACK には dat と pak を作った軌道の way だけを指定する）。
 // 使い方: ゲームを -mcp-port 47123 で起動し、flat_512 を開いて
 //   python <mcp_client.py> --port 47123 --timeout 300 --run-squirrel "$(cat ingame/sample.nut)"
 // 返り値の先頭が ok なら全部敷けた。失敗した所は「名前 場所=[…]」で続く。最後に確かめた値（[check] の行）が続く。
@@ -52,23 +52,26 @@
 //   T2 トンネル（架線つきの壁）: 東西 y=50・南北 x=27（坑口 y=46・50）
 //   T3 複線のトンネル: 東西 y=56・57 に back・front
 //   BT_ONLY を true にすると、橋とトンネルの区画だけを敷く（試すとき）
-local WAYS = ["ami_rail_ballast"];
-// [基盤の版の way, 壁の way-object（null は壁なし）]
-local WALLED = [["ami_rail_ballast_base_single", "ami_wall_rail_single"], ["ami_rail_ballast_base_back", "ami_wall_rail_back"],
-                ["ami_rail_ballast_base_center", "ami_wall_rail_center"], ["ami_rail_ballast_base_front", "ami_wall_rail_front"]];
+// 見本に敷く軌道の種類（通常の版の way の名前。blender/catalog.py の Track.way）。ここだけを替えると、way・基盤・高架・橋・トンネルが替わる
+local TRACK = "ami_rail_ballast";
+local VARIANTS = ["single", "back", "center", "front"];
+local WAYS = [TRACK];
+// WALLED: [基盤の版の way, 壁の way-object（null は壁なし）]。CATENARY: 架線つきの壁（[基盤の版の way, 架線つきの壁の way-object]）。
+// ELEVATED: 高架の 4 版（[高架の way, 壁の way-object]）
+local WALLED = [], CATENARY = [], ELEVATED = [];
+foreach (v in VARIANTS) {
+  WALLED.append([TRACK + "_base_" + v, "ami_wall_rail_" + v]);
+  CATENARY.append([TRACK + "_base_" + v, "ami_wall_rail_" + v + "_catenary"]);
+  ELEVATED.append([TRACK + "_elev_" + v, "ami_wall_rail_" + v]);
+}
 local W_AREA = [24, 18];  // 区画 W の大きさ（降雪の塗り直しに使う）
-// 架線つきの壁（[基盤の版の way, 架線つきの壁の way-object]）
-local CATENARY = [["ami_rail_ballast_base_single", "ami_wall_rail_single_catenary"], ["ami_rail_ballast_base_back", "ami_wall_rail_back_catenary"],
-                  ["ami_rail_ballast_base_center", "ami_wall_rail_center_catenary"], ["ami_rail_ballast_base_front", "ami_wall_rail_front_catenary"]];
-// 高架の 4 版（[高架の way, 壁の way-object]）と橋脚の way。ELEV_DX は地上の区画からの東へのずらし
-local ELEVATED = [["ami_rail_ballast_elev_single", "ami_wall_rail_single"], ["ami_rail_ballast_elev_back", "ami_wall_rail_back"],
-                  ["ami_rail_ballast_elev_center", "ami_wall_rail_center"], ["ami_rail_ballast_elev_front", "ami_wall_rail_front"]];
+// 橋脚の way。ELEV_DX は地上の区画からの東へのずらし
 local PIER = "ami_pier_rail";
 local PIER_GATE = "ami_pier_rail_gate";
 local GATE_ONLY = false;
 // 橋とトンネル（#19）。BT_DY は門型の橋脚の区画の原点からの南へのずらし
-local BRIDGE = "ami_rail_ballast_bridge";
-local TUNNEL = "ami_rail_ballast_tunnel";
+local BRIDGE = TRACK + "_bridge";
+local TUNNEL = TRACK + "_tunnel";
 local BT_DY = 130;
 local BT_AREA = [32, 62];  // 区画の大きさ（降雪の塗り直しに使う）
 local BT_ONLY = false;
@@ -219,7 +222,7 @@ function lay(name, wall, ox, oy) {
 // kind は way の版（"base" は地上の基盤の版、"elev" は高架の版の区画 WV・WVE。高架は mode を高架にしてから呼ぶ）
 function lay_pairs(ox, oy, suffix = "", kind = "base") {
   local wd = {}, od = {};
-  foreach (v in ["single", "back", "center", "front"]) wd[v] <- way_desc_x("ami_rail_ballast_" + kind + "_" + v);
+  foreach (v in VARIANTS) wd[v] <- way_desc_x(TRACK + "_" + kind + "_" + v);
   foreach (v in ["single", "back", "center", "front", "twin"]) {
     od[v] <- wayobj_desc_x("ami_wall_rail_" + v + suffix);
     if (od[v] == null) return "ami_wall_rail_" + v + suffix + " desc=[missing]\n";
@@ -272,7 +275,7 @@ function lay_pairs(ox, oy, suffix = "", kind = "base") {
 // 西から東西に (0,1)-(7,1)、南から南北に (10,12)-(10,7) 敷き、台の上で地上の基盤の版（single）につなぐ（高架の端のタイルから敷く）。
 // 壁の way-object（single）は、高架と台の上を通して 1 本で敷く。橋脚は高架の下だけ
 function lay_join(ox, oy) {
-  local e = way_desc_x("ami_rail_ballast_elev_single"), g = way_desc_x("ami_rail_ballast_base_single");
+  local e = way_desc_x(TRACK + "_elev_single"), g = way_desc_x(TRACK + "_base_single");
   local wo = wayobj_desc_x("ami_wall_rail_single"), p = way_desc_x(PIER);
   local c = function(x, y, z = 0) { return coord3d(ox + x, oy + y, z); };
   local s = r("J label", marker.work(pl, c(0, -2), "elevated <-> ground"));
@@ -332,8 +335,8 @@ function lay_bt(bx, by) {
   local br = bridge_desc_x(BRIDGE), tn = TUNNEL;
   if (br == null) return BRIDGE + " desc=[missing]\n";
   local wd = {}, od = {};
-  foreach (v in ["single", "back", "center", "front"]) {
-    wd[v] <- way_desc_x("ami_rail_ballast_base_" + v);
+  foreach (v in VARIANTS) {
+    wd[v] <- way_desc_x(TRACK + "_base_" + v);
     od[v] <- wayobj_desc_x("ami_wall_rail_" + v);
   }
   local ws = wayobj_desc_x("ami_wall_rail_single_catenary"), ev = way_desc_x(ELEVATED[0][0]), pr = way_desc_x(PIER);
