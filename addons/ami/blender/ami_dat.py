@@ -4,7 +4,8 @@
 まだ絵を作っていない way は BUILT に入れない（dat も pak も作らない）。シートの行の並びは
     夏の絵 4 行（奥の絵）→ 雪の絵 4 行
 で、無壁の線路の並び。カーブは斜めの絵（DIAG_CURVES）を指す。橋の版は、そのステップで足す。
-高架の版（ami_rail_ballast_elev_<版>）は基盤の版と同じ並びで system_type=1。橋脚の way（ami_pier_rail）は行 0〜3 だけで、雪の絵も同じセル。
+高架の版（ami_rail_ballast_elev_<版>）は基盤の版と同じ並びで system_type=1。橋脚の way は雪の絵も同じセルで、単柱（ami_pier_rail）は行 0〜3 だけ、
+門型（ami_pier_rail_gate）は行 0〜3 が奥の絵、行 4〜7 が手前の絵（PIER_FRONT_ROW）。
 
 基盤の版の way（ami_rail_ballast_base_<版>）は通常の版と同じ並びで、近い斜めの絵を持たない（本体が分け合うタイルに 2 本の way を置き、
 奥の線と手前の線を別の版にできる。docs/reference/way-addon.md の 6 章）。壁の way-object（ami_wall_rail_<版>）のシートは
@@ -79,7 +80,8 @@ for _v in BASE_VARIANTS:
 # 値は仮（iss の橋脚と同じ費用・維持費）。topspeed は走らせる物ではないので 1
 PIER_VALUES = dict(waytype="tram_track", cost=1000, maintenance=100, intro_year=1900, topspeed=1)
 PIERS = {"ami_pier_rail": "ami_pier_rail", "ami_pier_rail_gate": "ami_pier_rail_gate"}  # 単柱と門型（門型は #18 の追加）
-# 手前の絵（frontimage）を持つ橋脚: 名前 → 手前の絵の行のずらし（sheetlib の PIER_GATE_FRONT_ROW）。門型は柱・梁を手前の絵に描く
+# 手前の絵（frontimage）を持つ橋脚: 名前 → 手前の絵の行のずらし。シートを描く側の tools/blender/sheetlib/sheetlib.py の
+# PIER_GATE_FRONT_ROW と同じ値にする。門型は柱・梁を手前の絵に描く
 PIER_FRONT_ROW = {"ami_pier_rail_gate": 4}
 # 橋脚のシートにあるセル（render の pier_sheet）。分岐の絵（switch 画像）は T字・十字と同じ柱
 PIER_SWITCH = {"[nse1]": "[nse]", "[nse2]": "[nse]", "[new1]": "[new]", "[new2]": "[new]", "[nsw1]": "[nsw]", "[nsw2]": "[nsw]",

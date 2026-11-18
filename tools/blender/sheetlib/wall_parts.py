@@ -12,6 +12,7 @@ from mathutils import Vector
 
 from .core import (  # noqa: F401
     H,
+    TILE,
     box,
     sweep,
 )
@@ -112,7 +113,7 @@ PIER_GATE_POST = 1.0
 PIER_GATE_BEAM_EMBED = 0.2
 PIER_GATE_BEAM_SHOW = 0.15
 PIER_GATE_BEAM_D = PIER_GATE_BEAM_EMBED + PIER_GATE_BEAM_SHOW
-PIER_GATE_CLEAR = 5.0 - PIER_GATE_POST   # TILE / 2 − 柱の太さ
+PIER_GATE_CLEAR = TILE / 2 - PIER_GATE_POST
 _M_PIER_POST = ("pier_post", (0.56, 0.56, 0.54))
 _M_PIER_BEAM = ("pier_beam", (0.52, 0.52, 0.50))
 

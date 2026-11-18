@@ -894,6 +894,7 @@ def _gate_parts(name):
 
 
 # 門型の橋脚のシートの手前の絵（frontimage）の行。奥の絵（image）の行 0〜3 の下（壁の way-object の WALL_FRONT_ROW と同じ並び）
+# 手前の絵の行のずらし。dat を書く側の addons/ami/blender/ami_dat.py の PIER_FRONT_ROW と同じ値にする
 PIER_GATE_FRONT_ROW = 4
 # 斜めのタイルで、中心の柱を手前の絵にも描くセル（柱が経路より手前にある。ほかの斜めは同じ奥行きか奥なので奥の絵だけ）
 _GATE_CENTER_FRONT = ("diag_nw",)
