@@ -84,7 +84,9 @@ ELEV_LOWER = 16 * ELEV_STEPS
 #   ELEV_BODY_LOWER: 躯体を描くために、高架の way の持ち分を下へ広げる行数（深さの px に余りを足す）
 #   ELEV_BODY_DIAG_INSET: 斜めの躯体の壁の無い側の切り口を、路盤の面の高さで近い斜めの 2 本の真ん中（DIAG_OPEN_HALF）から内へ下げる幅。
 #   切り口は基盤と同じ傾き（DIAG_OPEN_UNDERCUT）で、下ほど中心線へ寄る（躯体の上面で約 1.35 内）
-ELEV_BODY_D = 1.0
+#   ELEV_BODY_D は、高架下を 2 階建てバス（pak128 の aec_aclo_regent_iii・cst_urban_city_dd。屋根は地面から約 20 px）が
+#   余裕をもって通れるよう浅くしてある（躯体の下面は地面から約 27 px。iss の高架は床の下に躯体が無く、門型の橋脚 pier5 の梁の下面も約 27 px）
+ELEV_BODY_D = 0.25
 ELEV_BODY_INSET = 0.45
 ELEV_BODY_DIAG_INSET = 0.3
 ELEV_BODY_LOWER = math.ceil((BASE_H + ELEV_BODY_D) * 16 / H) + 2
@@ -101,14 +103,14 @@ _M_PIER = ("pier", (0.56, 0.56, 0.54))
 # 門型の橋脚の way（pier_gate_sheet）: 柱をタイルの角の近くに立て、柱の間を空けて上に梁を渡す。直下に並行する道路と、
 # タイルの中ほどを横切る道路のどちらも、柱の内側の面（中心から PIER_GATE_CLEAR）より内を通れる。
 #   PIER_GATE_POST: 柱の太さ（正方形の 1 辺）。柱はタイルの辺に面を合わせ（中心は辺から PIER_GATE_POST / 2 内）、隣のタイルの柱と背中合わせになる
-#   PIER_GATE_BEAM_EMBED: 梁（と柱）の上端を、高架の躯体の下面より上へ食い込ませる高さ（躯体の深さ ELEV_BODY_D より小さく、躯体に隠れる。
+#   PIER_GATE_BEAM_EMBED: 梁（と柱）の上端を、高架の躯体の下面より上へ食い込ませる高さ（基盤と躯体の深さ BASE_H + ELEV_BODY_D より小さく、躯体に隠れる。
 #     床より幅の広い梁の端は、躯体の横で食い込んだ分まで見える）
 #   PIER_GATE_BEAM_SHOW: 梁の、躯体の下面より下に見える厚み。高架下の通れる高さは 床の高さ − 基盤 − 躯体 − これ
 #   PIER_GATE_BEAM_D: 梁の深さ（上の 2 つの和）
 #   PIER_GATE_CLEAR: 柱の内側の面の、タイルの中心からの距離（道路が通れる半幅）
 PIER_GATE_POST = 1.0
-PIER_GATE_BEAM_EMBED = 0.6
-PIER_GATE_BEAM_SHOW = 0.25
+PIER_GATE_BEAM_EMBED = 0.2
+PIER_GATE_BEAM_SHOW = 0.15
 PIER_GATE_BEAM_D = PIER_GATE_BEAM_EMBED + PIER_GATE_BEAM_SHOW
 PIER_GATE_CLEAR = 5.0 - PIER_GATE_POST   # TILE / 2 − 柱の太さ
 _M_PIER_POST = ("pier_post", (0.56, 0.56, 0.54))

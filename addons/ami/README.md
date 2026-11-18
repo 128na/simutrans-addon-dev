@@ -155,19 +155,22 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
   - 行き止まり: 閉じた側の辺にも門を立てる（床の端を支える）。1 タイル（single）は北と南の辺
   - 斜め（カーブも同じ絵）: 経路の内側（タイルの中心）に柱を 1 本立て、外側の角の近くまで、経路を横切る片持ちの梁を出す。近い斜め（close1・close2）は中心の柱を 2 本の線で分け合い、梁を両側へ出す
   - 作り: iss の橋脚 5・6（`../iss/src/util/pier/ground/pier.dat` の `iss_wsg_pier5`・`iss_wsg_pier6`、`pier5_rear.png`・`pier5_surface.png`）に合わせ、奥の絵（`image`）に全部の柱と梁、手前の絵（`frontimage`。乗り物の後に描く）に北西の角の柱と経路より奥の中心の柱を除いたものを描く。シートは奥の絵が行 0〜3、手前の絵が行 4〜7（`PIER_GATE_FRONT_ROW`。`blender/ami_dat.py` の `PIER_FRONT_ROW`）
-  - 高架下の高さ（2026-11-18）: 梁と柱の上端を躯体に食い込ませ（`PIER_GATE_BEAM_EMBED`）、躯体の下面より下に見える梁を薄くして（`PIER_GATE_BEAM_SHOW`）、梁の下面を地面から約 19px にした。躯体の下面（約 21px）より上には上げられない。iss の橋脚 5 は枠の下面が地面から約 27px（`pier5_surface.png` の直線のセルで、手前の柱の見える長さ）で、床の下の躯体が無い分だけ高い。もっと広げるなら、躯体の深さ（`ELEV_BODY_D`）を浅くする
+  - 高架下の高さ（2026-11-18）: pak128 の 2 階建てバスが余裕をもって通れるよう、躯体を浅くし（`ELEV_BODY_D` を 1.0 から 0.25 に）、梁の下面を地面から約 26px、躯体の下面を約 27px にした（前は梁が約 19px、躯体が約 21px で、2 階建てバスの屋根より低かった）
+    - 車両の高さ: 車両のシートの行 1 の、直線を走る向き（`W`・`N`・`E`・`S`）の絵で、左右の端の列（車体の縦の角）の見える長さを測った。2 階建てバスの `AEC_Aclo_Regent_III`（`../pak128/vehicles/road-psg+mail/aec_aclo_regent_iii.png`）と `CST_Urban_City_DD`（`cst_urban_city_dd.png`）が約 20px で最も高い。2 階建ての観光バス `irisbus_magelys_hdh.png` は約 17px、大型トラック `../pak128/vehicles/road-cargo/big_erztruck.png` は約 13px、`40ft_container_trailer.png` はそれより低い
+    - 手本: iss の橋脚 5 は枠の下面が地面から約 27px（`pier5_surface.png` の直線のセルで、手前の柱の見える長さ）。iss の高架（`../iss/release/pak128/way/rail/standard_slab_e_single.png`。`../iss/src/way/rail/track_slab.dat` が指す）は床の下に躯体が無く、絵の下端が床の高さ（地面から 32px）
+    - 確かめ方: 区画 R の R1 に車庫を置き、`CST_Urban_City_DD` を高架の下の並行の道路と、横切る道路に走らせて撮った（`docs/rail_elev_gate_bus_*.png`）。梁と柱の上端は躯体に食い込ませる（`PIER_GATE_BEAM_EMBED`）。躯体の下面より下に見える梁の厚みは `PIER_GATE_BEAM_SHOW`
   - 名前と並び: ゲームの道具の一覧は waytype・速さ・登場年・名前の順（`../simutrans` の `bauer/wegbauer.cc` の `compare_ways`）で、値が同じなので `ami_pier_rail` の直後、`ami_pier_road` の前に並ぶ。値（費用・維持費・速さ）は単柱と同じ（仮）
 - 寸法（仮。`tools/blender/sheetlib/wall_parts.py`）:
 
   | 値 | 定数 | 今の値 | 画面の目安 |
   |---|---|---|---|
-  | 躯体の深さ（基盤の下面から） | `ELEV_BODY_D` | 1.0 | 約 8px（基盤の板 `BASE_H` 0.35 と合わせて床の下 約 11px） |
+  | 躯体の深さ（基盤の下面から） | `ELEV_BODY_D` | 0.25 | 約 2px（基盤の板 `BASE_H` 0.35 と合わせて床の下 約 5px。躯体の下面は地面から約 27px。2 階建てバスを通すため 1.0 から浅くした。2026-11-18） |
   | 躯体の側面の下げ幅（壁のある側、壁の外の面から） | `ELEV_BODY_INSET` | 0.45 | 約 4px |
   | 斜めの躯体の切り口の下げ幅（壁の無い側、路盤の面の高さで 2 本の真ん中から） | `ELEV_BODY_DIAG_INSET` | 0.3 | 約 3px |
   | 橋脚の太さ（線路に沿う向き × 横切る向き） | `PIER_SIZE`・`PIER_SIZE * PIER_ACROSS_K` | 1.6 × 3.84 | blender-poc の高架の橋脚と同じ |
   | 門型の橋脚の柱の太さ（正方形の 1 辺。柱はタイルの辺に面を合わせる） | `PIER_GATE_POST` | 1.0 | 約 9px |
-  | 門型の橋脚の梁と柱の上端の、躯体の下面からの食い込み（躯体に隠れる。床より幅の広い梁の端は躯体の横に見える） | `PIER_GATE_BEAM_EMBED` | 0.6 | 約 5px |
-  | 門型の橋脚の梁の、躯体の下面より下に見える厚み（梁の深さ `PIER_GATE_BEAM_D` は上との和） | `PIER_GATE_BEAM_SHOW` | 0.25 | 約 2px。高架下の通れる高さは地面から約 19px（2.48）。梁を食い込ませる前は約 15px（2026-11-18） |
+  | 門型の橋脚の梁と柱の上端の、躯体の下面からの食い込み（躯体に隠れる。床より幅の広い梁の端は躯体の横に見える） | `PIER_GATE_BEAM_EMBED` | 0.2 | 約 2px |
+  | 門型の橋脚の梁の、躯体の下面より下に見える厚み（梁の深さ `PIER_GATE_BEAM_D` は上との和） | `PIER_GATE_BEAM_SHOW` | 0.15 | 約 1px。高架下の通れる高さは地面から約 26px（3.33）。2 階建てバスの屋根（約 20px）より約 6px 高い（2026-11-18） |
   | 門型の柱の内側の面の、タイルの中心からの距離（道路が通れる半幅） | `PIER_GATE_CLEAR` | 4.0 | pak128 の `Road_050` は路肩まで柱の内に収まる（`docs/rail_elev_gate_R1.png`） |
   | 床の高さ（段） | `ELEV_STEPS` | 2 | pak128 の既定（`way_height_clearance` が無い pak は `height_conversion_factor`） |
 
@@ -248,7 +251,7 @@ GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe bash ingame/sample_check.sh
 - 架線つきの壁は `rail_catenary_*.png`（区画 SE（single）・BE（back）の輪と十字、SE の坂と急坂（`SE_DE`）、区画 WE1（複線の輪）・WE2a（近い斜めの複線）・WE3（行き止まりの並び）、降雪側の WE1（`snow_WE1`）、一部だけ電化した線の境（`upgrade`）、pak128 の `classic_catenary`（上）と並べた直線（`vs_pak128`。画面を 2 倍に拡大）、斜めの線を隣のタイルに並べた 3 本並び（上）と複線（下）の梁のつながり（`diag_beams`。ユーザーの確認用の保存データの (40,346) の辺り。2 倍）、近い斜めの複線で、`twin_catenary` を置く前の分け合うタイルの梁のはみ出しと線の間の柱（`close_pair`。同じ保存データ。2 倍。置いた後は `WE2a`）。`layout` はレイアウト検証用モードで、線を上下 2 本・1px にしてハンガーを足す前の絵（柱・梁の配置とつながりは今と同じ）。2026-11-18）
 - 高架と橋脚は `rail_elev_*.png`（区画 VS（single）・VB（back）の輪と十字、VS の行き止まり・1 タイル・坂（`VS_AFC`）、区画 WV1（複線の輪）・WVE1（架線つきの複線の輪）・WV2a・WV2b（近い斜めの複線。画面で縦向き・横向き）・WV3（行き止まりの並び）、区画 J（高架と地上のつなぎ目）、降雪側の VB（`snow_VB`）。`WV2b_before` は斜めの躯体の切り口を直す前で、奥の線の躯体の切り口が手前の線の床の上に三角に出ていた。`layout` はレイアウト検証用モードで、切り口を直す前の絵（配置とつながりは今と同じ）。`pier_cross_*` は高架の下を横切る道路（`road`）と地上の線路（`pier_first` は橋脚の後に線路、`rail_first` は線路の後に橋脚、`split` は線路のタイルを飛ばして橋脚を 2 本に分けたもの。`split` は高架を敷かず橋脚だけ）。2026-11-18）
 - 門型の橋脚は、高架の区画のさらに東 80（`sample.nut` の `lay_gate`。原点 (ox + 160, oy)）に、高架の single の区画・区画 WV の並び・道路の区画 R（`Road_050` を高架の直下に並行して通し、十字で横切る。斜めの道路の上の斜めの高架）を、真下の橋脚を門型にして敷く。`GATE_ONLY` を true にすると温暖側の門型の区画だけを敷く。撮るのは `sample_capture.sh` の `G*` の場所
-- 門型の橋脚は `rail_elev_gate_*.png`（`AFC`・`B`・`DE`・`IH` は高架の single の区画、`WV1`〜`WV3` は区画 WV の並び、`R1`（南北の高架の下の道路と十字。`R1_zoom` は拡大）・`R2`（東西）・`R3`（斜め）。`layout_*` はレイアウト検証用モードで、梁を躯体に食い込ませる前の高さ（配置とつながりは今と同じ）。2026-11-18）
+- 門型の橋脚は `rail_elev_gate_*.png`（`AFC`・`B`・`DE`・`IH` は高架の single の区画、`WV1`〜`WV3` は区画 WV の並び、`R1`（南北の高架の下の道路と十字。`R1_zoom` は拡大）・`R2`（東西）・`R3`（斜め）。`layout_*` はレイアウト検証用モードで、梁を躯体に食い込ませる前の高さ（配置とつながりは今と同じ）。`bus_parallel`・`bus_cross` は 2 階建てバスが高架の下の並行の道路と横切る道路を通るところ。2026-11-18）
 - 保存・ロードやダイアログの見た目はスクリプトで確かめられないので、ユーザーが見る
 
 塗りを実装する前に、レイアウト検証用モード（部品ごとに画像で見分けやすい単色で塗る）で、部品の配置とタイルどうしの接合を確かめる（[ADR 0005](../../docs/adr/0005-ami-render-tool-conventions.md)）。
