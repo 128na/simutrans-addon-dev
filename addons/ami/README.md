@@ -2,7 +2,7 @@
 
 pak128 用のインフラアドオン集。絵は Blender のスクリプトで描く（作り方は [blender-poc](../blender-poc/README.md) で確かめたもの）。
 
-**今あるのは在来線の通常の版（`ami_rail_ballast`）と、在来線の基盤の 4 版・壁だけの way-object・架線つきの壁の way-object（`ami_rail_ballast_base_*`・`ami_wall_rail_*`・`ami_wall_rail_*_catenary`）。** 描画から pak までの骨組み（[#14](https://github.com/128na/simutrans-addon-dev/issues/14)）の上に、在来線の壁の無い通常の版を仕上げ（[#15](https://github.com/128na/simutrans-addon-dev/issues/15)。全方位・分岐の絵・近い斜め・雪・汚れ）、基盤の版と壁を足した（[#16](https://github.com/128na/simutrans-addon-dev/issues/16)。下の「壁の敷き方」）。壁に架線を持たせた版を足した（[#17](https://github.com/128na/simutrans-addon-dev/issues/17)。下の「架線の作り」）。下の表の残りは作る予定のもの（開発ステップの一覧は [#27](https://github.com/128na/simutrans-addon-dev/issues/27)）。範囲と作りを決めた理由は次の ADR にある。
+**今あるのは在来線の通常の版（`ami_rail_ballast`）と、在来線の基盤の 4 版・壁だけの way-object・架線つきの壁の way-object（`ami_rail_ballast_base_*`・`ami_wall_rail_*`・`ami_wall_rail_*_catenary`）、高架の 4 版と橋脚の way（`ami_rail_ballast_elev_*`・`ami_pier_rail`）。** 描画から pak までの骨組み（[#14](https://github.com/128na/simutrans-addon-dev/issues/14)）の上に、在来線の壁の無い通常の版を仕上げ（[#15](https://github.com/128na/simutrans-addon-dev/issues/15)。全方位・分岐の絵・近い斜め・雪・汚れ）、基盤の版と壁を足した（[#16](https://github.com/128na/simutrans-addon-dev/issues/16)。下の「壁の敷き方」）。壁に架線を持たせた版を足した（[#17](https://github.com/128na/simutrans-addon-dev/issues/17)。下の「架線の作り」）。高架の 4 版と、高架の真下の地面に敷く橋脚の way を足した（[#18](https://github.com/128na/simutrans-addon-dev/issues/18)。下の「高架と橋脚の作り」）。下の表の残りは作る予定のもの（開発ステップの一覧は [#27](https://github.com/128na/simutrans-addon-dev/issues/27)）。範囲と作りを決めた理由は次の ADR にある。
 
 - [ADR 0002](../../docs/adr/0002-ami-scope.md): 範囲・対象・ライセンス・配布
 - [ADR 0003](../../docs/adr/0003-ami-walls-base-piers-as-separate-objects.md): 壁・基盤・橋脚・歩道の分け方
@@ -22,7 +22,7 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 | 道路の壁 | `ami_wall_road_<版>`（`single`・`back`・`front`） |
 | 橋脚・歩道 | `ami_pier_rail`・`ami_pier_road`・`ami_sidewalk` |
 
-dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`。
+dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`。
 
 ### 線路（新描画位置）
 
@@ -144,6 +144,29 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 分け合うタイルの梁の長さ: 分け合うタイルでは隣の線が タイル / √2 しか離れていないので、通常の 4 版の斜めの梁（反対の角まで。上の「梁」）では、隣の線の外の壁から 5px ほどはみ出した。分け合うタイルと、斜めの線を隣のタイルに並べた複線は同じ斜めのセルを使うので、分け合うタイル用のシートだけ、梁をタイルの中心の先まで（`CAT_BEAM_REACH_TWIN`）にした（2026-11-18、ユーザーの判断）。2 本の線の梁は中心の先で重なってつながり、外の側は壁の外の面で止まる。`twin_catenary` を置く前は、分け合うタイルは先に敷いた `back` の架線つきの版のままで、梁がはみ出し、手前の線の柱が線の間に立った（`docs/rail_catenary_close_pair.png`。直した後は `rail_catenary_WE2a.png`）
 - 描く対象: `ami_wall_rail_<版>_catenary`（`blender/render.py`。way のシートは書かない。way は基盤の版の対象が書く）
 
+### 高架と橋脚の作り（在来線、#18）
+
+高架の版の way（`ami_rail_ballast_elev_<版>`、`system_type=1`）を敷き、壁・架線は地上と同じ way-object（`ami_wall_rail_<版>`・`ami_wall_rail_<版>_catenary`。近い斜めの分け合うタイルは `twin`・`twin_catenary`）を、同じ経路の高架の高さに重ねる。高架の真下の地面には、橋脚の way（`ami_pier_rail`）を同じ経路に敷く。
+
+- 絵の作り: 高架の版は、基盤の版と同じ絵（道床・まくらぎ・レール・基盤。基盤は壁の位置で止まり、壁の無い側はタイルの端まで）の下に、躯体（桁）を足したもの。橋脚と壁は描かない（`blender/render.py` の `rail_ballast_elev_*`、`tools/blender/sheetlib` の `elev_body`・`write_walls`）。躯体は基盤と同じ決め方で削り、壁のある側は壁の外の面から `ELEV_BODY_INSET` 内で止め（床の縁が見える）、壁の無い側はタイルの端まで（並べた線の躯体とつながる）。斜めの壁の無い側は、上の縁を近い斜めの 2 本の真ん中より `ELEV_BODY_DIAG_INSET` 内で止め、基盤と同じく下ほど中心線へ寄る切り口にする（縦に切ると、近い斜めの複線で、奥の線の躯体の切り口が手前の線の床の上に三角に出た。2026-11-18）
+- 橋脚の絵: 経路の中ほど（直線・行き止まり・T字・十字はタイルの中心、斜めは斜めの部分の中ほど）の下に、線路を横切る向きに長い柱を 1 本立てる。上端は高架の躯体の下面に合わせ、高架の床と同じ基準面で動かす。坂は地面の坂を当てる（本体の高架は地面の坂を引き継ぐ。`../simutrans` の `bauer/wegbauer.cc` の `build_elevated`）。近い斜めの絵（close1・close2）は 2 本の柱。分岐の絵は T字・十字と同じ柱（`tools/blender/sheetlib` の `pier_sheet`）
+- 寸法（仮。`tools/blender/sheetlib/wall_parts.py`）:
+
+  | 値 | 定数 | 今の値 | 画面の目安 |
+  |---|---|---|---|
+  | 躯体の深さ（基盤の下面から） | `ELEV_BODY_D` | 1.0 | 約 8px（基盤の板 `BASE_H` 0.35 と合わせて床の下 約 11px） |
+  | 躯体の側面の下げ幅（壁のある側、壁の外の面から） | `ELEV_BODY_INSET` | 0.45 | 約 4px |
+  | 斜めの躯体の上の縁の下げ幅（壁の無い側、2 本の真ん中から） | `ELEV_BODY_DIAG_INSET` | 0.3 | 約 3px |
+  | 橋脚の太さ（線路に沿う向き × 横切る向き） | `PIER_SIZE`・`PIER_SIZE * PIER_ACROSS_K` | 1.6 × 3.84 | blender-poc の高架の橋脚と同じ |
+  | 床の高さ（段） | `ELEV_STEPS` | 2 | pak128 の既定（`way_height_clearance` が無い pak は `height_conversion_factor`） |
+
+- 橋脚の waytype（仮、2026-11-18）: `narrowgauge_track`。pak128 と AMI が使っていない waytype にした。iss の `tram_track` は、本体が `track` の `system_type=7` として読み込む（`../simutrans` の `descriptor/reader/way_reader.cc`）ので、線路の網とつながって列車が走れ、線路の way-object（壁・架線）も載る。AMI の路面軌道（`ami_tram`）とも同じ waytype になる。`narrowgauge_track` は、pak128 では狭軌の道具の一覧（`config/menuconf.tab` の `toolbar[10]`）に出る。ほかの狭軌のアドオンと一緒に使うと、その車両が橋脚を走れる（`topspeed=1`）。道路のタイルには敷けない（道路に重ねられるのは `tram_track` だけ）
+- 高架の行き止まり（POC の C7、仮、2026-11-18）: 床（基盤）と躯体を閉じた側のタイルの端まで延ばし、平らな端の面にする（壁は地上と同じく、壁の way-object がタイルの端に立てる）。端の面に模様は描かない。POC の高架の高速道路で見えた白い点線の模様は、このモードの区画 WV3（行き止まりの並び）で出ないことを見た
+- 近い斜め: 高架でも、分け合うタイルに高架の way が 2 本置かれる（地上の基盤の版と同じ）。壁は地上と同じく `back`・`front` を敷いた後に `twin`（架線つきは `twin_catenary`）を重ね、`back`・`front` を敷き直す。橋脚の way は近い斜めの絵を持つので、分け合うタイルの地面は橋脚の way 1 本（2 本の柱の絵）か 2 本になる（敷き方による）
+- 名前と並び: 高架の 4 版は `ami_rail_ballast_elev_<版>`。ゲームの道具の一覧は高架の道具（`ways(2,1)`）に分かれ、同じ速さ（160）なので名前の順（`back`・`center`・`front`・`single`）に並ぶ。壁の way-object は地上と共通なので、高架のための特例（`twin` のような別の way-object）は作らなかった
+- 値（仮）: 高架は地上の 2 倍の費用・維持費（30000・600。iss と同じ考え方。`blender/ami_dat.py` の `ELEV_COST_K`）、橋脚は費用 1000・維持費 100（iss と同じ）・速さ 1（`PIER_VALUES`）
+- 敷き方（スクリプト）: 壁の way-object は高架の高さ（地面 + 2 段）の座標で敷く（地面の座標では敷けない）。橋脚の way は地面の座標で敷く。高架と地上の線路は、地面を 2 段上げた台の上で、高架の端のタイルから地上の基盤の版を敷くとつながる（`sample.nut` の区画 J）
+
 ### 付属（別の pak にして同梱）
 
 | もの | 作り | 名前（仮） |
@@ -153,7 +176,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 | 橋脚 | 高架の真下の地面に敷く、別の waytype の way。線路用と道路用 | `ami_pier_rail`・`ami_pier_road` |
 | 歩道 | 道路の隣のタイルに敷く、別の waytype の way | `ami_sidewalk` |
 
-橋脚と歩道の waytype は、それぞれを作るステップ（#18・#24）で決める（iss は橋脚が `tram_track`、歩道が `water`）。
+橋脚の waytype は #18 で仮に `narrowgauge_track` にした（上の「高架と橋脚の作り」。iss は `tram_track`）。歩道の waytype は歩道を作るステップ（#24）で決める（iss は `water`）。
 
 ### 後で足すもの
 
@@ -207,10 +230,12 @@ GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe bash ingame/sample_check.sh
 - 見本は way の全部の絵を、周りとつながった形で出す（行き止まり・1 タイル・斜め・輪と十字・坂・急坂・近い斜め・十字の分岐の固定・分岐の自動選択 8 通り。区画の表は `sample.nut` の冒頭）。降雪側は敷いた後に一帯を降雪に塗り直す
 - 返り値の `[check]` の行に、近い斜めの分け合うタイルが way 1 本か（`two_ways=false` なら近い斜めの絵が使われている）と、分岐の絵を固定する道具があるかを出す
 - 基盤の版は `WALLED` に way と壁の組で足す（同じ区画の並びで、壁を同じ経路に重ねる。近い斜めの区画 G は敷かない）。複線と壁の組（輪・近い斜め・行き止まりの並び）は区画 W。架線つきの壁は `CATENARY`（区画 W の後に同じ並びで 4 版）と区画 WE（区画 W と同じ並びで、壁を架線つきの版にしたもの）で、`[check]` の行の way の名前の後ろの `elec` は電化されていること。`[check]` の行には、区画 W・WE の角と分け合うタイルの way と壁の名前も出す（`(2)` は way が 2 本）
+- 高架は地上の区画の東 80 に敷く（`sample.nut` の `ELEVATED`）。区画の並びは基盤の版と同じで、高架の 4 版に壁の 4 版を重ね、真下に橋脚の way を敷く。その南に区画 WV（区画 W の並びを高架で）・WVE（区画 WE の並びを高架で）・高架に架線つきの壁の single・区画 J（高架と地上のつなぎ目）。`[check]` の行の高架の名前の後ろの ` / ami_pier_rail` は、真下の地面の橋脚の way（`(2)` は 2 本）
 - 撮るのは `bash ingame/sample_capture.sh`（`work/sample/` に温暖側・降雪側の区画ごと）。レイアウト検証用モードの pak は `PAK=work/layout/dist/ami.pak` で入れ、`OUT=work/sample_layout` で撮る。終わったら `dist/ami.pak` を入れ直す
 - 同じポートでゲームが動いていると、`sample_check.sh` は止まる（他のゲームに見本を流さない）。閉じるのは自分で起動したゲームだけ
 - 確認画像は `docs/`。在来線の通常の版は `rail_ballast_*.png`（温暖側・降雪側の見本、レイアウト検証用モードの見本、行き止まりの拡大、T字・十字・分岐のセル、道床の色の前後。2026-11-17）。基盤の版と壁は `rail_base_*.png`（区画 W1〜W3 と、back・front の輪と十字。`layout` はレイアウト検証用モード。`fix_*` は継ぎ目を直した前後の拡大（`_before` が前）。2026-11-17）
 - 架線つきの壁は `rail_catenary_*.png`（区画 SE（single）・BE（back）の輪と十字、SE の坂と急坂（`SE_DE`）、区画 WE1（複線の輪）・WE2a（近い斜めの複線）・WE3（行き止まりの並び）、降雪側の WE1（`snow_WE1`）、一部だけ電化した線の境（`upgrade`）、pak128 の `classic_catenary`（上）と並べた直線（`vs_pak128`。画面を 2 倍に拡大）、斜めの線を隣のタイルに並べた 3 本並び（上）と複線（下）の梁のつながり（`diag_beams`。ユーザーの確認用の保存データの (40,346) の辺り。2 倍）、近い斜めの複線で、`twin_catenary` を置く前の分け合うタイルの梁のはみ出しと線の間の柱（`close_pair`。同じ保存データ。2 倍。置いた後は `WE2a`）。`layout` はレイアウト検証用モードで、線を上下 2 本・1px にしてハンガーを足す前の絵（柱・梁の配置とつながりは今と同じ）。2026-11-18）
+- 高架と橋脚は `rail_elev_*.png`（区画 VS（single）・VB（back）の輪と十字、VS の行き止まり・1 タイル・坂（`VS_AFC`）、区画 WV1（複線の輪）・WVE1（架線つきの複線の輪）・WV2a・WV2b（近い斜めの複線。画面で縦向き・横向き）・WV3（行き止まりの並び）、区画 J（高架と地上のつなぎ目）、降雪側の VB（`snow_VB`）。`WV2b_before` は斜めの躯体の切り口を直す前で、奥の線の躯体の切り口が手前の線の床の上に三角に出ていた。`layout` はレイアウト検証用モードで、切り口を直す前の絵（配置とつながりは今と同じ）。2026-11-18）
 - 保存・ロードやダイアログの見た目はスクリプトで確かめられないので、ユーザーが見る
 
 塗りを実装する前に、レイアウト検証用モード（部品ごとに画像で見分けやすい単色で塗る）で、部品の配置とタイルどうしの接合を確かめる（[ADR 0005](../../docs/adr/0005-ami-render-tool-conventions.md)）。
@@ -232,6 +257,7 @@ GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe bash ingame/sample_check.sh
 
 - 架線（#17）: 柱の位置・高さ、線の高さ（今は pak128 にそろえた）、値（費用・維持費・登場年・速さ）は仮（「架線の作り」）。電化の車両が走れることと、車両と架線の重なりは、ユーザーが手で走らせて見る（スクリプトからは編成を走らせられない）。`center` の架線つきの版が行き止まりの端の壁を持つか（今は持つ）は確定が要る。分岐・十字のタイルに柱を立てない作りでよいかは、絵を見て決める。高架・橋・坑口での架線の見え方は、それぞれのステップ（#18・#19）で確かめる
 - 壁（#16）: 壁の way-object の値（費用・維持費・登場年）は仮。線路の上を走る編成と壁の重なり（ACCEPTANCE の 2-3）はユーザーの確認待ち。高架・橋への重ね（2-1）、道路の壁は後のステップ
+- 高架と橋脚（#18）: 橋脚の waytype（今は `narrowgauge_track`）と、高架の行き止まりの端（今は平らな端の面）は仮で、確定が要る（「高架と橋脚の作り」）。躯体と橋脚の寸法、高架と橋脚の値も仮。高さが 2 段なので、`back`・`center`・`front` を並べた幅の広い床や 1 タイルの高架では、橋脚の多くが床に隠れ、手前の列だけが見える（区画 VB・WV1）。高架の上を走る編成と壁・架線の重なり、電化した編成が高架を走れることは、ユーザーが手で走らせて見る
 - 近い斜めの壁は、西の線を `back`、東の線を `front` にした組だけ絵が合う。逆の組（西が `front`）の分け合うタイル用の way-object は作っていない
 - 路面軌道（#23）のカーブは今の曲線のままでよい（ユーザーの指摘、2026-11-17）。斜めの絵にするのは在来線（と、作るときに決める高速線）
 - 路面軌道を tram（道路に重ねる）にすると、写真のような縁石と柵で分けた専用の軌道には見えない。どちらに寄せるかは、路面軌道を作るステップ（#23）で絵を見て決める

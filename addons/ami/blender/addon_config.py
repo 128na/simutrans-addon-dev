@@ -6,6 +6,7 @@ PREFIX = "ami_"
 # 道の名前（dat の name）→ シート名（src/<シート名>.png）。絵を作った way だけ
 SHEETS = {"ami_rail_ballast": "ami_rail_ballast"}
 SHEETS.update({f"ami_rail_ballast_base_{v}": f"ami_rail_ballast_base_{v}" for v in ("single", "back", "center", "front")})
+SHEETS.update({f"ami_rail_ballast_elev_{v}": f"ami_rail_ballast_elev_{v}" for v in ("single", "back", "center", "front")})
 
 # カーブに斜めの絵を使うシート（道路は作るステップで足す）。
 # 基盤の版はカーブを斜めの形の別のセル（基盤の壁の無い側を削らない）に描くので、ここには入れない
