@@ -246,7 +246,7 @@ python -X utf8 build.py                                                        #
 - レイアウト検証用モードの pak は `SHEET_LAYOUT=1` で描いた後、`SHEET_LAYOUT=1 python -X utf8 build.py`（`work/layout/dist/` に作る）
 - 同じシートの通常の描画とレイアウト検証用の描画を同時に動かさない。セルごとの生の絵（`work/<シート>_<セル>.png`）の名前が同じで、互いのセルを取り込んだシートができた（2026-11-17）
 - `src/`（dat とシート）はコミットする。`dist/` と `work/` はコミットしない
-- 設定は `blender/render.py`（描き分け・シート名）、`blender/ami_dat.py`（dat と値）、`blender/addon_config.py`（判定の道具が読む対応表）
+- 設定は `blender/catalog.py`（軌道の種類と、そこから導く way・基盤・高架・橋・トンネルの名前）、`blender/render.py`（描き分け・シート名）、`blender/ami_dat.py`（dat と値）、`blender/addon_config.py`（判定の道具が読む対応表）
 
 ## 導入と検証
 
@@ -257,7 +257,7 @@ makeobj は本家と同じもの（60.12）なので、本家での確認はし�
 GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe bash ingame/sample_check.sh
 ```
 
-- `dist/ami.pak` をゲームの `addons/pak128/` に写し、OTRP を MCP つきで起動して `ingame/sample.nut` を流す。見本は温暖側 (20,20) と降雪側 (276,20) に敷く。絵を作った way は `sample.nut` の `WAYS` に足す
+- `dist/ami.pak` をゲームの `addons/pak128/` に写し、OTRP を MCP つきで起動して `ingame/sample.nut` を流す。見本は温暖側 (20,20) と降雪側 (276,20) に敷く。敷く軌道の種類は `sample.nut` の先頭の `TRACK`（通常の版の way の名前）で選ぶ。基盤・高架・橋・トンネルの名前はそこから導く
 - 見本は way の全部の絵を、周りとつながった形で出す（行き止まり・1 タイル・斜め・輪と十字・坂・急坂・近い斜め・十字の分岐の固定・分岐の自動選択 8 通り。区画の表は `sample.nut` の冒頭）。降雪側は敷いた後に一帯を降雪に塗り直す
 - 返り値の `[check]` の行に、近い斜めの分け合うタイルが way 1 本か（`two_ways=false` なら近い斜めの絵が使われている）と、分岐の絵を固定する道具があるかを出す
 - 基盤の版は `WALLED` に way と壁の組で足す（同じ区画の並びで、壁を同じ経路に重ねる。近い斜めの区画 G は敷かない）。複線と壁の組（輪・近い斜め・行き止まりの並び）は区画 W。架線つきの壁は `CATENARY`（区画 W の後に同じ並びで 4 版）と区画 WE（区画 W と同じ並びで、壁を架線つきの版にしたもの）で、`[check]` の行の way の名前の後ろの `elec` は電化されていること。`[check]` の行には、区画 W・WE の角と分け合うタイルの way と壁の名前も出す（`(2)` は way が 2 本）
