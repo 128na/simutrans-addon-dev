@@ -21,5 +21,7 @@ for i in $(seq 1 60); do $M --run-squirrel "return 1;" > /dev/null 2>&1 && break
 # 行頭の空白と // で始まる行を消すので、sample.nut に複数行の文字列を足すと中身が変わる（1 行の文字列にする）
 # NUT で流すスクリプトを替えられる（例: 橋とトンネルの区画だけ敷く写し）
 NUT=${NUT:-ingame/sample.nut}
-echo "[sample] $($M --run-squirrel "$(sed -e 's/^[[:space:]]*//' -e '/^\/\//d' -e '/^$/d' "$NUT")" --timeout 300)"
+# TRACK で敷く軌道を替えられる（例: TRACK=ami_rail_slab。sample.nut の先頭の TRACK を置き換えて流す）
+TRACK_SED=${TRACK:+s/^local TRACK = .*/local TRACK = \"$TRACK\";/}
+echo "[sample] $($M --run-squirrel "$(sed -e 's/^[[:space:]]*//' -e '/^\/\//d' -e '/^$/d' -e "${TRACK_SED:-b}" "$NUT")" --timeout 300)"
 $M --run-squirrel "gui.close_all_windows(); gui.set_zoom(3); gui.jump(coord3d(24, 24, 0)); return 1;" > /dev/null

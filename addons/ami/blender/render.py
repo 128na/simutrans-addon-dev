@@ -6,7 +6,7 @@
 （共通とアドオンの設定の分け方は tools/README.md）。dat は blender/ami_dat.py、pak は build.py。
 軌道の種類ごとの名前は blender/catalog.py から展開する。種類を足すときは catalog.TRACKS と、下の TRACK_SETTINGS に足す。
 
-出力（今の軌道の種類は在来線だけ）:
+出力（在来線の名前で書く。高速線 ami_rail_slab も、壁・架線・橋脚を除いて同じ並び）:
     src/ami_rail_ballast.png  在来線（バラスト軌道）の通常の版。形は blender-poc の線路と同じで、夏の道床を砕石のまだらにした
     src/ami_rail_ballast_base_<版>.png  基盤の版（single・back・center・front）の way。基盤は壁の位置で止まる
     src/ami_wall_rail_<版>.png  壁の way-object（4 版。center は行き止まりの端の壁だけ）。上 4 行が奥（back）、下 4 行が手前（front）の絵
@@ -58,9 +58,15 @@ _REPLACE = {
 # blender-poc はタイルの中心 = 0.5）。道床はタイルの端まで
 END_FROM_EDGE = 0.25
 
+# 高速線の基準面: bed・rail は在来線のまま（壁・架線・橋脚と噛み合う）。コンクリート道床（slab_bed）はレールと同じ下げ幅にする
+_SLAB_DATUMS = dict(_DATUMS, slab_bed=_DATUMS["rail"])
+
 # 軌道の種類ごとの描き分け（catalog.Track.key → TRACK_PROFILES のキー）。label はアイコンの最高速度の数字
 TRACK_SETTINGS = {
     catalog.RAIL_BALLAST.key: {"label": "160", "skin": {"ballast": _BALLAST_STONE}, "replace": _REPLACE},
+    # 高速線（スラブ軌道）: 部品は sheetlib の slab_parts。レール・基準面・カーブや行き止まりの作りは在来線と同じ
+    catalog.RAIL_SLAB.key: {"label": "480", "datums": _SLAB_DATUMS, "track_parts": R.SLAB_TRACK_PARTS, "bed_fills": R.SLAB_BED_FILLS,
+                            "replace": R.SLAB_WEAR_REPLACE, "snow_skin": R.SLAB_SNOW_SKIN},
 }
 
 for _t in catalog.TRACKS:

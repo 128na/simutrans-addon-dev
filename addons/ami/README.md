@@ -2,7 +2,7 @@
 
 pak128 用のインフラアドオン集。絵は Blender のスクリプトで描く（作り方は [blender-poc](../blender-poc/README.md) で確かめたもの）。
 
-**今あるのは在来線の通常の版（`ami_rail_ballast`）と、在来線の基盤の 4 版・壁だけの way-object・架線つきの壁の way-object（`ami_rail_ballast_base_*`・`ami_wall_rail_*`・`ami_wall_rail_*_catenary`）、高架の 4 版と橋脚の way（`ami_rail_ballast_elev_*`・`ami_pier_rail`・門型の `ami_pier_rail_gate`）、橋とトンネル（`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`）。** 描画から pak までの骨組み（[#14](https://github.com/128na/simutrans-addon-dev/issues/14)）の上に、在来線の壁の無い通常の版を仕上げ（[#15](https://github.com/128na/simutrans-addon-dev/issues/15)。全方位・分岐の絵・近い斜め・雪・汚れ）、基盤の版と壁を足した（[#16](https://github.com/128na/simutrans-addon-dev/issues/16)。下の「壁の敷き方」）。壁に架線を持たせた版を足した（[#17](https://github.com/128na/simutrans-addon-dev/issues/17)。下の「架線の作り」）。高架の 4 版と、高架の真下の地面に敷く橋脚の way を足した（[#18](https://github.com/128na/simutrans-addon-dev/issues/18)。下の「高架と橋脚の作り」）。橋とトンネルを足した（[#19](https://github.com/128na/simutrans-addon-dev/issues/19)。下の「橋とトンネルの作り」）。下の表の残りは作る予定のもの（開発ステップの一覧は [#27](https://github.com/128na/simutrans-addon-dev/issues/27)）。範囲と作りを決めた理由は次の ADR にある。
+**今あるのは在来線の通常の版（`ami_rail_ballast`）と、在来線の基盤の 4 版・壁だけの way-object・架線つきの壁の way-object（`ami_rail_ballast_base_*`・`ami_wall_rail_*`・`ami_wall_rail_*_catenary`）、高架の 4 版と橋脚の way（`ami_rail_ballast_elev_*`・`ami_pier_rail`・門型の `ami_pier_rail_gate`）、橋とトンネル（`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`）、高速線（スラブ軌道）の通常の版・基盤の 4 版・高架の 4 版・橋・トンネル（`ami_rail_slab`・`ami_rail_slab_base_*`・`ami_rail_slab_elev_*`・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`）。** 描画から pak までの骨組み（[#14](https://github.com/128na/simutrans-addon-dev/issues/14)）の上に、在来線の壁の無い通常の版を仕上げ（[#15](https://github.com/128na/simutrans-addon-dev/issues/15)。全方位・分岐の絵・近い斜め・雪・汚れ）、基盤の版と壁を足した（[#16](https://github.com/128na/simutrans-addon-dev/issues/16)。下の「壁の敷き方」）。壁に架線を持たせた版を足した（[#17](https://github.com/128na/simutrans-addon-dev/issues/17)。下の「架線の作り」）。高架の 4 版と、高架の真下の地面に敷く橋脚の way を足した（[#18](https://github.com/128na/simutrans-addon-dev/issues/18)。下の「高架と橋脚の作り」）。橋とトンネルを足した（[#19](https://github.com/128na/simutrans-addon-dev/issues/19)。下の「橋とトンネルの作り」）。高速線を足した（[#20](https://github.com/128na/simutrans-addon-dev/issues/20)。下の「高速線の作り」）。下の表の残りは作る予定のもの（開発ステップの一覧は [#27](https://github.com/128na/simutrans-addon-dev/issues/27)）。範囲と作りを決めた理由は次の ADR にある。
 
 - [ADR 0002](../../docs/adr/0002-ami-scope.md): 範囲・対象・ライセンス・配布
 - [ADR 0003](../../docs/adr/0003-ami-walls-base-piers-as-separate-objects.md): 壁・基盤・橋脚・歩道の分け方
@@ -22,7 +22,7 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 | 道路の壁 | `ami_wall_road_<版>`（`single`・`back`・`front`） |
 | 橋脚・歩道 | `ami_pier_rail`（門型は `ami_pier_rail_gate`）・`ami_pier_road`・`ami_sidewalk` |
 
-dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`。
+dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`。
 
 ### 線路（新描画位置）
 
@@ -92,6 +92,32 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 橋: 欄干を描かない。壁の way-object を重ねる
 - 分岐の絵（OTRP の switch 画像、1・2 の 10 枚）は全部の way に入れる。近い斜めは壁の無い way に入れる
 - 雪の絵と汚れ（blender-poc の 6 章）は全部の way に入れる
+
+### 高速線の作り（スラブ軌道、#20）
+
+在来線と同じ版（通常・基盤 4 版・高架 4 版・橋・トンネル）を、線路の部品の差し替えで作った。壁・架線・橋脚は在来線と同じ way-object・way（`ami_wall_rail_*`・`ami_pier_rail*`）を重ねるので、高速線用のシートは無い。敷き方も在来線と同じ。
+
+- 部品: `tools/blender/sheetlib/slab_parts.py`。下から `slab_bed`（コンクリート道床）・`slab_fill`（てん充層）・`slab`（軌道スラブ）・`slab_notch`（スラブの端の欠き込み）・`slab_stud`（円柱の突起）・`slab_fastener`（締結装置）で、レールは在来線の部品そのもの。設定は `blender/render.py` の `TRACK_SETTINGS`
+- 在来線と同じもの: レールの高さと横位置、基準面 `bed`・`rail` の下げ幅、カーブ（斜めの絵）・T字・十字・分岐の絵・行き止まり・車止めの作り。断面は壁の内側（`WALL_U` = 2.15）に収まる
+- コンクリート道床の基準面: 道床だけは `slab_bed`（値は `rail` と同じ下げ幅）に乗せる。`bed` のままだと、スラブが道床の手前へ 2px 寄って見えた。名前を `rail` と分けるのは、分岐の絵で作り直されるのが `rail` の部品だけだから（道床は T字・十字の形のまま）。この分だけ、道床は基盤・壁に対して在来線の道床より 2px 下に見え、pak128 標準の線路とのつなぎ目で帯の中心のずれが在来線の 0〜0.5px から 2.0px になる（`seam_judge.py`、幅が違うので参考の値。草の線は無し。2026-11-19）
+- 割り付け: スラブは直線でタイルに 2 枚、斜めも 2 枚で、継ぎ目はタイルの辺に来ない。突起は継ぎ目（スラブの長手の両端）の、レールの間の中央に立つ。締結装置は継ぎ目の間に偶数組を等間隔に置くので、タイルの辺の前後で間隔がそろう
+- 分岐のすき間埋めは道床だけ（`bed_fills`）。スラブまで埋めると、経路の間が大きな明るい三角になる
+- 汚れ: 在来線の汚れと同じ名前（`rust0`・`rust1`・`oil`・`sleeper_rust`）の差し替えで、スラブの上面に乗せ、スラブの縁と継ぎ目で止める。帯は在来線より狭く、色はスラブの色から混ぜる。`sleeper_rust` は締結装置の周りのさびになる
+- 雪: 道床・てん充層・スラブ・欠き込みは雪の色、突起と締結装置は雪の上に少し見える色（`SLAB_SNOW_SKIN`）。レールと雪の上の汚れは在来線と同じ
+- 値: 480 km/h。高架・橋・トンネルの費用の倍率は在来線と同じ（`ELEV_COST_K`・`BRIDGE_COST_K`・`TUNNEL_COST_K`）。アイコン・カーソルは仮（数字の 480）
+
+| 層 | 寸法（部品の単位。1 単位 ≈ 9px） | 色 |
+|---|---|---|
+| コンクリート道床 | 下面の半幅 1.72・上面の半幅 1.68、高さ 0〜0.08 | スラブより暗い灰色のまだら |
+| てん充層 | 半幅 1.07、高さ 0.08〜0.11 | ほぼ黒 |
+| 軌道スラブ | 半幅 1.02、高さ 0.11〜0.15。長さの目安 5、すき間 0.2 | 明るい灰色のまだら |
+| 突起・欠き込み | 半径 0.24・0.36。突起の上面 0.19 | 中間の灰色・てん充層の色 |
+| 締結装置 | 沿う向き 0.22 × 横切る向き 0.34、高さ 0.15〜0.20、間隔の目安 0.625 | 黒 |
+| レール | 在来線と同じ（中心から 0.417〜0.517、高さ 0.19〜0.30） | 赤茶色 |
+
+手本の扱い: 層の順と形は上の「見た目の手本」の書き起こしから。iss のスラブ（`../refs/iss/src/way/rail/track_slab.dat`・`standard_slab.png`）は、タイル全面が灰色で壁を絵に焼き込む別の作りなので、形は取り入れていない。
+
+確認画像は `docs/rail_slab_*.png`（通常・拡大・分岐・基盤と壁・架線・高架・橋・トンネル・雪、`layout` はレイアウト検証用モード、`seam_standard` は pak128 標準の線路とのつなぎ目の判定）。
 
 ### 壁の敷き方（在来線、#16）
 
@@ -255,6 +281,7 @@ makeobj は本家と同じもの（60.12）なので、本家での確認はし�
 
 ```bash
 GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe bash ingame/sample_check.sh
+# 高速線の見本は TRACK=ami_rail_slab を前に付ける
 ```
 
 - `dist/ami.pak` をゲームの `addons/pak128/` に写し、OTRP を MCP つきで起動して `ingame/sample.nut` を流す。見本は温暖側 (20,20) と降雪側 (276,20) に敷く。敷く軌道の種類は `sample.nut` の先頭の `TRACK`（通常の版の way の名前）で選ぶ。基盤・高架・橋・トンネルの名前はそこから導く
