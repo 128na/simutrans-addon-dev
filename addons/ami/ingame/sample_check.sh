@@ -17,5 +17,8 @@ $M --run-squirrel "return 1;" > /dev/null 2>&1 && { echo "[sample] ポート $PO
 cp "$PAK" "$GAME_DIR/addons/pak128/ami.pak" || exit 1
 (cd "$GAME_DIR" && "./$EXE" -objects pak128/ -addons -load "$SAVE" -mcp-port "$PORT" > /dev/null 2>&1 &)
 for i in $(seq 1 60); do $M --run-squirrel "return 1;" > /dev/null 2>&1 && break; sleep 2; done
-echo "[sample] $($M --run-squirrel "$(cat ingame/sample.nut)" --timeout 300)"
+# 見本はコマンドラインの引数で渡すので、Windows の長さの上限（約 32K 字）に収まるよう、行頭のコメント・字下げ・空行を除いて渡す
+# NUT で流すスクリプトを替えられる（例: 橋とトンネルの区画だけ敷く写し）
+NUT=${NUT:-ingame/sample.nut}
+echo "[sample] $($M --run-squirrel "$(sed -e 's/^[[:space:]]*//' -e '/^\/\//d' -e '/^$/d' "$NUT")" --timeout 300)"
 $M --run-squirrel "gui.close_all_windows(); gui.set_zoom(3); gui.jump(coord3d(24, 24, 0)); return 1;" > /dev/null

@@ -2,7 +2,7 @@
 
 pak128 用のインフラアドオン集。絵は Blender のスクリプトで描く（作り方は [blender-poc](../blender-poc/README.md) で確かめたもの）。
 
-**今あるのは在来線の通常の版（`ami_rail_ballast`）と、在来線の基盤の 4 版・壁だけの way-object・架線つきの壁の way-object（`ami_rail_ballast_base_*`・`ami_wall_rail_*`・`ami_wall_rail_*_catenary`）、高架の 4 版と橋脚の way（`ami_rail_ballast_elev_*`・`ami_pier_rail`・門型の `ami_pier_rail_gate`）。** 描画から pak までの骨組み（[#14](https://github.com/128na/simutrans-addon-dev/issues/14)）の上に、在来線の壁の無い通常の版を仕上げ（[#15](https://github.com/128na/simutrans-addon-dev/issues/15)。全方位・分岐の絵・近い斜め・雪・汚れ）、基盤の版と壁を足した（[#16](https://github.com/128na/simutrans-addon-dev/issues/16)。下の「壁の敷き方」）。壁に架線を持たせた版を足した（[#17](https://github.com/128na/simutrans-addon-dev/issues/17)。下の「架線の作り」）。高架の 4 版と、高架の真下の地面に敷く橋脚の way を足した（[#18](https://github.com/128na/simutrans-addon-dev/issues/18)。下の「高架と橋脚の作り」）。下の表の残りは作る予定のもの（開発ステップの一覧は [#27](https://github.com/128na/simutrans-addon-dev/issues/27)）。範囲と作りを決めた理由は次の ADR にある。
+**今あるのは在来線の通常の版（`ami_rail_ballast`）と、在来線の基盤の 4 版・壁だけの way-object・架線つきの壁の way-object（`ami_rail_ballast_base_*`・`ami_wall_rail_*`・`ami_wall_rail_*_catenary`）、高架の 4 版と橋脚の way（`ami_rail_ballast_elev_*`・`ami_pier_rail`・門型の `ami_pier_rail_gate`）、橋とトンネル（`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`）。** 描画から pak までの骨組み（[#14](https://github.com/128na/simutrans-addon-dev/issues/14)）の上に、在来線の壁の無い通常の版を仕上げ（[#15](https://github.com/128na/simutrans-addon-dev/issues/15)。全方位・分岐の絵・近い斜め・雪・汚れ）、基盤の版と壁を足した（[#16](https://github.com/128na/simutrans-addon-dev/issues/16)。下の「壁の敷き方」）。壁に架線を持たせた版を足した（[#17](https://github.com/128na/simutrans-addon-dev/issues/17)。下の「架線の作り」）。高架の 4 版と、高架の真下の地面に敷く橋脚の way を足した（[#18](https://github.com/128na/simutrans-addon-dev/issues/18)。下の「高架と橋脚の作り」）。橋とトンネルを足した（[#19](https://github.com/128na/simutrans-addon-dev/issues/19)。下の「橋とトンネルの作り」）。下の表の残りは作る予定のもの（開発ステップの一覧は [#27](https://github.com/128na/simutrans-addon-dev/issues/27)）。範囲と作りを決めた理由は次の ADR にある。
 
 - [ADR 0002](../../docs/adr/0002-ami-scope.md): 範囲・対象・ライセンス・配布
 - [ADR 0003](../../docs/adr/0003-ami-walls-base-piers-as-separate-objects.md): 壁・基盤・橋脚・歩道の分け方
@@ -22,7 +22,7 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 | 道路の壁 | `ami_wall_road_<版>`（`single`・`back`・`front`） |
 | 橋脚・歩道 | `ami_pier_rail`（門型は `ami_pier_rail_gate`）・`ami_pier_road`・`ami_sidewalk` |
 
-dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`。
+dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`。
 
 ### 線路（新描画位置）
 
@@ -181,6 +181,25 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 値（仮）: 高架は地上の 2 倍の費用・維持費（30000・600。iss と同じ考え方。`blender/ami_dat.py` の `ELEV_COST_K`）、橋脚は費用 1000・維持費 100（iss と同じ）・速さ 1（`PIER_VALUES`）
 - 敷き方（スクリプト）: 壁の way-object は高架の高さ（地面 + 2 段）の座標で敷く（地面の座標では敷けない）。橋脚の way は地面の座標で敷く。高架と地上の線路は、地面を 2 段上げた台の上で、高架の端のタイルから地上の基盤の版を敷くとつながる（`sample.nut` の区画 J）
 
+### 橋とトンネルの作り（在来線、#19）
+
+橋（`ami_rail_ballast_bridge`）は欄干を描かず、床・道床・まくらぎ・レールと橋脚だけを描く。壁・架線は地上と同じ way-object（`ami_wall_rail_<版>`・`ami_wall_rail_<版>_catenary`）を、同じ経路の橋の高さに重ねる。トンネル（`ami_rail_ballast_tunnel`）は坑口の絵だけを持ち、中と前後の way は地上の通常の版（`ami_rail_ballast`）か基盤の版を使う。
+
+- 手本: iss の橋（`../iss/src/bridge/rail/bridge.dat` の `iss_bt_0120_single`・`back`・`center`・`front`。`pillar_distance=1`、版ごとに別の橋で、壁は橋の手前の絵）とトンネル（`../iss/src/tunnel/rail/tunnel.dat`）、iss の架線（`../iss/src/way-object/rail/catenary_new.dat`）、blender-poc の橋とトンネル（`../blender-poc/src/track_bridge.dat`・`track_tunnel.dat`、`blender/render.py` の `bridge`、`ingame/bridge.nut`・`tunnel.nut`）。シートの並び（端の坂・坂から始まる端・橋脚・雪の行）と dat のキーは blender-poc の橋をそのまま使った
+- 壁の way-object の手前の絵と車両（2026-11-18、ゲームで確かめた）: 橋の上でも、way-object の手前の絵（`frontimage`）は車両の後に描かれる。iss の橋 `iss_bt_0120_center` に AMI の架線つきの壁を重ね、編成を置いて撮ると、手前の柱が車両の上に描かれた（本体の `boden/grund.cc` の描く順も、橋のタイルで地上と同じ）。壁を橋の絵に描かず way-object に分ける作り（[ADR 0003](../../docs/adr/0003-ami-walls-base-piers-as-separate-objects.md)）は、橋でもそのまま使える
+- 床（仮、2026-11-18）: 床はタイルの幅いっぱい（`blender/render.py` の `BRIDGE_DECK_U`）。橋は 1 つで、壁の版は重ねる way-object で選ぶので、床は壁の位置で止めない。`back`・`center`・`front` を並べた橋は床がつながる。`single` の壁を重ねると、壁の外に床の縁が出る（`docs/rail_bridge_B1.png`）。床・躯体の作りは高架の `center` の版と同じ（`rail_ballast_elev_center`）で、高さ・位置（dat のオフセット `-64,-32`）も高架にそろえた
+- 端: 平地から立ち上がる坂（Ramp）は、坂の躯体を床と同じ幅で地面まで埋める（`tools/blender/sheetlib` の `ramp_body_shape`）。坂のタイルから始まる端（Start・Start2）は、坂の地面の上に床を描く（blender-poc の橋と同じ）
+- 橋脚: 高架の橋脚（`ami_pier_rail`）と同じ寸法の柱（`BRIDGE_PIER`）を、1 段ごとに積む（本体は橋の高さの段数だけ橋脚の絵を重ねる。`../simutrans` の `bauer/brueckenbauer.cc`）。`pillar_distance=1`（iss と同じ。全部のタイルに立つ）。床がタイルの幅いっぱいなので、2 段の橋では柱の多くが床に隠れ、下の端だけが見える（高架を並べたときと同じ）
+- 高架とのつなぎ目: 2 段の坂から始まる橋（Start2）の床は高架と同じ高さで、高架の端のタイルとつながる。スクリプトでは、高架を橋の両側に先に敷いてから橋を架ける（橋を先に架けると、高架を橋の端へつなげない。`sample.nut` の B4）。壁は高架の高さの座標で、高架と橋を通して 1 本で敷く
+- トンネル: 坑口の覆いの形は blender-poc のトンネル（`tools/blender/sheetlib` の `tunnel_sheet`）で、道床・まくらぎ・レールは AMI の在来線の通常の版。壁・架線は、坑口とトンネルの中を通して 1 本で敷く。坑口のタイルに way-object が無いと、隣の壁のタイルが行き止まりの絵（線路を横切る端の壁）になる。坑口のタイルの壁と架線は覆いに隠れ、覆いから突き出さない。iss のトンネルに iss の架線を重ねても、架線は覆いのところで終わる。トンネルの中の way も架線つきの壁で電化される（`[check]` の行の `elec`）
+- 名前と並び: 橋の道具の一覧は waytype・速さ・名前の順で、AMI の在来線の橋は 1 つ（版は壁の way-object で選ぶ）。トンネルも 1 つ。アイコンは仮（高架と同じ数字の 160。版の印は付けない）
+- 値（仮）: 橋・トンネルとも地上の 4 倍の費用・維持費（60000・1200。`blender/ami_dat.py` の `BRIDGE_COST_K`・`TUNNEL_COST_K`）、速さ 160
+- 描く対象: `ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`（`blender/render.py`）
+- 確かめていないこと・決めること:
+  - 床の幅（仮）: (a) 今の、タイルの幅いっぱい（並べた橋がつながる。`single` は壁の外に縁が出る）、(b) 壁の位置で止める（`single` の縁は出ないが、並べた橋の床の間にすき間が出る）、(c) 版ごとに 4 つの橋を作る（iss と同じ。ADR 0003 の見直しが要る）
+  - 橋の高さ・橋脚の位置（POC の C6、仮）: 床の高さ・位置は高架にそろえた（どちらも 2 段、オフセット `-64,-32`）。iss の `iss_bt_0120_single` を隣に架けて比べると（`docs/rail_bridge_vs_iss.png`。上が AMI、下が iss）、iss は床が壁の内側の幅で細く、床の縁に青い桁が見え、橋脚が床の下から地面まで見える。AMI は床がタイルの幅いっぱいなので、橋脚は下の端しか見えない。レールの高さを画素で突き合わせることはしていない。床の幅を (b) にすると iss に近くなる
+  - 坂の躯体（端の Ramp の下を地面まで埋める箱）は床と同じ幅にした。`single` の壁の外に床の縁が出るのと同じく、坂の躯体も壁の外へ出る（`docs/rail_bridge_B1.png` の左端）
+
 ### 付属（別の pak にして同梱）
 
 | もの | 作り | 名前（仮） |
@@ -252,6 +271,9 @@ GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe bash ingame/sample_check.sh
 - 高架と橋脚は `rail_elev_*.png`（区画 VS（single）・VB（back）の輪と十字、VS の行き止まり・1 タイル・坂（`VS_AFC`）、区画 WV1（複線の輪）・WVE1（架線つきの複線の輪）・WV2a・WV2b（近い斜めの複線。画面で縦向き・横向き）・WV3（行き止まりの並び）、区画 J（高架と地上のつなぎ目）、降雪側の VB（`snow_VB`）。`WV2b_before` は斜めの躯体の切り口を直す前で、奥の線の躯体の切り口が手前の線の床の上に三角に出ていた。`layout` はレイアウト検証用モードで、切り口を直す前の絵（配置とつながりは今と同じ）。`pier_cross_*` は高架の下を横切る道路（`road`）と地上の線路（`pier_first` は橋脚の後に線路、`rail_first` は線路の後に橋脚、`split` は線路のタイルを飛ばして橋脚を 2 本に分けたもの。`split` は高架を敷かず橋脚だけ。どれも躯体を浅くする（`ELEV_BODY_D` 1.0 → 0.25）前の形）。2026-11-18）
 - 門型の橋脚は、高架の区画のさらに東 80（`sample.nut` の `lay_gate`。原点 (ox + 160, oy)）に、高架の single の区画・区画 WV の並び・道路の区画 R（`Road_050` を高架の直下に並行して通し、十字で横切る。斜めの道路の上の斜めの高架）を、真下の橋脚を門型にして敷く。`GATE_ONLY` を true にすると温暖側の門型の区画だけを敷く。撮るのは `sample_capture.sh` の `G*` の場所
 - 門型の橋脚は `rail_elev_gate_*.png`（`AFC`・`B`・`DE`・`IH` は高架の single の区画、`WV1`〜`WV3` は区画 WV の並び、`R1`（南北の高架の下の道路と十字。`R1_zoom` は拡大）・`R2`（東西）・`R3`（斜め）。`layout_*` はレイアウト検証用モードで、梁を躯体に食い込ませる前の高さ（配置とつながりは今と同じ）。`bus_parallel`・`bus_cross` は 2 階建てバスが高架の下の並行の道路と横切る道路を通るところ。2026-11-18）
+- 橋とトンネルは、門型の橋脚の区画の南（`sample.nut` の `lay_bt`。原点 (ox + 160, oy + 130)）に、平地から立ち上がる橋（B1。東西・南北）・坂から始まる橋（B2。1 段・2 段）・並べた橋（B3）・高架と橋のつなぎ目（B4）・壁だけのトンネル（T1。東西・南北）・架線つきのトンネル（T2）・複線のトンネル（T3）を敷く。`BT_ONLY` を true にすると橋とトンネルの区画だけを敷く（写しを作って `NUT=` で渡す）。`[check] BT` の行は、橋の床・坑口・トンネルの中のタイルの way（`d` の後ろは向き）と壁、電化（`elec`）、橋かトンネルか。撮るのは `sample_capture.sh` の `BT_*` の場所
+- `sample_check.sh` は `sample.nut` をコマンドラインの引数で渡すので、Windows の長さの上限（約 32K 字）に収まるよう、行頭のコメント・字下げ・空行を除いて渡す（橋とトンネルを足して 34K 字を超えた。2026-11-18）
+- 橋とトンネルは `rail_bridge_*.png`・`rail_tunnel_*.png`（`B1`（平地から立ち上がる橋。拡大）・`B2`（坂から始まる橋の 1 段・2 段）・`B3`（並べた橋。拡大）・`B4`（高架と橋のつなぎ目。拡大）・`snow_B2`（降雪側）・`vs_iss`（iss の `iss_bt_0120_single` と並べたもの。拡大）・`T1`（壁だけのトンネル）・`T2`（架線つき。拡大）・`T3`（複線）。`layout_*` はレイアウト検証用モード。2026-11-18）
 - 保存・ロードやダイアログの見た目はスクリプトで確かめられないので、ユーザーが見る
 
 塗りを実装する前に、レイアウト検証用モード（部品ごとに画像で見分けやすい単色で塗る）で、部品の配置とタイルどうしの接合を確かめる（[ADR 0005](../../docs/adr/0005-ami-render-tool-conventions.md)）。
@@ -271,9 +293,10 @@ GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe bash ingame/sample_check.sh
 
 ## 残っていること
 
-- 架線（#17）: 柱の位置・高さ、線の高さ（今は pak128 にそろえた）、値（費用・維持費・登場年・速さ）は仮（「架線の作り」）。電化の車両が走れることと、車両と架線の重なりは、ユーザーが手で走らせて見る（スクリプトからは編成を走らせられない）。`center` の架線つきの版が行き止まりの端の壁を持つか（今は持つ）は確定が要る。分岐・十字のタイルに柱を立てない作りでよいかは、絵を見て決める。高架・橋・坑口での架線の見え方は、それぞれのステップ（#18・#19）で確かめる
+- 架線（#17）: 柱の位置・高さ、線の高さ（今は pak128 にそろえた）、値（費用・維持費・登場年・速さ）は仮（「架線の作り」）。電化の車両が走れることと、車両と架線の重なりは、ユーザーが手で走らせて見る（スクリプトからは編成を走らせられない）。`center` の架線つきの版が行き止まりの端の壁を持つか（今は持つ）は確定が要る。分岐・十字のタイルに柱を立てない作りでよいかは、絵を見て決める。高架・橋・坑口での架線の見え方は、#18・#19 で画面で見た（つながり。車両との重なりは未確認）
 - 壁（#16）: 壁の way-object の値（費用・維持費・登場年）は仮。線路の上を走る編成と壁の重なり（ACCEPTANCE の 2-3）はユーザーの確認待ち。高架・橋への重ね（2-1）、道路の壁は後のステップ
 - 高架と橋脚（#18）: 高架の行き止まりの端（今は平らな端の面）は仮で、確定が要る（「高架と橋脚の作り」）。橋脚は `tram_track` なので、地上の線路が高架の下を横切るタイルには敷かない（敷くと線路とつながるか、線路が切れる）。躯体と橋脚の寸法、高架と橋脚の値も仮。高さが 2 段なので、`back`・`center`・`front` を並べた幅の広い床や 1 タイルの高架では、橋脚の多くが床に隠れ、手前の列だけが見える（区画 VB・WV1）。高架の上を走る編成と壁・架線の重なり、電化した編成が高架を走れることは、ユーザーが手で走らせて見る
+- 橋とトンネル（#19）: 床の幅（タイルの幅いっぱい・壁の位置で止める・版ごとに 4 つの橋）、橋の高さ・橋脚の見え方（POC の C6）、値は仮で、確定が要る（「橋とトンネルの作り」）。橋の上・トンネルの中を走る編成と壁・架線の重なり、電化した編成が橋とトンネルを走れることは、ユーザーが手で走らせて見る
 - 近い斜めの壁は、西の線を `back`、東の線を `front` にした組だけ絵が合う。逆の組（西が `front`）の分け合うタイル用の way-object は作っていない
 - 路面軌道（#23）のカーブは今の曲線のままでよい（ユーザーの指摘、2026-11-17）。斜めの絵にするのは在来線（と、作るときに決める高速線）
 - 路面軌道を tram（道路に重ねる）にすると、写真のような縁石と柵で分けた専用の軌道には見えない。どちらに寄せるかは、路面軌道を作るステップ（#23）で絵を見て決める

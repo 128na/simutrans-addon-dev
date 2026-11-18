@@ -59,6 +59,14 @@ def _ramp_body_shape(path, k):
     u = (WALL_U + WALL_W) * k
     return sweep(path, [(-u, -RAMP_DEPTH), (u, -RAMP_DEPTH), (u, -BASE_H), (-u, -BASE_H)])
 
+
+def ramp_body_shape(u):
+    """橋の端の坂の躯体を、経路から横へ u まで（_ramp_body_shape は壁の外の面まで）。床をタイルの幅いっぱいにした橋
+    （AMI の橋。壁は way-object なので床は壁の位置で止めない）で、床と同じ幅にする。"""
+    def shape(path, k):
+        return sweep(path, [(-u * k, -RAMP_DEPTH), (u * k, -RAMP_DEPTH), (u * k, -BASE_H), (-u * k, -BASE_H)])
+    return shape
+
 # 橋: 床版（路盤の下の板）と橋脚。床版は路盤に乗る部品、橋脚は橋の下の地面のタイルに描く別の絵
 BASE_H = 0.35
 

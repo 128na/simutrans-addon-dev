@@ -48,6 +48,10 @@ D:\bin\blender\blender.exe -b --factory-startup --python ..\..\tools\blender\com
   - `ELEV_BODY_D` を 1.0 から 0.25 に浅くした変更（2 階建てバスを高架の下に通すため。PR #37、2026-11-18）では、AMI の高架の 4 版（`ami_rail_ballast_elev_<版>`）と橋脚の 2 種（`ami_pier_rail`・`ami_pier_rail_gate`）のシートだけが変わる。blender-poc と AMI のほかのシートは画素単位で変わらないことを、描き直して確かめた
   - `pier_sheet(sheet, datums, label, across)`: 橋脚の way のシート（線路と同じセルの並び、4 × 10）。経路の中ほどに柱を 1 本（近い斜めは 2 本）立て、上端を高架の躯体の下面に `PIER_TOP_OVERLAP` 重ね、下端は地面の下 `PIER_FOOT` まで。坂は `apply_slope` で地面の坂を当てる。持ち分は地面の菱形を `PIER_RISE` 行上へ広げたもので、不透明度 250 未満を捨てる
   - `pier_gate_sheet(sheet, datums, label)`: 門型の橋脚の way のシート（8 × 10。行 0〜3 が奥の絵、行 `PIER_GATE_FRONT_ROW`〜 が手前の絵）。部品は `_gate_parts` が経路ごとに決める（経路が出る手前の辺（南・東）に門、行き止まりは閉じた側の辺にも門、斜めは中心の柱と外の角への片持ちの梁）。柱と梁の上端は躯体の下面に `PIER_GATE_BEAM_EMBED` 食い込ませ、梁は躯体の下面より `PIER_GATE_BEAM_SHOW` 下まで。寸法は `PIER_GATE_POST`・`PIER_GATE_CLEAR`（`wall_parts.py`）。手前の絵は北西の角の柱と経路より奥の中心の柱を除く（`_GATE_CENTER_FRONT`）。高さ・坂・持ち分は `pier_sheet` と同じ
+- 橋とトンネル（AMI の在来線。#19）:
+  - 橋は `track_sheet` の橋の作り（`starts`・`piers`。blender-poc の橋）に、次の描き分けのキーを足した。`deck_u`（坂から始まる端の床の横幅。無ければ壁の外の面まで）、`pier_box`（橋脚の柱の `(横切る向きの長さ, 沿う向きの長さ, 材質)`。無ければ POC の橋の柱）、`badge`（アイコンの印。無ければ `walls` から引く）。坂の躯体の幅は `wall_parts.ramp_body_shape(u)` を `"replace"` で差し替える（`rampbody`）
+  - `tunnel_sheet(kind, profile, sheet, label)`: `profile` で道床・レールの描き分け（`TRACK_PROFILES` の名前。`replace`・夏の `skin` も使う）、`sheet` でシート・アイコンの名前、`label` でアイコンの数字を選ぶ。既定は前と同じ（`TRACK_PROFILES["new"]`・`track_tunnel`・`100`）
+  - どれも既定の値で前と同じ形になる。blender-poc の `track_bridge`・`track_tunnel`・`expressway_tunnel` と、AMI の既存の対象の一部（`ami_rail_ballast_elev_center`・`ami_rail_ballast_base_single`・`ami_pier_rail`）を描き直し、`src/` のシートが変わらないことを確かめた（2026-11-18）
 - アドオンのディレクトリは、道具が `os.getcwd()` で決める。アドオンの外では動かさない
 - 入口が `tools/blender` を探す相対パスは、`addons/<アドオン>/blender/` から見た `../../../tools/blender`
 

@@ -14,6 +14,8 @@
     src/ami_rail_ballast_elev_<版>.png  高架の版（4 版）の way。基盤の版の絵の下に躯体を足す（橋脚・壁は描かない）
     src/ami_pier_rail.png     高架の真下の地面に敷く橋脚の way
     src/ami_pier_rail_gate.png  門型の橋脚の way（柱をタイルの角の近くに立て、直下に道路を通せる）
+    src/ami_rail_ballast_bridge.png  橋（欄干なし。床はタイルの幅いっぱいで、壁は way-object を重ねる）。並びは blender-poc の橋と同じ
+    src/ami_rail_ballast_tunnel.png  トンネルの坑口（覆いは blender-poc のトンネル、道床・レールは在来線の通常の版）
     work/                     セルごとの生の描画結果（確認用）
 """
 import dataclasses
@@ -117,6 +119,28 @@ PIER_LABEL = "P"  # アイコンの文字（仮。アイコンはステップ 13
 # 門型の橋脚の way（ami_pier_rail_gate。#18 の追加）: 柱をタイルの角の近くに立て、上に梁を渡す（sheetlib の pier_gate_sheet）
 PIER_GATE_LABEL = "G"
 
+# ---------------------------------------------------------------- 橋とトンネル（ADR 0003。#19）
+# 橋（ami_rail_ballast_bridge、obj=bridge）: 欄干を描かず、壁・架線は地上と同じ way-object を橋の上に重ねる（橋の 4 版は作らない）。
+# 床は 1 つの絵で single・back・center・front のどの壁とも組むので、高架の center と同じく基盤・躯体をタイルの幅いっぱいにする
+# （並べた橋の床がつながる。single の壁では壁の外に床が張り出す。README の「橋とトンネルの作り」）。
+# セルは blender-poc の橋（track_bridge）と同じ並び: 行 0 の列 2・3 が平らな橋、行 1 が端の坂（Ramp・Ramp2）、行 2 が橋脚、行 3 が坂から始まる端
+# （Start・Start2）。手前の絵は無い（欄干が無く、車両より手前に描く物が無い）。雪の絵は 4 行下
+BRIDGE_DECK_U = R.TILE / 2  # 床・端の坂の躯体・Start の躯体の横幅（経路から。タイルの端まで）
+BRIDGE_PIER = (R.PIER_SIZE * R.PIER_ACROSS_K, R.PIER_SIZE, R._M_PIER)  # 橋脚の柱（横切る向き × 沿う向き）。高架の単柱の橋脚と同じ太さ
+BRIDGE_CELLS = ("ns", "ew", "up12", "up9", "up3", "up6", "up2_12", "up2_9", "up2_3", "up2_6")
+_RAMP_BODY = next(p for p in R.TRACK_EXTRAS if p.name == "rampbody")
+R.TRACK_PROFILES["rail_ballast_bridge"] = dict(
+    R.TRACK_PROFILES["rail_ballast_elev_center"], sheet="ami_rail_ballast_bridge", wall_sheet=None, write_walls=False,
+    groups=("body", "base", "weathering", "ramp"), only=BRIDGE_CELLS, starts=True, piers=True, solid=True,
+    pier_box=BRIDGE_PIER, deck_u=BRIDGE_DECK_U, band="bridge", badge=None,
+    replace=dict(R.TRACK_PROFILES["rail_ballast_elev_center"]["replace"],
+                 rampbody=dataclasses.replace(_RAMP_BODY, shape=R.ramp_body_shape(BRIDGE_DECK_U))))
+
+# トンネル（ami_rail_ballast_tunnel、obj=tunnel）: blender-poc の坑口（sheetlib の tunnel_sheet。躯体はタイル全体の箱、口は低い側の辺）に、
+# 在来線の通常の版の道床（砕石のまだら）・まくらぎ・レール・汚れを入れたもの。壁・架線は坑口のタイルにも way-object を重ねる
+# （坑口の躯体は way の手前の絵で、way-object の絵より後に描かれるので、躯体の中へ入る壁・架線は躯体に隠れる。README の「橋とトンネルの作り」）
+TUNNEL_LABEL = "160"
+
 # ---------------------------------------------------------------- 対象（シート名 → 描く関数）
 # 基盤の版の対象は、way のシートと壁の way-object のシートを 1 つのプロセスで描く
 
@@ -133,6 +157,9 @@ for _v in BASE_VARIANTS:
     SHEETS[f"ami_rail_ballast_elev_{_v}"] = lambda v=_v: R.track_sheet(f"rail_ballast_elev_{v}")
 SHEETS["ami_pier_rail"] = lambda: R.pier_sheet("ami_pier_rail", _DATUMS, label=PIER_LABEL)
 SHEETS["ami_pier_rail_gate"] = lambda: R.pier_gate_sheet("ami_pier_rail_gate", _DATUMS, label=PIER_GATE_LABEL)
+SHEETS["ami_rail_ballast_bridge"] = lambda: R.track_sheet("rail_ballast_bridge")
+SHEETS["ami_rail_ballast_tunnel"] = lambda: R.tunnel_sheet("track", profile="rail_ballast", sheet="ami_rail_ballast_tunnel",
+                                                           label=TUNNEL_LABEL)
 
 if __name__ == "__main__":
     R.run_targets(SHEETS, list(SHEETS))

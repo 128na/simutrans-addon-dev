@@ -42,6 +42,17 @@
 //   R2 東西の高架 (8,2)-(18,2) の真下に道路を並行して敷き、(13,-2)-(13,6) の南北の道路で横切る
 //   R3 斜めの高架 (22,0) から南東へ 4 段の真下に、同じ斜めの道路を敷く
 //   GATE_ONLY を true にすると、門型の橋脚の区画だけを温暖側に敷く（試すとき）
+//
+// 橋とトンネル（BRIDGE・TUNNEL。#19）: 門型の橋脚の区画の南（原点 (ox + 2 * ELEV_DX, oy + BT_DY)）。橋は先に架け、way（地上の基盤の版）を
+//   橋の上も通して 1 本で敷き、同じ経路に壁の way-object を重ねる（橋は欄干を描かない）。トンネルは坑口とトンネルの中にも壁を通す:
+//   B1 平地から立ち上がる橋（端は Ramp）: 東西 (4,1)-(10,1)・南北 (19,4)-(19,10)。way は (0)-(15)。壁は single
+//   B2 坂のタイルから始まる橋（端は Start・Start2）: 東西 y=19（1 段）・y=23（2 段）、南北 x=24（1 段）・x=28（2 段）
+//   B3 並べた橋: y=28・29 に back・front、y=32〜34 に back・center・front
+//   B4 高架と橋のつなぎ目: 高架の single (0)-(4)・(12)-(15) の間を、2 段の坂から始まる橋 (5)-(11) で渡す（y=38）
+//   T1 トンネル（壁だけ）: 東西 y=44（坑口 (2)・(6)）・南北 x=22（坑口 y=40・44）
+//   T2 トンネル（架線つきの壁）: 東西 y=50・南北 x=27（坑口 y=46・50）
+//   T3 複線のトンネル: 東西 y=56・57 に back・front
+//   BT_ONLY を true にすると、橋とトンネルの区画だけを敷く（試すとき）
 local WAYS = ["ami_rail_ballast"];
 // [基盤の版の way, 壁の way-object（null は壁なし）]
 local WALLED = [["ami_rail_ballast_base_single", "ami_wall_rail_single"], ["ami_rail_ballast_base_back", "ami_wall_rail_back"],
@@ -56,6 +67,12 @@ local ELEVATED = [["ami_rail_ballast_elev_single", "ami_wall_rail_single"], ["am
 local PIER = "ami_pier_rail";
 local PIER_GATE = "ami_pier_rail_gate";
 local GATE_ONLY = false;
+// 橋とトンネル（#19）。BT_DY は門型の橋脚の区画の原点からの南へのずらし
+local BRIDGE = "ami_rail_ballast_bridge";
+local TUNNEL = "ami_rail_ballast_tunnel";
+local BT_DY = 130;
+local BT_AREA = [32, 62];  // 区画の大きさ（降雪の塗り直しに使う）
+local BT_ONLY = false;
 // 区画 R に敷く道路（pak128 の 50 km/h の道路）
 local ROAD = "Road_050";
 local ELEV_DX = 80;
@@ -311,9 +328,120 @@ function lay_gate(gx, gy) {
   return s;
 }
 
+// 橋とトンネルの区画（冒頭の表の「橋とトンネル」）。原点 (bx, by) は門型の橋脚の区画の南
+function lay_bt(bx, by) {
+  local br = bridge_desc_x(BRIDGE), tn = TUNNEL;
+  if (br == null) return BRIDGE + " desc=[missing]\n";
+  local wd = {}, od = {};
+  foreach (v in ["single", "back", "center", "front"]) {
+    wd[v] <- way_desc_x("ami_rail_ballast_base_" + v);
+    od[v] <- wayobj_desc_x("ami_wall_rail_" + v);
+  }
+  local ws = wayobj_desc_x("ami_wall_rail_single_catenary"), ev = way_desc_x(ELEVATED[0][0]), pr = way_desc_x(PIER);
+  local c = function(x, y, z = 0) { return coord3d(bx + x, by + y, z); };
+  local s = r("BT label", marker.work(pl, c(0, -2), "bridge + tunnel"));
+  // way を a から b へ敷き、壁を重ねる（橋は先に架けておく。way は橋の上も通して 1 本で敷く）
+  local wl = function(v, a, b, wo = null) {
+    local e = command_x.build_way(pl, a, b, wd[v], true);
+    if (e == null) e = command_x.build_wayobj(pl, a, b, wo == null ? od[v] : wo);
+    return e;
+  };
+  // B1: 平地から立ち上がる橋（端は Ramp）。東西 y=1、南北 x=19。壁は single
+  s += r("B1 ew bridge", command_x.build_bridge(pl, c(4, 1), c(10, 1), br));
+  s += r("B1 ew", wl("single", c(0, 1), c(15, 1)));
+  s += r("B1 ns bridge", command_x.build_bridge(pl, c(19, 4), c(19, 10), br));
+  s += r("B1 ns", wl("single", c(19, 0), c(19, 15)));
+  // B2: 坂のタイルから始まる橋（端は Start・Start2）。両端のタイルを n 段上げ、内側を坂にして架ける。
+  // 東西 y=19（1 段）・23（2 段）、南北 x=24（1 段）・28（2 段）。坂の値は blender-poc の bridge.nut と同じ
+  foreach (q in [[19, 1], [23, 2]]) {
+    local y = q[0], n = q[1];
+    for (local k = 0; k < n; k++) foreach (x in [0, 8]) s += r("B2 raise", command_x.set_slope(pl, c(x, y, k), slope.all_up_slope));
+    s += r("B2 rampW", command_x.set_slope(pl, c(1, y), 28 * n));
+    s += r("B2 rampE", command_x.set_slope(pl, c(7, y), 12 * n));
+    s += r("B2 ew bridge", command_x.build_bridge(pl, c(1, y), c(7, y), br));
+    s += r("B2 ew", wl("single", c(0, y, n), c(8, y, n)));
+  }
+  foreach (q in [[24, 1], [28, 2]]) {
+    local x = q[0], n = q[1];
+    for (local k = 0; k < n; k++) foreach (y in [16, 24]) s += r("B2 raise", command_x.set_slope(pl, c(x, y, k), slope.all_up_slope));
+    s += r("B2 rampN", command_x.set_slope(pl, c(x, 17), 36 * n));
+    s += r("B2 rampS", command_x.set_slope(pl, c(x, 23), 4 * n));
+    s += r("B2 ns bridge", command_x.build_bridge(pl, c(x, 17), c(x, 23), br));
+    s += r("B2 ns", wl("single", c(x, 16, n), c(x, 24, n)));
+  }
+  // B3: 並べた橋。y=28・29 に back・front、y=32〜34 に back・center・front（壁は版のとおり。center は壁なし）
+  foreach (q in [[28, "back"], [29, "front"], [32, "back"], [33, "center"], [34, "front"]]) {
+    s += r("B3 bridge", command_x.build_bridge(pl, c(4, q[0]), c(10, q[0]), br));
+    s += r("B3 " + q[1], wl(q[1], c(0, q[0]), c(15, q[0])));
+  }
+  // B4: 高架と橋のつなぎ目（1-8 の 5a-4）。高架の single (0)-(4)・(12)-(15) の間を、2 段の坂から始まる橋 (5)-(11) で渡す（橋の床は高架と同じ高さ）。
+  // 高架は橋の両側に分けて先に敷き、後から橋を架ける（橋の端の Start2 が隣の高架とつながる。橋を先に架けると、高架を橋の端へつなげない）。
+  // 壁は高架の高さの座標で、高架と橋を通して 1 本で敷く。橋脚は高架の下だけ
+  s += r("B4 rampW", command_x.set_slope(pl, c(5, 38), 56));
+  s += r("B4 rampE", command_x.set_slope(pl, c(11, 38), 24));
+  s += r("B4 elevW", command_x.build_way(pl, c(0, 38), c(4, 38), ev, true));
+  s += r("B4 elevE", command_x.build_way(pl, c(12, 38), c(15, 38), ev, true));
+  s += r("B4 bridge", command_x.build_bridge(pl, c(5, 38), c(11, 38), br));
+  s += r("B4 pierW", command_x.build_way(pl, c(0, 38), c(4, 38), pr, true));
+  s += r("B4 pierE", command_x.build_way(pl, c(12, 38), c(15, 38), pr, true));
+  s += r("B4 wall", command_x.build_wayobj(pl, c(0, 38, ELEV_UP), c(15, 38, ELEV_UP), od["single"]));
+  // T1〜T3: トンネル（pak128 の坑口は 2 段の坂だけ）。尾根を 2 段上げ、両端を 2 段の坂にして掘り、前後に地上の基盤の版を敷き、
+  // 壁の way-object を坑口とトンネルの中を通して 1 本で敷く（坑口のタイルに壁が無いと、隣のタイルが行き止まりの絵になる）
+  // T1 壁だけ（東西 y=44・南北 x=22）、T2 架線つき（東西 y=50・南北 x=27）、T3 複線（東西 y=56・57 に back・front）
+  local tunnel = function(tag, v, ew, at, wo) {
+    local t = "";
+    if (ew) {
+      for (local x = 3; x <= 5; x++) for (local k = 0; k < 2; k++) t += r(tag + " raise", command_x.set_slope(pl, c(x, at, k), slope.all_up_slope));
+      t += r(tag + " rampW", command_x.set_slope(pl, c(2, at), 24));
+      t += r(tag + " rampE", command_x.set_slope(pl, c(6, at), 56));
+      t += r(tag + " tunnel", command_x(tool_build_tunnel).work(pl, c(2, at), tn));
+      t += r(tag + " way", command_x.build_way(pl, c(0, at), c(2, at), wd[v], true));
+      t += r(tag + " way", command_x.build_way(pl, c(6, at), c(8, at), wd[v], true));
+      t += r(tag + " wall", command_x.build_wayobj(pl, c(0, at), c(8, at), wo));
+    } else {
+      local y0 = at < 25 ? 37 : 43;
+      for (local y = y0 + 4; y <= y0 + 6; y++) for (local k = 0; k < 2; k++) t += r(tag + " raise", command_x.set_slope(pl, c(at, y, k), slope.all_up_slope));
+      t += r(tag + " rampN", command_x.set_slope(pl, c(at, y0 + 3), 8));
+      t += r(tag + " rampS", command_x.set_slope(pl, c(at, y0 + 7), 72));
+      t += r(tag + " tunnel", command_x(tool_build_tunnel).work(pl, c(at, y0 + 3), tn));
+      t += r(tag + " way", command_x.build_way(pl, c(at, y0), c(at, y0 + 3), wd[v], true));
+      t += r(tag + " way", command_x.build_way(pl, c(at, y0 + 7), c(at, y0 + 10), wd[v], true));
+      t += r(tag + " wall", command_x.build_wayobj(pl, c(at, y0), c(at, y0 + 10), wo));
+    }
+    return t;
+  };
+  s += tunnel("T1 ew", "single", true, 44, od["single"]);
+  s += tunnel("T1 ns", "single", false, 22, od["single"]);
+  s += tunnel("T2 ew", "single", true, 50, ws);
+  s += tunnel("T2 ns", "single", false, 27, ws);
+  // T3: 2 本の尾根を並べて 1 つにし、back（北の線）・front（南の線）を掘る
+  s += tunnel("T3 back", "back", true, 56, od["back"]);
+  s += tunnel("T3 front", "front", true, 57, od["front"]);
+  // [check]: 橋の上・坑口・トンネルの中のタイルの way と壁（橋は床の高さ、トンネルの中は地面の下の高さ 0）
+  foreach (q in [[7, 1, 2], [19, 7, 2], [4, 19, 1], [4, 23, 2], [7, 28, 2], [7, 33, 2], [4, 38, 2], [5, 38, 0], [8, 38, 2], [11, 38, 0], [12, 38, 2]])
+    checks += "[check] BT bridge (" + q[0] + "," + q[1] + ",z=" + q[2] + ") " + bt_names(bx + q[0], by + q[1], q[2]) + "\n";
+  foreach (q in [[2, 44], [4, 44], [22, 40], [22, 42], [2, 50], [4, 50], [27, 46], [2, 56], [2, 57]])
+    checks += "[check] BT tunnel (" + q[0] + "," + q[1] + ") " + bt_names(bx + q[0], by + q[1], 0) + "\n";
+  return s;
+}
+// 高さ z のタイル（橋の床・トンネルの中）の way（d の後ろは向き。東西につながると 10、南北は 5）・壁と、橋か坑口・トンネルか
+function bt_names(x, y, z) {
+  local t = square_x(x, y).get_tile_at_height(z);
+  if (t == null) return "(no tile at z=" + z + ")";
+  local w = t.get_way(wt_rail), o = t.find_object(mo_wayobj);
+  return (w == null ? "-" : w.get_desc().get_name() + " d" + w.get_dirs()) + "+" + (o == null ? "-" : o.get_desc().get_name())
+         + (w != null && w.is_electrified() ? " elec" : "") + (t.is_bridge() ? " bridge" : "") + (t.is_tunnel() ? " tunnel" : "");
+}
+
 if (GATE_ONLY) ORIGINS = [ORIGINS[0]];
 foreach (n, o in ORIGINS) {
   if (GATE_ONLY) { report += lay_gate(o[0] + 2 * ELEV_DX, o[1]); continue; }
+  if (BT_ONLY) {
+    report += lay_bt(o[0] + 2 * ELEV_DX, o[1] + BT_DY);
+    if (n == SNOW) report += r("climate bt", command_x(tool_set_climate).work(pl, coord3d(o[0] + 2 * ELEV_DX - 2, o[1] + BT_DY - 3, 0),
+                                                coord3d(o[0] + 2 * ELEV_DX + BT_AREA[0], o[1] + BT_DY + BT_AREA[1], 0), "7"));
+    continue;
+  }
   foreach (i, name in WAYS) report += lay(name, null, o[0], o[1] + i * SPACING);
   foreach (i, pr in WALLED) report += lay(pr[0], pr[1], o[0], o[1] + (WAYS.len() + i) * SPACING);
   local wy = o[1] + (WAYS.len() + WALLED.len()) * SPACING;
@@ -338,6 +466,7 @@ foreach (n, o in ORIGINS) {
   mode.pier = null;
   report += lay_join(ex, vy + 3 * SPACING);
   report += lay_gate(o[0] + 2 * ELEV_DX, o[1]);
+  report += lay_bt(o[0] + 2 * ELEV_DX, o[1] + BT_DY);
   if (n == SNOW) {
     local y1 = wey + W_AREA[1];
     report += r("climate", command_x(tool_set_climate).work(pl, coord3d(o[0] - 2, o[1] - 3, 0), coord3d(o[0] + AREA[0], y1, 0), "7"));
@@ -345,6 +474,8 @@ foreach (n, o in ORIGINS) {
                                                                    coord3d(ex + AREA[0], vy + 3 * SPACING + 14, 0), "7"));
     report += r("climate gate", command_x(tool_set_climate).work(pl, coord3d(ex + ELEV_DX - 2, o[1] - 3, 0),
                                                                    coord3d(ex + ELEV_DX + AREA[0], o[1] + 3 * SPACING + 16, 0), "7"));
+    report += r("climate bt", command_x(tool_set_climate).work(pl, coord3d(ex + ELEV_DX - 2, o[1] + BT_DY - 3, 0),
+                                                                 coord3d(ex + ELEV_DX + BT_AREA[0], o[1] + BT_DY + BT_AREA[1], 0), "7"));
   }
 }
 foreach (e in elec_spots) checks += "[check] " + e[0] + " (" + e[1] + "," + e[2] + (e[3] ? ",z=" + e[3] : "") + ") " + names(e[1], e[2], e[3]) + "\n";
