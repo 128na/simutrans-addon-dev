@@ -8,6 +8,7 @@ SHEETS = {"ami_rail_ballast": "ami_rail_ballast"}
 SHEETS.update({f"ami_rail_ballast_base_{v}": f"ami_rail_ballast_base_{v}" for v in ("single", "back", "center", "front")})
 SHEETS.update({f"ami_rail_ballast_elev_{v}": f"ami_rail_ballast_elev_{v}" for v in ("single", "back", "center", "front")})
 SHEETS["ami_pier_rail"] = "ami_pier_rail"
+SHEETS["ami_pier_rail_gate"] = "ami_pier_rail_gate"
 
 # カーブに斜めの絵を使うシート（道路は作るステップで足す）。
 # 基盤の版はカーブを斜めの形の別のセル（基盤の壁の無い側を削らない）に描くので、ここには入れない

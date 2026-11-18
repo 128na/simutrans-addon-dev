@@ -78,7 +78,9 @@ for _v in BASE_VARIANTS:
 # 本体は track（system_type=7）として読むので、線路の網とつながり、線路の way-object（壁・架線）も載り、道路に重ねられる。
 # 値は仮（iss の橋脚と同じ費用・維持費）。topspeed は走らせる物ではないので 1
 PIER_VALUES = dict(waytype="tram_track", cost=1000, maintenance=100, intro_year=1900, topspeed=1)
-PIERS = {"ami_pier_rail": "ami_pier_rail"}
+PIERS = {"ami_pier_rail": "ami_pier_rail", "ami_pier_rail_gate": "ami_pier_rail_gate"}  # 単柱と門型（門型は #18 の追加）
+# 手前の絵（frontimage）を持つ橋脚: 名前 → 手前の絵の行のずらし（sheetlib の PIER_GATE_FRONT_ROW）。門型は柱・梁を手前の絵に描く
+PIER_FRONT_ROW = {"ami_pier_rail_gate": 4}
 # 橋脚のシートにあるセル（render の pier_sheet）。分岐の絵（switch 画像）は T字・十字と同じ柱
 PIER_SWITCH = {"[nse1]": "[nse]", "[nse2]": "[nse]", "[new1]": "[new]", "[new2]": "[new]", "[nsw1]": "[nsw]", "[nsw2]": "[nsw]",
                "[sew1]": "[sew]", "[sew2]": "[sew]", "[nsew1]": "[nsew]", "[nsew2]": "[nsew]"}
@@ -176,7 +178,8 @@ def wall_dat_text(name, sheet, twin=False, catenary=False):
 
 
 def pier_dat_text(name, sheet):
-    """橋脚の way の dat。カーブは斜めのセル、分岐の絵は T字・十字のセル。雪の絵（[1]）は夏と同じセル（柱に雪は描かない）"""
+    """橋脚の way の dat。カーブは斜めのセル、分岐の絵は T字・十字のセル。雪の絵（[1]）は夏と同じセル（柱に雪は描かない）。
+    PIER_FRONT_ROW にある橋脚は、同じキーの手前の絵（front<キー>）を、行を下げたセルで足す"""
     v = PIER_VALUES
     cell = {(key, idx): (row, col) for key, idx, row, col in IMAGES}
     out = [
@@ -196,13 +199,15 @@ def pier_dat_text(name, sheet):
         f"icon=> {sheet}.0.0",
         f"cursor={sheet}.0.1,-64,-32",
     ]
-    for season in (0, 1):
-        for key, idx, row, col in IMAGES:
-            if key == "image" and idx in CURVE_TO_DIAG:
-                row, col = CURVE_TO_DIAG[idx]
-            elif key == "image" and idx in PIER_SWITCH:
-                row, col = cell[("image", PIER_SWITCH[idx])]
-            out.append(f"{key}{idx}[{season}]={sheet}.{row}.{col},-64,-32")
+    front_rows = (0, PIER_FRONT_ROW[name]) if name in PIER_FRONT_ROW else (0,)
+    for dr in front_rows:
+        for season in (0, 1):
+            for key, idx, row, col in IMAGES:
+                if key == "image" and idx in CURVE_TO_DIAG:
+                    row, col = CURVE_TO_DIAG[idx]
+                elif key == "image" and idx in PIER_SWITCH:
+                    row, col = cell[("image", PIER_SWITCH[idx])]
+                out.append(f"{'front' if dr else ''}{key}{idx}[{season}]={sheet}.{row + dr}.{col},-64,-32")
     return NL.join(out) + NL
 
 

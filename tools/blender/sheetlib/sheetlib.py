@@ -68,6 +68,10 @@ from .wall_parts import (  # noqa: F401
     PIER_RISE,
     PIER_SIZE,
     PIER_TOP_OVERLAP,
+    PIER_GATE_BEAM_D,
+    PIER_GATE_POST,
+    _M_PIER_BEAM,
+    _M_PIER_POST,
     WALL_U,
     _M_ELEV_BODY,
     _M_PIER,
@@ -767,13 +771,9 @@ def track_sheet(profile="new"):
         make_sheet(wcells, 2 * WALL_FRONT_ROW, 15 if any(c >= 10 for _, c in wcells) else 10, os.path.join(SRC, wall_sheet + ".png"))
 
 
-def pier_sheet(sheet, datums, label="P", across=PIER_SIZE * PIER_ACROSS_K):
-    """高架の真下の地面のタイルに敷く、橋脚の way のシート（AMI。ADR 0003）。セルの位置は線路の way と同じ（行 0〜3）。
-    柱は経路の中ほど（直線・行き止まり・T字・十字はタイルの中心、斜めは斜めの部分の中ほど）の下に、線路を横切る向きに長く立つ。
-    T字・十字は通り抜ける線（T字）・南北の線（十字）の向き。近い斜めの分け合うタイル（close1・close2）は 2 本の柱。
-    上端は高架の躯体の下面（地面から ELEV_STEPS 段 − BASE_H − ELEV_BODY_D）より PIER_TOP_OVERLAP 上で、躯体に隠れる。
-    高架の床と同じ基準面（datums["bed"]）で動かし、坂は高架と同じく地面の坂を当てる（本体の高架は地面の坂を引き継ぐ）。
-    持ち分は地面の菱形を上へ PIER_RISE 行広げた範囲で、輪郭の半透明の画素は捨てる（高さのある部品の層と同じ）"""
+def _pier_jobs():
+    """橋脚のシートのセル: (行, 列) → (名前, [(中心, 向き), ...], 坂)。セルの位置は線路の way と同じ（行 0〜3）。
+    中心と向きは単柱の橋脚（pier_sheet）の柱の位置。門型（pier_gate_sheet）は名前と坂だけを使う"""
     half = TILE / 2
     N, S, E, W, O = (Vector((0, half)), Vector((0, -half)), Vector((half, 0)), Vector((-half, 0)), Vector((0, 0)))
     NS, EW = N - S, E - W
@@ -797,37 +797,149 @@ def pier_sheet(sheet, datums, label="P", across=PIER_SIZE * PIER_ACROSS_K):
         jobs[(1, base + 3)] = (f"{pre}6", [(O, EW)], up(n, lambda x, y: x + half))
     if ONLY:
         jobs = {k: v for k, v in jobs.items() if v[0] in ONLY + ("ns",)}
-    top, bottom = ELEV_STEPS * H - BASE_H - ELEV_BODY_D + PIER_TOP_OVERLAP, -PIER_FOOT
+    return jobs
+
+
+def _pier_top_bottom():
+    """橋脚の上端（高架の躯体の下面より PIER_TOP_OVERLAP 上）と下端（地面より PIER_FOOT 下）"""
+    return ELEV_STEPS * H - BASE_H - ELEV_BODY_D + PIER_TOP_OVERLAP, -PIER_FOOT
+
+
+def _pier_place(ob, datums, name, slope):
+    """橋脚の形を高架の床と同じ基準面で動かし、坂を当てる（単柱・門型で共通）。
+    close1 は nw と se の 2 本で、どちらも画面で横向きの斜め（div 2）。close2 は縦向き（div 1）"""
+    div = 2 if name in ("diag_nw", "diag_se", "close1") else 1
+    move = datum_move(datums["bed"], slope, div)
+    if move is not None:
+        for v in ob.data.vertices:
+            v.co += move
+    if slope:
+        apply_slope(ob, slope)
+
+
+def _pier_cell(cname, slope):
+    """橋脚のセルを描き、持ち分（地面の菱形を上へ PIER_RISE 行広げた範囲）で切る。輪郭の半透明の画素は捨てる"""
+    img = load_rgba8(render_cell(cname)).copy()
+    m = _ground_mask(slope, None, GROUND_CY)
+    base = m.copy()
+    for k in range(1, PIER_RISE + 1):
+        m[:-k] |= base[k:]
+    img[..., 3] = np.where(m & (img[..., 3] >= 250), 255, 0)
+    path = os.path.join(WORK, cname + "_full.png")
+    save_rgba(path, img)
+    return path
+
+
+def pier_sheet(sheet, datums, label="P", across=PIER_SIZE * PIER_ACROSS_K):
+    """高架の真下の地面のタイルに敷く、橋脚の way のシート（AMI。ADR 0003）。セルの位置は線路の way と同じ（行 0〜3）。
+    柱は経路の中ほど（直線・行き止まり・T字・十字はタイルの中心、斜めは斜めの部分の中ほど）の下に、線路を横切る向きに長く立つ。
+    T字・十字は通り抜ける線（T字）・南北の線（十字）の向き。近い斜めの分け合うタイル（close1・close2）は 2 本の柱。
+    上端は高架の躯体の下面（地面から ELEV_STEPS 段 − BASE_H − ELEV_BODY_D）より PIER_TOP_OVERLAP 上で、躯体に隠れる。
+    高架の床と同じ基準面（datums["bed"]）で動かし、坂は高架と同じく地面の坂を当てる（本体の高架は地面の坂を引き継ぐ）。
+    持ち分は地面の菱形を上へ PIER_RISE 行広げた範囲で、輪郭の半透明の画素は捨てる（高さのある部品の層と同じ）"""
+    top, bottom = _pier_top_bottom()
     set_anchor(128 + BALLAST_DY)  # 線路の way と同じ（dat のオフセット -64,-32）
     cells = {}
-    for pos, (name, piers, slope) in jobs.items():
+    for pos, (name, piers, slope) in _pier_jobs().items():
         clear_models()
-        div = 2 if name in ("diag_nw", "diag_se", "close1") else 1
-        for i, (c, d) in enumerate(piers):
-            # close1 は nw と se の 2 本で、どちらも画面で横向きの斜め（div 2）。close2 は縦向き（div 1）
+        for c, d in piers:
             ob = mesh_object("pier", *box(c.x, c.y, (top + bottom) / 2, PIER_SIZE, across, top - bottom, rot=math.atan2(d.y, d.x)),
                              material(*_M_PIER))
-            move = datum_move(datums["bed"], slope, div)
-            if move is not None:
-                for v in ob.data.vertices:
-                    v.co += move
-            if slope:
-                apply_slope(ob, slope)
-        cname = f"{sheet}_{name}"
-        img = load_rgba8(render_cell(cname)).copy()
-        m = _ground_mask(slope, None, GROUND_CY)
-        base = m.copy()
-        for k in range(1, PIER_RISE + 1):
-            m[:-k] |= base[k:]
-        img[..., 3] = np.where(m & (img[..., 3] >= 250), 255, 0)
-        cells[pos] = os.path.join(WORK, cname + "_full.png")
-        save_rgba(cells[pos], img)
+            _pier_place(ob, datums, name, slope)
+        cells[pos] = _pier_cell(f"{sheet}_{name}", slope)
     # アイコン（仮の絵。ステップ 13 でまとめて作る）: 直線の柱に、文字と高架の帯。カーソルは南北の直線の柱
     clear_models()
     mesh_object("pier", *box(0, 0, (top + bottom) / 2, PIER_SIZE, across, top - bottom), material(*_M_PIER))
     cells[(0, 0)] = render_icon(sheet + "_icon", 0.5, shift=(-0.14, 0.2), label=label, style="track", band="elevated")
     cells[(0, 1)] = cells[(0, 2)]
     make_sheet(cells, 4, 10, os.path.join(SRC, sheet + ".png"))
+
+
+_EDGE = {"n": (0, 1), "s": (0, -1), "e": (1, 0), "w": (-1, 0)}
+_OPPOSITE = {"n": "s", "s": "n", "e": "w", "w": "e"}
+# 斜めのセル → 経路の外側の角（近い斜めの分け合うタイルは 2 本分）
+_DIAG_CORNERS = {"diag_sw": ("sw",), "diag_nw": ("nw",), "diag_ne": ("ne",), "diag_se": ("se",),
+                 "close1": ("nw", "se"), "close2": ("ne", "sw")}
+
+
+def _gate_parts(name):
+    """門型の橋脚のセルの柱と梁: ([(柱の角, 中心 x, y)], [(梁の辺, 梁)])。梁は ("box", 中心 x, y, 長さ x, 長さ y) か ("arm", 先端 x, y)。
+    直線・坂・T字・十字: 経路が出る手前の辺（南・東）ごとに、その辺に沿う門（辺の両端の角に柱、柱の間に辺に沿う梁）。柱は辺に面を合わせる。
+    奥の辺（北・西）の門は奥のタイルの手前の門が兼ねる（継ぎ目ごとに門が 1 つ。両側のタイルが描くと背中合わせの 2 つになる）。
+    行き止まりは閉じた側の辺にも門を立てる（床の端を支える）。
+    1 タイル（single）は南北の線と同じく北と南の辺。
+    斜め: 経路の内側（タイルの中心）に柱を 1 本立て、経路を横切る向きに、外側の角の近く（柱の中心と同じ距離）まで片持ちの梁を出す。
+    近い斜めの分け合うタイル（close1・close2）は、中心の柱を 2 本の斜めで分け合い、梁を両側へ出す"""
+    q = TILE / 2 - PIER_GATE_POST / 2   # 柱の中心の、タイルの中心からの距離
+    if name in _DIAG_CORNERS:
+        arms = [(c, ("arm", (1 if "e" in c else -1) * q, (1 if "n" in c else -1) * q)) for c in _DIAG_CORNERS[name]]
+        return [("c", 0.0, 0.0)], arms
+    exits = "ns" if name == "single" else exits_of(name)
+    edges = [e for e in exits if e in "se"]
+    if len(exits) == 1:
+        edges.append(_OPPOSITE[exits])
+    elif name == "single":
+        edges = ["n", "s"]
+    posts, beams = {}, []
+    for e in edges:
+        dx, dy = _EDGE[e]
+        if dx:   # 東西の辺: 南北に沿う梁
+            posts.update({"n" + e: (dx * q, q), "s" + e: (dx * q, -q)})
+            beams.append((e, ("box", dx * q, 0.0, PIER_GATE_POST, TILE)))
+        else:
+            posts.update({e + "e": (q, dy * q), e + "w": (-q, dy * q)})
+            beams.append((e, ("box", 0.0, dy * q, TILE, PIER_GATE_POST)))
+    return sorted((k, x, y) for k, (x, y) in posts.items()), beams
+
+
+# 門型の橋脚のシートの手前の絵（frontimage）の行。奥の絵（image）の行 0〜3 の下（壁の way-object の WALL_FRONT_ROW と同じ並び）
+PIER_GATE_FRONT_ROW = 4
+# 斜めのタイルで、中心の柱を手前の絵にも描くセル（柱が経路より手前にある。ほかの斜めは同じ奥行きか奥なので奥の絵だけ）
+_GATE_CENTER_FRONT = ("diag_nw",)
+
+
+def pier_gate_sheet(sheet, datums, label="G"):
+    """門型の橋脚の way のシート（AMI。#18 の追加）。セルの位置・高さ・基準面・坂・持ち分は単柱の橋脚（pier_sheet）と同じ。
+    柱と梁の置き方は _gate_parts。梁の上端は単柱の橋脚の上端と同じ（躯体の下面より PIER_TOP_OVERLAP 上）で、深さは PIER_GATE_BEAM_D。
+    作りは iss の橋脚 5・6（../iss/src/util/pier/ground/pier.dat の iss_wsg_pier5・6）に合わせる: 奥の絵（image）は全部の柱と梁、
+    手前の絵（frontimage。乗り物の後に描く）は奥の角（北西）の柱と、経路より奥の中心の柱を除いたもの。手前の絵は行 PIER_GATE_FRONT_ROW〜"""
+    top, bottom = _pier_top_bottom()
+    btop, bbot = top, top - PIER_TOP_OVERLAP - PIER_GATE_BEAM_D
+    set_anchor(128 + BALLAST_DY)
+
+    def build(name):
+        """[(形, 手前の絵にも描くか)]"""
+        posts, beams = _gate_parts(name)
+        # 部品の名前は角・辺ごとに分ける（レイアウト検証用モードで、どの柱・梁がどのタイルのものか見分ける）
+        obs = [(mesh_object("pier_post", *box(x, y, (top + bottom) / 2, PIER_GATE_POST, PIER_GATE_POST, top - bottom),
+                            material(f"{_M_PIER_POST[0]}_{k}", _M_PIER_POST[1])), k not in ("c", "nw") or name in _GATE_CENTER_FRONT)
+               for k, x, y in posts]
+        for side, b in beams:
+            if b[0] == "box":
+                v, f = box(b[1], b[2], (btop + bbot) / 2, b[3], b[4], btop - bbot)
+            else:
+                # 斜めの片持ちの梁: 中心の柱の中心から先端の点 (x, y) まで、柱の太さの幅（先端は柱の中心と同じ距離）
+                x, y = b[1], b[2]
+                v, f = box(x / 2, y / 2, (btop + bbot) / 2, math.hypot(x, y), PIER_GATE_POST, btop - bbot, rot=math.atan2(y, x))
+            obs.append((mesh_object("pier_beam", v, f, material(f"{_M_PIER_BEAM[0]}_{side}", _M_PIER_BEAM[1])), True))
+        return obs
+
+    cells = {}
+    for pos, (name, _piers, slope) in _pier_jobs().items():
+        clear_models()
+        obs = build(name)
+        for ob, _front in obs:
+            _pier_place(ob, datums, name, slope)
+        for front, row in ((False, 0), (True, PIER_GATE_FRONT_ROW)):
+            for ob, f in obs:
+                ob.hide_render = front and not f
+            cells[(pos[0] + row, pos[1])] = _pier_cell(f"{sheet}_{name}{'_front' if front else ''}", slope)
+    # アイコン（仮の絵）: 南北の直線の門に、文字と高架の帯。カーソルは南北の直線（手前の絵）
+    clear_models()
+    build("ns")
+    cells[(0, 0)] = render_icon(sheet + "_icon", 0.5, shift=(-0.14, 0.2), label=label, style="track", band="elevated")
+    cells[(0, 1)] = cells[(PIER_GATE_FRONT_ROW, 2)]
+    make_sheet(cells, 2 * PIER_GATE_FRONT_ROW, 10, os.path.join(SRC, sheet + ".png"))
 
 
 ICON = 32

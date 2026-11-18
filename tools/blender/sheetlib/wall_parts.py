@@ -98,6 +98,17 @@ PIER_FOOT = 0.5
 PIER_RISE = 16 * ELEV_STEPS + 4
 _M_PIER = ("pier", (0.56, 0.56, 0.54))
 
+# 門型の橋脚の way（pier_gate_sheet）: 柱をタイルの角の近くに立て、柱の間を空けて上に梁を渡す。直下に並行する道路と、
+# タイルの中ほどを横切る道路のどちらも、柱の内側の面（中心から PIER_GATE_CLEAR）より内を通れる。
+#   PIER_GATE_POST: 柱の太さ（正方形の 1 辺）。柱はタイルの辺に面を合わせ（中心は辺から PIER_GATE_POST / 2 内）、隣のタイルの柱と背中合わせになる
+#   PIER_GATE_BEAM_D: 梁の深さ（上端は単柱の橋脚と同じく、躯体の下面より PIER_TOP_OVERLAP 上）
+#   PIER_GATE_CLEAR: 柱の内側の面の、タイルの中心からの距離（道路が通れる半幅）
+PIER_GATE_POST = 1.0
+PIER_GATE_BEAM_D = 0.8
+PIER_GATE_CLEAR = 5.0 - PIER_GATE_POST   # TILE / 2 − 柱の太さ
+_M_PIER_POST = ("pier_post", (0.56, 0.56, 0.54))
+_M_PIER_BEAM = ("pier_beam", (0.52, 0.52, 0.50))
+
 
 def _pier_box(path, across):
     """高架の橋脚: 経路の中ほどの下に立つ、経路を横切る向きに長い柱。床（基盤）の下から、ELEV_STEPS 段下の地面まで。"""
