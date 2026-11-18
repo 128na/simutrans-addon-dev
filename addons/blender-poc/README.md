@@ -77,7 +77,7 @@ python -X utf8 ../../tools/blender/render_parallel.py --jobs 16 track track_old 
 位置の検証:
 
 ```powershell
-D:\bin\blender\blender.exe -b --factory-startup --python ../../tools/blender/check.py -- ..\..\..\iss\src\way\rail\standard_slab.png
+D:\bin\blender\blender.exe -b --factory-startup --python ../../tools/blender/check.py -- ..\..\..\refs\iss\src\way\rail\standard_slab.png
 ```
 
 ## 描画の決まりごと

@@ -39,9 +39,11 @@ makeobj pak128 .\dist\example.pak .\src\example.dat
 
 このmonorepoの外にある以下のリポジトリは過去作成分のアーカイブです。
 
-- `../iss` — インフラアドオン集
-- `../rtx` — 道路・路面アドオン
-- `../rtg` — 道路タイル画像生成ツール
+- `../refs/iss` — インフラアドオン集
+- `../refs/rtx` — 道路・路面アドオン
+- `../refs/rtg` — 道路タイル画像生成ツール
+
+参照資料の全体と使い分けは [docs/reference/refs-index.md](docs/reference/refs-index.md) にあります。
 
 仕様や制作手順の参考にはできますが、通常の開発対象ではありません。内容を移植する場合は、元リポジトリと対象アセットのライセンス、依存関係、互換性を個別に確認してください。
 

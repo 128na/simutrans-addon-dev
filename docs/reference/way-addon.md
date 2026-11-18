@@ -9,12 +9,14 @@
 
 ## 1. 手本の置き場所
 
+作るものごとに何を見るかは [refs-index.md](refs-index.md) で引く。
+
 | 手本 | 場所（このリポジトリの隣） | 中身 |
 |---|---|---|
-| pak128 標準 | `../pak128/` | ソース（dat と画像）。例: `infrastructure/rail_tracks/rail_100_tracks.png` |
-| iss のソース | `../iss/src/` | dat と画像の層（`way/` など） |
-| iss のビルド済み pak | `../iss/release/pak128/` | まとめた pak（`iss_*.pak`）と、種類別のフォルダ（`way/`・`bridge/`・`tunnel/` など）。git 管理外で、手元にだけある |
-| SIS | 元画像なし（pak だけ） | ゲームでつないで撮って比べる |
+| pak128 標準 | `../refs/pak128/` | ソース（dat と画像）。例: `infrastructure/rail_tracks/rail_100_tracks.png` |
+| iss のソース | `../refs/iss/src/` | dat と画像の層（`way/` など） |
+| iss のビルド済み pak | `../refs/iss/release/pak128/` | まとめた pak（`iss_*.pak`）と、種類別のフォルダ（`way/`・`bridge/`・`tunnel/` など）。git 管理外で、手元にだけある |
+| SIS | `../refs/sis/` | pak・dat・元絵・`.blend`。流用はできない（CC BY-NC-SA 4.0）。つなぎ目はゲームでつないで撮って比べる |
 | 本体のソース | `../simutrans/` | `descriptor/`・`bauer/`・`script/api/` |
 
 ## 2. 本体の描き方と持ち分（どの画素をそのタイルが描くか）
@@ -46,7 +48,7 @@
   持ち分を菱形どおりに切った線路が奥に来ると、帯の上側に草の線（15〜28px）が出る。奥側の持ち分を手前の 2 辺へ 1 行と半行はみ出させると埋まる。
   相手の作りに合わせてはみ出しを足すと、他の相手（SIS・道路）との継ぎ目も変わりうる
 - **Rail_100 は `ImageUp2` を持たない**。急坂には 1 段の坂の絵が出る
-- **pak128 標準の線路のカーブは斜めの絵**（2026-11-17、`../pak128/infrastructure/rail_tracks/rail_100_tracks.dat`）: `Image[NE]` などが `Diagonal[NE]` と同じセルを指す。T字は直線と、枝の 2 辺をつなぐ斜めの直線 2 本、十字は直線 2 本と斜め 4 本で、間の道床は埋まっている。分岐の絵（`NSE1` など）は直線と斜め 1 本
+- **pak128 標準の線路のカーブは斜めの絵**（2026-11-17、`../refs/pak128/infrastructure/rail_tracks/rail_100_tracks.dat`）: `Image[NE]` などが `Diagonal[NE]` と同じセルを指す。T字は直線と、枝の 2 辺をつなぐ斜めの直線 2 本、十字は直線 2 本と斜め 4 本で、間の道床は埋まっている。分岐の絵（`NSE1` など）は直線と斜め 1 本
 - **坑口の形**（pak128）: タイル全体の箱で、屋根は丘の上面
 
 ## 4. 厚みのある絵を画面で下げるときの坂（2026-11-13）
@@ -264,8 +266,8 @@ ex 画像を持つ way だけが対象。形は blender-poc の見本（`ingame/
 | way-object の道具の並び | 道具の一覧は waytype → 速さ（`topspeed`）→ 名前の順に並ぶ | `obj/wayobj.cc` の `compare_wayobj_desc`（OTRP、2026-11-18） |
 | 速さの値 | 列車の速さを縛るのは架線（電化）の way-object だけ。`own_waytype` が `track` なら電化ではない | `obj/wayobj.cc` の `update_electrification`・`electrify_way` |
 | 電化の way-object と壁 | 電化（`own_waytype=electrified_track`）の way-object を置くと、下の way が電化される（スクリプトの `way_x.is_electrified()` で読める）。近い斜めの分け合うタイル（way 2 本）に置いた電化の way-object でも、`get_way` で読める 1 本目は電化された。2 本目はスクリプトで読めないので見ていない。壁だけの線の一部を電化の版で置き換えると、境の外側の壁だけのタイルが行き止まりの絵になる（上の「置き換えで消えるつながり」）。壁だけの版を境のタイルまで敷き直すと戻る | AMI の `ingame/sample.nut` の区画 WE と、`flat_512.sve` で 8 タイルの back の線の中ほど 4 タイルを架線つきにして見た（OTRP の `OTRPv64_3.exe`、2026-11-18） |
-| 架線の手本の寸法 | iss の新描画位置の架線（`catenary_new_*`）: 柱は線路の両側でタイルの角に立ち、上端が地面から約 41px。梁は柱の上端の高さでタイルを横切る。線は 1px の 2 本で、縦に 2px 離れ、タイルの中心で地面から約 21px と 23px（絵の位置は `-64,-28` なので、地面の中心はセルの y=124）。柱は奥の絵（`*_rear`）、梁・線と手前の柱は手前の絵（`*_surface`）。`back`・`front` は壁の側だけに柱が立ち、梁は反対側のタイルの端まで延びる。`center` は梁と線だけ | `../iss/src/way-object/rail/single_rear.png`・`single_surface.png`・`back_surface.png`・`center_surface.png` を Blender で読み、不透明な画素の範囲を測った（2026-11-18） |
-| 架線の線（pak128） | pak128 の架線（`../pak128/infrastructure/catenary_all/classicalcatenary.dat` の `classic_catenary`）の線は上下 2 本: 上がちょう架線、下がトロリ線で、間にハンガー（1px の縦線。直線では画面の横 16px ごと、1 タイルに 4 本）。線はどちらも 1px（直線は 1 行に 2px ずつの階段）。タイルの中心で地面から下が約 24px、上が約 28px（縦に 4px 離れる）。画面で縦向きの斜め（`frontdiagonal[sw]`・`[ne]`）では 2 本が重なり、幅 1px の縦線 1 本に見える | `elec_classiccatenary.png` の `ns`（0.0）と `elec_classiccatenary_diago.png` のセルを Blender で読み、列ごとの不透明な画素を測った（セルは 128px、地面の中心は y=96。2026-11-18） |
+| 架線の手本の寸法 | iss の新描画位置の架線（`catenary_new_*`）: 柱は線路の両側でタイルの角に立ち、上端が地面から約 41px。梁は柱の上端の高さでタイルを横切る。線は 1px の 2 本で、縦に 2px 離れ、タイルの中心で地面から約 21px と 23px（絵の位置は `-64,-28` なので、地面の中心はセルの y=124）。柱は奥の絵（`*_rear`）、梁・線と手前の柱は手前の絵（`*_surface`）。`back`・`front` は壁の側だけに柱が立ち、梁は反対側のタイルの端まで延びる。`center` は梁と線だけ | `../refs/iss/src/way-object/rail/single_rear.png`・`single_surface.png`・`back_surface.png`・`center_surface.png` を Blender で読み、不透明な画素の範囲を測った（2026-11-18） |
+| 架線の線（pak128） | pak128 の架線（`../refs/pak128/infrastructure/catenary_all/classicalcatenary.dat` の `classic_catenary`）の線は上下 2 本: 上がちょう架線、下がトロリ線で、間にハンガー（1px の縦線。直線では画面の横 16px ごと、1 タイルに 4 本）。線はどちらも 1px（直線は 1 行に 2px ずつの階段）。タイルの中心で地面から下が約 24px、上が約 28px（縦に 4px 離れる）。画面で縦向きの斜め（`frontdiagonal[sw]`・`[ne]`）では 2 本が重なり、幅 1px の縦線 1 本に見える | `elec_classiccatenary.png` の `ns`（0.0）と `elec_classiccatenary_diago.png` のセルを Blender で読み、列ごとの不透明な画素を測った（セルは 128px、地面の中心は y=96。2026-11-18） |
 | 橋の上の手前の絵 | 橋のタイルでも、way-object の手前の絵（`frontimage`）は車両の後に描かれる（地上と同じ）。橋に欄干・壁を描かず、壁を way-object で重ねても、手前の壁・柱は車両より手前に出る | `boden/grund.cc` の描く順。iss の `iss_bt_0120_center` に AMI の架線つきの壁を重ね、編成を置いて撮った（`OTRPv64_3.exe`、2026-11-18） |
 | トンネルの坑口と way-object | 坑口のタイルの way-object は、平らなタイルの絵で描かれ、坑口の覆いに隠れる（覆いから突き出さない）。坑口のタイルに way-object が無いと、隣のタイルの壁は行き止まりの絵になるので、壁・架線は坑口とトンネルの中を通して敷く。トンネルの中の way も電化の way-object で電化される | `boden/tunnelboden.cc`（`get_weg_hang` が平らを返す）、`obj/tunnel.cc`。AMI の見本の T1〜T3 と、iss のトンネルに iss の架線を重ねて見た（`OTRPv64_3.exe`、2026-11-18） |
-| 手本 | iss の線路の壁は、架線の way-object に入っている（`../iss/src/way-object/rail/catenary_new.dat` の `iss_ot_new_position_catenary_{single,back,center,front}`。`own_waytype=electrified_track`）。道路の壁と中央分離帯も、1 つにまとめた way-object がある（`way-object/road/wall_with_center_divider.dat`）。道路の側壁は way-object（`../iss/src/way-object/road/wall_1.dat`。`waytype=road`・`own_waytype=road`・`topspeed=65535`）。橋脚（`util/pier/ground`、`waytype=tram_track`）と歩道（`util/sidewalk`、`waytype=water`）は、別の waytype の way を隣や下のタイルに敷く | `../iss/src/`（2026-11-15） |
+| 手本 | iss の線路の壁は、架線の way-object に入っている（`../refs/iss/src/way-object/rail/catenary_new.dat` の `iss_ot_new_position_catenary_{single,back,center,front}`。`own_waytype=electrified_track`）。道路の壁と中央分離帯も、1 つにまとめた way-object がある（`way-object/road/wall_with_center_divider.dat`）。道路の側壁は way-object（`../refs/iss/src/way-object/road/wall_1.dat`。`waytype=road`・`own_waytype=road`・`topspeed=65535`）。橋脚（`util/pier/ground`、`waytype=tram_track`）と歩道（`util/sidewalk`、`waytype=water`）は、別の waytype の way を隣や下のタイルに敷く | `../refs/iss/src/`（2026-11-15） |
