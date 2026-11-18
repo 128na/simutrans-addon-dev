@@ -693,10 +693,14 @@ def track_sheet(profile="new"):
                     obs.append(build_start_body(paths[0], grounds[name], prof["datums"]["bed"], _M_BASE))
                     mask_slope = grounds[name]  # 持ち分を、坂の地面まで下へ広げる
             cname = f"{prof['sheet']}{suffix}_{name}"
+            # 持ち分を下へ広げる行数（prof["lower"]。高架の躯体）。地面に接する橋の端（solid の坂・坂から始まる端）では広げない。
+            # 坂の低い側では、基盤・躯体が地面より下にあり、広げると地面の下の部分が描かれて、隣の地上の線路の上に帯（基盤の端の面）と、
+            # 手前の壁の下に三角が出た（AMI の橋。2026-11-18、ユーザーの確認用の保存データ）。坂の躯体・Start の躯体は solid・grounds で地面まで描く
+            lower = 0 if prof.get("solid") and (slope or name in grounds) else prof.get("lower", 0)
             if wall_sheet and any(ob.get("tall") for ob in obs):
                 # 壁を way-object に分ける版: 本体（壁なし）は way のシート、壁は way-object のシート（夏の絵だけ）へ
                 body, wback, wfront = render_layers(cname, obs, True, exits_of(name), mask_slope, cy, prof["spill"], prof.get("rise", WALL_RISE),
-                                                    prof.get("solid", False), prof.get("lower", 0), separate=True,
+                                                    prof.get("solid", False), lower, separate=True,
                                                     tall_layers=row0 == 0 and write_walls, origin=origin)
                 cells[(pos[0] + row0, pos[1])] = body
                 if wback:
@@ -706,19 +710,21 @@ def track_sheet(profile="new"):
             elif any(ob.get("tall") for ob in obs):
                 cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, True, exits_of(name), mask_slope, cy,
                                                                       prof["spill"], WALL_RISE, prof.get("solid", False),
-                                                                      prof.get("lower", 0), origin=origin)
+                                                                      lower, origin=origin)
                 if front:
                     cells[(pos[0] + row0 + prof["front_row"], pos[1])] = front
             else:
                 cells[(pos[0] + row0, pos[1])] = render_cell(cname, exits_of(name), slope=mask_slope, cy=cy, spill=prof["spill"],
-                                                             solid=prof.get("solid", False), lower=prof.get("lower", 0))
+                                                             solid=prof.get("solid", False), lower=lower)
 
     if prof.get("piers"):
         # 橋脚: 橋の下の地面のタイルに立つ柱（高さ 1 段）。線路の向きに直角に長い。(2, 0) が南北の橋、(2, 1) が東西の橋
+        # prof["pier_box"]（無くてよい）: (線路を横切る向きの長さ, 線路に沿う向きの長さ, 材質)。無ければ POC の橋の柱（PIER_L × PIER_W、壁の材質）
         set_anchor(128)
-        for col, (sx, sy) in enumerate(((PIER_L, PIER_W), (PIER_W, PIER_L))):
+        across, along, pmat = prof.get("pier_box", (PIER_L, PIER_W, _M_WALL))
+        for col, (sx, sy) in enumerate(((across, along), (along, across))):
             clear_models()
-            mesh_object("pier", *box(0, 0, H / 2, sx, sy, H), material(*_M_WALL))
+            mesh_object("pier", *box(0, 0, H / 2, sx, sy, H), material(*pmat))
             cells[(2, col)] = render_cell(f"{prof['sheet']}_pier{col}")
         set_anchor(128 + BALLAST_DY)
 
@@ -747,8 +753,9 @@ def track_sheet(profile="new"):
         pass  # way のシートを書かない版（下）
     elif "walls" in prof or "band" in prof:
         # 側壁のバリエーションは右下の印（S・B・C・F）、橋は下の帯で区別する
+        # prof["badge"]（無くてよい）: 右下の印。無ければ版（walls）の印。None で印なし（橋）
         cells[(0, 0)] = render_icon(prof["sheet"] + "_icon", 0.5, shift=(-0.14, 0.2), label=prof.get("label", "100"), style="track",
-                                    badge=ICON_BADGE.get(prof.get("walls")), band=prof.get("band"))
+                                    badge=prof.get("badge", ICON_BADGE.get(prof.get("walls"))), band=prof.get("band"))
         cells[(0, 1)] = cells[(0, 2)]
     else:
         cells[(0, 0)] = render_icon("track_icon", 0.5, shift=(-0.14, 0.2), label=prof.get("label", "100"))
@@ -1105,8 +1112,9 @@ TUNNEL_HOOD = (TILE / 2, 2 * H)         # 躯体の半幅と高さ
 TUNNEL_RISE = 36      # 躯体の高さ（画面の px。持ち分を上へ広げる行数）
 
 
-def tunnel_sheet(kind="track"):
-    """坑口 4 方向（kind: track・expressway）。pak128 では坑口は 2 段の坂にしか置けない（本体の tunnelbauer）。BackImage[N] は北が高い坂（南から入る）。シートは 行 0: 奥の絵、行 1: 手前の絵、行 2・3: 雪。"""
+def tunnel_sheet(kind="track", profile="new", sheet=None, label="100"):
+    """坑口 4 方向（kind: track・expressway）。profile は線路の描き分け（TRACK_PROFILES の名前。部品の差し替え replace と夏の材質 skin も使う）、
+    sheet はシート名（無ければ track_tunnel・expressway_tunnel）、label はアイコンの最高速度。pak128 では坑口は 2 段の坂にしか置けない（本体の tunnelbauer）。BackImage[N] は北が高い坂（南から入る）。シートは 行 0: 奥の絵、行 1: 手前の絵、行 2・3: 雪。"""
     half = TILE / 2
     N, S, E, W = (0, half), (0, -half), (half, 0), (-half, 0)
     dirs = {  # 名前: (列, 経路, 高い側の向き, 坂の高さ)
@@ -1115,13 +1123,14 @@ def tunnel_sheet(kind="track"):
         "e": (4, straight(W, E), Vector((1, 0)), lambda x, y: 2 * H * (x + half) / TILE),
         "w": (5, straight(W, E), Vector((-1, 0)), lambda x, y: 2 * H * (half - x) / TILE),
     }
-    prof = TRACK_PROFILES["new"]
+    prof = TRACK_PROFILES[profile]
     expwy = kind == "expressway"
+    parts = tuple(prof.get("replace", {}).get(p.name, p) for p in TRACK_PARTS + TRACK_EXTRAS)
     # 高速道路: iss の都市高速の坑口（tunnel/road。タイルいっぱいの箱と口の上の名板）が手本。穴は両側の壁の内側まで広げる。
     # 道路は地面の菱形より 1px 下に描く（ROAD_CY）。持ち分も同じだけ下げ、隣の道路と同じく spill は 0
     bore_w = EXPWY_WALL_U - 0.1 if expwy else TUNNEL_BORE[0]
     cy, spill = (ROAD_CY, 0) if expwy else (GROUND_CY, prof["spill"])
-    pre = "expwy_tunnel" if expwy else "tunnel"
+    pre = "expwy_tunnel" if expwy else (sheet or "tunnel")
     set_anchor(ROAD_CY if expwy else 128 + BALLAST_DY)
     cells = {}
     a0, a1 = -half + TUNNEL_FACE, half  # 坑口の面と、躯体の奥の端（経路に沿った位置）
@@ -1156,7 +1165,10 @@ def tunnel_sheet(kind="track"):
             else:
                 # 線路の本体と同じく汚れを入れる（雪の絵は雪の上の汚れ）
                 grp = prof["groups"]
-                assemble(TRACK_PARTS + TRACK_EXTRAS, [path], prof["datums"], groups=grp, skin=track_skin(grp, snow=bool(skin)))
+                tskin = track_skin(grp, snow=bool(skin))
+                if not skin and "skin" in prof:
+                    tskin = dict(tskin or {}, **prof["skin"])  # 夏の絵だけの材質の差し替え（track_sheet と同じ）
+                assemble(parts, [path], prof["datums"], groups=grp, skin=tskin)
                 # 穴の内側: 床（基盤と同じ材質）と暗い左右の壁だけを置く（線路は床の上に見える。箱で埋めると線路まで隠れた）
                 # 床はタイルの幅いっぱい（躯体の下は隠れる。口の辺では、隣の側壁つきの線路の基盤と 1 行重なってすき間を埋める）
                 floor = mesh_object("floor", *box(c.x, c.y, 0.005, a1 - a0, TILE, 0.01, rot=rot),
@@ -1197,7 +1209,8 @@ def tunnel_sheet(kind="track"):
         cells[(0, 0)] = render_icon("expwy_tunnel_icon", 0.5, shift=(-0.14, 0.2), label="120", style="expressway", band="tunnel")
     else:
         assemble(TRACK_PARTS, [long], clip=False)
-        cells[(0, 0)] = render_icon("track_tunnel_icon", 0.5, shift=(-0.14, 0.2), label="100", style="track", band="tunnel")
+        cells[(0, 0)] = render_icon(f"{sheet}_icon" if sheet else "track_tunnel_icon", 0.5, shift=(-0.14, 0.2), label=label, style="track",
+                                    band="tunnel")
     # カーソル: 口が手前を向いた坑口（BackImage[N]）の奥の絵に手前の絵（躯体）を重ねた 1 枚
     back, front = load_rgba8(cells[(0, 2)]), load_rgba8(cells[(1, 2)])
     cursor = np.where(front[..., 3:] >= 128, front, back)
@@ -1207,7 +1220,7 @@ def tunnel_sheet(kind="track"):
     else:
         cells[(0, 1)] = os.path.join(WORK, f"{pre}_cursor.png")
         save_rgba(cells[(0, 1)], cursor)
-    make_sheet(cells, 4, 6, os.path.join(SRC, ("expressway" if expwy else "track") + "_tunnel.png"))
+    make_sheet(cells, 4, 6, os.path.join(SRC, (sheet or ("expressway" if expwy else "track") + "_tunnel") + ".png"))
 
 
 def run_targets(sheets, default_targets):

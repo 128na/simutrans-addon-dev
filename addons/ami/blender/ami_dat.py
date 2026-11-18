@@ -3,7 +3,7 @@
 値（速度・費用・維持費・登場年）は VALUES が持つ。README の「値の一覧」と同じにする。
 まだ絵を作っていない way は BUILT に入れない（dat も pak も作らない）。シートの行の並びは
     夏の絵 4 行（奥の絵）→ 雪の絵 4 行
-で、無壁の線路の並び。カーブは斜めの絵（DIAG_CURVES）を指す。橋の版は、そのステップで足す。
+で、無壁の線路の並び。カーブは斜めの絵（DIAG_CURVES）を指す。
 高架の版（ami_rail_ballast_elev_<版>）は基盤の版と同じ並びで system_type=1。橋脚の way は雪の絵も同じセルで、単柱（ami_pier_rail）は行 0〜3 だけ、
 門型（ami_pier_rail_gate）は行 0〜3 が奥の絵、行 4〜7 が手前の絵（PIER_FRONT_ROW）。
 
@@ -16,6 +16,9 @@ back と front のシートの斜めのセルを指す（README の「壁の敷�
 架線つきの壁の way-object（ami_wall_rail_<版>_catenary）は壁と同じ並びで、own_waytype=electrified_track（電化）。
 ami_wall_rail_twin_catenary は近い斜めの分け合うタイル用で、斜めの梁を短くした back と front の架線つきのシート
 （ami_wall_rail_twin_catenary_<back|front>）の斜めのセルを指す（README の「架線の作り」）。
+
+橋（BRIDGES）とトンネル（TUNNELS）は blender-poc の橋・トンネルと同じシートの並びで、手前の絵は無い（壁は way-object）。
+makeobj は橋の手前のキーが無いと警告するので、手前のキーは全部、空のセル（BRIDGE_EMPTY_CELL）を指す（README の「橋とトンネルの作り」）。
 """
 import os
 
@@ -109,6 +112,73 @@ CATENARY_VALUES = dict(cost=4000, maintenance=100, intro_year=1900, topspeed=110
 CATENARY_TWIN_TOPSPEED = CATENARY_VALUES["topspeed"] + 1
 CATENARY = {f"ami_wall_rail_{_v}_catenary": f"ami_wall_rail_{_v}_catenary" for _v in BASE_VARIANTS}
 TWIN_FROM_CATENARY = {k: v.replace("ami_wall_rail_", "ami_wall_rail_twin_catenary_") for k, v in TWIN_FROM.items()}
+
+
+# ---------------------------------------------------------------- 橋とトンネル（#19）
+# 橋は欄干を描かず、壁・架線は地上と同じ way-object を重ねる（ADR 0003）。値は仮: 費用・維持費は地上の BRIDGE_COST_K・TUNNEL_COST_K 倍、
+# 速さは地上と同じ（README の「橋とトンネルの作り」）。橋の pillar_distance は iss の橋と同じ 1（全部のタイルに橋脚）。
+# 橋のシートの並び（render.py の rail_ballast_bridge。blender-poc の橋と同じセル）: 行 0 の列 2・3 が平らな橋（NS・EW）、
+# 行 1 が端の坂（列 0〜3 が 1 段、5〜8 が 2 段。並びは way の imageup と同じ 12・9・3・6）、行 2 の列 0・1 が橋脚（南北の橋・東西の橋）、
+# 行 3 が坂から始まる端（列 0〜3 が 1 段、5〜8 が 2 段。並びは n・s・e・w）。雪の絵は BRIDGE_SNOW_ROWS 下（橋脚は夏と同じセル）。
+# Ramp[N] は北が高い坂の絵、Start[N] は南が高い坂のタイルで使われる（docs/reference/way-addon.md の 5 章）
+BRIDGE_COST_K = 4
+TUNNEL_COST_K = 4
+BRIDGE_SNOW_ROWS = 4
+BRIDGE_RAMPS = (("n", 0), ("w", 1), ("s", 2), ("e", 3))  # Ramp の向き → 列（2 段は +5）
+BRIDGE_STARTS = (("n", 0), ("s", 1), ("e", 2), ("w", 3))  # Start の向き → 列（2 段は +5）
+# makeobj が読む橋の手前の絵のキー（bridge_writer.cc の並び）と、それが指す空のセル（行 0 の列 9。シートの描かない所）
+BRIDGE_FRONT_KEYS = (("image", "ns ew".split()), ("start", "nsew"), ("ramp", "nsew"), ("pillar", "sw"),
+                     ("image2", "ns ew".split()), ("start2", "nsew"), ("ramp2", "nsew"), ("pillar2", "sw"))
+BRIDGE_EMPTY_CELL = "0.9"
+BRIDGES = {"ami_rail_ballast_bridge": ("ami_rail_ballast", "ami_rail_ballast_bridge")}  # 名前 → (地上の way, シート)
+# トンネルのシートの並び（sheetlib の tunnel_sheet）: 行 0 が奥の絵、行 1 が手前の絵（坑口の躯体）、行 2・3 が雪。列 2〜5 が n・s・e・w。
+# image[N] は北が高い坂のタイル。トンネルの中の way は地上の通常の版（way=）
+TUNNEL_DIRS = (("n", 2), ("s", 3), ("e", 4), ("w", 5))
+TUNNELS = {"ami_rail_ballast_tunnel": ("ami_rail_ballast", "ami_rail_ballast_tunnel")}  # 名前 → (中の way, シート)
+
+
+def _head(name, kind, obj, base, cost_k, sheet):
+    v = VALUES[base]
+    return [
+        f"# AMI: {name}（CC BY 4.0）。{v['speed']} km/h の{kind}。シートは blender/render.py が描く",
+        f"obj={obj}",
+        f"name={name}",
+        "copyright=AMI (CC BY 4.0)",
+        f"intro_year={v['intro_year']}",
+        "intro_month=1",
+        "retire_year=2999",
+        "retire_month=1",
+        f"waytype={v['waytype']}",
+        f"cost={v['cost'] * cost_k}",
+        f"maintenance={v['maintenance'] * cost_k}",
+        f"topspeed={v['speed']}",
+    ]
+
+
+def bridge_dat_text(name, base, sheet):
+    out = _head(name, "橋（欄干なし。壁は way-object を重ねる）", "bridge", base, BRIDGE_COST_K, sheet)
+    out += ["pillar_distance=1", f"icon=> {sheet}.0.0", f"cursor={sheet}.0.1,-64,-32"]
+    for season in (0, 1):
+        dr = season * BRIDGE_SNOW_ROWS
+        out += [f"backimage[ns][{season}]={sheet}.{dr}.2,-64,-32", f"backimage[ew][{season}]={sheet}.{dr}.3,-64,-32"]
+        for pre, dc in (("", 0), ("2", 5)):
+            out += [f"backramp{pre}[{d}][{season}]={sheet}.{1 + dr}.{c + dc},-64,-32" for d, c in BRIDGE_RAMPS]
+            out += [f"backstart{pre}[{d}][{season}]={sheet}.{3 + dr}.{c + dc},-64,-32" for d, c in BRIDGE_STARTS]
+        out += [f"backpillar[s][{season}]={sheet}.2.0,-64,-32", f"backpillar[w][{season}]={sheet}.2.1,-64,-32"]
+        # 手前の絵は無いが、makeobj は front のキーが無いと全部の向きで警告を出す（descriptor/writer/bridge_writer.cc）。空のセルを指す
+        for key, dirs in BRIDGE_FRONT_KEYS:
+            out += [f"front{key}[{d}][{season}]={sheet}.{BRIDGE_EMPTY_CELL},-64,-32" for d in dirs]
+    return NL.join(out) + NL
+
+
+def tunnel_dat_text(name, base, sheet):
+    out = _head(name, "トンネル", "tunnel", base, TUNNEL_COST_K, sheet)
+    out += [f"way={base}", f"icon=> {sheet}.0.0", f"cursor={sheet}.0.1,-64,-32"]
+    for season in (0, 1):
+        for d, c in TUNNEL_DIRS:
+            out += [f"backimage[{d}][{season}]={sheet}.{2 * season}.{c},-64,-32",
+                    f"frontimage[{d}][{season}]={sheet}.{2 * season + 1}.{c},-64,-32"]
+    return NL.join(out) + NL
 
 
 def dat_text(name, sheet):
@@ -237,6 +307,11 @@ def main():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(pier_dat_text(name, sheet))
         print(f"[dat] {name}.dat")
+    for table, text in ((BRIDGES, bridge_dat_text), (TUNNELS, tunnel_dat_text)):
+        for name, (base, sheet) in table.items():
+            with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
+                f.write(text(name, base, sheet))
+            print(f"[dat] {name}.dat")
 
 
 if __name__ == "__main__":
