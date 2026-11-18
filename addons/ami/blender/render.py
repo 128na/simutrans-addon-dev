@@ -10,6 +10,7 @@
     src/ami_rail_ballast_base_<版>.png  基盤の版（single・back・center・front）の way。基盤は壁の位置で止まる
     src/ami_wall_rail_<版>.png  壁の way-object（4 版。center は行き止まりの端の壁だけ）。上 4 行が奥（back）、下 4 行が手前（front）の絵
     src/ami_wall_rail_<版>_catenary.png  架線つきの壁の way-object（4 版。center は架線と行き止まりの端の壁だけ）。行の並びは壁と同じ
+    src/ami_wall_rail_twin_catenary_<back|front>.png  近い斜めの分け合うタイル用の架線つきの壁の絵（back・front の版で、斜めの梁を短くした）
     work/                     セルごとの生の描画結果（確認用）
 """
 import dataclasses
@@ -88,6 +89,16 @@ for _v in BASE_VARIANTS:
         groups=_base["groups"] + ("catenary", "catenary_support"), snow=False, wall_only=True, rise=R.CAT_RISE,
         wall_label=CATENARY_LABEL)
 
+# 近い斜めの分け合うタイル用の架線つきの壁（ami_wall_rail_twin_catenary）の絵。壁だけの twin と同じく、nw・sw の線は back、ne・se の線は
+# front の版の斜めのセルを使う。斜めの梁だけを短くした（CAT_BEAM_REACH_TWIN。分け合うタイルの隣の線の外の壁からはみ出さない）。
+# 通常の 4 版の梁は変えない（斜めの線を隣のタイルに並べた複線・3 本並びで、梁をタイルの角でつなぐため）。dat は斜めのキーだけを指す
+TWIN_FROM = ("back", "front")
+for _v in TWIN_FROM:
+    R.TRACK_PROFILES[f"rail_ballast_base_{_v}_twin_catenary"] = dict(
+        R.TRACK_PROFILES[f"rail_ballast_base_{_v}_catenary"], sheet=f"ami_rail_ballast_base_{_v}_twcat",
+        wall_sheet=f"ami_wall_rail_twin_catenary_{_v}",
+        replace=dict(R.TRACK_PROFILES[f"rail_ballast_base_{_v}_catenary"]["replace"], cat_beam=R.beam_part(R.CAT_BEAM_REACH_TWIN)))
+
 # ---------------------------------------------------------------- 対象（シート名 → 描く関数）
 # 基盤の版の対象は、way のシートと壁の way-object のシートを 1 つのプロセスで描く
 
@@ -98,6 +109,8 @@ for _v in BASE_VARIANTS:
     SHEETS[f"ami_rail_ballast_base_{_v}"] = lambda v=_v: R.track_sheet(f"rail_ballast_base_{v}")
 for _v in BASE_VARIANTS:
     SHEETS[f"ami_wall_rail_{_v}_catenary"] = lambda v=_v: R.track_sheet(f"rail_ballast_base_{v}_catenary")
+for _v in TWIN_FROM:
+    SHEETS[f"ami_wall_rail_twin_catenary_{_v}"] = lambda v=_v: R.track_sheet(f"rail_ballast_base_{v}_twin_catenary")
 
 if __name__ == "__main__":
     R.run_targets(SHEETS, list(SHEETS))
