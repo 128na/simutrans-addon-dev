@@ -1,6 +1,6 @@
-# AMI: ami_wall_rail_close（CC BY 4.0）。線路の壁の way-object（壁だけ、架線なし）。シートは blender/render.py が描く
+# AMI: ami_wall_rail_twin（CC BY 4.0）。線路の壁の way-object（壁だけ、架線なし）。シートは blender/render.py が描く
 obj=way-object
-name=ami_wall_rail_close
+name=ami_wall_rail_twin
 copyright=AMI (CC BY 4.0)
 intro_year=1900
 intro_month=1

@@ -21,7 +21,7 @@
 // 区画 W（複線と壁の組。WAYS と WALLED の区画の後。原点は (ox, oy + (WAYS と WALLED の数) * SPACING)）:
 //   W1 複線の輪: 外 (0,0)-(12,9)・内 (1,1)-(11,8)。辺ごとに奥の線は back、手前の線は front。カーブ（斜めの絵）のタイルは南北の辺と同じ版
 //   W2 近い斜めの複線: (16,0) から南東へ・(16,16) から北東へ 5 段。奥の線が back、1 タイル東の手前の線が front。
-//      分け合うタイル（way 2 本）には、back・front を敷いた後に ami_wall_rail_close を 1 タイルずつ敷いて置き換える
+//      分け合うタイル（way 2 本）には、back・front を敷いた後に ami_wall_rail_twin を 1 タイルずつ敷いて置き換える
 //   W3 行き止まりを並べる: y=12・13・14 に (0)-(3) の東西を back・center・front（両端が行き止まり）
 //
 // 架線つきの壁（CATENARY。区画 W の後に、WALLED と同じ並びで 4 版。その後に区画 W と同じ並びの区画 WE）:
@@ -166,9 +166,9 @@ function lay(name, wall, ox, oy) {
 function lay_pairs(ox, oy, suffix = "") {
   local wd = {}, od = {};
   foreach (v in ["single", "back", "center", "front"]) wd[v] <- way_desc_x("ami_rail_ballast_base_" + v);
-  // 近い斜めの分け合うタイル用の close は壁だけの版にしか無い（架線つきの区画 WE では使わない）
-  local close = suffix == "";
-  foreach (v in close ? ["single", "back", "center", "front", "close"] : ["single", "back", "center", "front"]) {
+  // 近い斜めの分け合うタイル用の twin は壁だけの版にしか無い（架線つきの区画 WE では使わない）
+  local twin = suffix == "";
+  foreach (v in twin ? ["single", "back", "center", "front", "twin"] : ["single", "back", "center", "front"]) {
     od[v] <- wayobj_desc_x("ami_wall_rail_" + v + suffix);
     if (od[v] == null) return "ami_wall_rail_" + v + suffix + " desc=[missing]\n";
   }
@@ -197,14 +197,14 @@ function lay_pairs(ox, oy, suffix = "") {
       for (local y = -1; y <= 6; y++) {
         local yy = g[1] + g[2] * y;
         if (!square_x(ox + x, oy + yy).get_ground_tile().has_two_ways()) continue;
-        if (close) s += r("W2 close", obj("close", x, yy, x, yy));
+        if (twin) s += r("W2 twin", obj("twin", x, yy, x, yy));
         checks += "[check] " + tag + "2 (" + x + "," + yy + ") " + names(ox + x, oy + yy) + "\n";
       }
     }
-    if (!close) continue;  // 区画 WE: 分け合うタイルは、先に敷いた back の架線つきの版に front の向きが足されたまま
-    // close で置き換えると、前の way-object が消えるときに隣のタイルの壁の向きから自分の側を外す（obj/wayobj.cc の ~wayobj_t）。
-    // 新しい close は向きを引き継ぐので隣へつなぎ直さない。back・front を同じ経路にもう一度敷いて、隣の向きを戻す
-    // （close の方が速いので、分け合うタイルは close のまま向きだけ足される）
+    if (!twin) continue;  // 区画 WE: 分け合うタイルは、先に敷いた back の架線つきの版に front の向きが足されたまま
+    // twin で置き換えると、前の way-object が消えるときに隣のタイルの壁の向きから自分の側を外す（obj/wayobj.cc の ~wayobj_t）。
+    // 新しい twin は向きを引き継ぐので隣へつなぎ直さない。back・front を同じ経路にもう一度敷いて、隣の向きを戻す
+    // （twin の方が速いので、分け合うタイルは twin のまま向きだけ足される）
     s += r("W2 back wall again", stair_wo(od["back"], ox + g[0], oy + g[1], 5, g[2]));
     s += r("W2 front wall again", stair_wo(od["front"], ox + g[0] + 1, oy + g[1], 5, g[2]));
   }

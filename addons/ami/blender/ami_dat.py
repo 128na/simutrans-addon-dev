@@ -8,7 +8,7 @@
 基盤の版の way（ami_rail_ballast_base_<版>）は通常の版と同じ並びで、近い斜めの絵を持たない（本体が分け合うタイルに 2 本の way を置き、
 奥の線と手前の線を別の版にできる。docs/reference/way-addon.md の 6 章）。壁の way-object（ami_wall_rail_<版>）のシートは
     奥の絵 4 行（backimage）→ 手前の絵 4 行（frontimage）
-で、セルの位置は way と同じ。雪の絵は無い（way-object に雪のキーが無い）。ami_wall_rail_close は近い斜めの分け合うタイル用で、
+で、セルの位置は way と同じ。雪の絵は無い（way-object に雪のキーが無い）。ami_wall_rail_twin は近い斜めの分け合うタイル用で、
 back と front のシートの斜めのセルを指す（README の「壁の敷き方」）。
 
 架線つきの壁の way-object（ami_wall_rail_<版>_catenary）は壁と同じ並びで、own_waytype=electrified_track（電化）。
@@ -62,20 +62,20 @@ NO_CLOSE = {f"ami_rail_ballast_base_{_v}" for _v in BASE_VARIANTS}  # 近い斜�
 # ---------------------------------------------------------------- 壁の way-object（線路用、壁だけ。架線つきは別のステップ）
 # 値は仮（README の「今の決まりごと」）。topspeed は架線でない way-object では列車の速さを縛らない（本体は電化した編成にだけ
 # max_wayobj_speed を当てる。vehicle/simvehicle.cc）。同じ waytype の way-object は、遅い物を速い物で置き換える（Ctrl なし。
-# obj/wayobj.cc の extend_wayobj）ので、close だけ 1 速くして、back・front を敷き直しても close が残るようにする
+# obj/wayobj.cc の extend_wayobj）ので、twin だけ 1 速くして、back・front を敷き直しても twin が残るようにする
 WALL_VALUES = dict(cost=3000, maintenance=60, intro_year=1900, topspeed=1000)
-WALL_CLOSE_TOPSPEED = WALL_VALUES["topspeed"] + 1
+WALL_TWIN_TOPSPEED = WALL_VALUES["topspeed"] + 1
 # center は側壁が無く、行き止まりの端の壁だけ（ほかのキーの絵は空。架線つきの版で center も要るので 4 版にそろえる）
 WALLS = {f"ami_wall_rail_{_v}": f"ami_wall_rail_{_v}" for _v in BASE_VARIANTS}
 WALL_FRONT_ROW = 4  # 壁のシートの手前の絵の行（sheetlib の WALL_FRONT_ROW と同じ）
 WAYOBJ_KEYS = {"image": "image", "imageup": "imageup", "imageup2": "imageup2", "diagonal": "diagonal"}  # way のキー → way-object の back/front の後ろ
 # 近い斜めの分け合うタイル用: 斜めの向きごとに、タイルの角の側の壁を持つ版のシート（back は nw・sw、front は ne・se。README の「壁の敷き方」）
-CLOSE_FROM = {"[nw]": "ami_wall_rail_back", "[sw]": "ami_wall_rail_back", "[ne]": "ami_wall_rail_front", "[se]": "ami_wall_rail_front"}
+TWIN_FROM = {"[nw]": "ami_wall_rail_back", "[sw]": "ami_wall_rail_back", "[ne]": "ami_wall_rail_front", "[se]": "ami_wall_rail_front"}
 
 # ---------------------------------------------------------------- 架線つきの壁の way-object（線路用、電化。#17）
 # 値は仮（README の「架線の作り」）。架線の way-object の topspeed は、電化した編成の速さを縛る（本体の max_wayobj_speed）ので、
-# いちばん速い線路（高速線 480 km/h）より大きくする。壁だけの版（1000・close 1001）より速くして、壁の上に敷くと架線つきに置き換わる
-# （逆に、架線つきの上に壁だけの版を敷いても置き換わらない。外してから敷く）。近い斜めの分け合うタイル用の版（close）は無い
+# いちばん速い線路（高速線 480 km/h）より大きくする。壁だけの版（1000・twin 1001）より速くして、壁の上に敷くと架線つきに置き換わる
+# （逆に、架線つきの上に壁だけの版を敷いても置き換わらない。外してから敷く）。近い斜めの分け合うタイル用の版（twin）は無い
 CATENARY_VALUES = dict(cost=4000, maintenance=100, intro_year=1900, topspeed=1100)
 CATENARY = {f"ami_wall_rail_{_v}_catenary": f"ami_wall_rail_{_v}_catenary" for _v in BASE_VARIANTS}
 
@@ -109,10 +109,10 @@ def dat_text(name, sheet):
     return NL.join(out) + NL
 
 
-def wall_dat_text(name, sheet, close=False, catenary=False):
+def wall_dat_text(name, sheet, twin=False, catenary=False):
     """壁の way-object の dat。セルは way と同じ位置（分岐の絵・近い斜めは持たない。壁は通常の T字・十字と同じ）。
-    カーブは way と同じく斜めのセルを指す。close は近い斜めの分け合うタイル用（斜めとカーブのキーだけ、CLOSE_FROM のシートを指す）。
-    catenary は架線つき（電化。own_waytype=electrified_track、値は CATENARY_VALUES。close の版は無い）"""
+    カーブは way と同じく斜めのセルを指す。twin は近い斜めの分け合うタイル用（斜めとカーブのキーだけ、TWIN_FROM のシートを指す）。
+    catenary は架線つき（電化。own_waytype=electrified_track、値は CATENARY_VALUES。twin の版は無い）"""
     v = CATENARY_VALUES if catenary else WALL_VALUES
     kind = "架線つき（電化）" if catenary else "壁だけ、架線なし"
     out = [
@@ -128,7 +128,7 @@ def wall_dat_text(name, sheet, close=False, catenary=False):
         f"own_waytype={'electrified_track' if catenary else 'track'}",
         f"cost={v['cost']}",
         f"maintenance={v['maintenance']}",
-        f"topspeed={WALL_CLOSE_TOPSPEED if close else v['topspeed']}",
+        f"topspeed={WALL_TWIN_TOPSPEED if twin else v['topspeed']}",
         f"icon=> {sheet}.0.0",
         f"cursor={sheet}.0.1,-64,-32",
     ]
@@ -138,10 +138,10 @@ def wall_dat_text(name, sheet, close=False, catenary=False):
         if key == "image" and idx in CURVE_TO_DIAG:
             row, col = CURVE_TO_DIAG[idx]
         src = sheet
-        if close:
-            if not ((key == "diagonal" or key == "image") and idx in CLOSE_FROM):
+        if twin:
+            if not ((key == "diagonal" or key == "image") and idx in TWIN_FROM):
                 continue
-            src = CLOSE_FROM[idx]
+            src = TWIN_FROM[idx]
         for side, dr in (("back", 0), ("front", WALL_FRONT_ROW)):
             out.append(f"{side}{WAYOBJ_KEYS[key]}{idx}={src}.{row + dr}.{col},-64,-32")
     return NL.join(out) + NL
@@ -157,9 +157,9 @@ def main():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(wall_dat_text(name, sheet))
         print(f"[dat] {name}.dat")
-    with open(os.path.join(SRC, "ami_wall_rail_close.dat"), "w", encoding="utf8", newline=NL) as f:
-        f.write(wall_dat_text("ami_wall_rail_close", "ami_wall_rail_back", close=True))
-    print("[dat] ami_wall_rail_close.dat")
+    with open(os.path.join(SRC, "ami_wall_rail_twin.dat"), "w", encoding="utf8", newline=NL) as f:
+        f.write(wall_dat_text("ami_wall_rail_twin", "ami_wall_rail_back", twin=True))
+    print("[dat] ami_wall_rail_twin.dat")
     for name, sheet in CATENARY.items():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(wall_dat_text(name, sheet, catenary=True))
