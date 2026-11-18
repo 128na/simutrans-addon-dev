@@ -11,6 +11,8 @@
     src/ami_wall_rail_<版>.png  壁の way-object（4 版。center は行き止まりの端の壁だけ）。上 4 行が奥（back）、下 4 行が手前（front）の絵
     src/ami_wall_rail_<版>_catenary.png  架線つきの壁の way-object（4 版。center は架線と行き止まりの端の壁だけ）。行の並びは壁と同じ
     src/ami_wall_rail_twin_catenary_<back|front>.png  近い斜めの分け合うタイル用の架線つきの壁の絵（back・front の版で、斜めの梁を短くした）
+    src/ami_rail_ballast_elev_<版>.png  高架の版（4 版）の way。基盤の版の絵の下に躯体を足す（橋脚・壁は描かない）
+    src/ami_pier_rail.png     高架の真下の地面に敷く橋脚の way
     work/                     セルごとの生の描画結果（確認用）
 """
 import dataclasses
@@ -99,6 +101,19 @@ for _v in TWIN_FROM:
         wall_sheet=f"ami_wall_rail_twin_catenary_{_v}",
         replace=dict(R.TRACK_PROFILES[f"rail_ballast_base_{_v}_catenary"]["replace"], cat_beam=R.beam_part(R.CAT_BEAM_REACH_TWIN)))
 
+# ---------------------------------------------------------------- 高架の 4 版と橋脚の way（ADR 0003。#18）
+# 高架の版の way（ami_rail_ballast_elev_<版>、dat は system_type=1）は、基盤の版と同じ絵（道床・基盤。基盤は壁の位置で止まる）の下に、
+# 躯体（桁。sheetlib の ELEV_BODY_*）を足したもの。橋脚は描かない。壁・架線は地上と同じ way-object（ami_wall_rail_*）を重ねるので、
+# 壁の way-object のシートは書かない（write_walls）。持ち分は躯体の分だけ下へ広げる（lower）。アイコンは高架の帯
+for _v in BASE_VARIANTS:
+    R.TRACK_PROFILES[f"rail_ballast_elev_{_v}"] = dict(
+        R.TRACK_PROFILES[f"rail_ballast_base_{_v}"], sheet=f"ami_rail_ballast_elev_{_v}", write_walls=False, elev_body=True,
+        lower=R.ELEV_BODY_LOWER, band="elevated")
+
+# 橋脚の way（ami_pier_rail）: 高架の真下の地面のタイルに敷く。柱の上端は高架の躯体の下面に合わせる（sheetlib の pier_sheet）。
+# 基準面は在来線と同じ（高架の床と同じ動かし方）
+PIER_LABEL = "P"  # アイコンの文字（仮。アイコンはステップ 13 でまとめて作る）
+
 # ---------------------------------------------------------------- 対象（シート名 → 描く関数）
 # 基盤の版の対象は、way のシートと壁の way-object のシートを 1 つのプロセスで描く
 
@@ -111,6 +126,9 @@ for _v in BASE_VARIANTS:
     SHEETS[f"ami_wall_rail_{_v}_catenary"] = lambda v=_v: R.track_sheet(f"rail_ballast_base_{v}_catenary")
 for _v in TWIN_FROM:
     SHEETS[f"ami_wall_rail_twin_catenary_{_v}"] = lambda v=_v: R.track_sheet(f"rail_ballast_base_{v}_twin_catenary")
+for _v in BASE_VARIANTS:
+    SHEETS[f"ami_rail_ballast_elev_{_v}"] = lambda v=_v: R.track_sheet(f"rail_ballast_elev_{v}")
+SHEETS["ami_pier_rail"] = lambda: R.pier_sheet("ami_pier_rail", _DATUMS, label=PIER_LABEL)
 
 if __name__ == "__main__":
     R.run_targets(SHEETS, list(SHEETS))

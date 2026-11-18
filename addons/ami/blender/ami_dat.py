@@ -3,7 +3,8 @@
 値（速度・費用・維持費・登場年）は VALUES が持つ。README の「値の一覧」と同じにする。
 まだ絵を作っていない way は BUILT に入れない（dat も pak も作らない）。シートの行の並びは
     夏の絵 4 行（奥の絵）→ 雪の絵 4 行
-で、無壁の線路の並び。カーブは斜めの絵（DIAG_CURVES）を指す。高架・橋の版は、それぞれのステップで足す。
+で、無壁の線路の並び。カーブは斜めの絵（DIAG_CURVES）を指す。橋の版は、そのステップで足す。
+高架の版（ami_rail_ballast_elev_<版>）は基盤の版と同じ並びで system_type=1。橋脚の way（ami_pier_rail）は行 0〜3 だけで、雪の絵も同じセル。
 
 基盤の版の way（ami_rail_ballast_base_<版>）は通常の版と同じ並びで、近い斜めの絵を持たない（本体が分け合うタイルに 2 本の way を置き、
 奥の線と手前の線を別の版にできる。docs/reference/way-addon.md の 6 章）。壁の way-object（ami_wall_rail_<版>）のシートは
@@ -60,6 +61,28 @@ for _v in BASE_VARIANTS:
     # 斜めのセルは近い斜めの分け合うタイルのために、壁の無い側を 2 本の真ん中で削る。カーブ（斜めが続かない曲がり）は削らない
 NO_CLOSE = {f"ami_rail_ballast_base_{_v}" for _v in BASE_VARIANTS}  # 近い斜めの絵を持たない way
 
+# ---------------------------------------------------------------- 高架の 4 版（#18）
+# 基盤の版と同じ並び（近い斜めの絵を持たない）で、system_type=1。値は仮: iss と同じく地上の 2 倍の費用・維持費（速さは地上と同じ）
+ELEV_COST_K = 2
+ELEVATED = set()
+for _v in BASE_VARIANTS:
+    _n = f"ami_rail_ballast_elev_{_v}"
+    BUILT[_n] = _n
+    VALUES[_n] = dict(VALUES["ami_rail_ballast"], cost=VALUES["ami_rail_ballast"]["cost"] * ELEV_COST_K,
+                      maintenance=VALUES["ami_rail_ballast"]["maintenance"] * ELEV_COST_K)
+    NO_CLOSE.add(_n)
+    ELEVATED.add(_n)
+
+# ---------------------------------------------------------------- 橋脚の way（#18）
+# 高架の真下の地面のタイルに敷く。waytype は tram_track（iss と同じ。ユーザーの決定、2026-11-18。README の「高架と橋脚の作り」）。
+# 本体は track（system_type=7）として読むので、線路の網とつながり、線路の way-object（壁・架線）も載り、道路に重ねられる。
+# 値は仮（iss の橋脚と同じ費用・維持費）。topspeed は走らせる物ではないので 1
+PIER_VALUES = dict(waytype="tram_track", cost=1000, maintenance=100, intro_year=1900, topspeed=1)
+PIERS = {"ami_pier_rail": "ami_pier_rail"}
+# 橋脚のシートにあるセル（render の pier_sheet）。分岐の絵（switch 画像）は T字・十字と同じ柱
+PIER_SWITCH = {"[nse1]": "[nse]", "[nse2]": "[nse]", "[new1]": "[new]", "[new2]": "[new]", "[nsw1]": "[nsw]", "[nsw2]": "[nsw]",
+               "[sew1]": "[sew]", "[sew2]": "[sew]", "[nsew1]": "[nsew]", "[nsew2]": "[nsew]"}
+
 # ---------------------------------------------------------------- 壁の way-object（線路用、壁だけ。架線つきは下の CATENARY）
 # 値は仮（README の「今の決まりごと」）。topspeed は架線でない way-object では列車の速さを縛らない（本体は電化した編成にだけ
 # max_wayobj_speed を当てる。vehicle/simvehicle.cc）。同じ waytype の way-object は、遅い物を速い物で置き換える（Ctrl なし。
@@ -99,7 +122,7 @@ def dat_text(name, sheet):
         f"cost={v['cost']}",
         f"maintenance={v['maintenance']}",
         f"topspeed={v['speed']}",
-        "system_type=0",
+        f"system_type={1 if name in ELEVATED else 0}",
         f"icon=> {sheet}.0.0",
         f"cursor={sheet}.0.1,-64,-32",
     ]
@@ -152,6 +175,37 @@ def wall_dat_text(name, sheet, twin=False, catenary=False):
     return NL.join(out) + NL
 
 
+def pier_dat_text(name, sheet):
+    """橋脚の way の dat。カーブは斜めのセル、分岐の絵は T字・十字のセル。雪の絵（[1]）は夏と同じセル（柱に雪は描かない）"""
+    v = PIER_VALUES
+    cell = {(key, idx): (row, col) for key, idx, row, col in IMAGES}
+    out = [
+        f"# AMI: {name}（CC BY 4.0）。高架の真下の地面に敷く橋脚の way。シートは blender/render.py が描く",
+        "obj=way",
+        f"name={name}",
+        "copyright=AMI (CC BY 4.0)",
+        f"intro_year={v['intro_year']}",
+        "intro_month=1",
+        "retire_year=2999",
+        "retire_month=1",
+        f"waytype={v['waytype']}",
+        f"cost={v['cost']}",
+        f"maintenance={v['maintenance']}",
+        f"topspeed={v['topspeed']}",
+        "system_type=0",
+        f"icon=> {sheet}.0.0",
+        f"cursor={sheet}.0.1,-64,-32",
+    ]
+    for season in (0, 1):
+        for key, idx, row, col in IMAGES:
+            if key == "image" and idx in CURVE_TO_DIAG:
+                row, col = CURVE_TO_DIAG[idx]
+            elif key == "image" and idx in PIER_SWITCH:
+                row, col = cell[("image", PIER_SWITCH[idx])]
+            out.append(f"{key}{idx}[{season}]={sheet}.{row}.{col},-64,-32")
+    return NL.join(out) + NL
+
+
 def main():
     os.makedirs(SRC, exist_ok=True)
     for name, sheet in BUILT.items():
@@ -172,6 +226,10 @@ def main():
     with open(os.path.join(SRC, "ami_wall_rail_twin_catenary.dat"), "w", encoding="utf8", newline=NL) as f:
         f.write(wall_dat_text("ami_wall_rail_twin_catenary", "ami_wall_rail_twin_catenary_back", twin=True, catenary=True))
     print("[dat] ami_wall_rail_twin_catenary.dat")
+    for name, sheet in PIERS.items():
+        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
+            f.write(pier_dat_text(name, sheet))
+        print(f"[dat] {name}.dat")
 
 
 if __name__ == "__main__":

@@ -383,9 +383,10 @@ DIAG_OPEN_HALF = TILE / (2 * math.sqrt(2))
 DIAG_OPEN_UNDERCUT = 3.0  # 切り口の傾き（高さ 1 あたり中心線へ寄る幅）。基盤の厚み BASE_H で約 1 寄る
 
 
-def _diag_open_cut(walls, path):
+def _diag_open_cut(walls, path, inset=0.0):
     """斜めの基盤のうち、壁の無い側で、中心線から DIAG_OPEN_HALF より外を削る柱。
-    タイルの角まで塗ると、近い斜めの隣の線のレールを隠し、角が隣の線の壁の外へ三角に突き出す（2026-11-14、ゲームで確認）"""
+    タイルの角まで塗ると、近い斜めの隣の線のレールを隠し、角が隣の線の壁の外へ三角に突き出す（2026-11-14、ゲームで確認）。
+    inset は高架の躯体用（切り口を DIAG_OPEN_HALF より inset だけ内へずらす。傾きは基盤と同じ DIAG_OPEN_UNDERCUT）"""
     sides = {-1 if w["pname"] == "wallL" else 1 for w in walls if w["pname"] in ("wallL", "wallR")}
     p0, p1 = Vector((path[0].x, path[0].y)), Vector((path[-1].x, path[-1].y))
     d = (p1 - p0).normalized()
@@ -397,7 +398,7 @@ def _diag_open_cut(walls, path):
         a, b = p0 - d * 30, p1 + d * 30
         # 切り口は下ほど中心線へ寄る斜め（上面の縁は DIAG_OPEN_HALF のまま）。縦に切ると、奥の線の切り口の側面（暗い）が
         # 手前の線の床の上に線で見えた（2026-11-14、ゲームで確認）。下向きの面はカメラから見えない
-        lo, hi = DIAG_OPEN_HALF - 2 * DIAG_OPEN_UNDERCUT, DIAG_OPEN_HALF + 2 * DIAG_OPEN_UNDERCUT
+        lo, hi = DIAG_OPEN_HALF - inset - 2 * DIAG_OPEN_UNDERCUT, DIAG_OPEN_HALF - inset + 2 * DIAG_OPEN_UNDERCUT
         verts = [Vector((q.x, q.y, -2)) for q in (a + n * lo, b + n * lo, b + n * 40, a + n * 40)]
         verts += [Vector((q.x, q.y, 2)) for q in (a + n * hi, b + n * hi, b + n * 40, a + n * 40)]
         faces = [(3, 2, 1, 0), (4, 5, 6, 7)] + [(i, (i + 1) % 4, 4 + (i + 1) % 4, 4 + i) for i in range(4)]
@@ -405,15 +406,17 @@ def _diag_open_cut(walls, path):
     return cut
 
 
-def build_base(walls, paths, k, datum, slope, div, mat, clip=True, extra_cut=None, wu=None, ww=None):
+def build_base(walls, paths, k, datum, slope, div, mat, clip=True, extra_cut=None, wu=None, ww=None, z0=0.0, depth=BASE_H,
+               name="base"):
     """基盤（道床の下の板。上面が路盤の面、厚み BASE_H は橋で側面に見える）を作る。
     タイル全面の板から、残した壁の外側だけを削る。壁のない側はタイルの端まで埋まるので、
     - 並べた線路の基盤とつながる（直線・斜め・直角カーブの内側と外側）
     - 分岐・十字で、基盤が壁を突き抜けない（壁の外側は必ず削られる）
     - 壁が 1 枚も無ければタイル全面になる（中線、1 タイルだけの軌道）
     walls は残した壁の物（assemble が pname・pi・cut を付けている）。通り道で一部が削られた直線の壁は、
-    削られた先に線路があるので外側を削らない（カーブの内側の壁の外側は、ほかの通り道に重ならないのでいつも削る）"""
-    plate = mesh_object("base", *box(0, 0, -BASE_H / 2, TILE + 8, TILE + 8, BASE_H), material(*mat))
+    削られた先に線路があるので外側を削らない（カーブの内側の壁の外側は、ほかの通り道に重ならないのでいつも削る）。
+    z0・depth・name は高架の躯体用（板の上面を z0 に置き、厚みを depth にする。名前で部品を見分ける）"""
+    plate = mesh_object(name, *box(0, 0, z0 - depth / 2, TILE + 8, TILE + 8, depth), material(*mat))
     plate["tall"] = False
     move = datum_move(datum, slope, div)
     cut = _beyond_prisms(walls, paths, k, wu, ww, ref_move=move) + (extra_cut or [])

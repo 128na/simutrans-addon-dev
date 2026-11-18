@@ -3,7 +3,7 @@
 # 使い方（アドオンのディレクトリで、ingame/sample_check.sh で見本を敷いたゲームを開いたまま）:
 #   bash ingame/sample_capture.sh            # OUT=work/sample。レイアウト検証用モードの pak なら OUT=work/sample_layout
 # 撮るのは 1 本目の way（WAYS の先頭）の区画と、基盤の版と壁の区画（sample.nut の WALLED。SPACING = 30 ずつ南）と区画 W、
-# 架線つきの壁の区画（CATENARY）と区画 WE。一部だけ撮るときは SPOTS="名前:x:y ..." を渡す。
+# 架線つきの壁の区画（CATENARY）と区画 WE、高架の区画（ELEVATED・WV・WVE・J）。一部だけ撮るときは SPOTS="名前:x:y ..." を渡す。
 # 場所の意味は sample.nut の冒頭の表。画像は目で見る（絵の欠け・縦線・段・すき間）
 M="python ${MCP_CLIENT:-E:/addon_dev/simutrans/.agents/skills/simutrans-mcp-gui-debug/scripts/mcp_client.py} --port ${PORT:-47123}"
 OUT=${OUT:-work/sample}
@@ -21,6 +21,13 @@ for v in SE:180 BE:210 CE:240 FE:270; do
   IFS=: read n dy <<< "$v"
   WALLED_SPOTS="$WALLED_SPOTS ${n}_AFC:8:$((2 + dy)) ${n}_B:3:$((7 + dy)) ${n}_DE:14:$((7 + dy)) ${n}_H0:3:$((22 + dy))"
 done
+# 高架（sample.nut の ELEVATED。地上の区画の東 80）: VS・VB・VC・VF は single・back・center・front の区画（y=0〜）、
+# WV1〜WV3 は区画 WV（y=120〜）、WVE1〜WVE3 は区画 WVE（y=150〜）、VSE は架線つきの壁の single（y=180〜）、J はつなぎ目（y=210〜）
+for v in VS:0 VB:30 VC:60 VF:90 VSE:180; do
+  IFS=: read n dy <<< "$v"
+  WALLED_SPOTS="$WALLED_SPOTS ${n}_AFC:88:$((2 + dy)) ${n}_B:83:$((7 + dy)) ${n}_DE:94:$((7 + dy)) ${n}_IH:85:$((18 + dy))"
+done
+WALLED_SPOTS="$WALLED_SPOTS WV1:86:125 WV2a:99:123 WV2b:99:133 WV3:82:133 WVE1:86:155 WVE2a:99:153 WVE2b:99:163 WVE3:82:163 J:88:214"
 SPOTS=${SPOTS:-"AFC:8:2 B:3:7 DE:14:7 G1:25:3 G2:25:15 I:5:14 H0:3:22 H1:11:22 H2:19:22 H3:27:22 H4:35:22 H5:43:22 H6:51:22 H7:59:22$WALLED_SPOTS W1:6:155 W2a:19:153 W2b:19:163 W3:2:163 WE1:6:305 WE2a:19:303 WE2b:19:313 WE3:2:313"}
 mkdir -p "$OUT"
 for season in temperate:20:20 snow:276:20; do
