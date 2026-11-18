@@ -24,13 +24,16 @@ import sys
 import bpy
 import numpy as np
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from sheetlib import CELL, TRANSPARENT  # noqa: E402
+
 ap = argparse.ArgumentParser()
 ap.add_argument("addon")
 ap.add_argument("--compare", nargs=2, metavar=("A", "B"))
 ap.add_argument("--skip-holes", default=None)
 args = ap.parse_args(sys.argv[sys.argv.index("--") + 1:])
 
-KEY = np.array([231, 255, 255], np.int32)
+KEY = np.array(TRANSPARENT, np.int32)
 NEAR_KEY = 24             # 透過色との差（RGB の差の合計）がこれ以下なら「近い」
 WHITE_R = 245             # 赤がこれ以上の色は白線などとして透過色に近いと数えない
 SMALL_HOLE = 40           # これ以下の穴を報告する（画素）
@@ -39,13 +42,13 @@ COVER_TOL = 16            # --compare で、セルごとに許す塗りの差（
 STEP = {"ew": (64, 32), "ns": (-64, 32)}  # タイル 1 枚分の画面のずれ（pak128）
 N4 = ((-1, 0), (1, 0), (0, -1), (0, 1))
 N8 = N4 + ((-1, -1), (-1, 1), (1, -1), (1, 1))
-REF = re.compile(r"^\s*([^#=\s][^=]*?)\s*=\s*>?\s*(?:\./)?([\w\-]+)\.(\d+)\.(\d+)", re.M)
-STRAIGHT = re.compile(r"^(front|back)?image\[(ew|ns)\](?:\[0\])?$", re.I)
+LINE = re.compile(r"^[ \t]*([^#=\s][^=\n]*?)[ \t]*=[ \t]*(.*?)[ \t]*$", re.M)
+IMAGE_KEY = re.compile(r"^(?:front|back)?(?:image(?:up)?2?|diagonal|pillar2?|ramp2?|start2?)(?:\[|$)", re.I)
+# makeobj の書式: [> ]ファイル名[[[[.行].列],x],y]（descriptor/writer/image_writer.cc）。列を省くと、行の値は左上からの通し番号
+IMAGE_REF = re.compile(r"^>?\s*((?:[^/]*/)*[^./]+)\.(\d+)(?:\.(\d+))?\s*(?:,|$)")
+STRAIGHT = re.compile(r"^(front|back)?image\[(ew|ns)\](?:\[[01]\])?$", re.I)
 
 root = os.path.abspath(args.addon)
-build = os.path.join(root, "build.py")
-found = re.search(r"pak(\d+)", open(build, encoding="utf8").read()) if os.path.exists(build) else None
-CELL = int(found.group(1)) if found else 256
 sheets = {}
 
 
@@ -57,12 +60,16 @@ def sheet(name):
         px = np.empty(w * h * 4, np.float32)
         img.pixels.foreach_get(px)
         bpy.data.images.remove(img)
-        sheets[name] = np.rint(np.flipud(px.reshape(h, w, 4))[..., :3] * 255).astype(np.int32)
+        sheets[name] = np.rint(np.flipud(px.reshape(h, w, 4))[..., :3] * 255).astype(np.uint8)
     return sheets[name]
 
 
+def key_distance(a):
+    return np.abs(a.astype(np.int32) - KEY).sum(axis=2)
+
+
 def opaque(a):
-    return np.abs(a - KEY).sum(axis=2) > 0
+    return key_distance(a) > 0
 
 
 def groups(mask, near):
@@ -103,7 +110,7 @@ def check_cell(cell, holes):
     edge = int(op[0].sum() + op[-1].sum() + op[:, 0].sum() + op[:, -1].sum())
     if edge:
         found_here.append(f"edge={edge}")
-    d = np.abs(cell - KEY).sum(axis=2)
+    d = key_distance(cell)
     near = int(((d > 0) & (d <= NEAR_KEY) & (cell[..., 0] < WHITE_R)).sum())
     if near:
         found_here.append(f"near_key={near}")
@@ -138,14 +145,22 @@ for dat in sorted(glob.glob(os.path.join(root, "src", "*.dat"))):
     holes = not (args.skip_holes and re.search(args.skip_holes, name))
     seen = {}
     lines = []
-    for key, fn, r, c in REF.findall(open(dat, encoding="utf8", errors="replace").read()):
+    for key, value in LINE.findall(open(dat, encoding="utf8", errors="replace").read()):
         low = key.lower()
-        if low.startswith(("icon", "cursor")):
+        if not IMAGE_KEY.match(low) or value in ("", "-"):
             continue
+        ref = IMAGE_REF.match(value)
+        if not ref:
+            lines.append(f"{key}: 画像の参照を読めない（{value}）")
+            continue
+        fn, r, c = ref.groups()
         if not os.path.exists(os.path.join(root, "src", fn + ".png")):
             lines.append(f"{key}: {fn}.png が無い")
             continue
-        a, r, c = sheet(fn), int(r), int(c)
+        a, r = sheet(fn), int(r)
+        if c is None:
+            r, c = r // (a.shape[0] // CELL), r % (a.shape[1] // CELL)  # makeobj と同じ計算
+        c = int(c)
         if (r + 1) * CELL > a.shape[0] or (c + 1) * CELL > a.shape[1]:
             lines.append(f"{key}: {fn}.{r}.{c} はシートの外")
             continue
@@ -177,6 +192,10 @@ if args.compare:
         if not os.path.exists(os.path.join(root, "src", nb + ".png")):
             continue
         oa, ob = opaque(sheet(na)), opaque(sheet(nb))
+        if oa.shape != ob.shape:
+            problems += 1
+            print(f"[audit] compare {nb}: シートの大きさが違う {oa.shape[1::-1]} / {ob.shape[1::-1]}")
+            continue
         for r in range(oa.shape[0] // CELL):
             for c in range(oa.shape[1] // CELL):
                 y, x = r * CELL, c * CELL

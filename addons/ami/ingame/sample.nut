@@ -95,7 +95,7 @@ function up(p) { return coord3d(p.x, p.y, p.z + mode.z); }
 // 地形を変える。変えたタイルの気候は元に戻り、最後の塗り直しでは高架の way の絵が替わらないので、降雪の区画ではその場で塗り直す
 function set_slope_kept(p, s) {
   local e = command_x.set_slope(pl, p, s);
-  if (mode.snow) command_x(tool_set_climate).work(pl, coord3d(p.x - 1, p.y - 1, 0), coord3d(p.x + 1, p.y + 1, 0), "7");
+  if (e == null && mode.snow) e = command_x(tool_set_climate).work(pl, coord3d(p.x - 1, p.y - 1, 0), coord3d(p.x + 1, p.y + 1, 0), "7");
   return e;
 }
 // way を a から b へ敷き、壁の way-object（wo。null なら無し）を同じ経路に重ねる。高架なら真下の地面に橋脚の way も敷く
