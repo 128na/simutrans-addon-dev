@@ -39,5 +39,6 @@ def profile(name):
 
 
 RAIL_BALLAST = Track("rail_ballast")  # 在来線（バラスト軌道）
-TRACKS = (RAIL_BALLAST,)
+RAIL_SLAB = Track("rail_slab")  # 高速線（スラブ軌道）
+TRACKS = (RAIL_BALLAST, RAIL_SLAB)
 WALL_TRACK = RAIL_BALLAST  # 共有の壁・架線のシートを描く元の軌道（ほかの種類の基盤の版は、壁のシートを書かない）
