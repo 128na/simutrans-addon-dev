@@ -26,7 +26,8 @@
 //
 // 架線つきの壁（CATENARY。区画 W の後に、WALLED と同じ並びで 4 版。その後に区画 W と同じ並びの区画 WE）:
 //   基盤の版の way に、同じ版の架線つきの壁（ami_wall_rail_<版>_catenary）を重ねる。原点は (ox, oy + (WAYS と WALLED の数 + 1 + i) * SPACING)。
-//   区画 WE は区画 W と同じ並びで、壁の way-object を架線つきの版にしたもの（近い斜めの分け合うタイルは ami_wall_rail_close_catenary）。
+//   区画 WE は区画 W と同じ並びで、壁の way-object を架線つきの版にしたもの（近い斜めの分け合うタイル用の架線つきの版は無いので、
+//   分け合うタイルは先に敷いた back の架線つきの版のまま。[check] の行にその名前と電化を出す）。
 //   [check] の行に、架線つきの区画の way が電化されているか（way の名前の後ろの elec）を出す
 local WAYS = ["ami_rail_ballast"];
 // [基盤の版の way, 壁の way-object（null は壁なし）]
@@ -165,7 +166,9 @@ function lay(name, wall, ox, oy) {
 function lay_pairs(ox, oy, suffix = "") {
   local wd = {}, od = {};
   foreach (v in ["single", "back", "center", "front"]) wd[v] <- way_desc_x("ami_rail_ballast_base_" + v);
-  foreach (v in ["single", "back", "center", "front", "close"]) {
+  // 近い斜めの分け合うタイル用の close は壁だけの版にしか無い（架線つきの区画 WE では使わない）
+  local close = suffix == "";
+  foreach (v in close ? ["single", "back", "center", "front", "close"] : ["single", "back", "center", "front"]) {
     od[v] <- wayobj_desc_x("ami_wall_rail_" + v + suffix);
     if (od[v] == null) return "ami_wall_rail_" + v + suffix + " desc=[missing]\n";
   }
@@ -194,10 +197,11 @@ function lay_pairs(ox, oy, suffix = "") {
       for (local y = -1; y <= 6; y++) {
         local yy = g[1] + g[2] * y;
         if (!square_x(ox + x, oy + yy).get_ground_tile().has_two_ways()) continue;
-        s += r("W2 close", obj("close", x, yy, x, yy));
+        if (close) s += r("W2 close", obj("close", x, yy, x, yy));
         checks += "[check] " + tag + "2 (" + x + "," + yy + ") " + names(ox + x, oy + yy) + "\n";
       }
     }
+    if (!close) continue;  // 区画 WE: 分け合うタイルは、先に敷いた back の架線つきの版に front の向きが足されたまま
     // close で置き換えると、前の way-object が消えるときに隣のタイルの壁の向きから自分の側を外す（obj/wayobj.cc の ~wayobj_t）。
     // 新しい close は向きを引き継ぐので隣へつなぎ直さない。back・front を同じ経路にもう一度敷いて、隣の向きを戻す
     // （close の方が速いので、分け合うタイルは close のまま向きだけ足される）
