@@ -90,8 +90,14 @@ local checks = "";
 local elec_spots = [];   // 電化を確かめるタイル（[壁の名前, x, y, z]。架線つきの区画。z は高架なら ELEV_UP、地上は 0）
 function r(name, v) { return v == null ? "" : name + "=[" + v + "]\n"; }
 // 高架の区画を敷く間だけ、z を ELEV_UP にし、pier に橋脚の way を入れる（way-object は高架の高さの座標で敷く。地面の座標では敷けない）
-local mode = {z = 0, pier = null};
+local mode = {z = 0, pier = null, snow = false};
 function up(p) { return coord3d(p.x, p.y, p.z + mode.z); }
+// 地形を変える。変えたタイルの気候は元に戻り、最後の塗り直しでは高架の way の絵が替わらないので、降雪の区画ではその場で塗り直す
+function set_slope_kept(p, s) {
+  local e = command_x.set_slope(pl, p, s);
+  if (e == null && mode.snow) e = command_x(tool_set_climate).work(pl, coord3d(p.x - 1, p.y - 1, 0), coord3d(p.x + 1, p.y + 1, 0), "7");
+  return e;
+}
 // way を a から b へ敷き、壁の way-object（wo。null なら無し）を同じ経路に重ねる。高架なら真下の地面に橋脚の way も敷く
 function way2(w, wo, a, b) {
   local e = command_x.build_way(pl, a, b, w, true);
@@ -178,11 +184,11 @@ function lay(name, wall, ox, oy) {
   // D・E
   foreach (h in [[11, 7, 1], [17, 7, 2]]) {
     local cx = h[0], cy = h[1], n = h[2];
-    for (local k = 0; k < n; k++) s += r("hill raise", command_x.set_slope(pl, c(cx, cy, k), slope.all_up_slope));
-    s += r("hill rampN", command_x.set_slope(pl, c(cx, cy - 1), 4 * n));
-    s += r("hill rampS", command_x.set_slope(pl, c(cx, cy + 1), 36 * n));
-    s += r("hill rampW", command_x.set_slope(pl, c(cx - 1, cy), 12 * n));
-    s += r("hill rampE", command_x.set_slope(pl, c(cx + 1, cy), 28 * n));
+    for (local k = 0; k < n; k++) s += r("hill raise", set_slope_kept(c(cx, cy, k), slope.all_up_slope));
+    s += r("hill rampN", set_slope_kept(c(cx, cy - 1), 4 * n));
+    s += r("hill rampS", set_slope_kept(c(cx, cy + 1), 36 * n));
+    s += r("hill rampW", set_slope_kept(c(cx - 1, cy), 12 * n));
+    s += r("hill rampE", set_slope_kept(c(cx + 1, cy), 28 * n));
     s += r("hill ns", line(cx, cy - 2, cx, cy + 2));
     s += r("hill ew", line(cx - 2, cy, cx + 2, cy));
   }
@@ -281,7 +287,7 @@ function lay_join(ox, oy) {
   local s = r("J label", marker.work(pl, c(0, -2), "elevated <-> ground"));
   for (local x = 8; x <= 12; x++)
     for (local y = 0; y <= 6; y++)
-      for (local k = 0; k < ELEV_UP; k++) s += r("J raise", command_x.set_slope(pl, c(x, y, k), slope.all_up_slope));
+      for (local k = 0; k < ELEV_UP; k++) s += r("J raise", set_slope_kept(c(x, y, k), slope.all_up_slope));
   s += r("J ew elev", command_x.build_way(pl, c(0, 1), c(7, 1), e, true));
   s += r("J ew pier", command_x.build_way(pl, c(0, 1), c(7, 1), p, true));
   s += r("J ew ground", command_x.build_way(pl, c(7, 1, ELEV_UP), c(12, 1, ELEV_UP), g, true));
@@ -357,25 +363,25 @@ function lay_bt(bx, by) {
   // 東西 y=19（1 段）・23（2 段）、南北 x=24（1 段）・28（2 段）。坂の値は blender-poc の bridge.nut と同じ
   foreach (q in [[19, 1], [23, 2]]) {
     local y = q[0], n = q[1];
-    for (local k = 0; k < n; k++) foreach (x in [0, 8]) s += r("B2 raise", command_x.set_slope(pl, c(x, y, k), slope.all_up_slope));
-    s += r("B2 rampW", command_x.set_slope(pl, c(1, y), 28 * n));
-    s += r("B2 rampE", command_x.set_slope(pl, c(7, y), 12 * n));
+    for (local k = 0; k < n; k++) foreach (x in [0, 8]) s += r("B2 raise", set_slope_kept(c(x, y, k), slope.all_up_slope));
+    s += r("B2 rampW", set_slope_kept(c(1, y), 28 * n));
+    s += r("B2 rampE", set_slope_kept(c(7, y), 12 * n));
     s += r("B2 ew bridge", command_x.build_bridge(pl, c(1, y), c(7, y), br));
     s += r("B2 ew", wl("single", c(0, y, n), c(8, y, n)));
   }
   foreach (q in [[24, 1], [28, 2]]) {
     local x = q[0], n = q[1];
-    for (local k = 0; k < n; k++) foreach (y in [16, 24]) s += r("B2 raise", command_x.set_slope(pl, c(x, y, k), slope.all_up_slope));
-    s += r("B2 rampN", command_x.set_slope(pl, c(x, 17), 36 * n));
-    s += r("B2 rampS", command_x.set_slope(pl, c(x, 23), 4 * n));
+    for (local k = 0; k < n; k++) foreach (y in [16, 24]) s += r("B2 raise", set_slope_kept(c(x, y, k), slope.all_up_slope));
+    s += r("B2 rampN", set_slope_kept(c(x, 17), 36 * n));
+    s += r("B2 rampS", set_slope_kept(c(x, 23), 4 * n));
     s += r("B2 ns bridge", command_x.build_bridge(pl, c(x, 17), c(x, 23), br));
     s += r("B2 ns", wl("single", c(x, 16, n), c(x, 24, n)));
   }
   // B4: 高架と橋のつなぎ目（1-8 の 5a-4）。高架の single (0)-(4)・(12)-(15) の間を、2 段の坂から始まる橋 (5)-(11) で渡す（橋の床は高架と同じ高さ）。
   // 高架は橋の両側に分けて先に敷き、後から橋を架ける（橋の端の Start2 が隣の高架とつながる。橋を先に架けると、高架を橋の端へつなげない）。
   // 壁は高架の高さの座標で、高架と橋を通して 1 本で敷く。橋脚は高架の下だけ
-  s += r("B4 rampW", command_x.set_slope(pl, c(5, 38), 56));
-  s += r("B4 rampE", command_x.set_slope(pl, c(11, 38), 24));
+  s += r("B4 rampW", set_slope_kept(c(5, 38), 56));
+  s += r("B4 rampE", set_slope_kept(c(11, 38), 24));
   s += r("B4 elevW", command_x.build_way(pl, c(0, 38), c(4, 38), ev, true));
   s += r("B4 elevE", command_x.build_way(pl, c(12, 38), c(15, 38), ev, true));
   s += r("B4 bridge", command_x.build_bridge(pl, c(5, 38), c(11, 38), br));
@@ -388,18 +394,18 @@ function lay_bt(bx, by) {
   local tunnel = function(tag, v, ew, at, wo) {
     local t = "";
     if (ew) {
-      for (local x = 3; x <= 5; x++) for (local k = 0; k < 2; k++) t += r(tag + " raise", command_x.set_slope(pl, c(x, at, k), slope.all_up_slope));
-      t += r(tag + " rampW", command_x.set_slope(pl, c(2, at), 24));
-      t += r(tag + " rampE", command_x.set_slope(pl, c(6, at), 56));
+      for (local x = 3; x <= 5; x++) for (local k = 0; k < 2; k++) t += r(tag + " raise", set_slope_kept(c(x, at, k), slope.all_up_slope));
+      t += r(tag + " rampW", set_slope_kept(c(2, at), 24));
+      t += r(tag + " rampE", set_slope_kept(c(6, at), 56));
       t += r(tag + " tunnel", command_x(tool_build_tunnel).work(pl, c(2, at), tn));
       t += r(tag + " way", command_x.build_way(pl, c(0, at), c(2, at), wd[v], true));
       t += r(tag + " way", command_x.build_way(pl, c(6, at), c(8, at), wd[v], true));
       t += r(tag + " wall", command_x.build_wayobj(pl, c(0, at), c(8, at), wo));
     } else {
       local y0 = at < 25 ? 37 : 43;
-      for (local y = y0 + 4; y <= y0 + 6; y++) for (local k = 0; k < 2; k++) t += r(tag + " raise", command_x.set_slope(pl, c(at, y, k), slope.all_up_slope));
-      t += r(tag + " rampN", command_x.set_slope(pl, c(at, y0 + 3), 8));
-      t += r(tag + " rampS", command_x.set_slope(pl, c(at, y0 + 7), 72));
+      for (local y = y0 + 4; y <= y0 + 6; y++) for (local k = 0; k < 2; k++) t += r(tag + " raise", set_slope_kept(c(at, y, k), slope.all_up_slope));
+      t += r(tag + " rampN", set_slope_kept(c(at, y0 + 3), 8));
+      t += r(tag + " rampS", set_slope_kept(c(at, y0 + 7), 72));
       t += r(tag + " tunnel", command_x(tool_build_tunnel).work(pl, c(at, y0 + 3), tn));
       t += r(tag + " way", command_x.build_way(pl, c(at, y0), c(at, y0 + 3), wd[v], true));
       t += r(tag + " way", command_x.build_way(pl, c(at, y0 + 7), c(at, y0 + 10), wd[v], true));
@@ -432,6 +438,7 @@ function bt_names(x, y, z) {
 
 if (GATE_ONLY) ORIGINS = [ORIGINS[0]];
 foreach (n, o in ORIGINS) {
+  mode.snow = n == SNOW;
   if (GATE_ONLY) { report += lay_gate(o[0] + 2 * ELEV_DX, o[1]); continue; }
   if (BT_ONLY) {
     report += lay_bt(o[0] + 2 * ELEV_DX, o[1] + BT_DY);
