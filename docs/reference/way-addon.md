@@ -133,6 +133,7 @@
 - Blender: Boolean の適用に `bpy.ops.object.modifier_apply` を直接使うと遅い（シーン更新で約 2 倍）。`boolean()` を通す。`use_self` は、削る形が自分と重なるときだけ要る（帯を 1 本ずつ削れば外せる）。詳細は `tools/README.md` の「描画が遅いとき」（2026-11-17）
 - Blender: 厚みが 0 になる形は、切り抜き（Boolean）で形ごと消える。地面に切り上げるときは上面を少し上で止める
 - Blender: 作った直後のカメラの `matrix_world` は更新されていない。向きは `rotation_euler.to_matrix()` から取る
+- ゲーム: 検証用のフォルダの `script/` が本家（125.0.1）のままだと、`schedule_entry_x(pos, load, wait)` が座標を読めず、`change_schedule` が「項目が 2 未満」で失敗する。OTRP の `script/`（`script_base.nut` など）に揃える（2026-11-18、`docs/records/2026-11-18_script-schedule-entry-stale-script-dir.md`）
 - ゲーム: 急坂のある所へ `gui.jump` すると、画面の縦の位置が見当から大きくずれる（急坂の十字で 64px）
 - ゲーム: 坂の見本の斜め隣を崖のままにすると、崖の岩が草の色の判定に掛からず、道床の縁が測れない。角だけ上げた坂にする
 - ゲーム: OTRP 本体を手元でビルドした `../simutrans/build/default/sim.exe` は MSYS2 の DLL を使う。`/c/msys64/mingw64/bin` を PATH に足して起動しないと、`libpng16-16.dll` が無いと言って起動しない
