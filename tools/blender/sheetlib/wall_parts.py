@@ -82,7 +82,8 @@ ELEV_LOWER = 16 * ELEV_STEPS
 # 別の way（pier_sheet）が描き、上端を躯体の下面に合わせる。
 #   ELEV_BODY_D: 躯体の深さ（基盤の下面から）。ELEV_BODY_INSET: 壁のある側で、壁の外の面から躯体の側面を内へ下げる幅（床の縁を見せる）。
 #   ELEV_BODY_LOWER: 躯体を描くために、高架の way の持ち分を下へ広げる行数（深さの px に余りを足す）
-#   ELEV_BODY_DIAG_INSET: 斜めの躯体の壁の無い側で、近い斜めの 2 本の真ん中（DIAG_OPEN_HALF）から内へ下げる幅（隣の線の躯体と重ねない）
+#   ELEV_BODY_DIAG_INSET: 斜めの躯体の壁の無い側の切り口を、路盤の面の高さで近い斜めの 2 本の真ん中（DIAG_OPEN_HALF）から内へ下げる幅。
+#   切り口は基盤と同じ傾き（DIAG_OPEN_UNDERCUT）で、下ほど中心線へ寄る（躯体の上面で約 1.35 内）
 ELEV_BODY_D = 1.0
 ELEV_BODY_INSET = 0.45
 ELEV_BODY_DIAG_INSET = 0.3

@@ -678,7 +678,7 @@ def track_sheet(profile="new"):
                     open_cut = _diag_open_cut(kept, paths[0]) if name.startswith("diag_") else None
                     obs.append(build_base(kept, paths, kb, prof["datums"]["bed"], slope, div, bmat, extra_cut=open_cut))
                     if prof.get("elev_body"):
-                        # 斜めの壁の無い側は、基盤と同じ下ほど中心線へ寄る切り口にし、上の縁を近い斜めの 2 本の真ん中より内で止める。
+                        # 斜めの壁の無い側は、基盤と同じ下ほど中心線へ寄る切り口にし、路盤の面の高さで近い斜めの 2 本の真ん中より内を通す。
                         # 縦に切ると、奥の線の躯体の切り口（カメラを向く暗い面）が手前の線の床の上に三角に出た（2026-11-18、ゲームで確認）
                         body_cut = (_diag_open_cut(kept, paths[0], inset=ELEV_BODY_DIAG_INSET)
                                     if name.startswith("diag_") else None)
