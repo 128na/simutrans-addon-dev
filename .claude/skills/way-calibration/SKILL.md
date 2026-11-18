@@ -22,9 +22,9 @@ description: 線路・道路などの way アドオンの描画位置とタイ�
 4. **数値は手本の画像から測る。** 「pak128 はこうなっているはず」という思い込みで決めない。
    レールの位置は重心ではなく、明るさの断面（`ref_measure.py` の「断面」）で比べる。
 
-## ツール（`addons/blender-poc/` にある）
+## ツール（判定は `tools/blender/`、見本はアドオンの `ingame/`）
 
-2 つ目のアドオンがこのツールを使い始めるときは、その変更の最初のコミットでリポジトリ直下の `tools/` へ移す（`AGENTS.md` の決まり）。
+下の表の `ingame/` のスクリプトは `addons/blender-poc/ingame/` にある。AMI の見本は `addons/ami/ingame/sample.nut` で、継ぎ目や坂の判定を AMI で回すときは、同じ形のスクリプトを AMI の名前で作る（`addons/blender-poc/` を直接使わない）。手本の場所は [refs-index.md](../../../docs/reference/refs-index.md)。
 
 | 段階 | ツール | 何を自動で出すか |
 |---|---|---|
@@ -44,7 +44,7 @@ Blender は `blender -b --factory-startup --python <script> -- <引数>` で動�
 
 - つなぐ相手を決める。線路なら pak128 標準（Rail_100 など）・SIS・iss、道路なら SIS の一般道・高速道路・pak128 標準（Road_050）。
 - 元画像があるものは `ref_measure.py` で測る。pak128 のソースは `pak128/` の clone（例: `infrastructure/rail_tracks/rail_100_tracks.png`）、
-  iss は `../iss/src/way/` の層（ビルド済みの pak は `../iss/release/pak128/`）。dat を見て、どのセルが直線・斜めかを確かめてから向きを指定する。
+  iss は `../refs/iss/src/way/` の層（ビルド済みの pak は `../refs/iss/release/pak128/`）。dat を見て、どのセルが直線・斜めかを確かめてから向きを指定する。
 - 元画像が無いもの（SIS は pak だけ）は、ゲームでつないで撮って比べる（手順 4）。
 - 自分のシートも同じツールで測り、手本と並べる。比べるのは次の三つ。
   - 直線のレール・白線の行（断面）
