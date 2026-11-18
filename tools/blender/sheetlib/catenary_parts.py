@@ -16,6 +16,7 @@
 柱・梁・吊り金具（group "catenary_support"）は経路が 1 本のセルだけに作る（track_sheet。分岐・十字に経路ごとの門ができないように）。
 線（group "catenary"）は全部のセルに作る。梁・吊り金具・線は、車両より手前の絵（Part.front）に描く。
 """
+import dataclasses
 import math
 
 from mathutils import Vector
@@ -60,6 +61,10 @@ CAT_BEAM_REACH = TILE    # 梁の、経路から横への長さ（直線。タ�
 # 前はタイルの中心まで（TILE / (2√2)）で、1 行おきに梁の間に 30px ほどの隙間が見えた（2026-11-18、ユーザーの確認用の保存データ）
 CAT_BEAM_OVERLAP_DIAG = 0.5  # 斜めの梁の長さの余り（最も遠い角の先まで届かせる）
 CAT_BEAM_REACH_DIAG = TILE * 1.5 / math.sqrt(2) + CAT_BEAM_OVERLAP_DIAG
+# 近い斜めの分け合うタイル用の梁の長さ（タイルの中心の先まで）。分け合うタイルでは隣の線が TILE / √2 しか離れていないので、
+# CAT_BEAM_REACH_DIAG では隣の線の外の壁から 5px ほどはみ出した（2026-11-18）。2 本の線の梁がタイルの中心の先で重なってつながる。
+# 分け合うタイル用のシートだけが使う（beam_part。アドオンの入口で "replace" に渡す）
+CAT_BEAM_REACH_TWIN = TILE / (2 * math.sqrt(2)) + CAT_BEAM_OVERLAP_DIAG
 # 吊り金具（梁からちょう架線へ下ろす）とハンガー（ちょう架線からトロリ線へ下ろす）は、画面で 1px の縦線（Part.thin）。
 # 画面の横の位置を画素の中心に乗せる（_snap_x）。pak128 の架線は、直線で画面の横 16px ごとにハンガーがある（2026-11-18 に測った）
 CAT_HANGER_PX = 1.0      # 吊り金具・ハンガーの、画面での太さ（px）
@@ -103,11 +108,16 @@ def _pole_shape(s):
     return shape
 
 
-def _beam_shape(path, k):
-    """梁: 柱の上端の高さで、経路を横切る向きに両側へ延ばす（壁の外は trim_catenary で削る）。"""
-    p, d = _anchor(path)
-    reach = CAT_BEAM_REACH_DIAG if _diag(k) else CAT_BEAM_REACH
-    return box(p.x, p.y, CAT_POLE_TOP - CAT_BEAM_H / 2, CAT_BEAM_T, 2 * reach, CAT_BEAM_H, rot=math.atan2(d.y, d.x))
+def beam_shape(reach_diag):
+    """梁: 柱の上端の高さで、経路を横切る向きに両側へ延ばす（壁の外は trim_catenary で削る）。斜めの長さは reach_diag。"""
+    def shape(path, k):
+        p, d = _anchor(path)
+        reach = reach_diag if _diag(k) else CAT_BEAM_REACH
+        return box(p.x, p.y, CAT_POLE_TOP - CAT_BEAM_H / 2, CAT_BEAM_T, 2 * reach, CAT_BEAM_H, rot=math.atan2(d.y, d.x))
+    return shape
+
+
+_beam_shape = beam_shape(CAT_BEAM_REACH_DIAG)
 
 
 def _screen_vertical(d):
@@ -188,6 +198,11 @@ CATENARY_PARTS = (
     Part("cat_wire", "bed", "bed", _M_WIRE, _line_shape(CAT_WIRE_Z), "catenary", tall=True, front=True, thin=True),
     Part("cat_messenger", "bed", "bed", _M_WIRE, _line_shape(CAT_MESSENGER_Z), "catenary", tall=True, front=True, thin=True),
 )
+
+
+def beam_part(reach_diag):
+    """斜めの梁の長さだけを変えた梁の部品（名前・材質は cat_beam のまま。TRACK_PROFILES の "replace" に渡す）。"""
+    return dataclasses.replace(CATENARY_PARTS[2], shape=beam_shape(reach_diag))
 
 
 def is_catenary(ob):
