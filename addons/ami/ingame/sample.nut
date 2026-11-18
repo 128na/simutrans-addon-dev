@@ -102,7 +102,7 @@ function names(x, y, z = 0) {
             + (w != null && w.is_electrified() ? " elec" : "");
   if (z != 0) {
     local g = square_x(x, y).get_ground_tile();
-    local p = g.get_way(wt_narrowgauge);
+    local p = g.get_way(wt_rail);  // 橋脚の way は tram_track（本体では track）
     s += " / " + (p == null ? "-" : p.get_desc().get_name()) + (g.has_two_ways() ? "(2)" : "");
   }
   return s;

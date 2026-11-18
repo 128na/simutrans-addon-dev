@@ -74,10 +74,10 @@ for _v in BASE_VARIANTS:
     ELEVATED.add(_n)
 
 # ---------------------------------------------------------------- 橋脚の way（#18）
-# 高架の真下の地面のタイルに敷く。waytype は仮に narrowgauge_track（pak128 と AMI が使っていない。README の「橋脚の作り」）。
-# iss の tram_track は、本体が track（system_type=7）として読むので、線路の網とつながり、線路の way-object（壁・架線）も載る。
+# 高架の真下の地面のタイルに敷く。waytype は tram_track（iss と同じ。ユーザーの決定、2026-11-18。README の「高架と橋脚の作り」）。
+# 本体は track（system_type=7）として読むので、線路の網とつながり、線路の way-object（壁・架線）も載り、道路に重ねられる。
 # 値は仮（iss の橋脚と同じ費用・維持費）。topspeed は走らせる物ではないので 1
-PIER_VALUES = dict(waytype="narrowgauge_track", cost=1000, maintenance=100, intro_year=1900, topspeed=1)
+PIER_VALUES = dict(waytype="tram_track", cost=1000, maintenance=100, intro_year=1900, topspeed=1)
 PIERS = {"ami_pier_rail": "ami_pier_rail"}
 # 橋脚のシートにあるセル（render の pier_sheet）。分岐の絵（switch 画像）は T字・十字と同じ柱
 PIER_SWITCH = {"[nse1]": "[nse]", "[nse2]": "[nse]", "[new1]": "[new]", "[new2]": "[new]", "[nsw1]": "[nsw]", "[nsw2]": "[nsw]",
