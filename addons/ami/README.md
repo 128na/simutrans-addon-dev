@@ -2,7 +2,7 @@
 
 pak128 用のインフラアドオン集。絵は Blender のスクリプトで描く（作り方は [blender-poc](../blender-poc/README.md) で確かめたもの）。
 
-**今あるのは在来線の通常の版（`ami_rail_ballast`）と、在来線の基盤の 4 版・壁だけの way-object（`ami_rail_ballast_base_*`・`ami_wall_rail_*`）。** 描画から pak までの骨組み（[#14](https://github.com/128na/simutrans-addon-dev/issues/14)）の上に、在来線の壁の無い通常の版を仕上げ（[#15](https://github.com/128na/simutrans-addon-dev/issues/15)。全方位・分岐の絵・近い斜め・雪・汚れ）、基盤の版と壁を足した（[#16](https://github.com/128na/simutrans-addon-dev/issues/16)。下の「壁の敷き方」）。下の表の残りは作る予定のもの（開発ステップの一覧は [#27](https://github.com/128na/simutrans-addon-dev/issues/27)）。範囲と作りを決めた理由は次の ADR にある。
+**今あるのは在来線の通常の版（`ami_rail_ballast`）と、在来線の基盤の 4 版・壁だけの way-object・架線つきの壁の way-object（`ami_rail_ballast_base_*`・`ami_wall_rail_*`・`ami_wall_rail_*_catenary`）。** 描画から pak までの骨組み（[#14](https://github.com/128na/simutrans-addon-dev/issues/14)）の上に、在来線の壁の無い通常の版を仕上げ（[#15](https://github.com/128na/simutrans-addon-dev/issues/15)。全方位・分岐の絵・近い斜め・雪・汚れ）、基盤の版と壁を足した（[#16](https://github.com/128na/simutrans-addon-dev/issues/16)。下の「壁の敷き方」）。壁に架線を持たせた版を足した（[#17](https://github.com/128na/simutrans-addon-dev/issues/17)。下の「架線の作り」）。下の表の残りは作る予定のもの（開発ステップの一覧は [#27](https://github.com/128na/simutrans-addon-dev/issues/27)）。範囲と作りを決めた理由は次の ADR にある。
 
 - [ADR 0002](../../docs/adr/0002-ami-scope.md): 範囲・対象・ライセンス・配布
 - [ADR 0003](../../docs/adr/0003-ami-walls-base-piers-as-separate-objects.md): 壁・基盤・橋脚・歩道の分け方
@@ -18,11 +18,11 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 | way（通常の版） | `ami_tram`・`ami_rail_ballast`・`ami_rail_slab`・`ami_road_local`・`ami_road_general`・`ami_road_expressway` |
 | 基盤・高架の版 | `<way の名前>_base_<版>`・`<way の名前>_elev_<版>`（版は `single`・`back`・`center`・`front`） |
 | 橋・トンネル | `<way の名前>_bridge`・`<way の名前>_tunnel` |
-| 線路の壁 | `ami_wall_rail_<版>`（`single`・`back`・`center`・`front`。`center` は行き止まりの端の壁だけ）、架線つきは `ami_wall_rail_<版>_catenary`（`center` は架線だけ）。近い斜めの分け合うタイル用に `ami_wall_rail_close`（仮。下の「壁の敷き方」） |
+| 線路の壁 | `ami_wall_rail_<版>`（`single`・`back`・`center`・`front`。`center` は行き止まりの端の壁だけ）、架線つきは `ami_wall_rail_<版>_catenary`（`center` は架線と、行き止まりの端の壁だけ）。近い斜めの分け合うタイル用に `ami_wall_rail_twin`（壁だけ。下の「壁の敷き方」）と `ami_wall_rail_twin_catenary`（架線つき。下の「架線の作り」） |
 | 道路の壁 | `ami_wall_road_<版>`（`single`・`back`・`front`） |
 | 橋脚・歩道 | `ami_pier_rail`・`ami_pier_road`・`ami_sidewalk` |
 
-dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_close`。
+dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`。
 
 ### 線路（新描画位置）
 
@@ -102,9 +102,47 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - カーブ: 通常の版と同じく斜めの絵で表す。ただし基盤の版は、カーブのセルを斜めのタイルと別に描き、基盤の壁の無い側を削らない（複線の直角の曲がりで、内側の線の外側に草が三角に出たため。`curve_cells`）
 - 継ぎ目（ユーザーの指摘、2026-11-17）: 坂の壁は、上がった側の端の最後の 1 列が欠けて、坂の上の十字・T字の壁との間に 1px のすき間が出た。坂のセルだけ、壁をタイルの外へ長めに残し、持ち分を左右へ 1 列広げた。T字・十字では、斜めの部分の通り道が反対側の壁（直線の側の壁）の端まで削り、隣の直線との継ぎ目に 1px の縦線が出た。斜めの部分の通り道は、その部分がある側の壁だけを削り、斜めの部分の壁はタイルの辺で切る（`tools/blender/sheetlib` の `assemble`）
 - 奥と手前の決め方（POC の C5）: 版の「奥」「手前」は、南北の線なら西が奥・東が手前、東西の線なら北が奥・南が手前。カーブ・T字・十字のタイルは南北の線（T字は通り抜ける線）の版に合わせる。複線の輪では、角のタイルを南北の辺と同じ版で敷く（`sample.nut` の区画 W1）。斜めのタイルでは、奥の版は `nw`・`sw` の壁がタイルの角の側、`ne`・`se` の壁が中心の側に立つ（手前の版はその逆）
-- 近い斜め（POC の C2）: 1 タイルに way-object は waytype ごとに 1 つなので、分け合うタイル（way が 2 本）には `back` と `front` を両方は置けない。分け合うタイルには、`back`・`front` を敷いた後に `ami_wall_rail_close` を 1 タイルずつ重ねる。OTRP は分け合うタイルの way-object 1 つで 2 本の線を、それぞれの斜めの絵で描く（`../simutrans` の `obj/wayobj.cc` の `two_legs`）。`ami_wall_rail_close` は `nw`・`sw` の線に `back` の壁、`ne`・`se` の線に `front` の壁の絵を使うので、近い斜めの複線は西の線（x の小さい方）を `back`、東の線を `front` にする。速さの値を `back`・`front` より 1 大きくしてあり、後から重ねると置き換わる（同じ速さの way-object を重ねても、前の版のまま向きだけ足される。`obj/wayobj.cc` の `extend_wayobj`）。置き換えると、隣のタイルの壁が分け合うタイルの側へつながらなくなる（前の way-object が消えるときに隣の向きを外し、新しい方はつなぎ直さない。`~wayobj_t`）。`close` を置いた後に、`back`・`front` を同じ経路にもう一度敷く（`close` の方が速いので、分け合うタイルは `close` のまま）
+- 近い斜め（POC の C2）: 1 タイルに way-object は waytype ごとに 1 つなので、分け合うタイル（way が 2 本）には `back` と `front` を両方は置けない。分け合うタイルには、`back`・`front` を敷いた後に `ami_wall_rail_twin` を 1 タイルずつ重ねる。OTRP は分け合うタイルの way-object 1 つで 2 本の線を、それぞれの斜めの絵で描く（`../simutrans` の `obj/wayobj.cc` の `two_legs`）。`ami_wall_rail_twin` は `nw`・`sw` の線に `back` の壁、`ne`・`se` の線に `front` の壁の絵を使うので、近い斜めの複線は西の線（x の小さい方）を `back`、東の線を `front` にする。速さの値を `back`・`front` より 1 大きくしてあり、後から重ねると置き換わる（同じ速さの way-object を重ねても、前の版のまま向きだけ足される。`obj/wayobj.cc` の `extend_wayobj`）。置き換えると、隣のタイルの壁が分け合うタイルの側へつながらなくなる（前の way-object が消えるときに隣の向きを外し、新しい方はつなぎ直さない。`~wayobj_t`）。`twin` を置いた後に、`back`・`front` を同じ経路にもう一度敷く（`twin` の方が速いので、分け合うタイルは `twin` のまま）
+- 名前（2026-11-18）: ユーザーの指定で、`single` より後ろに来る `twin` にした。ゲームの道具の一覧は waytype・速さ・名前の順に並ぶ（`../simutrans` の `obj/wayobj.cc` の `compare_wayobj_desc`）ので、`back`・`center`・`front`・`single`（1000）・`twin`（1001）、続いて架線つきの 4 版（1100）・`twin_catenary`（1101）の順になる
 - 値（仮）: 壁の way-object は費用 3000・維持費 60・登場 1900、速さ 1000（`blender/ami_dat.py` の `WALL_VALUES`）。架線ではない（`own_waytype=track`）ので、速さの値は列車の速さを縛らない
 - 確かめたゲーム: `OTRPv64_3.exe`（2026-11-17）。分け合うタイルの 2 本の線の描き分けは OTRP の機能で、本家での近い斜めの壁の見え方は確かめていない
+
+### 架線の作り（在来線、#17）
+
+壁の way-object に架線を持たせた版（`ami_wall_rail_<版>_catenary`、電化）を、壁だけの版と同じ組み方で敷く。基盤の版の way（`ami_rail_ballast_base_<版>`）に、同じ版の架線つきの壁を同じ経路に重ねる。壁の部分は壁だけの版と同じ形（同じ設定で描き、架線の部品を足しただけ）。
+
+- 部品: 柱・梁・吊り金具・線・ハンガー（`tools/blender/sheetlib/catenary_parts.py`。レイアウト検証用モードの色は柱が水色、梁が橙、吊り金具が黄緑、トロリ線が赤紫、ちょう架線が紫、ハンガーが桃）
+- 吊り金具とハンガー: 吊り金具は梁の中ほどからちょう架線へ、ハンガーはちょう架線からトロリ線へ下ろす、線と同じ色の 1px の縦線。ハンガーは pak128 と同じく画面の横 16px ごと（直線は 1 タイルに 4 本、画面で横向きの斜めも 4 本）。画面で縦向きの斜めは 2 本の線が重なるので無い（pak128 も無い）
+- 線: pak128 の架線（`classic_catenary` など）と同じく上下 2 本。上がちょう架線、下がトロリ線で、どちらも 1px。高さは pak128 にそろえた（タイルの中心で地面から下 約 24px・上 約 28px。[reference](../../docs/reference/way-addon.md) の 10 章）。画面で縦向きの斜めでは 2 本が重なって 1 本に見える（pak128 も同じ）
+- 柱の位置: 壁の上（壁の厚みの真ん中）に立つ。線路に沿う向きは、経路の上でタイルの中心にいちばん近い点（直線・行き止まりはタイルの中心、斜めは斜めの部分の中ほど）。1 タイルに 1 組
+- 版と柱: 壁と同じ決め方で、`single` は両側、`back` は奥、`front` は手前に柱が立つ。`center` は柱が無く、梁と線だけ（行き止まりの端の壁は、壁だけの版と同じく持つ）
+- 梁: 柱の上端の高さで線路を横切り、壁のある側は壁の外の面で止まり、壁の無い側はタイルの端まで延びる。複線で `back`・`center`・`front` を並べると、梁が隣の線の梁とつながって 1 本の門になる（iss の架線と同じ考え方）。斜めの梁は、経路から反対の角まで届く長さ（`CAT_BEAM_REACH_DIAG`。最も遠い角の先まで `CAT_BEAM_OVERLAP_DIAG` 余らせる）で作り、タイルの角の先で切る（壁のある側は壁の外の面）。斜めの線を隣のタイルに並べた複線・3 本並び（線の間が タイル × √2）では、梁が線の間のタイルを横切って、タイルの角で隣の線の梁とつながる。前は梁をタイルの中心の先までにしていて、この並べ方で 1 行おきに梁の間に 30px ほどの隙間が見えた（2026-11-18、ユーザーの確認用の保存データ。その前の、角と中心でちょうど止めて 2〜5px の隙間が見えた指摘も同じ日）。`docs/rail_catenary_diag_beams.png` が直した後
+- 分岐・十字（T字・十字・分岐の絵・カーブを斜めの直線で表したセルのうち経路が 2 本以上のもの）: 線だけを全部の経路に張り、柱・梁は立てない（経路ごとに門ができて重なるため。隣の直線のタイルの柱で足りる）
+- 奥と手前の絵: 奥の柱は奥の絵（`backimage`、車両より先に描く）、手前の柱・梁・吊り金具・線は手前の絵（`frontimage`、車両より後に描く）。iss の架線と同じ分け方
+- 寸法（仮。`catenary_parts.py` の `CAT_*`。高さは路盤から。手本は柱・梁が iss の架線、線が pak128 の架線（[reference](../../docs/reference/way-addon.md) の 10 章））:
+
+  | 値 | 定数 | 今の値 | 画面の目安 |
+  |---|---|---|---|
+  | 柱の上端の高さ | `CAT_POLE_TOP` | 5.2 | 約 41px |
+  | 柱の横位置（経路の中心から） | `CAT_POLE_U` | 2.26（`WALL_U + WALL_W / 2`） | 壁の厚みの真ん中 |
+  | 柱の太さ | `CAT_POLE_S` | 0.35 | 約 3px |
+  | トロリ線（下の線）の高さ（下の面） | `CAT_WIRE_Z` | 3.0 | タイルの中心で地面から約 24px |
+  | ちょう架線（上の線）の高さ（下の面） | `CAT_MESSENGER_Z` | 3.51（`CAT_WIRE_Z + H / 4`） | トロリ線のちょうど 4px 上（約 28px） |
+  | 線の太さ（直線・画面で横向きの斜め） | `CAT_WIRE_W`・`CAT_WIRE_H` | 0.05・0.09 | 1px（直線は 1 行に 2px ずつの階段） |
+  | 線の横幅（画面で縦向きの斜め） | `CAT_WIRE_W_DIAG` | 0.12 | 1px |
+  | 斜めの線のずらし | `CAT_DIAG_SHIFT`・`CAT_DIAG_SHIFT_Z` | 半画素 | 線の中心を画素の中心に乗せる（縦向きは右へ、横向きは上へ） |
+  | 梁の高さ・厚み | `CAT_BEAM_H`・`CAT_BEAM_T` | 0.35・0.25 | 約 3px・2px |
+  | 斜めの梁の長さ（経路から） | `CAT_BEAM_REACH_DIAG` | 11.1（`TILE * 1.5 / √2 + CAT_BEAM_OVERLAP_DIAG`） | 最も遠い角の先まで |
+  | 斜めの梁の長さの余り | `CAT_BEAM_OVERLAP_DIAG` | 0.5 | 約 4px |
+  | 吊り金具・ハンガーの太さ | `CAT_HANGER_PX` | 1.0 | 1px（画面の横の位置を画素の中心に乗せる） |
+  | 1 タイルのハンガーの数 | `CAT_DROPPER_N`・`CAT_DROPPER_N_DIAG` | 4・4 | 画面の横 16px ごと |
+
+- 描き方: 架線は高さのある部品で、持ち分を上へ `CAT_RISE`（約 47 行）広げる（壁だけの版は 11 行）。線は 1px なので、輪郭の半透明の画素を捨てる処理では消える。線だけを描き直して、半分以上覆われた画素を残す（`Part.thin`。[tools/README.md](../../tools/README.md)）。斜めの線は、中心が画素の境に来ると 2 列（2 行）に分かれるので、半画素ずらす。斜めの梁はタイルの角の先まで残し、持ち分を左右へ 1 列広げて描く（`Part.widen`）
+- 値（仮）: 費用 4000・維持費 100・登場 1900、速さ 1100（`blender/ami_dat.py` の `CATENARY_VALUES`）。`own_waytype=electrified_track`（電化）。架線の速さは電化した編成の最高速度を縛るので、いちばん速い線路（高速線 480 km/h）より大きくした。壁だけの版（1000）より速いので、壁だけの版の上に敷くと架線つきに置き換わる。逆に、架線つきの上に壁だけの版を敷いても置き換わらない（撤去してから敷く）
+- 壁だけの線の一部を電化するとき: 架線つきの版で置き換えると、境の外側の壁だけのタイルが行き止まりの絵（線路を横切る端の壁）になる（置き換えで、隣の way-object の向きから境の側が外れる。[reference](../../docs/reference/way-addon.md) の 10 章）。架線つきを敷いた後に、壁だけの版を境のタイルまで敷き直す（境のタイルは架線つきの方が速いので置き換わらず、向きだけ足される）。ゲームで確かめた（2026-11-18、`OTRPv64_3.exe`。`docs/rail_catenary_upgrade_before.png` が敷き直す前、`rail_catenary_upgrade.png` が後）
+- 近い斜め: 分け合うタイルには、壁だけの版の `ami_wall_rail_twin` の代わりに `ami_wall_rail_twin_catenary`（速さ 1101）を重ね、`back`・`front` の架線つきの版を同じ経路にもう一度敷く（敷き方は「壁の敷き方」と同じ。`sample.nut` の区画 WE）。1101 なので、架線つきの 4 版（1100）と壁だけの `twin`（1001）を置き換える。絵は `twin` と同じ組（`nw`・`sw` の線は `back`、`ne`・`se` の線は `front` の版）で、斜めの梁だけを短くしたシート（`src/ami_wall_rail_twin_catenary_<back|front>.png`。`blender/render.py` の `TWIN_FROM`）を指す
+- 分け合うタイルの梁の長さ: 分け合うタイルでは隣の線が タイル / √2 しか離れていないので、通常の 4 版の斜めの梁（反対の角まで。上の「梁」）では、隣の線の外の壁から 5px ほどはみ出した。分け合うタイルと、斜めの線を隣のタイルに並べた複線は同じ斜めのセルを使うので、分け合うタイル用のシートだけ、梁をタイルの中心の先まで（`CAT_BEAM_REACH_TWIN`）にした（2026-11-18、ユーザーの判断）。2 本の線の梁は中心の先で重なってつながり、外の側は壁の外の面で止まる。`twin_catenary` を置く前は、分け合うタイルは先に敷いた `back` の架線つきの版のままで、梁がはみ出し、手前の線の柱が線の間に立った（`docs/rail_catenary_close_pair.png`。直した後は `rail_catenary_WE2a.png`）
+- 描く対象: `ami_wall_rail_<版>_catenary`（`blender/render.py`。way のシートは書かない。way は基盤の版の対象が書く）
 
 ### 付属（別の pak にして同梱）
 
@@ -168,10 +206,11 @@ GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe bash ingame/sample_check.sh
 - `dist/ami.pak` をゲームの `addons/pak128/` に写し、OTRP を MCP つきで起動して `ingame/sample.nut` を流す。見本は温暖側 (20,20) と降雪側 (276,20) に敷く。絵を作った way は `sample.nut` の `WAYS` に足す
 - 見本は way の全部の絵を、周りとつながった形で出す（行き止まり・1 タイル・斜め・輪と十字・坂・急坂・近い斜め・十字の分岐の固定・分岐の自動選択 8 通り。区画の表は `sample.nut` の冒頭）。降雪側は敷いた後に一帯を降雪に塗り直す
 - 返り値の `[check]` の行に、近い斜めの分け合うタイルが way 1 本か（`two_ways=false` なら近い斜めの絵が使われている）と、分岐の絵を固定する道具があるかを出す
-- 基盤の版は `WALLED` に way と壁の組で足す（同じ区画の並びで、壁を同じ経路に重ねる。近い斜めの区画 G は敷かない）。複線と壁の組（輪・近い斜め・行き止まりの並び）は区画 W。`[check]` の行に、区画 W の角と分け合うタイルの way と壁の名前を出す（`(2)` は way が 2 本）
+- 基盤の版は `WALLED` に way と壁の組で足す（同じ区画の並びで、壁を同じ経路に重ねる。近い斜めの区画 G は敷かない）。複線と壁の組（輪・近い斜め・行き止まりの並び）は区画 W。架線つきの壁は `CATENARY`（区画 W の後に同じ並びで 4 版）と区画 WE（区画 W と同じ並びで、壁を架線つきの版にしたもの）で、`[check]` の行の way の名前の後ろの `elec` は電化されていること。`[check]` の行には、区画 W・WE の角と分け合うタイルの way と壁の名前も出す（`(2)` は way が 2 本）
 - 撮るのは `bash ingame/sample_capture.sh`（`work/sample/` に温暖側・降雪側の区画ごと）。レイアウト検証用モードの pak は `PAK=work/layout/dist/ami.pak` で入れ、`OUT=work/sample_layout` で撮る。終わったら `dist/ami.pak` を入れ直す
 - 同じポートでゲームが動いていると、`sample_check.sh` は止まる（他のゲームに見本を流さない）。閉じるのは自分で起動したゲームだけ
 - 確認画像は `docs/`。在来線の通常の版は `rail_ballast_*.png`（温暖側・降雪側の見本、レイアウト検証用モードの見本、行き止まりの拡大、T字・十字・分岐のセル、道床の色の前後。2026-11-17）。基盤の版と壁は `rail_base_*.png`（区画 W1〜W3 と、back・front の輪と十字。`layout` はレイアウト検証用モード。`fix_*` は継ぎ目を直した前後の拡大（`_before` が前）。2026-11-17）
+- 架線つきの壁は `rail_catenary_*.png`（区画 SE（single）・BE（back）の輪と十字、SE の坂と急坂（`SE_DE`）、区画 WE1（複線の輪）・WE2a（近い斜めの複線）・WE3（行き止まりの並び）、降雪側の WE1（`snow_WE1`）、一部だけ電化した線の境（`upgrade`）、pak128 の `classic_catenary`（上）と並べた直線（`vs_pak128`。画面を 2 倍に拡大）、斜めの線を隣のタイルに並べた 3 本並び（上）と複線（下）の梁のつながり（`diag_beams`。ユーザーの確認用の保存データの (40,346) の辺り。2 倍）、近い斜めの複線で、`twin_catenary` を置く前の分け合うタイルの梁のはみ出しと線の間の柱（`close_pair`。同じ保存データ。2 倍。置いた後は `WE2a`）。`layout` はレイアウト検証用モードで、線を上下 2 本・1px にしてハンガーを足す前の絵（柱・梁の配置とつながりは今と同じ）。2026-11-18）
 - 保存・ロードやダイアログの見た目はスクリプトで確かめられないので、ユーザーが見る
 
 塗りを実装する前に、レイアウト検証用モード（部品ごとに画像で見分けやすい単色で塗る）で、部品の配置とタイルどうしの接合を確かめる（[ADR 0005](../../docs/adr/0005-ami-render-tool-conventions.md)）。
@@ -191,7 +230,8 @@ GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe bash ingame/sample_check.sh
 
 ## 残っていること
 
-- 壁（#16）: 壁の way-object の値（費用・維持費・登場年）は仮。`ami_wall_rail_close` の名前も仮で、確定が要る。線路の上を走る編成と壁の重なり（ACCEPTANCE の 2-3）はユーザーの確認待ち。架線つきの版（2-6）、高架・橋への重ね（2-1）、道路の壁は後のステップ
+- 架線（#17）: 柱の位置・高さ、線の高さ（今は pak128 にそろえた）、値（費用・維持費・登場年・速さ）は仮（「架線の作り」）。電化の車両が走れることと、車両と架線の重なりは、ユーザーが手で走らせて見る（スクリプトからは編成を走らせられない）。`center` の架線つきの版が行き止まりの端の壁を持つか（今は持つ）は確定が要る。分岐・十字のタイルに柱を立てない作りでよいかは、絵を見て決める。高架・橋・坑口での架線の見え方は、それぞれのステップ（#18・#19）で確かめる
+- 壁（#16）: 壁の way-object の値（費用・維持費・登場年）は仮。線路の上を走る編成と壁の重なり（ACCEPTANCE の 2-3）はユーザーの確認待ち。高架・橋への重ね（2-1）、道路の壁は後のステップ
 - 近い斜めの壁は、西の線を `back`、東の線を `front` にした組だけ絵が合う。逆の組（西が `front`）の分け合うタイル用の way-object は作っていない
 - 路面軌道（#23）のカーブは今の曲線のままでよい（ユーザーの指摘、2026-11-17）。斜めの絵にするのは在来線（と、作るときに決める高速線）
 - 路面軌道を tram（道路に重ねる）にすると、写真のような縁石と柵で分けた専用の軌道には見えない。どちらに寄せるかは、路面軌道を作るステップ（#23）で絵を見て決める

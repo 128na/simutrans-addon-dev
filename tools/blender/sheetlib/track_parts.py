@@ -32,6 +32,7 @@ from .wall_parts import (  # noqa: F401
     _ramp_body_shape,
     _wall_shape,
 )
+from .catenary_parts import CATENARY_PARTS  # noqa: F401
 
 
 # pak128 標準に合わせて低くする: 道床の厚み0.12（画面で約1px）、レール上面0.30（約2px）
@@ -394,3 +395,6 @@ TRACK_EXTRAS += (Part("pier", "bed", "bed", ("base", (0.50, 0.50, 0.48)), _pier_
 
 TRACK_EXTRAS += (Part("endw", "bed", "bed", _M_WALL, _end_wall_shape, "wall", "end", tall=True),
                  Part("rampbody", "bed", "bed", _M_BASE, _ramp_body_shape, "ramp", ground=True))
+
+# 架線（group "catenary"・"catenary_support"。catenary_parts）。groups に入れた版だけが作る
+TRACK_EXTRAS += CATENARY_PARTS

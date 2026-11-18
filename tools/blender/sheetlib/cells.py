@@ -17,6 +17,7 @@ from .core import (  # noqa: F401
     SPECIAL,
     SPECIAL_COLORS,
     TILE,
+    THIN_ALPHA,
     TRANSPARENT,
     WORK,
     near_camera,
@@ -226,6 +227,9 @@ def render_layers(name, obs, split, exits, slope, cy, spill, rise, solid=False, 
         wide[:, :-1] |= m[:, 1:]
         m = wide
     front = near_camera(obs, origin=origin) if split else []
+    if split:
+        # Part.front の部品（架線の梁・トロリ線）は、位置に関わらず手前の絵にする（車両の上に描く）
+        front += [ob for ob in tall if ob.get("front") and ob not in front]
 
     def layer(objs, suffix):
         for ob in tall:
@@ -233,6 +237,23 @@ def render_layers(name, obs, split, exits, slope, cy, spill, rise, solid=False, 
         im = load_rgba8(render_cell(name + suffix)).copy()
         # 輪郭の半透明の画素は捨てる（色が暗く出て、壁の上の縁とタイルの境に黒い点線が見えた）
         im[..., 3] = np.where(m & (im[..., 3] >= 250), 255, 0)
+        # 細い部品（架線の線）: それだけを描き直し、捨てた画素のうち THIN_ALPHA 以上覆われた所を不透明にして足す
+        # （1px ほどの線は、全部の画素が半透明になって消えるため。2026-11-18）
+        # 広げる部品（架線の梁）: それだけを描き直し、持ち分を左右へ 1 列広げた範囲で足す。斜めのタイルの梁はタイルの角を通って
+        # 隣の斜めのタイルの梁とつながるが、菱形の角の列はどちらのタイルの持ち分にも入らず、2px の隙間が見えた（2026-11-18）
+        wide = m.copy()
+        wide[:, 1:] |= m[:, :-1]
+        wide[:, :-1] |= m[:, 1:]
+        for key, mask, alpha in (("thin", m, THIN_ALPHA), ("widen", wide, 250)):
+            sel = [ob for ob in objs if ob.get(key)]
+            if not sel:
+                continue
+            for ob in tall:
+                ob.hide_render = ob not in sel
+            th = load_rgba8(render_cell(name + suffix + "_" + key))
+            fill = mask & (im[..., 3] == 0) & (th[..., 3] >= alpha)
+            im[fill, :3] = th[fill, :3]
+            im[fill, 3] = 255
         return im
 
     back = layer([ob for ob in tall if ob not in front], "_tallb")

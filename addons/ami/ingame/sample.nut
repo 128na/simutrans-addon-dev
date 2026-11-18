@@ -21,13 +21,22 @@
 // 区画 W（複線と壁の組。WAYS と WALLED の区画の後。原点は (ox, oy + (WAYS と WALLED の数) * SPACING)）:
 //   W1 複線の輪: 外 (0,0)-(12,9)・内 (1,1)-(11,8)。辺ごとに奥の線は back、手前の線は front。カーブ（斜めの絵）のタイルは南北の辺と同じ版
 //   W2 近い斜めの複線: (16,0) から南東へ・(16,16) から北東へ 5 段。奥の線が back、1 タイル東の手前の線が front。
-//      分け合うタイル（way 2 本）には、back・front を敷いた後に ami_wall_rail_close を 1 タイルずつ敷いて置き換える
+//      分け合うタイル（way 2 本）には、back・front を敷いた後に ami_wall_rail_twin を 1 タイルずつ敷いて置き換える
 //   W3 行き止まりを並べる: y=12・13・14 に (0)-(3) の東西を back・center・front（両端が行き止まり）
+//
+// 架線つきの壁（CATENARY。区画 W の後に、WALLED と同じ並びで 4 版。その後に区画 W と同じ並びの区画 WE）:
+//   基盤の版の way に、同じ版の架線つきの壁（ami_wall_rail_<版>_catenary）を重ねる。原点は (ox, oy + (WAYS と WALLED の数 + 1 + i) * SPACING)。
+//   区画 WE は区画 W と同じ並びで、壁の way-object を架線つきの版にしたもの（近い斜めの分け合うタイルは ami_wall_rail_twin_catenary。
+//   敷き方は区画 W2 と同じ）。
+//   [check] の行に、架線つきの区画の way が電化されているか（way の名前の後ろの elec）を出す
 local WAYS = ["ami_rail_ballast"];
 // [基盤の版の way, 壁の way-object（null は壁なし）]
 local WALLED = [["ami_rail_ballast_base_single", "ami_wall_rail_single"], ["ami_rail_ballast_base_back", "ami_wall_rail_back"],
                 ["ami_rail_ballast_base_center", "ami_wall_rail_center"], ["ami_rail_ballast_base_front", "ami_wall_rail_front"]];
 local W_AREA = [24, 18];  // 区画 W の大きさ（降雪の塗り直しに使う）
+// 架線つきの壁（[基盤の版の way, 架線つきの壁の way-object]）
+local CATENARY = [["ami_rail_ballast_base_single", "ami_wall_rail_single_catenary"], ["ami_rail_ballast_base_back", "ami_wall_rail_back_catenary"],
+                  ["ami_rail_ballast_base_center", "ami_wall_rail_center_catenary"], ["ami_rail_ballast_base_front", "ami_wall_rail_front_catenary"]];
 local ORIGINS = [[20, 20], [276, 20]];
 local SNOW = 1;          // ORIGINS の何番目を降雪に塗り直すか
 local SPACING = 30;
@@ -36,6 +45,7 @@ local pl = player_x(0);
 local marker = command_x(tool_set_marker);
 local report = "";
 local checks = "";
+local elec_spots = [];   // 電化を確かめるタイル（[壁の名前, x, y]。架線つきの区画）
 function r(name, v) { return v == null ? "" : name + "=[" + v + "]\n"; }
 // way を a から b へ敷き、壁の way-object（wo。null なら無し）を同じ経路に重ねる
 function way2(w, wo, a, b) {
@@ -69,7 +79,8 @@ function names(x, y) {
   local t = square_x(x, y).get_ground_tile();
   local w = t.get_way(wt_rail);
   local o = t.find_object(mo_wayobj);
-  return (w == null ? "-" : w.get_desc().get_name()) + "+" + (o == null ? "-" : o.get_desc().get_name()) + (t.has_two_ways() ? "(2)" : "");
+  return (w == null ? "-" : w.get_desc().get_name()) + "+" + (o == null ? "-" : o.get_desc().get_name()) + (t.has_two_ways() ? "(2)" : "")
+         + (w != null && w.is_electrified() ? " elec" : "");
 }
 // 分岐の絵を固定する道具（OTRP の改修版だけにある）。無ければ null
 local pin = null;
@@ -94,6 +105,10 @@ function lay(name, wall, ox, oy) {
   s += r("A ew", line(0, 0, 2, 0));
   s += r("A ns", line(4, 0, 4, 2));
   s += r("F", line(6, 0, 6, 0));
+  if (wall != null && wall.find("_catenary") != null) {
+    // 架線つきの壁: 直線・行き止まり・T字・十字の way が電化されているか（敷いた後に下で確かめる）
+    foreach (p in [[1, 0], [0, 0], [4, 1], [3, 7], [3, 4]]) elec_spots.append([wall, ox + p[0], oy + p[1]]);
+  }
   // C
   s += r("C se", stair(w, ox + 8, oy + 0, 3, 1, wo));
   s += r("C ne", stair(w, ox + 13, oy + 3, 3, -1, wo));
@@ -147,14 +162,19 @@ function lay(name, wall, ox, oy) {
   return s;
 }
 // 区画 W: 複線と壁の組（冒頭の表）
-function lay_pairs(ox, oy) {
+// suffix は壁の way-object の名前の後ろ（"" は壁だけの区画 W、"_catenary" は架線つきの区画 WE）
+function lay_pairs(ox, oy, suffix = "") {
   local wd = {}, od = {};
   foreach (v in ["single", "back", "center", "front"]) wd[v] <- way_desc_x("ami_rail_ballast_base_" + v);
-  foreach (v in ["single", "back", "center", "front", "close"]) od[v] <- wayobj_desc_x("ami_wall_rail_" + v);
+  foreach (v in ["single", "back", "center", "front", "twin"]) {
+    od[v] <- wayobj_desc_x("ami_wall_rail_" + v + suffix);
+    if (od[v] == null) return "ami_wall_rail_" + v + suffix + " desc=[missing]\n";
+  }
   local c = function(x, y) { return coord3d(ox + x, oy + y, 0); };
   local way = function(v, x0, y0, x1, y1) { return command_x.build_way(pl, c(x0, y0), c(x1, y1), wd[v], true); };
   local obj = function(v, x0, y0, x1, y1) { return command_x.build_wayobj(pl, c(x0, y0), c(x1, y1), od[v]); };
-  local s = r("W label", marker.work(pl, c(0, -2), "walls: double track"));
+  local tag = suffix == "" ? "W" : "WE";
+  local s = r("W label", marker.work(pl, c(0, -2), suffix == "" ? "walls: double track" : "walls + catenary: double track"));
   // W1: way は東西の辺を先に、南北の辺を後に敷く（角のタイルは後から敷いた南北の辺の版になる。スクリプトの build_way は置き換える）。
   // 壁は南北の辺を先に敷く（同じ速さの壁を後から敷くと、前の版のまま向きだけ足される。obj/wayobj.cc の extend_wayobj）
   local EW = [["back", 0, 0, 12, 0], ["front", 0, 9, 12, 9], ["front", 1, 1, 11, 1], ["back", 1, 8, 11, 8]];
@@ -164,7 +184,7 @@ function lay_pairs(ox, oy) {
   foreach (e in NS) s += r("W1 wall", obj(e[0], e[1], e[2], e[3], e[4]));
   foreach (e in EW) s += r("W1 wall", obj(e[0], e[1], e[2], e[3], e[4]));
   foreach (p in [[0, 0], [1, 0], [0, 1], [12, 0], [11, 1], [12, 9], [11, 8], [0, 9], [1, 8]])
-    checks += "[check] W1 (" + p[0] + "," + p[1] + ") " + names(ox + p[0], oy + p[1]) + "\n";
+    checks += "[check] " + tag + "1 (" + p[0] + "," + p[1] + ") " + names(ox + p[0], oy + p[1]) + "\n";
   // W2
   foreach (g in [[16, 0, 1], [16, 16, -1]]) {
     s += r("W2 back", stair(wd["back"], ox + g[0], oy + g[1], 5, g[2]));
@@ -175,13 +195,13 @@ function lay_pairs(ox, oy) {
       for (local y = -1; y <= 6; y++) {
         local yy = g[1] + g[2] * y;
         if (!square_x(ox + x, oy + yy).get_ground_tile().has_two_ways()) continue;
-        s += r("W2 close", obj("close", x, yy, x, yy));
-        checks += "[check] W2 (" + x + "," + yy + ") " + names(ox + x, oy + yy) + "\n";
+        s += r("W2 twin", obj("twin", x, yy, x, yy));
+        checks += "[check] " + tag + "2 (" + x + "," + yy + ") " + names(ox + x, oy + yy) + "\n";
       }
     }
-    // close で置き換えると、前の way-object が消えるときに隣のタイルの壁の向きから自分の側を外す（obj/wayobj.cc の ~wayobj_t）。
-    // 新しい close は向きを引き継ぐので隣へつなぎ直さない。back・front を同じ経路にもう一度敷いて、隣の向きを戻す
-    // （close の方が速いので、分け合うタイルは close のまま向きだけ足される）
+    // twin で置き換えると、前の way-object が消えるときに隣のタイルの壁の向きから自分の側を外す（obj/wayobj.cc の ~wayobj_t）。
+    // 新しい twin は向きを引き継ぐので隣へつなぎ直さない。back・front を同じ経路にもう一度敷いて、隣の向きを戻す
+    // （twin の方が速いので、分け合うタイルは twin のまま向きだけ足される）
     s += r("W2 back wall again", stair_wo(od["back"], ox + g[0], oy + g[1], 5, g[2]));
     s += r("W2 front wall again", stair_wo(od["front"], ox + g[0] + 1, oy + g[1], 5, g[2]));
   }
@@ -198,11 +218,17 @@ foreach (n, o in ORIGINS) {
   foreach (i, pr in WALLED) report += lay(pr[0], pr[1], o[0], o[1] + (WAYS.len() + i) * SPACING);
   local wy = o[1] + (WAYS.len() + WALLED.len()) * SPACING;
   report += lay_pairs(o[0], wy);
+  // 架線つきの壁（CATENARY と区画 WE）
+  local cy = wy + SPACING;
+  foreach (i, pr in CATENARY) report += lay(pr[0], pr[1], o[0], cy + i * SPACING);
+  local wey = cy + CATENARY.len() * SPACING;
+  report += lay_pairs(o[0], wey, "_catenary");
   if (n == SNOW) {
-    local y1 = wy + W_AREA[1];
+    local y1 = wey + W_AREA[1];
     report += r("climate", command_x(tool_set_climate).work(pl, coord3d(o[0] - 2, o[1] - 3, 0), coord3d(o[0] + AREA[0], y1, 0), "7"));
   }
 }
+foreach (e in elec_spots) checks += "[check] " + e[0] + " (" + e[1] + "," + e[2] + ") " + names(e[1], e[2]) + "\n";
 checks += "[check] pin tool=" + (pin != null) + "\n";
 gui.close_all_windows();
 return (report == "" ? "ok\n" : "check\n" + report) + checks;

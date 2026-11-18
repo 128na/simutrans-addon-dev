@@ -52,6 +52,10 @@ from .track_parts import (  # noqa: F401
     TRACK_SNOW_WEAR_SKIN,
     TRACK_WEAR_SKIN,
 )
+from .catenary_parts import (  # noqa: F401
+    CAT_POLE_TOP,
+    is_catenary,
+)
 from .wall_parts import (  # noqa: F401
     PIER_L,
     PIER_W,
@@ -393,7 +397,9 @@ def select_walls(obs, name, paths, side, wall_names=None, origin=None):
     """側壁のバリエーション（複線以上を並べて作るとき用）: back はカメラから遠い側の壁だけ、front は近い側の壁だけ、center は無し。
     残さない壁は消して obs から外し、残した壁（高さのある部品）を返す。行き止まりの端の壁は、壁のある版ならいつも残す。
     手前/奥を分ける向き: T字は、まっすぐ通る道（東西か南北）に対して手前か奥かで決める（分岐の向きで壁が変わる）。
-    南北の道は東が手前、東西の道は南が手前。それ以外はカメラの向き（NEAR_AXIS）。origin を渡すと、手前/奥をその点から測る"""
+    南北の道は東が手前、東西の道は南が手前。それ以外はカメラの向き（NEAR_AXIS）。origin を渡すと、手前/奥をその点から測る。
+    架線の部品（catenary_parts）は壁に数えない: 柱は壁と同じ決め方で残すか消し（center は無し）、梁・トロリ線はいつも残す。
+    返すのは壁だけ（基盤・端の壁の削りに使う）"""
     axis = {"nse": Vector((1, 0, 0)), "nsw": Vector((1, 0, 0)),
             "new": Vector((0, -1, 0)), "sew": Vector((0, -1, 0))}.get(_junction(name), NEAR_AXIS)
     if origin is None and len(paths) > 1:
@@ -401,9 +407,10 @@ def select_walls(obs, name, paths, side, wall_names=None, origin=None):
     near = near_camera(obs, axis, origin=origin)
     keep = {"both": lambda ob: True, "center": lambda ob: False,
             "front": lambda ob: ob in near, "back": lambda ob: ob not in near}[side]
-    walls = [ob for ob in obs if ob.get("tall")]
+    walls = [ob for ob in obs if ob.get("tall") and not is_catenary(ob)]
     kept = [ob for ob in walls if ob.name.startswith("endw") or keep(ob)]
-    for ob in [ob for ob in walls if ob not in kept]:
+    poles = [ob for ob in obs if ob.get("tall") and is_catenary(ob) and ob["pname"].startswith("cat_pole")]
+    for ob in [ob for ob in walls if ob not in kept] + [ob for ob in poles if not keep(ob)]:
         obs.remove(ob)
         bpy.data.objects.remove(ob, do_unlink=True)
     return kept
@@ -421,6 +428,27 @@ def trim_end_walls(kept, paths, k, move, wu=None, ww=None, zr=(-2, 2)):
         for v in cutter.data.vertices:
             v.co += move
     for ob in end_walls:
+        boolean(ob, cutter)
+    bpy.data.objects.remove(cutter, do_unlink=True)
+
+
+def trim_catenary(obs, kept, paths, k, move):
+    """架線の梁から、残した側壁の外側を削る（壁のある側は壁の外の面で止まり、壁の無い側はタイルの端まで延びて隣の線の梁とつながる）。
+    削る型は trim_end_walls と同じ（_beyond_prisms）で、高さを坂（急坂で 2 段）の上の梁まで広げる。
+    低いと急坂で梁の上の部分が型からはみ出し、削った形が壊れてタイルいっぱいの塊になった"""
+    beams = [ob for ob in obs if is_catenary(ob) and ob["pname"] == "cat_beam"]
+    sides = [ob for ob in kept if ob["pname"] in ("wallL", "wallR")]
+    if not (beams and sides):
+        return
+    cut = _beyond_prisms(sides, paths, k, zr=(-2, CAT_POLE_TOP + 2 * H + 4), ref_move=move)
+    if not cut:
+        return
+    cutter = mesh_object("catcut", *merge(cut), material(*_M_WALL))
+    recalc_normals(cutter)
+    if move is not None:
+        for v in cutter.data.vertices:
+            v.co += move
+    for ob in beams:
         boolean(ob, cutter)
     bpy.data.objects.remove(cutter, do_unlink=True)
 
@@ -576,7 +604,9 @@ def track_sheet(profile="new"):
             shape = name.replace("curve_", "diag_") if diag_of and name.startswith("curve_") else name
             div = 2 if shape in ("diag_nw", "diag_se", "close1") else 1
             widths = {"gauge": DIAG_RAIL, "bed": DIAG_BALLAST} if shape.startswith(("diag_", "close")) else None
-            kw = dict(widths=widths, div=div, groups=grp, ends=name in ("s", "w", "n", "e"), skin=skin)
+            # 架線の柱・梁（catenary_support）は経路が 1 本のセルだけに作る（分岐・十字に経路ごとの門を作らない。トロリ線は全部の経路）
+            cell_grp = grp if len(paths) == 1 else tuple(g for g in grp if g != "catenary_support")
+            kw = dict(widths=widths, div=div, groups=cell_grp, ends=name in ("s", "w", "n", "e"), skin=skin)
             if prof.get("wall_sheet") and slope:
                 # 壁を way-object に分ける版の坂: 壁をタイルの外へ長めに残す。坂では基準面の動きが平地と違い、
                 # 上がった側の端の最後の列が欠けて、隣の平らなタイルの壁との間に 1px のすき間が出た（持ち分は render_layers で 1 列広げる）
@@ -613,6 +643,8 @@ def track_sheet(profile="new"):
             mask_slope = slope
             kb = (widths or {}).get("bed", 1.0)
             trim_end_walls(kept, paths, kb, datum_move(prof["datums"]["bed"], slope, div))
+            if "catenary_support" in grp:
+                trim_catenary(obs, kept, paths, kb, datum_move(prof["datums"]["bed"], slope, div))
             if "base" in grp:
                 bmat = (skin or {}).get("base", _M_BASE)
                 if name == "single":
@@ -629,7 +661,7 @@ def track_sheet(profile="new"):
             cname = f"{prof['sheet']}{suffix}_{name}"
             if wall_sheet and any(ob.get("tall") for ob in obs):
                 # 壁を way-object に分ける版: 本体（壁なし）は way のシート、壁は way-object のシート（夏の絵だけ）へ
-                body, wback, wfront = render_layers(cname, obs, True, exits_of(name), mask_slope, cy, prof["spill"], WALL_RISE,
+                body, wback, wfront = render_layers(cname, obs, True, exits_of(name), mask_slope, cy, prof["spill"], prof.get("rise", WALL_RISE),
                                                     prof.get("solid", False), prof.get("lower", 0), separate=True,
                                                     tall_layers=row0 == 0, origin=origin)
                 cells[(pos[0] + row0, pos[1])] = body
@@ -677,6 +709,8 @@ def track_sheet(profile="new"):
         clear_models()
         assemble(parts, [straight(S, N)], prof["datums"], groups=groups, skin=track_skin(groups))
         cells[(0, 1)] = render_cursor("track_trial_cursor", "100", "track")
+    elif prof.get("wall_only"):
+        pass  # way のシートを書かない版（下）
     elif "walls" in prof or "band" in prof:
         # 側壁のバリエーションは右下の印（S・B・C・F）、橋は下の帯で区別する
         cells[(0, 0)] = render_icon(prof["sheet"] + "_icon", 0.5, shift=(-0.14, 0.2), label=prof.get("label", "100"), style="track",
@@ -687,12 +721,15 @@ def track_sheet(profile="new"):
         cells[(0, 1)] = cells[(0, 2)]  # カーソルは ns と同じ絵
 
     rows = block * (2 if prof.get("snow") else 1)
-    make_sheet(cells, rows, 15 if any(c >= 10 for _, c in cells) else 10, os.path.join(SRC, prof["sheet"] + ".png"))
+    # prof["wall_only"]（無くてよい）: way のシートを書かず、壁の way-object のシートだけを書く（架線つきの壁。way は基盤の版と同じ絵なので、
+    # 基盤の版の対象が書く。prof["sheet"] は作業ファイル（work/）の名前にだけ使うので、基盤の版と別の名前にする）
+    if not prof.get("wall_only"):
+        make_sheet(cells, rows, 15 if any(c >= 10 for _, c in cells) else 10, os.path.join(SRC, prof["sheet"] + ".png"))
     if wall_sheet:
         # 壁の way-object のアイコン（仮の絵。way と同じ絵に、印と W を書く）とカーソル（直線の奥の壁）
         clear_models()
         assemble(TRACK_PARTS, [straight((0, -12), (0, 12), ext=0.6)], clip=False)
-        wcells[(0, 0)] = render_icon(wall_sheet + "_icon", 0.5, shift=(-0.14, 0.2), label="W", style="track",
+        wcells[(0, 0)] = render_icon(wall_sheet + "_icon", 0.5, shift=(-0.14, 0.2), label=prof.get("wall_label", "W"), style="track",
                                      badge=ICON_BADGE.get(prof.get("walls")))
         ns = wcells.get((0, 2)) or wcells.get((WALL_FRONT_ROW, 2))  # front の版の直線は手前の絵だけ
         ns = ns or wcells.get((0, 5))  # 側壁の無い版（center）は、行き止まりの端の壁の絵をカーソルにする
