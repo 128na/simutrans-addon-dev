@@ -19,8 +19,12 @@ ami_wall_rail_twin_catenary は近い斜めの分け合うタイル用で、斜�
 
 橋（BRIDGES）とトンネル（TUNNELS）は blender-poc の橋・トンネルと同じシートの並びで、手前の絵は無い（壁は way-object）。
 makeobj は橋の手前のキーが無いと警告するので、手前のキーは全部、空のセル（BRIDGE_EMPTY_CELL）を指す（README の「橋とトンネルの作り」）。
+
+way・基盤・高架・橋・トンネルの名前は、軌道の種類の表（blender/catalog.py）から展開する。
 """
 import os
+
+import catalog
 
 SRC = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
 NL = chr(10)
@@ -52,30 +56,35 @@ VALUES = {
 
 # カーブを斜めの絵で表すシート（pak128 標準の線路と同じ。dat の image[sw]・[nw]・[ne]・[se] が diagonal と同じセルを指す。
 # シートのカーブのセル（行 2 の列 5〜8）は描かない。render.py の diag_curves と同じにする）
-DIAG_CURVES = {"ami_rail_ballast"}
+DIAG_CURVES = {_t.way for _t in catalog.TRACKS}
 CURVE_TO_DIAG = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
 
 # 絵を作った way（名前 → シート名）。dat と pak を作る
-BUILT = {"ami_rail_ballast": "ami_rail_ballast"}
-BASE_VARIANTS = ("single", "back", "center", "front")
-for _v in BASE_VARIANTS:
-    BUILT[f"ami_rail_ballast_base_{_v}"] = f"ami_rail_ballast_base_{_v}"
-    VALUES[f"ami_rail_ballast_base_{_v}"] = VALUES["ami_rail_ballast"]
-    # 基盤の版はカーブのセル（行 2 の列 5〜8）を斜めの形で描く（render.py の curve_cells）。斜めのセルとは基盤の削り方だけが違う:
-    # 斜めのセルは近い斜めの分け合うタイルのために、壁の無い側を 2 本の真ん中で削る。カーブ（斜めが続かない曲がり）は削らない
-NO_CLOSE = {f"ami_rail_ballast_base_{_v}" for _v in BASE_VARIANTS}  # 近い斜めの絵を持たない way
+BUILT = {}
+BASE_VARIANTS = catalog.VARIANTS
+NO_CLOSE = set()  # 近い斜めの絵を持たない way
+for _t in catalog.TRACKS:
+    BUILT[_t.way] = _t.way
+    for _v in BASE_VARIANTS:
+        # 基盤の版はカーブのセル（行 2 の列 5〜8）を斜めの形で描く（render.py の curve_cells）。斜めのセルとは基盤の削り方だけが違う:
+        # 斜めのセルは近い斜めの分け合うタイルのために、壁の無い側を 2 本の真ん中で削る。カーブ（斜めが続かない曲がり）は削らない
+        _n = _t.base(_v)
+        BUILT[_n] = _n
+        VALUES[_n] = VALUES[_t.way]
+        NO_CLOSE.add(_n)
 
 # ---------------------------------------------------------------- 高架の 4 版（#18）
 # 基盤の版と同じ並び（近い斜めの絵を持たない）で、system_type=1。値は仮: iss と同じく地上の 2 倍の費用・維持費（速さは地上と同じ）
 ELEV_COST_K = 2
 ELEVATED = set()
-for _v in BASE_VARIANTS:
-    _n = f"ami_rail_ballast_elev_{_v}"
-    BUILT[_n] = _n
-    VALUES[_n] = dict(VALUES["ami_rail_ballast"], cost=VALUES["ami_rail_ballast"]["cost"] * ELEV_COST_K,
-                      maintenance=VALUES["ami_rail_ballast"]["maintenance"] * ELEV_COST_K)
-    NO_CLOSE.add(_n)
-    ELEVATED.add(_n)
+for _t in catalog.TRACKS:
+    for _v in BASE_VARIANTS:
+        _n = _t.elev(_v)
+        BUILT[_n] = _n
+        VALUES[_n] = dict(VALUES[_t.way], cost=VALUES[_t.way]["cost"] * ELEV_COST_K,
+                          maintenance=VALUES[_t.way]["maintenance"] * ELEV_COST_K)
+        NO_CLOSE.add(_n)
+        ELEVATED.add(_n)
 
 # ---------------------------------------------------------------- 橋脚の way（#18）
 # 高架の真下の地面のタイルに敷く。waytype は tram_track（iss と同じ。ユーザーの決定、2026-11-18。README の「高架と橋脚の作り」）。
@@ -130,11 +139,11 @@ BRIDGE_STARTS = (("n", 0), ("s", 1), ("e", 2), ("w", 3))  # Start の向き → 
 BRIDGE_FRONT_KEYS = (("image", "ns ew".split()), ("start", "nsew"), ("ramp", "nsew"), ("pillar", "sw"),
                      ("image2", "ns ew".split()), ("start2", "nsew"), ("ramp2", "nsew"), ("pillar2", "sw"))
 BRIDGE_EMPTY_CELL = "0.9"
-BRIDGES = {"ami_rail_ballast_bridge": ("ami_rail_ballast", "ami_rail_ballast_bridge")}  # 名前 → (地上の way, シート)
+BRIDGES = {_t.bridge: (_t.way, _t.bridge) for _t in catalog.TRACKS}  # 名前 → (地上の way, シート)
 # トンネルのシートの並び（sheetlib の tunnel_sheet）: 行 0 が奥の絵、行 1 が手前の絵（坑口の躯体）、行 2・3 が雪。列 2〜5 が n・s・e・w。
 # image[N] は北が高い坂のタイル。トンネルの中の way は地上の通常の版（way=）
 TUNNEL_DIRS = (("n", 2), ("s", 3), ("e", 4), ("w", 5))
-TUNNELS = {"ami_rail_ballast_tunnel": ("ami_rail_ballast", "ami_rail_ballast_tunnel")}  # 名前 → (中の way, シート)
+TUNNELS = {_t.tunnel: (_t.way, _t.tunnel) for _t in catalog.TRACKS}  # 名前 → (中の way, シート)
 
 
 def _head(name, kind, obj, base, cost_k, sheet):
