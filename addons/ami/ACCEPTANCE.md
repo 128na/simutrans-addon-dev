@@ -60,4 +60,4 @@ AMI の初版を「できた」と言うための条件。blender-poc の [ACCEP
 | # | 条件 | 状態 | 確かめ方 |
 |---|---|---|---|
 | 6-1 | 全部入りのまとめの pak と、種類ごとの pak がある | ○（`ami.pak`・`ami_rail.pak`。dat が無い種類の pak は、dat を足すと作られる） | `dist/` の中身 |
-| 6-2 | 値（費用・維持費・登場年）が README の一覧どおり | ○（今ある `ami_rail_ballast`。高架の 4 版・壁・橋脚の値は仮で、README の各節に書いた） | `blender/ami_dat.py` の `VALUES` と README の表を突き合わせる |
+| 6-2 | 値（費用・維持費・登場年）が README の一覧どおり | ○（今ある `ami_rail_ballast`。高架の 4 版・壁・橋脚の値と、橋・トンネルの値（費用 60000・維持費 1200・速さ 160）は仮で、README の各節に書いた） | `blender/ami_dat.py` の `VALUES` と README の表を突き合わせる |

@@ -690,8 +690,7 @@ def track_sheet(profile="new"):
                         obs.append(build_base(kept, paths, kb, prof["datums"]["bed"], slope, div, _M_ELEV_BODY, extra_cut=body_cut,
                                               **body_kw))
                 if name in grounds:
-                    # prof["deck_u"]（無くてよい）: 躯体の横幅（経路から）。無ければ壁の外の面まで（build_start_body の既定）
-                    obs.append(build_start_body(paths[0], grounds[name], prof["datums"]["bed"], _M_BASE, u=prof.get("deck_u")))
+                    obs.append(build_start_body(paths[0], grounds[name], prof["datums"]["bed"], _M_BASE))
                     mask_slope = grounds[name]  # 持ち分を、坂の地面まで下へ広げる
             cname = f"{prof['sheet']}{suffix}_{name}"
             # 持ち分を下へ広げる行数（prof["lower"]。高架の躯体）。地面に接する橋の端（solid の坂・坂から始まる端）では広げない。
