@@ -121,20 +121,22 @@ PIER_GATE_LABEL = "G"
 
 # ---------------------------------------------------------------- 橋とトンネル（ADR 0003。#19）
 # 橋（ami_rail_ballast_bridge、obj=bridge）: 欄干を描かず、壁・架線は地上と同じ way-object を橋の上に重ねる（橋の 4 版は作らない）。
-# 床は 1 つの絵で single・back・center・front のどの壁とも組むので、高架の center と同じく基盤・躯体をタイルの幅いっぱいにする
-# （並べた橋の床がつながる。single の壁では壁の外に床が張り出す。README の「橋とトンネルの作り」）。
+# 床は 1 つの絵で single・back・center・front のどの壁とも組む。床（基盤）と躯体は壁の位置で止め、高架の single と同じ作りにする
+# （壁の外に床の縁が出ない。back・center・front を並べた橋は、床の間にすき間が出る。2026-11-18、ユーザーの決定。README の「橋とトンネルの作り」）。
+# 壁は way-object が描くので、ここでは基盤を削るためだけに置き、シートには書かない（write_walls。高架の版と同じ）。
 # セルは blender-poc の橋（track_bridge）と同じ並び: 行 0 の列 2・3 が平らな橋、行 1 が端の坂（Ramp・Ramp2）、行 2 が橋脚、行 3 が坂から始まる端
 # （Start・Start2）。手前の絵は無い（欄干が無く、車両より手前に描く物が無い）。雪の絵は 4 行下
-BRIDGE_DECK_U = R.TILE / 2  # 床・端の坂の躯体・Start の躯体の横幅（経路から。タイルの端まで）
+# BRIDGE_DECK_U: 床・端の坂の躯体・Start の躯体の横幅（経路から）。single の壁の外の面。床（基盤）は walls=both の壁の外の面で削られ、同じ幅になる
+BRIDGE_DECK_U = R.WALL_U + R.WALL_W
 BRIDGE_PIER = (R.PIER_SIZE * R.PIER_ACROSS_K, R.PIER_SIZE, R._M_PIER)  # 橋脚の柱（横切る向き × 沿う向き）。高架の単柱の橋脚と同じ太さ
 BRIDGE_CELLS = ("ns", "ew", "up12", "up9", "up3", "up6", "up2_12", "up2_9", "up2_3", "up2_6")
 _RAMP_BODY = next(p for p in R.TRACK_EXTRAS if p.name == "rampbody")
+_BRIDGE_BASE = R.TRACK_PROFILES["rail_ballast_elev_single"]
 R.TRACK_PROFILES["rail_ballast_bridge"] = dict(
-    R.TRACK_PROFILES["rail_ballast_elev_center"], sheet="ami_rail_ballast_bridge", wall_sheet=None, write_walls=False,
-    groups=("body", "base", "weathering", "ramp"), only=BRIDGE_CELLS, starts=True, piers=True, solid=True,
+    _BRIDGE_BASE, sheet="ami_rail_ballast_bridge", write_walls=False,
+    groups=_BRIDGE_BASE["groups"] + ("ramp",), only=BRIDGE_CELLS, starts=True, piers=True, solid=True,
     pier_box=BRIDGE_PIER, deck_u=BRIDGE_DECK_U, band="bridge", badge=None,
-    replace=dict(R.TRACK_PROFILES["rail_ballast_elev_center"]["replace"],
-                 rampbody=dataclasses.replace(_RAMP_BODY, shape=R.ramp_body_shape(BRIDGE_DECK_U))))
+    replace=dict(_BRIDGE_BASE["replace"], rampbody=dataclasses.replace(_RAMP_BODY, shape=R.ramp_body_shape(BRIDGE_DECK_U))))
 
 # トンネル（ami_rail_ballast_tunnel、obj=tunnel）: blender-poc の坑口（sheetlib の tunnel_sheet。躯体はタイル全体の箱、口は低い側の辺）に、
 # 在来線の通常の版の道床（砕石のまだら）・まくらぎ・レール・汚れを入れたもの。壁・架線は坑口のタイルにも way-object を重ねる
