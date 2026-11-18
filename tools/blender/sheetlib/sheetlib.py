@@ -694,10 +694,14 @@ def track_sheet(profile="new"):
                     obs.append(build_start_body(paths[0], grounds[name], prof["datums"]["bed"], _M_BASE, u=prof.get("deck_u")))
                     mask_slope = grounds[name]  # 持ち分を、坂の地面まで下へ広げる
             cname = f"{prof['sheet']}{suffix}_{name}"
+            # 持ち分を下へ広げる行数（prof["lower"]。高架の躯体）。地面に接する橋の端（solid の坂・坂から始まる端）では広げない。
+            # 坂の低い側では、基盤・躯体が地面より下にあり、広げると地面の下の部分が描かれて、隣の地上の線路の上に帯（基盤の端の面）と、
+            # 手前の壁の下に三角が出た（AMI の橋。2026-11-18、ユーザーの確認用の保存データ）。坂の躯体・Start の躯体は solid・grounds で地面まで描く
+            lower = 0 if prof.get("solid") and (slope or name in grounds) else prof.get("lower", 0)
             if wall_sheet and any(ob.get("tall") for ob in obs):
                 # 壁を way-object に分ける版: 本体（壁なし）は way のシート、壁は way-object のシート（夏の絵だけ）へ
                 body, wback, wfront = render_layers(cname, obs, True, exits_of(name), mask_slope, cy, prof["spill"], prof.get("rise", WALL_RISE),
-                                                    prof.get("solid", False), prof.get("lower", 0), separate=True,
+                                                    prof.get("solid", False), lower, separate=True,
                                                     tall_layers=row0 == 0 and write_walls, origin=origin)
                 cells[(pos[0] + row0, pos[1])] = body
                 if wback:
@@ -707,12 +711,12 @@ def track_sheet(profile="new"):
             elif any(ob.get("tall") for ob in obs):
                 cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, True, exits_of(name), mask_slope, cy,
                                                                       prof["spill"], WALL_RISE, prof.get("solid", False),
-                                                                      prof.get("lower", 0), origin=origin)
+                                                                      lower, origin=origin)
                 if front:
                     cells[(pos[0] + row0 + prof["front_row"], pos[1])] = front
             else:
                 cells[(pos[0] + row0, pos[1])] = render_cell(cname, exits_of(name), slope=mask_slope, cy=cy, spill=prof["spill"],
-                                                             solid=prof.get("solid", False), lower=prof.get("lower", 0))
+                                                             solid=prof.get("solid", False), lower=lower)
 
     if prof.get("piers"):
         # 橋脚: 橋の下の地面のタイルに立つ柱（高さ 1 段）。線路の向きに直角に長い。(2, 0) が南北の橋、(2, 1) が東西の橋
