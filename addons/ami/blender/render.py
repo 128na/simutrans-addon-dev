@@ -13,6 +13,7 @@
     src/ami_wall_rail_twin_catenary_<back|front>.png  近い斜めの分け合うタイル用の架線つきの壁の絵（back・front の版で、斜めの梁を短くした）
     src/ami_rail_ballast_elev_<版>.png  高架の版（4 版）の way。基盤の版の絵の下に躯体を足す（橋脚・壁は描かない）
     src/ami_pier_rail.png     高架の真下の地面に敷く橋脚の way
+    src/ami_pier_rail_gate.png  門型の橋脚の way（柱をタイルの角の近くに立て、直下に道路を通せる）
     work/                     セルごとの生の描画結果（確認用）
 """
 import dataclasses
@@ -113,6 +114,8 @@ for _v in BASE_VARIANTS:
 # 橋脚の way（ami_pier_rail）: 高架の真下の地面のタイルに敷く。柱の上端は高架の躯体の下面に合わせる（sheetlib の pier_sheet）。
 # 基準面は在来線と同じ（高架の床と同じ動かし方）
 PIER_LABEL = "P"  # アイコンの文字（仮。アイコンはステップ 13 でまとめて作る）
+# 門型の橋脚の way（ami_pier_rail_gate。#18 の追加）: 柱をタイルの角の近くに立て、上に梁を渡す（sheetlib の pier_gate_sheet）
+PIER_GATE_LABEL = "G"
 
 # ---------------------------------------------------------------- 対象（シート名 → 描く関数）
 # 基盤の版の対象は、way のシートと壁の way-object のシートを 1 つのプロセスで描く
@@ -129,6 +132,7 @@ for _v in TWIN_FROM:
 for _v in BASE_VARIANTS:
     SHEETS[f"ami_rail_ballast_elev_{_v}"] = lambda v=_v: R.track_sheet(f"rail_ballast_elev_{v}")
 SHEETS["ami_pier_rail"] = lambda: R.pier_sheet("ami_pier_rail", _DATUMS, label=PIER_LABEL)
+SHEETS["ami_pier_rail_gate"] = lambda: R.pier_gate_sheet("ami_pier_rail_gate", _DATUMS, label=PIER_GATE_LABEL)
 
 if __name__ == "__main__":
     R.run_targets(SHEETS, list(SHEETS))

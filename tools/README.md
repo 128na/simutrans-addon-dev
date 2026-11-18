@@ -44,8 +44,10 @@ D:\bin\blender\blender.exe -b --factory-startup --python ..\..\tools\blender\com
   - 描き分けのキー: `rise`（高さのある部品の持ち分を上へ広げる行数。既定は壁の `WALL_RISE`。架線は `CAT_RISE`）、`wall_only`（way のシートを書かず、壁の way-object のシートだけを書く。`sheet` は作業ファイルの名前にだけ使うので、同じ way の別の対象と違う名前にする）、`wall_label`（壁の way-object のアイコンの文字。既定は `W`）
 - 高架と橋脚（AMI の高架の版。#18）:
   - 描き分けのキー: `elev_body`（基盤の下に躯体を足す。`build_base` を `z0=-BASE_H`・`depth=ELEV_BODY_D`・`wu=WALL_U - ELEV_BODY_INSET` で呼び、基盤と同じ決め方で削る。斜めの壁の無い側は `_diag_open_cut(..., inset=ELEV_BODY_DIAG_INSET)` で、基盤と同じ下ほど中心線へ寄る切り口で切る。縦に切ると、奥の線の躯体の切り口が手前の線の床の上に出た）、`write_walls`（False で壁の way-object のシートを書かない。壁を選ぶ処理は基盤の版と同じなので、基盤・躯体の削り方は壁の way-object と合う）。持ち分を下へ広げる行数は `ELEV_BODY_LOWER`（`lower`）
-  - `build_base` の `z0`・`depth`・`name`、`_diag_open_cut` の `inset` は、既定の値で前と同じ形になる（既存のシートは画素単位で変わらないことを、blender-poc の描画対象 29 個（`src/` で追跡しているシート 28 枚と、`work/` に書くアイコンの一覧）と AMI の既存の対象で確かめた。2026-11-18）
+  - `build_base` の `z0`・`depth`・`name`、`_diag_open_cut` の `inset` は、既定の値で前と同じ形になる（既存のシートは画素単位で変わらないことを、blender-poc の描画対象 29 個（`src/` で追跡しているシート 28 枚と、`work/` に書くアイコンの一覧）と AMI の既存の対象で確かめた。2026-11-18、#36 の時点）
+  - `ELEV_BODY_D` を 1.0 から 0.25 に浅くした変更（2 階建てバスを高架の下に通すため。PR #37、2026-11-18）では、AMI の高架の 4 版（`ami_rail_ballast_elev_<版>`）と橋脚の 2 種（`ami_pier_rail`・`ami_pier_rail_gate`）のシートだけが変わる。blender-poc と AMI のほかのシートは画素単位で変わらないことを、描き直して確かめた
   - `pier_sheet(sheet, datums, label, across)`: 橋脚の way のシート（線路と同じセルの並び、4 × 10）。経路の中ほどに柱を 1 本（近い斜めは 2 本）立て、上端を高架の躯体の下面に `PIER_TOP_OVERLAP` 重ね、下端は地面の下 `PIER_FOOT` まで。坂は `apply_slope` で地面の坂を当てる。持ち分は地面の菱形を `PIER_RISE` 行上へ広げたもので、不透明度 250 未満を捨てる
+  - `pier_gate_sheet(sheet, datums, label)`: 門型の橋脚の way のシート（8 × 10。行 0〜3 が奥の絵、行 `PIER_GATE_FRONT_ROW`〜 が手前の絵）。部品は `_gate_parts` が経路ごとに決める（経路が出る手前の辺（南・東）に門、行き止まりは閉じた側の辺にも門、斜めは中心の柱と外の角への片持ちの梁）。柱と梁の上端は躯体の下面に `PIER_GATE_BEAM_EMBED` 食い込ませ、梁は躯体の下面より `PIER_GATE_BEAM_SHOW` 下まで。寸法は `PIER_GATE_POST`・`PIER_GATE_CLEAR`（`wall_parts.py`）。手前の絵は北西の角の柱と経路より奥の中心の柱を除く（`_GATE_CENTER_FRONT`）。高さ・坂・持ち分は `pier_sheet` と同じ
 - アドオンのディレクトリは、道具が `os.getcwd()` で決める。アドオンの外では動かさない
 - 入口が `tools/blender` を探す相対パスは、`addons/<アドオン>/blender/` から見た `../../../tools/blender`
 

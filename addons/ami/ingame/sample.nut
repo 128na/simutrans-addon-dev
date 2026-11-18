@@ -34,6 +34,14 @@
 //   高架の way を敷き、同じ経路の 2 段上（z=2。坂の上は本体が経路をたどる）に同じ版の壁の way-object を重ね、真下の地面に橋脚の way（PIER）を敷く。
 //   D・E は丘の上を越える高架（高架は地面の坂を引き継ぐ）。その後に区画 W と同じ並びの区画 WV（壁だけ）と WVE（架線つき）、
 //   地上とのつなぎ目の区画 J（高架の両端の先を地面ごと 2 段上げ、地上の基盤の版でつなぐ）
+//
+// 門型の橋脚（PIER_GATE。#18 の追加）: 高架の区画のさらに東（原点 (ox + 2 * ELEV_DX, oy)）に、真下の橋脚の way を門型にして敷き直す。
+//   高架の single の 1 本ずつの区画（A・F・C・B・D・E・I・H）、その南に区画 WV と同じ並び（複線・近い斜め・行き止まりの並び）、
+//   その南に道路の区画 R（高架の下に道路を通す。ROAD の道路）:
+//   R1 南北の高架 (2,0)-(2,10) の真下に道路を並行して敷き、(-2,5)-(6,5) の東西の道路で横切る（十字）
+//   R2 東西の高架 (8,2)-(18,2) の真下に道路を並行して敷き、(13,-2)-(13,6) の南北の道路で横切る
+//   R3 斜めの高架 (22,0) から南東へ 4 段の真下に、同じ斜めの道路を敷く
+//   GATE_ONLY を true にすると、門型の橋脚の区画だけを温暖側に敷く（試すとき）
 local WAYS = ["ami_rail_ballast"];
 // [基盤の版の way, 壁の way-object（null は壁なし）]
 local WALLED = [["ami_rail_ballast_base_single", "ami_wall_rail_single"], ["ami_rail_ballast_base_back", "ami_wall_rail_back"],
@@ -46,6 +54,10 @@ local CATENARY = [["ami_rail_ballast_base_single", "ami_wall_rail_single_catenar
 local ELEVATED = [["ami_rail_ballast_elev_single", "ami_wall_rail_single"], ["ami_rail_ballast_elev_back", "ami_wall_rail_back"],
                   ["ami_rail_ballast_elev_center", "ami_wall_rail_center"], ["ami_rail_ballast_elev_front", "ami_wall_rail_front"]];
 local PIER = "ami_pier_rail";
+local PIER_GATE = "ami_pier_rail_gate";
+local GATE_ONLY = false;
+// 区画 R に敷く道路（pak128 の 50 km/h の道路）
+local ROAD = "Road_050";
 local ELEV_DX = 80;
 local ELEV_UP = 2;       // 高架の床の高さ（段。pak128 の既定）
 local ORIGINS = [[20, 20], [276, 20]];
@@ -263,7 +275,45 @@ function lay_join(ox, oy) {
   return s;
 }
 
+// 区画 R: 高架の下に道路を通す（冒頭の表）。mode は高架で、mode.pier に橋脚の way を入れて呼ぶ
+function lay_roads(ox, oy) {
+  local e = way_desc_x(ELEVATED[0][0]), wo = wayobj_desc_x(ELEVATED[0][1]);
+  local rd = way_desc_x(ROAD);  // 無い名前でも null にならない（使うと失敗する）ので、pak128 にある名前を書く
+  local c = function(x, y) { return coord3d(ox + x, oy + y, 0); };
+  local s = r("R label", marker.work(pl, c(0, -3), "gate piers + road (" + rd.get_name() + ")"));
+  s += r("R1 elev", way2(e, wo, c(2, 0), c(2, 10)));
+  s += r("R1 road", command_x.build_way(pl, c(2, 0), c(2, 10), rd, true));
+  s += r("R1 cross", command_x.build_way(pl, c(-2, 5), c(6, 5), rd, true));
+  s += r("R2 elev", way2(e, wo, c(8, 2), c(18, 2)));
+  s += r("R2 road", command_x.build_way(pl, c(8, 2), c(18, 2), rd, true));
+  s += r("R2 cross", command_x.build_way(pl, c(13, -2), c(13, 6), rd, true));
+  s += r("R3 elev", stair(e, ox + 22, oy + 0, 4, 1, wo));
+  s += r("R3 road", stair(rd, ox + 22, oy + 0, 4, 1));
+  foreach (q in [[2, 5], [2, 3], [13, 2], [11, 2]]) {
+    local g = square_x(ox + q[0], oy + q[1]).get_ground_tile();
+    local w = g.get_way(wt_road), p = g.get_way(wt_rail);
+    checks += "[check] R (" + q[0] + "," + q[1] + ") " + (w == null ? "-" : w.get_desc().get_name()) + " / "
+              + (p == null ? "-" : p.get_desc().get_name()) + "\n";
+  }
+  return s;
+}
+
+// 門型の橋脚の区画（冒頭の表）。高架の single の区画・区画 WV の並び・区画 R
+function lay_gate(gx, gy) {
+  mode.z = ELEV_UP;
+  mode.pier = way_desc_x(PIER_GATE);
+  if (mode.pier == null) { mode.z = 0; return PIER_GATE + " desc=[missing]\n"; }
+  local s = lay(ELEVATED[0][0], ELEVATED[0][1], gx, gy);
+  s += lay_pairs(gx, gy + SPACING, "", "elev");
+  s += lay_roads(gx + 4, gy + 2 * SPACING + 3);
+  mode.z = 0;
+  mode.pier = null;
+  return s;
+}
+
+if (GATE_ONLY) ORIGINS = [ORIGINS[0]];
 foreach (n, o in ORIGINS) {
+  if (GATE_ONLY) { report += lay_gate(o[0] + 2 * ELEV_DX, o[1]); continue; }
   foreach (i, name in WAYS) report += lay(name, null, o[0], o[1] + i * SPACING);
   foreach (i, pr in WALLED) report += lay(pr[0], pr[1], o[0], o[1] + (WAYS.len() + i) * SPACING);
   local wy = o[1] + (WAYS.len() + WALLED.len()) * SPACING;
@@ -287,11 +337,14 @@ foreach (n, o in ORIGINS) {
   mode.z = 0;
   mode.pier = null;
   report += lay_join(ex, vy + 3 * SPACING);
+  report += lay_gate(o[0] + 2 * ELEV_DX, o[1]);
   if (n == SNOW) {
     local y1 = wey + W_AREA[1];
     report += r("climate", command_x(tool_set_climate).work(pl, coord3d(o[0] - 2, o[1] - 3, 0), coord3d(o[0] + AREA[0], y1, 0), "7"));
     report += r("climate elev", command_x(tool_set_climate).work(pl, coord3d(ex - 2, o[1] - 3, 0),
                                                                    coord3d(ex + AREA[0], vy + 3 * SPACING + 14, 0), "7"));
+    report += r("climate gate", command_x(tool_set_climate).work(pl, coord3d(ex + ELEV_DX - 2, o[1] - 3, 0),
+                                                                   coord3d(ex + ELEV_DX + AREA[0], o[1] + 3 * SPACING + 16, 0), "7"));
   }
 }
 foreach (e in elec_spots) checks += "[check] " + e[0] + " (" + e[1] + "," + e[2] + (e[3] ? ",z=" + e[3] : "") + ") " + names(e[1], e[2], e[3]) + "\n";
