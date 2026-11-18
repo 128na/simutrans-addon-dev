@@ -56,7 +56,7 @@ local pl = player_x(0);
 local marker = command_x(tool_set_marker);
 local report = "";
 local checks = "";
-local elec_spots = [];   // 電化を確かめるタイル（[壁の名前, x, y]。架線つきの区画）
+local elec_spots = [];   // 電化を確かめるタイル（[壁の名前, x, y, z]。架線つきの区画。z は高架なら ELEV_UP、地上は 0）
 function r(name, v) { return v == null ? "" : name + "=[" + v + "]\n"; }
 // 高架の区画を敷く間だけ、z を ELEV_UP にし、pier に橋脚の way を入れる（way-object は高架の高さの座標で敷く。地面の座標では敷けない）
 local mode = {z = 0, pier = null};

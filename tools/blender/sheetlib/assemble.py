@@ -383,10 +383,10 @@ DIAG_OPEN_HALF = TILE / (2 * math.sqrt(2))
 DIAG_OPEN_UNDERCUT = 3.0  # 切り口の傾き（高さ 1 あたり中心線へ寄る幅）。基盤の厚み BASE_H で約 1 寄る
 
 
-def _diag_open_cut(walls, path, undercut=DIAG_OPEN_UNDERCUT, inset=0.0):
+def _diag_open_cut(walls, path, inset=0.0):
     """斜めの基盤のうち、壁の無い側で、中心線から DIAG_OPEN_HALF より外を削る柱。
     タイルの角まで塗ると、近い斜めの隣の線のレールを隠し、角が隣の線の壁の外へ三角に突き出す（2026-11-14、ゲームで確認）。
-    inset は高架の躯体用（上の縁を DIAG_OPEN_HALF より inset だけ内で切る）。undercut=0 で縦に切る"""
+    inset は高架の躯体用（切り口を DIAG_OPEN_HALF より inset だけ内へずらす。傾きは基盤と同じ DIAG_OPEN_UNDERCUT）"""
     sides = {-1 if w["pname"] == "wallL" else 1 for w in walls if w["pname"] in ("wallL", "wallR")}
     p0, p1 = Vector((path[0].x, path[0].y)), Vector((path[-1].x, path[-1].y))
     d = (p1 - p0).normalized()
@@ -398,7 +398,7 @@ def _diag_open_cut(walls, path, undercut=DIAG_OPEN_UNDERCUT, inset=0.0):
         a, b = p0 - d * 30, p1 + d * 30
         # 切り口は下ほど中心線へ寄る斜め（上面の縁は DIAG_OPEN_HALF のまま）。縦に切ると、奥の線の切り口の側面（暗い）が
         # 手前の線の床の上に線で見えた（2026-11-14、ゲームで確認）。下向きの面はカメラから見えない
-        lo, hi = DIAG_OPEN_HALF - inset - 2 * undercut, DIAG_OPEN_HALF - inset + 2 * undercut
+        lo, hi = DIAG_OPEN_HALF - inset - 2 * DIAG_OPEN_UNDERCUT, DIAG_OPEN_HALF - inset + 2 * DIAG_OPEN_UNDERCUT
         verts = [Vector((q.x, q.y, -2)) for q in (a + n * lo, b + n * lo, b + n * 40, a + n * 40)]
         verts += [Vector((q.x, q.y, 2)) for q in (a + n * hi, b + n * hi, b + n * 40, a + n * 40)]
         faces = [(3, 2, 1, 0), (4, 5, 6, 7)] + [(i, (i + 1) % 4, 4 + (i + 1) % 4, 4 + i) for i in range(4)]
