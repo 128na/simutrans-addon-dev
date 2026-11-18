@@ -42,6 +42,10 @@ D:\bin\blender\blender.exe -b --factory-startup --python ..\..\tools\blender\com
   - それでも、線の中心が画素の境に来ると半透明の 2 列（2 行）に分かれて、太く見えるか消える。斜めの線は半画素ずらして画素の中心に乗せる（`CAT_DIAG_SHIFT`・`CAT_DIAG_SHIFT_Z`）。直線は傾き 2:1 なので、太さ（`CAT_WIRE_W`・`CAT_WIRE_H`）で 1 行に 2px ずつの階段になるようにした。上下 2 本の線は、間をちょうど 4px（`H / 4`）にして、画素への乗り方をそろえる（2026-11-18）
   - 高さのある部品の層は、架線を足した版と壁だけの版で、壁の画素が減らないことを確かめた（レイアウト検証用モードのシートで、壁だけの版の不透明な画素が透明になった所は 0。変わった画素は架線と重なる所か、架線と壁の境の混ざった色。2026-11-18）
   - 描き分けのキー: `rise`（高さのある部品の持ち分を上へ広げる行数。既定は壁の `WALL_RISE`。架線は `CAT_RISE`）、`wall_only`（way のシートを書かず、壁の way-object のシートだけを書く。`sheet` は作業ファイルの名前にだけ使うので、同じ way の別の対象と違う名前にする）、`wall_label`（壁の way-object のアイコンの文字。既定は `W`）
+- 高架と橋脚（AMI の高架の版。#18）:
+  - 描き分けのキー: `elev_body`（基盤の下に躯体を足す。`build_base` を `z0=-BASE_H`・`depth=ELEV_BODY_D`・`wu=WALL_U - ELEV_BODY_INSET` で呼び、基盤と同じ決め方で削る。斜めの壁の無い側は `_diag_open_cut(..., inset=ELEV_BODY_DIAG_INSET)` で、基盤と同じ下ほど中心線へ寄る切り口で切る。縦に切ると、奥の線の躯体の切り口が手前の線の床の上に出た）、`write_walls`（False で壁の way-object のシートを書かない。壁を選ぶ処理は基盤の版と同じなので、基盤・躯体の削り方は壁の way-object と合う）。持ち分を下へ広げる行数は `ELEV_BODY_LOWER`（`lower`）
+  - `build_base` の `z0`・`depth`・`name`、`_diag_open_cut` の `undercut`・`inset` は、既定の値で前と同じ形になる（既存のシートは画素単位で変わらないことを、blender-poc の全 29 枚と AMI の既存の対象で確かめた。2026-11-18）
+  - `pier_sheet(sheet, datums, label, across)`: 橋脚の way のシート（線路と同じセルの並び、4 × 10）。経路の中ほどに柱を 1 本（近い斜めは 2 本）立て、上端を高架の躯体の下面に `PIER_TOP_OVERLAP` 重ね、下端は地面の下 `PIER_FOOT` まで。坂は `apply_slope` で地面の坂を当てる。持ち分は地面の菱形を `PIER_RISE` 行上へ広げたもので、不透明度 250 未満を捨てる
 - アドオンのディレクトリは、道具が `os.getcwd()` で決める。アドオンの外では動かさない
 - 入口が `tools/blender` を探す相対パスは、`addons/<アドオン>/blender/` から見た `../../../tools/blender`
 

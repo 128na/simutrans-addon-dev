@@ -28,6 +28,7 @@ from .core import (  # noqa: F401
     TILE,
     TRACK_PROFILES,
     WORK,
+    apply_slope,
     arc,
     boolean,
     box,
@@ -57,6 +58,19 @@ from .catenary_parts import (  # noqa: F401
     is_catenary,
 )
 from .wall_parts import (  # noqa: F401
+    BASE_H,
+    ELEV_BODY_D,
+    ELEV_BODY_DIAG_INSET,
+    ELEV_BODY_INSET,
+    ELEV_STEPS,
+    PIER_ACROSS_K,
+    PIER_FOOT,
+    PIER_RISE,
+    PIER_SIZE,
+    PIER_TOP_OVERLAP,
+    WALL_U,
+    _M_ELEV_BODY,
+    _M_PIER,
     PIER_L,
     PIER_W,
     TALL_PAD,
@@ -590,6 +604,9 @@ def track_sheet(profile="new"):
     # prof["wall_sheet"]（無くてよい）: 壁を way の絵に焼き込まず、この名前の way-object のシートに分ける（AMI の基盤の版と壁。ADR 0003）。
     # way のシートには壁を除いた本体（基盤は壁の位置で止まる）を、壁のシートには壁だけを描く
     wall_sheet = prof.get("wall_sheet")
+    # prof["write_walls"]（無くてよい。既定は真）: 偽なら、壁を way の絵から分けるが、壁の way-object のシートは書かない
+    # （高架の版。壁は地上の版と同じ way-object を重ねるので、高架の対象では描かない。壁の層も描かない）
+    write_walls = prof.get("write_walls", True)
     wcells = {}
     # prof["skin"]（無くてよい）は夏の絵だけの材質の差し替え（部品の名前 → 材質）。雪の絵は雪の材質のまま
     summer = dict(track_skin(groups) or {}, **prof.get("skin", {})) or None
@@ -647,14 +664,26 @@ def track_sheet(profile="new"):
                 trim_catenary(obs, kept, paths, kb, datum_move(prof["datums"]["bed"], slope, div))
             if "base" in grp:
                 bmat = (skin or {}).get("base", _M_BASE)
+                # prof["elev_body"]（無くてよい）: 高架の躯体（桁）を基盤の下に足す。基盤と同じ決め方で、壁のある側は壁の外の面から
+                # ELEV_BODY_INSET 内で止め（床の縁が見える）、壁の無い側はタイルの端まで（並べた線の躯体とつながる）
+                body_kw = dict(z0=-BASE_H, depth=ELEV_BODY_D, name="elev_body", wu=WALL_U - ELEV_BODY_INSET)
                 if name == "single":
                     # 1 タイルだけの軌道: 線路も壁も置かず、タイル全面の基盤だけにする（高架のすき間を埋める景観用）
                     for ob in obs:
                         bpy.data.objects.remove(ob, do_unlink=True)
                     obs = [build_base([], paths, kb, prof["datums"]["bed"], slope, div, bmat)]
+                    if prof.get("elev_body"):
+                        obs.append(build_base([], paths, kb, prof["datums"]["bed"], slope, div, _M_ELEV_BODY, **body_kw))
                 else:
                     open_cut = _diag_open_cut(kept, paths[0]) if name.startswith("diag_") else None
                     obs.append(build_base(kept, paths, kb, prof["datums"]["bed"], slope, div, bmat, extra_cut=open_cut))
+                    if prof.get("elev_body"):
+                        # 斜めの壁の無い側は、基盤と同じ下ほど中心線へ寄る切り口にし、上の縁を近い斜めの 2 本の真ん中より内で止める。
+                        # 縦に切ると、奥の線の躯体の切り口（カメラを向く暗い面）が手前の線の床の上に三角に出た（2026-11-18、ゲームで確認）
+                        body_cut = (_diag_open_cut(kept, paths[0], inset=ELEV_BODY_DIAG_INSET)
+                                    if name.startswith("diag_") else None)
+                        obs.append(build_base(kept, paths, kb, prof["datums"]["bed"], slope, div, _M_ELEV_BODY, extra_cut=body_cut,
+                                              **body_kw))
                 if name in grounds:
                     obs.append(build_start_body(paths[0], grounds[name], prof["datums"]["bed"], _M_BASE))
                     mask_slope = grounds[name]  # 持ち分を、坂の地面まで下へ広げる
@@ -663,7 +692,7 @@ def track_sheet(profile="new"):
                 # 壁を way-object に分ける版: 本体（壁なし）は way のシート、壁は way-object のシート（夏の絵だけ）へ
                 body, wback, wfront = render_layers(cname, obs, True, exits_of(name), mask_slope, cy, prof["spill"], prof.get("rise", WALL_RISE),
                                                     prof.get("solid", False), prof.get("lower", 0), separate=True,
-                                                    tall_layers=row0 == 0, origin=origin)
+                                                    tall_layers=row0 == 0 and write_walls, origin=origin)
                 cells[(pos[0] + row0, pos[1])] = body
                 if wback:
                     wcells[pos] = wback
@@ -725,7 +754,7 @@ def track_sheet(profile="new"):
     # 基盤の版の対象が書く。prof["sheet"] は作業ファイル（work/）の名前にだけ使うので、基盤の版と別の名前にする）
     if not prof.get("wall_only"):
         make_sheet(cells, rows, 15 if any(c >= 10 for _, c in cells) else 10, os.path.join(SRC, prof["sheet"] + ".png"))
-    if wall_sheet:
+    if wall_sheet and write_walls:
         # 壁の way-object のアイコン（仮の絵。way と同じ絵に、印と W を書く）とカーソル（直線の奥の壁）
         clear_models()
         assemble(TRACK_PARTS, [straight((0, -12), (0, 12), ext=0.6)], clip=False)
@@ -736,6 +765,69 @@ def track_sheet(profile="new"):
         if ns:
             wcells[(0, 1)] = ns
         make_sheet(wcells, 2 * WALL_FRONT_ROW, 15 if any(c >= 10 for _, c in wcells) else 10, os.path.join(SRC, wall_sheet + ".png"))
+
+
+def pier_sheet(sheet, datums, label="P", across=PIER_SIZE * PIER_ACROSS_K):
+    """高架の真下の地面のタイルに敷く、橋脚の way のシート（AMI。ADR 0003）。セルの位置は線路の way と同じ（行 0〜3）。
+    柱は経路の中ほど（直線・行き止まり・T字・十字はタイルの中心、斜めは斜めの部分の中ほど）の下に、線路を横切る向きに長く立つ。
+    T字・十字は通り抜ける線（T字）・南北の線（十字）の向き。近い斜めの分け合うタイル（close1・close2）は 2 本の柱。
+    上端は高架の躯体の下面（地面から ELEV_STEPS 段 − BASE_H − ELEV_BODY_D）より PIER_TOP_OVERLAP 上で、躯体に隠れる。
+    高架の床と同じ基準面（datums["bed"]）で動かし、坂は高架と同じく地面の坂を当てる（本体の高架は地面の坂を引き継ぐ）。
+    持ち分は地面の菱形を上へ PIER_RISE 行広げた範囲で、輪郭の半透明の画素は捨てる（高さのある部品の層と同じ）"""
+    half = TILE / 2
+    N, S, E, W, O = (Vector((0, half)), Vector((0, -half)), Vector((half, 0)), Vector((-half, 0)), Vector((0, 0)))
+    NS, EW = N - S, E - W
+    mid = lambda a, b: ((a + b) / 2, b - a)  # 斜め: 2 辺の中点を結ぶ経路の中ほどと向き
+    up = lambda n, f: (lambda x, y: n * H * f(x, y) / TILE)
+    jobs = {  # (行, 列): (名前, [(中心, 向き), ...], 坂)
+        (0, 2): ("ns", [(O, NS)], None), (0, 3): ("ew", [(O, EW)], None),
+        (0, 5): ("s", [(O, NS)], None), (0, 6): ("w", [(O, EW)], None),
+        (0, 7): ("n", [(O, NS)], None), (0, 8): ("e", [(O, EW)], None), (0, 9): ("single", [(O, NS)], None),
+        (2, 0): ("diag_sw", [mid(S, W)], None), (2, 1): ("diag_nw", [mid(N, W)], None),
+        (2, 2): ("diag_ne", [mid(N, E)], None), (2, 3): ("diag_se", [mid(S, E)], None),
+        (2, 4): ("close1", [mid(N, W), mid(S, E)], None), (2, 9): ("close2", [mid(N, E), mid(S, W)], None),
+        (3, 5): ("nse", [(O, NS)], None), (3, 6): ("new", [(O, EW)], None), (3, 7): ("nsw", [(O, NS)], None),
+        (3, 8): ("sew", [(O, EW)], None), (3, 9): ("nsew", [(O, NS)], None),
+    }
+    for n, base in ((1, 0), (2, 5)):
+        pre = "up" if n == 1 else "up2_"
+        jobs[(1, base)] = (f"{pre}12", [(O, NS)], up(n, lambda x, y: y + half))
+        jobs[(1, base + 1)] = (f"{pre}9", [(O, EW)], up(n, lambda x, y: half - x))
+        jobs[(1, base + 2)] = (f"{pre}3", [(O, NS)], up(n, lambda x, y: half - y))
+        jobs[(1, base + 3)] = (f"{pre}6", [(O, EW)], up(n, lambda x, y: x + half))
+    if ONLY:
+        jobs = {k: v for k, v in jobs.items() if v[0] in ONLY + ("ns",)}
+    top, bottom = ELEV_STEPS * H - BASE_H - ELEV_BODY_D + PIER_TOP_OVERLAP, -PIER_FOOT
+    set_anchor(128 + BALLAST_DY)  # 線路の way と同じ（dat のオフセット -64,-32）
+    cells = {}
+    for pos, (name, piers, slope) in jobs.items():
+        clear_models()
+        div = 2 if name in ("diag_nw", "diag_se", "close1") else 1
+        for i, (c, d) in enumerate(piers):
+            # close1 は nw と se の 2 本で、どちらも画面で横向きの斜め（div 2）。close2 は縦向き（div 1）
+            ob = mesh_object("pier", *box(c.x, c.y, (top + bottom) / 2, PIER_SIZE, across, top - bottom, rot=math.atan2(d.y, d.x)),
+                             material(*_M_PIER))
+            move = datum_move(datums["bed"], slope, div)
+            if move is not None:
+                for v in ob.data.vertices:
+                    v.co += move
+            if slope:
+                apply_slope(ob, slope)
+        cname = f"{sheet}_{name}"
+        img = load_rgba8(render_cell(cname)).copy()
+        m = _ground_mask(slope, None, GROUND_CY)
+        base = m.copy()
+        for k in range(1, PIER_RISE + 1):
+            m[:-k] |= base[k:]
+        img[..., 3] = np.where(m & (img[..., 3] >= 250), 255, 0)
+        cells[pos] = os.path.join(WORK, cname + "_full.png")
+        save_rgba(cells[pos], img)
+    # アイコン（仮の絵。ステップ 13 でまとめて作る）: 直線の柱に、文字と高架の帯。カーソルは南北の直線の柱
+    clear_models()
+    mesh_object("pier", *box(0, 0, (top + bottom) / 2, PIER_SIZE, across, top - bottom), material(*_M_PIER))
+    cells[(0, 0)] = render_icon(sheet + "_icon", 0.5, shift=(-0.14, 0.2), label=label, style="track", band="elevated")
+    cells[(0, 1)] = cells[(0, 2)]
+    make_sheet(cells, 4, 10, os.path.join(SRC, sheet + ".png"))
 
 
 ICON = 32

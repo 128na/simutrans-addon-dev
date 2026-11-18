@@ -78,6 +78,25 @@ ELEV_STEPS = 2
 
 ELEV_LOWER = 16 * ELEV_STEPS
 
+# 橋脚を別の way に分けた高架（AMI。ADR 0003）: 床（基盤の板 BASE_H）の下に、躯体（桁）を足す。橋脚は高架の真下の地面のタイルの
+# 別の way（pier_sheet）が描き、上端を躯体の下面に合わせる。
+#   ELEV_BODY_D: 躯体の深さ（基盤の下面から）。ELEV_BODY_INSET: 壁のある側で、壁の外の面から躯体の側面を内へ下げる幅（床の縁を見せる）。
+#   ELEV_BODY_LOWER: 躯体を描くために、高架の way の持ち分を下へ広げる行数（深さの px に余りを足す）
+#   ELEV_BODY_DIAG_INSET: 斜めの躯体の壁の無い側で、近い斜めの 2 本の真ん中（DIAG_OPEN_HALF）から内へ下げる幅（隣の線の躯体と重ねない）
+ELEV_BODY_D = 1.0
+ELEV_BODY_INSET = 0.45
+ELEV_BODY_DIAG_INSET = 0.3
+ELEV_BODY_LOWER = math.ceil((BASE_H + ELEV_BODY_D) * 16 / H) + 2
+_M_ELEV_BODY = ("elev_body", (0.56, 0.56, 0.54))
+
+# 高架の橋脚の way（pier_sheet）: 経路の中ほどの下に立つ、線路を横切る向きに長い柱（POC の _pier_box と同じ寸法）。
+# 上端は高架の躯体の下面（地面から ELEV_STEPS 段 − BASE_H − ELEV_BODY_D）より PIER_TOP_OVERLAP だけ上（躯体に隠れる）。
+# 下端は地面より PIER_FOOT だけ下（持ち分で切る）。PIER_RISE: 持ち分を上へ広げる行数
+PIER_TOP_OVERLAP = 0.2
+PIER_FOOT = 0.5
+PIER_RISE = 16 * ELEV_STEPS + 4
+_M_PIER = ("pier", (0.56, 0.56, 0.54))
+
 
 def _pier_box(path, across):
     """高架の橋脚: 経路の中ほどの下に立つ、経路を横切る向きに長い柱。床（基盤）の下から、ELEV_STEPS 段下の地面まで。"""
