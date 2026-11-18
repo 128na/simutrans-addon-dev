@@ -106,7 +106,7 @@ function lay(name, wall, ox, oy) {
   s += r("A ns", line(4, 0, 4, 2));
   s += r("F", line(6, 0, 6, 0));
   if (wall != null && wall.find("_catenary") != null) {
-    // 架線つきの壁: 直線・行き止まり・斜め・十字の way が電化されているか（敷いた後に下で確かめる）
+    // 架線つきの壁: 直線・行き止まり・T字・十字の way が電化されているか（敷いた後に下で確かめる）
     foreach (p in [[1, 0], [0, 0], [4, 1], [3, 7], [3, 4]]) elec_spots.append([wall, ox + p[0], oy + p[1]]);
   }
   // C

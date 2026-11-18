@@ -60,7 +60,7 @@ for _v in BASE_VARIANTS:
     # 斜めのセルは近い斜めの分け合うタイルのために、壁の無い側を 2 本の真ん中で削る。カーブ（斜めが続かない曲がり）は削らない
 NO_CLOSE = {f"ami_rail_ballast_base_{_v}" for _v in BASE_VARIANTS}  # 近い斜めの絵を持たない way
 
-# ---------------------------------------------------------------- 壁の way-object（線路用、壁だけ。架線つきは別のステップ）
+# ---------------------------------------------------------------- 壁の way-object（線路用、壁だけ。架線つきは下の CATENARY）
 # 値は仮（README の「今の決まりごと」）。topspeed は架線でない way-object では列車の速さを縛らない（本体は電化した編成にだけ
 # max_wayobj_speed を当てる。vehicle/simvehicle.cc）。同じ waytype の way-object は、遅い物を速い物で置き換える（Ctrl なし。
 # obj/wayobj.cc の extend_wayobj）ので、twin だけ 1 速くして、back・front を敷き直しても twin が残るようにする
