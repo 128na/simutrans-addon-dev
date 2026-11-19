@@ -38,6 +38,8 @@ jobs:
 
       - name: dat の書き忘れ
         run: |
+          # 先に消して、生成しなくなった dat の消し忘れも差に出す
+          rm -f addons/ami/src/*.dat
           python -X utf8 addons/ami/blender/ami_dat.py > /dev/null
           if [ -n "$(git status --porcelain -- addons/ami/src)" ]; then
             git status --short -- addons/ami/src

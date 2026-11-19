@@ -25,7 +25,9 @@ case "$kind" in
   upstream)
     gh release download "$ref" -R simutrans/simutrans -p "makeobj_linux-x64*.zip" -D "$work"
     unzip -q "$work"/makeobj_linux-x64*.zip -d "$work/unzip"
-    install -m 755 "$work/unzip/makeobj" "$dest/makeobj"
+    bin="$(find "$work/unzip" -type f -name makeobj | head -1)"
+    [ -n "$bin" ] || { echo "[setup-makeobj] zip に makeobj が無い" >&2; exit 1; }
+    install -m 755 "$bin" "$dest/makeobj"
     ;;
   otrp)
     git init -q "$work/src"
