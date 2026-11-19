@@ -42,7 +42,7 @@ def profile(name):
 @dataclass(frozen=True)
 class Road:
     """道路の種類 1 つ。key は way の名前から PREFIX を除いたもの（render.py の ROAD_PROFILES の名前の元）。
-    通常の版の way・地上の基盤の版と高架の 4 版・橋・トンネル（#21・#22）。基盤の版を置くかは仮（ユーザーの確定待ち。
+    通常の版の way・地上の基盤の版と高架の 4 版・橋・トンネル（#21・#22）。基盤の版は 2026-11-19 にユーザーが確定（
     README の「道路の壁・高架・橋脚・橋・トンネルの作り」）"""
     key: str
 
@@ -75,7 +75,7 @@ ROAD_GENERAL = Road("road_general")  # 一般道路（120 km/h、中央線は白
 ROAD_EXPRESSWAY = Road("road_expressway")  # 高速道路（360 km/h、中央線は白の破線）
 ROADS = (ROAD_LOCAL, ROAD_GENERAL, ROAD_EXPRESSWAY)
 WALL_ROAD = ROAD_GENERAL  # 道路の壁のシートを描く元の道路（壁の形は 3 種で同じ。断面とカーブの作りが同じため）
-ROAD_WALL_VARIANTS = ("single", "back", "front")  # 道路の壁の way-object の版（README の名前の表。center の壁は無い）
-# 近い斜めの分け合うタイル用の道路の壁（仮の名前。ユーザーの確定待ち。README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
+ROAD_WALL_VARIANTS = ("single", "back", "center", "front")  # 道路の壁の way-object の版（README の名前の表。center は行き止まりの端の壁だけ）
+# 近い斜めの分け合うタイル用の道路の壁（名前は 2026-11-19 にユーザーが確定。README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
 ROAD_WALL_TWIN = "ami_wall_road_twin"
 PIER_ROAD = "ami_pier_road"  # 道路用の橋脚の way

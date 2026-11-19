@@ -18,8 +18,8 @@
     src/ami_rail_ballast_bridge.png  橋（欄干なし。床はタイルの幅いっぱいで、壁は way-object を重ねる）。並びは blender-poc の橋と同じ
     src/ami_rail_ballast_tunnel.png  トンネルの坑口（覆いは blender-poc のトンネル、道床・レールは在来線の通常の版）
     src/ami_road_<種類>.png    道路の通常の版（local・general・expressway）。断面は blender-poc の高速道路で、中央線と路面の色が種類ごとに違う
-    src/ami_wall_road_<版>.png  道路の壁の way-object（single・back・front。3 種で共有）。上 4 行が奥、下 4 行が手前の絵
-    src/ami_road_<種類>_base_<版>.png  道路の地上の基盤の版（4 版。置くかは仮）。壁の外を削り、カーブを斜めの形のセルに描く
+    src/ami_wall_road_<版>.png  道路の壁の way-object（single・back・center・front。3 種で共有。center は行き止まりの端の壁だけ）。上 4 行が奥、下 4 行が手前の絵
+    src/ami_road_<種類>_base_<版>.png  道路の地上の基盤の版（4 版。2026-11-19 にユーザーが確定）。壁の外を削り、カーブを斜めの形のセルに描く
     src/ami_road_<種類>_elev_<版>.png  道路の高架の版（4 版）。床（路面と基盤）と躯体だけ（橋脚・壁は描かない）
     src/ami_road_<種類>_bridge.png  道路の橋（欄干なし。床の縁の下に青い桁を見せる）
     src/ami_road_<種類>_tunnel.png  道路のトンネルの坑口（覆いは blender-poc の高速道路のトンネル、路面・白線は道路の種類ごと）
@@ -198,7 +198,7 @@ for _r in catalog.ROADS:
                                     "drive_left": DRIVE_LEFT}, **ROAD_SETTINGS[_r.key])
 
 # ---------------------------------------------------------------- 道路の壁の way-object・高架の 4 版・橋・トンネル・道路用の橋脚（#22）
-# 道路の壁（ami_wall_road_<版>。single・back・front）: blender-poc の高速道路の壁（sheetlib の road_parts の wallL・wallR・endw。
+# 道路の壁（ami_wall_road_<版>。single・back・center・front。center は側壁が無く、行き止まりの端の壁だけ）: blender-poc の高速道路の壁（sheetlib の road_parts の wallL・wallR・endw。
 # iss の都市高速と同じくタイルの端に立つコンクリートの壁）を、way の絵に焼き込まず way-object のシートに分ける（sheetlib の road_sheet の
 # wall_sheet）。壁の形は 3 種で同じなので、シートは catalog.WALL_ROAD の道路から 1 回だけ描く（wall_only。way のシートは書かない）。
 # 地上は通常の版の way にも重ねられるが、並べた車線の直角の曲がりと近い斜めは、地上の基盤の版（下）と組む
@@ -210,7 +210,7 @@ for _v in catalog.ROAD_WALL_VARIANTS:
         groups=R.ROAD_PROFILES[_WR.key]["groups"] + ("wall",), wall_sheet=f"ami_wall_road_{_v}", wall_only=True,
         wall_label=ROAD_WALL_LABEL)
 
-# 地上の基盤の版（<道路>_base_<版>。道路に基盤の版を置くかは仮で、ユーザーの確定待ち）: 通常の版の路面から壁の外を削り、カーブのセルを斜めの形で描いて
+# 地上の基盤の版（<道路>_base_<版>。2026-11-19 にユーザーが確定）: 通常の版の路面から壁の外を削り、カーブのセルを斜めの形で描いて
 # 壁の無い側をタイルの端まで延ばす（curve_cells。並べた車線の直角の曲がりで、内側の線との間に草の三角が出ない）。
 # 近い斜めの絵を持たない（本体が分け合うタイルに way を 2 本置き、ami_wall_road_twin を重ねられる。線路の基盤の版と同じ）。
 # 壁は way-object（ami_wall_road_<版>）を重ねるので、壁のシートは書かない
@@ -234,7 +234,7 @@ for _r in catalog.ROADS:
             elevated=True, elev_body=True, lower=ROAD_ELEV_LOWER, band="elevated", curve_cells=True)
 
 # 橋（<道路>_bridge）: 欄干を描かず、single の壁の way-object を重ねる（線路の橋と同じ）。床・躯体の高さは高架にそろえる。
-# 桁（POC の C6）: iss の都市高速の橋（../refs/iss/src/bridge/road/bridge.dat の iss_br_0120_bridge1）と同じく、床の縁の下に青い鋼の帯を見せる。
+# 桁（POC の C6。見せ方は 2026-11-19 にユーザーが確定）: iss の都市高速の橋（../refs/iss/src/bridge/road/bridge.dat の iss_br_0120_bridge1）と同じく、床の縁の下に青い鋼の帯を見せる。
 # 基盤（BASE_H）と、その下の桁（ROAD_GIRDER_D）を青くし、壁の外の面まで出す（躯体のように内へ下げない）。
 # iss の帯は 256px のセルで 4px（../refs/iss/release/pak128/bridge/road/0120_bridge1.png の NS のセル。2026-11-19 に測った）。
 # 床の下を描くため、平らなセルは高架と同じだけ持ち分を下へ広げる（端の坂と坂から始まる端は広げない。sheetlib の road_sheet）

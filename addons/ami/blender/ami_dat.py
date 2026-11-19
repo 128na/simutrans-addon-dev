@@ -84,7 +84,7 @@ for _t in catalog.TRACKS:
 # 道路 3 種の通常の版（#21）。並びは線路の通常の版と同じ（近い斜め・分岐の絵を持つ）。waytype と値は VALUES
 for _r in catalog.ROADS:
     BUILT[_r.way] = _r.way
-# 道路の地上の基盤の版（#22。道路に基盤の版を置くかは仮で、ユーザーの確定待ち）: 線路の基盤の版と同じく近い斜めの絵を持たず、カーブはカーブのセル（斜めの形）。
+# 道路の地上の基盤の版（#22。2026-11-19 にユーザーが確定）: 線路の基盤の版と同じく近い斜めの絵を持たず、カーブはカーブのセル（斜めの形）。
 # 値は通常の版と同じ（README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
 for _r in catalog.ROADS:
     for _v in BASE_VARIANTS:
@@ -122,7 +122,7 @@ for _r in catalog.ROADS:
 # 値は仮（iss の橋脚と同じ費用・維持費）。topspeed は走らせる物ではないので 1
 PIER_VALUES = dict(waytype="tram_track", cost=1000, maintenance=100, intro_year=1900, topspeed=1)
 PIERS = {"ami_pier_rail": "ami_pier_rail", "ami_pier_rail_gate": "ami_pier_rail_gate"}  # 単柱と門型（門型は #18 の追加）
-# 道路用の橋脚（#22）: 線路用と同じ waytype（tram_track）と値（仮）。シートの並びは単柱の橋脚と同じ（README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
+# 道路用の橋脚（#22）: 線路用と同じ waytype（tram_track。2026-11-19 にユーザーが確定）と値（仮）。シートの並びは単柱の橋脚と同じ（README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
 PIERS[catalog.PIER_ROAD] = catalog.PIER_ROAD
 # 手前の絵（frontimage）を持つ橋脚: 名前 → 手前の絵の行のずらし。シートを描く側の tools/blender/sheetlib/sheetlib.py の
 # PIER_GATE_FRONT_ROW と同じ値にする。門型は柱・梁を手前の絵に描く
@@ -145,8 +145,9 @@ WAYOBJ_KEYS = {"image": "image", "imageup": "imageup", "imageup2": "imageup2", "
 TWIN_FROM = {"[nw]": "ami_wall_rail_back", "[sw]": "ami_wall_rail_back", "[ne]": "ami_wall_rail_front", "[se]": "ami_wall_rail_front"}
 
 # ---------------------------------------------------------------- 道路の壁の way-object（#22）
-# waytype=road・own_waytype=road。値は線路の壁と同じ（仮）。版は single・back・front（center の壁は無い）。シートの並びは線路の壁と同じ。
-# 近い斜めの分け合うタイル用の ami_wall_road_twin（仮の名前。ユーザーの確定待ち）は、線路の twin と同じ作りで、back・front の斜めのセルを指す
+# waytype=road・own_waytype=road。値は線路の壁と同じ（仮）。版は single・back・center・front（center は線路の center と同じく、側壁が無く
+# 行き止まりの端の壁だけ）。シートの並びは線路の壁と同じ。
+# 近い斜めの分け合うタイル用の ami_wall_road_twin（名前は 2026-11-19 にユーザーが確定）は、線路の twin と同じ作りで、back・front の斜めのセルを指す
 ROAD_WALLS = {f"ami_wall_road_{_v}": f"ami_wall_road_{_v}" for _v in catalog.ROAD_WALL_VARIANTS}
 ROAD_TWIN_FROM = {k: v.replace("ami_wall_rail_", "ami_wall_road_") for k, v in TWIN_FROM.items()}
 

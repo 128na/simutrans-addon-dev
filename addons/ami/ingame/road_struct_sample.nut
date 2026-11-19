@@ -8,12 +8,12 @@
 //   地上の壁（x=0〜）: 通常の版の道路に ami_wall_road_single を同じ経路に重ねる。A 行き止まり・F 1 タイル・C 斜め・B 輪と十字・D 坂・E 急坂（road_sample.nut と同じ並び）
 //     G 近い斜め (22,0) から南東へ・(22,18) から北東へ: 道路を road_sample.nut の区画 G と同じに敷き、奥の線に back、1 タイル東の手前の線に front の壁を重ねる
 //   地上の複線（x=32〜。地上の基盤の版 <道路>_base_<版> と同じ版の壁）: W1 輪（外 (0,0)-(12,9)・内 (1,1)-(11,8)。奥の線は back、手前の線は front。
-//     sample.nut の区画 W1 と同じ敷き方）、W3 行き止まりを並べる（y=12・13・14 に (0)-(3) の東西を back・center・front。center は壁なし）、
+//     sample.nut の区画 W1 と同じ敷き方）、W3 行き止まりを並べる（y=12・13・14 に (0)-(3) の東西を back・center・front。それぞれ同じ版の壁を重ねる。center の壁は行き止まりの端の壁だけ）、
 //     W2 近い斜め (6,12) から南東へ 5 段（分け合うタイルに ami_wall_road_twin。高架の WV2 と同じ敷き方）
 //   高架（x=50〜）: <道路>_elev_single に壁 single を 2 段上（z=2）に重ね、真下の地面に ami_pier_road を敷く。A・F・C・B・D・E と、
 //     L 隣り合う十字（南北 (22,0)-(22,8)・(23,0)-(23,8) を東西 (18,4)-(27,4) が横切る。T字の「2」の絵が高架でも出るか）
 //   高架の複線（x=90〜）: WV1 輪（elev の back・front と同じ版の壁）、WV2 近い斜め (16,0) から南東へ 5 段（分け合うタイルに ami_wall_road_twin）、
-//     WV3 行き止まりを並べる（y=12・13・14 に back・center・front。壁は center だけ無し）
+//     WV3 行き止まりを並べる（y=12・13・14 に back・center・front。地上の W3 と同じく同じ版の壁を重ねる）
 //   橋とトンネル（x=125〜）: B1 平地から立ち上がる橋（東西 y=1 の (4)-(10)、南北 x=19 の (4)-(10)。前後の道路を先に敷いて端を押して架け、壁 single を橋の上も通して重ねる）、
 //     B2 2 段の坂から始まる橋（東西 y=19 の (1)-(7)）、B4 高架と橋のつなぎ目（y=24。高架 (0)-(4)・(12)-(15) の間を橋 (5)-(11)）、
 //     T1 トンネル（東西 y=19 の x=24〜32、南北 x=37 の y=0〜10）、T3 複線のトンネル（東西 y=24・25 に back・front の壁）
@@ -117,7 +117,7 @@ function lay_one(w, wo, ox, oy, tag) {
 function lay(name, ox, oy) {
   local w = way_desc_x(name), std = way_desc_x(STANDARD), rail = way_desc_x(RAIL), pier = way_desc_x(PIER);
   local od = {}, ev = {}, bd = {};
-  foreach (v in ["single", "back", "front", "twin"]) {
+  foreach (v in ["single", "back", "center", "front", "twin"]) {
     od[v] <- wayobj_desc_x("ami_wall_road_" + v);
     if (od[v] == null) return "ami_wall_road_" + v + " desc=[missing]\n";
   }
@@ -183,7 +183,7 @@ function lay(name, ox, oy) {
   s += pairs("W", px, function(v) { return bd[v]; });
   foreach (q in [[0, 0], [1, 1], [12, 9], [11, 8]]) checks += "[check] " + name + " W1 (" + q[0] + "," + q[1] + ") " + names(ox + px + q[0], oy + q[1]) + "\n";
   foreach (k, v in ["back", "center", "front"]) {
-    s += r("W3 way", way2(bd[v], v == "center" ? null : od[v], c(px, 12 + k), c(px + 3, 12 + k)));
+    s += r("W3 way", way2(bd[v], od[v], c(px, 12 + k), c(px + 3, 12 + k)));
   }
   s += close_pair("W2", px + 6, 12, bd);
   // 高架
@@ -203,7 +203,7 @@ function lay(name, ox, oy) {
   foreach (q in [[0, 0], [1, 1], [12, 9], [11, 8]]) checks += "[check] " + name + " WV1 (" + q[0] + "," + q[1] + ") " + names(ox + vx + q[0], oy + q[1], ELEV_UP) + "\n";
   s += close_pair("WV2", vx + 16, 0, ev);
   foreach (k, v in ["back", "center", "front"]) {
-    s += r("WV3 way", way2(ev[v], v == "center" ? null : od[v], c(vx, 12 + k), c(vx + 3, 12 + k)));
+    s += r("WV3 way", way2(ev[v], od[v], c(vx, 12 + k), c(vx + 3, 12 + k)));
   }
   mode.z = 0;
   mode.pier = null;

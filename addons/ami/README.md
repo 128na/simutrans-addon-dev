@@ -19,10 +19,10 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 | 基盤・高架の版 | `<way の名前>_base_<版>`・`<way の名前>_elev_<版>`（版は `single`・`back`・`center`・`front`） |
 | 橋・トンネル | `<way の名前>_bridge`・`<way の名前>_tunnel` |
 | 線路の壁 | `ami_wall_rail_<版>`（`single`・`back`・`center`・`front`。`center` は行き止まりの端の壁だけ）、架線つきは `ami_wall_rail_<版>_catenary`（`center` は架線と、行き止まりの端の壁だけ）。近い斜めの分け合うタイル用に `ami_wall_rail_twin`（壁だけ。下の「壁の敷き方」）と `ami_wall_rail_twin_catenary`（架線つき。下の「架線の作り」） |
-| 道路の壁 | `ami_wall_road_<版>`（`single`・`back`・`front`）。近い斜めの分け合うタイル用に `ami_wall_road_twin`（仮の名前。ユーザーの確定待ち。下の「道路の壁・高架・橋脚・橋・トンネルの作り」） |
+| 道路の壁 | `ami_wall_road_<版>`（`single`・`back`・`center`・`front`。`center` は行き止まりの端の壁だけ）。近い斜めの分け合うタイル用に `ami_wall_road_twin`（名前は確定。2026-11-19、ユーザーの決定。下の「道路の壁・高架・橋脚・橋・トンネルの作り」） |
 | 橋脚・歩道 | `ami_pier_rail`（門型は `ami_pier_rail_gate`）・`ami_pier_road`・`ami_sidewalk` |
 
-dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`・`ami_road_local`・`ami_road_general`・`ami_road_expressway`・道路 3 種それぞれの `_base_<版>`（4 版。置くかは仮）・`_elev_<版>`（4 版）・`_bridge`・`_tunnel`・`ami_wall_road_<版>`（3 版）・`ami_wall_road_twin`・`ami_pier_road`。
+dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`・`ami_road_local`・`ami_road_general`・`ami_road_expressway`・道路 3 種それぞれの `_base_<版>`（4 版。置くかは仮）・`_elev_<版>`（4 版）・`_bridge`・`_tunnel`・`ami_wall_road_<版>`（4 版）・`ami_wall_road_twin`・`ami_pier_road`。
 
 ### 線路（新描画位置）
 
@@ -83,7 +83,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 - 断面はどれも blender-poc の高速道路と同じ（片側 1 車線、タイル全面が路面、歩道なし）
 - 通常の版は #21、基盤の版・高架・橋・トンネルと道路の壁・橋脚は #22
-- 地上の道路の基盤の 4 版は、ゲームの画面で要ると判断して仮に作った（理由は「道路の壁・高架・橋脚・橋・トンネルの作り」。置くかはユーザーの確定待ち）
+- 地上の道路の基盤の 4 版は、ゲームの画面で要ると判断して作り、置くことが確定した（2026-11-19、ユーザーの決定。理由は「道路の壁・高架・橋脚・橋・トンネルの作り」）
 
 ### 道路の作り（通常の版、#21）
 
@@ -124,11 +124,11 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 ### 道路の壁・高架・橋脚・橋・トンネルの作り（#22）
 
-道路 3 種に、共有の壁の way-object（`ami_wall_road_<single|back|front>`）、地上の基盤の版（`<道路>_base_<版>`。置くかは仮）、高架の 4 版（`<道路>_elev_<版>`）、橋（`<道路>_bridge`）、トンネル（`<道路>_tunnel`）、道路用の橋脚（`ami_pier_road`）を足した。作りは線路の壁・高架・橋（上の「壁の敷き方」「高架と橋脚の作り」「橋とトンネルの作り」）と同じで、断面と壁の形は blender-poc の高速道路の壁の版（`tools/blender/sheetlib` の `road_sheet` の `walls`）。設定は `blender/render.py` の「道路の壁の way-object・高架の 4 版・橋・トンネル・道路用の橋脚」、値は `blender/ami_dat.py`。
+道路 3 種に、共有の壁の way-object（`ami_wall_road_<single|back|center|front>`）、地上の基盤の版（`<道路>_base_<版>`。確定。2026-11-19、ユーザーの決定）、高架の 4 版（`<道路>_elev_<版>`）、橋（`<道路>_bridge`）、トンネル（`<道路>_tunnel`）、道路用の橋脚（`ami_pier_road`）を足した。作りは線路の壁・高架・橋（上の「壁の敷き方」「高架と橋脚の作り」「橋とトンネルの作り」）と同じで、断面と壁の形は blender-poc の高速道路の壁の版（`tools/blender/sheetlib` の `road_sheet` の `walls`）。設定は `blender/render.py` の「道路の壁の way-object・高架の 4 版・橋・トンネル・道路用の橋脚」、値は `blender/ami_dat.py`。
 
-- 壁の way-object（`ami_wall_road_<版>`。`waytype=road`・`own_waytype=road`）: iss の都市高速の壁と同じく、タイルの端に立つコンクリートの壁。壁の形は 3 種で同じなので、シートは一般道路（`catalog.WALL_ROAD`）から 1 回だけ描く。上 4 行が奥、下 4 行が手前の絵で、雪の絵は無い（way-object にキーが無い）。`center` の壁は作らない（名前の表のとおり）。壁の位置の基準は道路の絵と同じ `ROAD_CY`
-- 近い斜めの分け合うタイル用の壁（`ami_wall_road_twin`。仮の名前で、ユーザーの確定待ち）: 線路の `ami_wall_rail_twin` と同じ作り（速さ 1001。`nw`・`sw` の線は `back`、`ne`・`se` の線は `front` の絵）。敷き方も線路と同じ（「壁の敷き方」）
-- 地上の基盤の版（`<道路>_base_<版>`。判断 1、仮）: 通常の版の路面から壁の外を削り、近い斜めの絵を持たず、カーブを斜めの形の別のセル（行 2 の列 5〜8）に描いて壁の無い側をタイルの端まで延ばしたもの（`tools/blender/sheetlib` の `road_sheet` の `curve_cells`）。壁は way の絵に描かず、同じ版の壁の way-object を重ねる。値は通常の版と同じ
+- 壁の way-object（`ami_wall_road_<版>`。`waytype=road`・`own_waytype=road`）: iss の都市高速の壁と同じく、タイルの端に立つコンクリートの壁。壁の形は 3 種で同じなので、シートは一般道路（`catalog.WALL_ROAD`）から 1 回だけ描く。上 4 行が奥、下 4 行が手前の絵で、雪の絵は無い（way-object にキーが無い）。`center` は線路の `ami_wall_rail_center` と同じく、側壁を持たず、行き止まりの端の壁だけを持つ（2026-11-19、ユーザーの決定。値・並びは線路の `center` と同じ）。壁の位置の基準は道路の絵と同じ `ROAD_CY`
+- 近い斜めの分け合うタイル用の壁（`ami_wall_road_twin`。名前は確定。2026-11-19、ユーザーの決定）: 線路の `ami_wall_rail_twin` と同じ作り（速さ 1001。`nw`・`sw` の線は `back`、`ne`・`se` の線は `front` の絵）。敷き方も線路と同じ（「壁の敷き方」）
+- 地上の基盤の版（`<道路>_base_<版>`。判断 1、確定。2026-11-19、ユーザーの決定）: 通常の版の路面から壁の外を削り、近い斜めの絵を持たず、カーブを斜めの形の別のセル（行 2 の列 5〜8）に描いて壁の無い側をタイルの端まで延ばしたもの（`tools/blender/sheetlib` の `road_sheet` の `curve_cells`）。壁は way の絵に描かず、同じ版の壁の way-object を重ねる。値は通常の版と同じ
   - 作った理由（2026-11-19、ゲームで確かめた）: 直線・T字・十字・坂・1 本の斜めは、通常の版に壁を重ねるだけで合う（`docs/road_struct_GE_WA_B.png`）。合わないのは 2 つ
     - 並べた車線の直角の曲がり: 通常の版のカーブは斜めの絵で、タイルの半分で切る。外の線と内の線のカーブのタイルの間に草の三角が出る（`docs/road_layout_pair_corner_plain.png`。レイアウト検証用モード、3 倍）
     - 近い斜め: 通常の版は近い斜めの絵を持つので、分け合うタイルは way 1 本（向きは十字）になる。way-object は 1 タイルに 1 つで、way-object の近い斜めの絵は makeobj が書けない（[reference](../../docs/reference/way-addon.md) の 10 章）。本体はそのタイルの壁を十字の絵で描き、車道の真ん中に壁の切れ端が立つ（`docs/road_wall_close_plain_zoom.png`。`../simutrans` の `obj/wayobj.cc` の `calc_image` の 542 行付近）
@@ -136,13 +136,13 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
   - 手本: iss の地上の道路も版ごとの way を持つ（`../refs/iss/src/way/road/ground.dat` の 139 行〜の `iss_wrg_0120_single`・`front`・`center`・`back`）。近い斜めの絵を持たず、カーブは斜めのセルと別のセル
   - ほかの選択肢: 通常の版から近い斜めの絵を外す（#21 の区画 G の作りが変わり、直角の曲がりのすき間は残る）、地上では近い斜めと並べた車線に壁を重ねない（基盤の版を作らない）
 - 高架の 4 版（`<道路>_elev_<版>`、`system_type=1`）: 床（路面と基盤）と躯体だけで、橋脚と壁は描かない。基盤と躯体は路面の板の下へ `ROAD_BASE_DROP`（0.05）下げる。カーブは基盤の版と同じくカーブのセルに描く（斜めのセルのままだと、高架の複線の直角の曲がりに三角の穴が開き、下の地面と橋脚が見えた。`docs/road_layout_elev_pair_corner_before.png`・`_after.png`）。近い斜めは線路の高架と同じく way が 2 本で、`twin` の壁が合う（`docs/road_layout_elev_twin_zoom.png`）
-- 道路用の橋脚（`ami_pier_road`。判断 3、仮）: waytype は線路用と同じ `tram_track`。iss の橋脚は全部 `tram_track` で、道路専用の橋脚は無い（`../refs/iss/src/util/pier/ground/pier.dat` の `iss_wsg_pier1`〜`6`）。本体は `track` の `system_type=7` として読むので（`../simutrans` の `descriptor/reader/way_reader.cc`）、道路のタイルに平行でも直交でも重ねて敷け、踏切は作られない。見本の区画 P で、pak128 の `Road_050`・AMI の道路と同じタイルに way 2 本で置けることと、地上の線路が横切るタイルでは線路とつながる（線路用の橋脚と同じ）ことを、スクリプトでタイルの中身を読んで確かめた
+- 道路用の橋脚（`ami_pier_road`。判断 3、waytype は確定。2026-11-19、ユーザーの決定）: waytype は線路用と同じ `tram_track`。iss の橋脚は全部 `tram_track` で、道路専用の橋脚は無い（`../refs/iss/src/util/pier/ground/pier.dat` の `iss_wsg_pier1`〜`6`）。本体は `track` の `system_type=7` として読むので（`../simutrans` の `descriptor/reader/way_reader.cc`）、道路のタイルに平行でも直交でも重ねて敷け、踏切は作られない。見本の区画 P で、pak128 の `Road_050`・AMI の道路と同じタイルに way 2 本で置けることと、地上の線路が横切るタイルでは線路とつながる（線路用の橋脚と同じ）ことを、スクリプトでタイルの中身を読んで確かめた
   - 形: 道の全幅を横切る柱（`ROAD_PIER_ACROSS` = 両側の壁の外の面の間。斜めは 1/√2）。上端は道路の高架の躯体の下面（`pier_sheet` の `top_drop`）。絵の位置は道路と同じ `ROAD_CY`
 - 橋（`<道路>_bridge`）: 欄干を描かず、`single` の壁の way-object を重ねる（線路の橋と同じ）。床・躯体の高さは高架にそろえ、橋脚は道路用の橋脚と同じ全幅の柱を全部のタイルに立てる
-  - 桁（POC の C6、判断 2、仮）: iss の都市高速の橋（`../refs/iss/src/bridge/road/bridge.dat` の `iss_br_0120_bridge1`）と同じく、床の縁の下に青い鋼の帯を見せる。基盤と、その下の桁（`ROAD_GIRDER_D`）を青くし、壁の外の面まで出す（躯体のように内へ下げない）。iss の帯は 256px のセルで 4px（`../refs/iss/release/pak128/bridge/road/0120_bridge1.png` の南北のセル。2026-11-19 に測った）で、AMI も約 4px（`docs/road_bridge_girder_zoom.png`。4 倍）
+  - 桁（POC の C6、判断 2、見せ方は確定。2026-11-19、ユーザーの決定）: iss の都市高速の橋（`../refs/iss/src/bridge/road/bridge.dat` の `iss_br_0120_bridge1`）と同じく、床の縁の下に青い鋼の帯を見せる。基盤と、その下の桁（`ROAD_GIRDER_D`）を青くし、壁の外の面まで出す（躯体のように内へ下げない）。iss の帯は 256px のセルで 4px（`../refs/iss/release/pak128/bridge/road/0120_bridge1.png` の南北のセル。2026-11-19 に測った）で、AMI も約 4px（`docs/road_bridge_girder_zoom.png`。4 倍）
   - 橋の上の way: 橋の道具を引いて架けると、橋の上の way は本体が選ぶ（橋の速さ以下で一番速い、平地の道路。`../simutrans` の `simtool.cc` の `tool_build_bridge_t::do_work` と `bauer/wegbauer.cc` の `weg_search`）。同じ速さの道路が複数あると、どれになるかは決まらない（見本では、一般道路の橋に blender-poc の `bpoc_expressway_wall_back` が載った）。道路の端のタイルを 1 回押して架けると、その道路が載る（`bauer/brueckenbauer.cc`）。橋の上の way は後から道路を敷いても替わらない。見本は端を押す形（`build_bridge_at`）で架ける
 - トンネル（`<道路>_tunnel`）: 坑口の覆いは blender-poc の高速道路のトンネル（iss の都市高速の坑口が手本）で、路面・白線を道路の種類ごとに描く（`tunnel_sheet` の `road_profile`）。壁は坑口とトンネルの中を通して 1 本で敷く
-- 隣り合う十字の T字の「2」と優先道路の十字: 基盤の版・高架の版も通常の版と同じく、「2」は通常の十字と同じ絵、十字の 1・2 は優先道路の十字（上の「隣り合う十字と優先道路の十字」）。床・躯体は十字と同じ形で作る。高架の区画 L（南北 2 本を東西 1 本が横切る）で、通常の十字が並び、床が十字の形でつながることを見た（`docs/road_elev_L_cross_zoom.png`。3 倍。2026-11-19）。前の T字の形の「2」では、路側線が横切る道路をふさいでいた（`docs/road_elev_L_zoom.png`）。橋は直線のセルだけなので出ない。高架・基盤の版の十字の 1・2 はシートのセルで見ただけで、ゲームで固定しては見ていない
+- 隣り合う十字の T字の「2」と優先道路の十字: 基盤の版・高架の版も通常の版と同じく、「2」は通常の十字（開いた十字）と同じ絵、十字の 1・2 は優先道路の十字で、角の路側線は円弧でつなぐ（上の「隣り合う十字と優先道路の十字」）。床・躯体は十字と同じ形で作る。高架の区画 L（南北 2 本を東西 1 本が横切る）で、開いた十字が並び、床が十字の形でつながることを見た（`docs/road_elev_L_cross_zoom.png`。3 倍。2026-11-19）。前の T字の形の「2」では、路側線が横切る道路をふさいでいた（`docs/road_elev_L_zoom.png`）。橋は直線のセルだけなので出ない。高架・基盤の版の十字の 1・2 はシートのセルで見ただけで、ゲームで固定しては見ていない
 - 値（仮）:
 
   | もの | 費用 | 維持費 | 速さ |
@@ -428,7 +428,7 @@ GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe NUT=ingame/road_struct_sampl
 - 橋とトンネル（#19）: 橋の高さ・橋脚の位置（POC の C6）、値・アイコンは仮で、確定が要る（床の幅は壁の位置で止めると決まった）（「橋とトンネルの作り」）。橋の上・トンネルの中を走る編成と壁・架線の重なり、電化した編成が橋とトンネルを走れることは、ユーザーが手で走らせて見る
 - 道路（#21）: 分岐の絵（優先道路の十字・T字の轍・多車線の交差点の絵）は、本体の仕様を整理してから戻す（[#46](https://github.com/128na/simutrans-addon-dev/issues/46)。確かめることもそちら）。画面で横向きになる急坂（東西の 2 段の坂）では、白線（実線・破線とも）が灰色に薄く見える（blender-poc の高速道路と同じ作りで、#21 では直していない）。道路を走る車両との重なりは見ていない
 
-- 道路の壁・高架・橋（#22）: ユーザーの確定待ちが 5 つある。地上の基盤の版を置くか（判断 1）、橋の桁の帯（判断 2）、道路用の橋脚の waytype（判断 3）、`ami_wall_road_twin` の名前、値（「道路の壁・高架・橋脚・橋・トンネルの作り」）。道路を走る車両と壁・高架・橋の重なり（2-3）、`center` の線の行き止まりに端の壁が無いこと（道路の壁に `center` が無いため。区画 WV3・W3）の見た目、アイコン・カーソル（仮）は、ユーザーが見る。橋を引いて架けたときに橋の上に載る道路は、同じ速さの道路の中から本体が選ぶ（「道路の壁・高架・橋脚・橋・トンネルの作り」）
+- 道路の壁・高架・橋（#22）: 地上の基盤の版（判断 1）、橋の桁の帯（判断 2）、道路用の橋脚の waytype（判断 3）、`ami_wall_road_twin` の名前は確定した（2026-11-19、ユーザーの決定）。値（「道路の壁・高架・橋脚・橋・トンネルの作り」）は仮。道路を走る車両と壁・高架・橋の重なり（2-3）、`ami_wall_road_center` の行き止まりの端の壁（区画 W3・WV3）の見た目、アイコン・カーソル（仮）は、ユーザーが見る。橋を引いて架けたときに橋の上に載る道路は、同じ速さの道路の中から本体が選ぶ（「道路の壁・高架・橋脚・橋・トンネルの作り」）
 - 近い斜めの壁は、西の線を `back`、東の線を `front` にした組だけ絵が合う。逆の組（西が `front`）の分け合うタイル用の way-object は作っていない
 - 路面軌道（#23）のカーブは今の曲線のままでよい（ユーザーの指摘、2026-11-17）。斜めの絵にするのは在来線（と、作るときに決める高速線）
 - 路面軌道を tram（道路に重ねる）にすると、写真のような縁石と柵で分けた専用の軌道には見えない。どちらに寄せるかは、路面軌道を作るステップ（#23）で絵を見て決める
