@@ -137,7 +137,7 @@ function lay(name, ox, oy) {
   local plain = {nse = img(ox, oy + 7), nsw = img(ox + 6, oy + 7), new = img(ox + 3, oy + 10), sew = img(ox + 3, oy + 4)};
   local auto = {nse = img(ox + 34, oy + 4), nsw = img(ox + 35, oy + 4), sew = img(ox + 38, oy + 12), new = img(ox + 38, oy + 13)};
   foreach (k, v in auto) {
-    // 1 と 2 が同じ絵なら same12（前は生活道路で出た。「2」を十字の形にしてからは出ない）
+    // 1 と 2 が同じ絵なら same12（前は生活道路で出た。轍のカーブで分けたので出ない）
     local ok = v == pinned[k + "1"] && v != plain[k];
     checks += "[check] " + name + " " + k + " auto=" + v + " pin1=" + pinned[k + "1"] + " pin2=" + pinned[k + "2"] + " plain=" + plain[k]
               + (pin == null ? "" : (ok ? " ok" : " NG")) + (pinned[k + "1"] == pinned[k + "2"] ? " same12" : "") + "\n";
