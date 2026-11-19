@@ -12,11 +12,17 @@ PORT=${PORT:-47125}
 OUT=${OUT:-work/calib/shots}
 ZOOMS=${ZOOMS:-"3 4 6"}   # 3 が等倍、4 が 3/4、6 が 1/2（本体 display/simgraph16.cc の zoom_num・zoom_den）
 M="python ${MCP_CLIENT:-E:/addon_dev/simutrans/.agents/skills/simutrans-mcp-gui-debug/scripts/mcp_client.py} --port $PORT"
-WAYS="calib0 calib1 calib2 calib3 calib4 pak128 iss"   # calib.nut の WAYS と同じ順
+# 並べる way（calib.nut の WAYS）と、画像の名前に使う短い名前。WAYS_NUT を渡すと、その way を並べる（ラウンドの比べ: #56）
+WAYS_NUT=${WAYS_NUT:-"ami_rail_ballast_calib0 ami_rail_ballast_calib1 ami_rail_ballast_calib2 ami_rail_ballast_calib3 ami_rail_ballast_calib4 Rail_160_Tracks iss_wtg_0240_single"}
+WAYS=""
+for w in $WAYS_NUT; do
+  case $w in Rail_160_Tracks) WAYS="$WAYS pak128" ;; iss_wtg_0240_single) WAYS="$WAYS iss" ;; *) WAYS="$WAYS ${w#ami_rail_ballast_}" ;; esac
+done
+PAKS=${PAKS:-work/calib/ami_calib.pak}   # GAME_DIR/addons/pak128/ に入れる pak（空白区切り）
 DX=16
 
 $M --run-squirrel "return 1;" > /dev/null 2>&1 && { echo "[calib] ポート $PORT で既にゲームが動いている"; exit 1; }
-cp work/calib/ami_calib.pak "$GAME_DIR/addons/pak128/ami_calib.pak" || exit 1
+for p in $PAKS; do cp "$p" "$GAME_DIR/addons/pak128/$(basename "$p")" || exit 1; done
 (cd "$GAME_DIR" && "./$EXE" -objects pak128/ -addons -load "$SAVE" -mcp-port "$PORT" > /dev/null 2>&1 &)
 for i in $(seq 1 60); do $M --run-squirrel "return 1;" > /dev/null 2>&1 && break; sleep 2; done
 mkdir -p "$OUT"
@@ -37,6 +43,7 @@ shoot() {  # $1 = bare|way
 }
 
 shoot bare
-echo "[calib] $($M --run-squirrel "$(sed -e 's/^[[:space:]]*//' -e '/^\/\//d' -e '/^$/d' ingame/calib.nut)" --timeout 300)"
+WAYS_SQ="[$(printf '"%s",' $WAYS_NUT | sed 's/,$//')]"
+echo "[calib] $($M --run-squirrel "$(sed -e 's/^[[:space:]]*//' -e '/^\/\//d' -e '/^$/d' -e "s/^local WAYS = .*/local WAYS = $WAYS_SQ;/" ingame/calib.nut)" --timeout 300)"
 shoot way
-echo "[calib] $OUT に撮った。ゲームを閉じてから GAME_DIR/addons/pak128/ami_calib.pak を消す"
+echo "[calib] $OUT に撮った。ゲームを閉じてから GAME_DIR/addons/pak128/ に入れた pak（$PAKS）を消す"

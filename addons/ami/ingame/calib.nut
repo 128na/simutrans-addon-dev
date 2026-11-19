@@ -4,10 +4,10 @@
 //   P 平行な複線: (0,0)-(9,0) と (0,1)-(9,1)
 //   B 輪と十字: (0,3)-(6,9) の輪に (3,3)-(3,9) と (0,6)-(6,6)（直線・カーブ・T字・十字）
 //   C 斜め（階段）: (8,3) から南東へ 4 段
-// 撮る場所は区画の (5,5)（ingame/calib_capture.sh）。WAYS を替えたら calib_capture.sh の WAYS も替える。
+// 撮る場所は区画の (5,5)（ingame/calib_capture.sh）。並べる way は calib_capture.sh の WAYS_NUT で替える。
 // 返り値の先頭が ok なら全部敷けた
-local WAYS = ["ami_rail_ballast_calib0", "ami_rail_ballast_calib1", "ami_rail_ballast_calib2", "ami_rail_ballast_calib3",
-              "ami_rail_ballast_calib4", "Rail_160_Tracks", "iss_wtg_0240_single"];
+// WAYS は 1 行に書く（calib_capture.sh が WAYS_NUT で行ごと置き換える）
+local WAYS = ["ami_rail_ballast_calib0", "ami_rail_ballast_calib1", "ami_rail_ballast_calib2", "ami_rail_ballast_calib3", "ami_rail_ballast_calib4", "Rail_160_Tracks", "iss_wtg_0240_single"];
 local ORIGINS = [[20, 20], [276, 20]];
 local SNOW = 1;
 local DX = 16;

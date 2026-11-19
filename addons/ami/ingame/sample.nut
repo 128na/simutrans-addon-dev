@@ -54,6 +54,10 @@
 //   BT_ONLY を true にすると、橋とトンネルの区画だけを敷く（試すとき）
 // 見本に敷く軌道の種類（通常の版の way の名前。blender/catalog.py の Track.way）。ここだけを替えると、way・基盤・高架・橋・トンネルが替わる
 local TRACK = "ami_rail_ballast";
+// ラウンドの版（#56）: AMI の名前（ami_ で始まるもの）の末尾に付ける。例: "_round1"。空なら今の名前
+local SUFFIX = "";
+function wdx(n) { return way_desc_x(n.find("ami_") == 0 ? n + SUFFIX : n); }
+function wodx(n) { return wayobj_desc_x(n.find("ami_") == 0 ? n + SUFFIX : n); }
 local VARIANTS = ["single", "back", "center", "front"];
 local WAYS = [TRACK];
 // WALLED: [基盤の版の way, 壁の way-object（null は壁なし）]。CATENARY: 架線つきの壁（[基盤の版の way, 架線つきの壁の way-object]）。
@@ -152,11 +156,11 @@ local AUTO = [["nse2", "ns", 1, 0, 0, -1], ["nse1", "ns", 1, 0, 0, 1], ["nsw2", 
               ["new2", "ew", 0, -1, 1, 0], ["new1", "ew", 0, -1, -1, 0], ["sew2", "ew", 0, 1, -1, 0], ["sew1", "ew", 0, 1, 1, 0]];
 
 function lay(name, wall, ox, oy) {
-  local w = way_desc_x(name);
+  local w = wdx(name);
   if (w == null) return name + " desc=[missing]\n";
   local wo = null;
   if (wall != null) {
-    wo = wayobj_desc_x(wall);
+    wo = wodx(wall);
     if (wo == null) return wall + " desc=[missing]\n";
   }
   local is_base = name.find("_base_") != null || name.find("_elev_") != null;  // 近い斜めの絵を持たない（区画 G を敷かない）
@@ -228,9 +232,9 @@ function lay(name, wall, ox, oy) {
 // kind は way の版（"base" は地上の基盤の版、"elev" は高架の版の区画 WV・WVE。高架は mode を高架にしてから呼ぶ）
 function lay_pairs(ox, oy, suffix = "", kind = "base") {
   local wd = {}, od = {};
-  foreach (v in VARIANTS) wd[v] <- way_desc_x(TRACK + "_" + kind + "_" + v);
+  foreach (v in VARIANTS) wd[v] <- wdx(TRACK + "_" + kind + "_" + v);
   foreach (v in ["single", "back", "center", "front", "twin"]) {
-    od[v] <- wayobj_desc_x("ami_wall_rail_" + v + suffix);
+    od[v] <- wodx("ami_wall_rail_" + v + suffix);
     if (od[v] == null) return "ami_wall_rail_" + v + suffix + " desc=[missing]\n";
   }
   local c = function(x, y) { return coord3d(ox + x, oy + y, 0); };
@@ -281,8 +285,8 @@ function lay_pairs(ox, oy, suffix = "", kind = "base") {
 // 西から東西に (0,1)-(7,1)、南から南北に (10,12)-(10,7) 敷き、台の上で地上の基盤の版（single）につなぐ（高架の端のタイルから敷く）。
 // 壁の way-object（single）は、高架と台の上を通して 1 本で敷く。橋脚は高架の下だけ
 function lay_join(ox, oy) {
-  local e = way_desc_x(TRACK + "_elev_single"), g = way_desc_x(TRACK + "_base_single");
-  local wo = wayobj_desc_x("ami_wall_rail_single"), p = way_desc_x(PIER);
+  local e = wdx(TRACK + "_elev_single"), g = wdx(TRACK + "_base_single");
+  local wo = wodx("ami_wall_rail_single"), p = wdx(PIER);
   local c = function(x, y, z = 0) { return coord3d(ox + x, oy + y, z); };
   local s = r("J label", marker.work(pl, c(0, -2), "elevated <-> ground"));
   for (local x = 8; x <= 12; x++)
@@ -302,8 +306,8 @@ function lay_join(ox, oy) {
 
 // 区画 R: 高架の下に道路を通す（冒頭の表）。mode は高架で、mode.pier に橋脚の way を入れて呼ぶ
 function lay_roads(ox, oy) {
-  local e = way_desc_x(ELEVATED[0][0]), wo = wayobj_desc_x(ELEVATED[0][1]);
-  local rd = way_desc_x(ROAD);  // 無い名前でも null にならない（使うと失敗する）ので、pak128 にある名前を書く
+  local e = wdx(ELEVATED[0][0]), wo = wodx(ELEVATED[0][1]);
+  local rd = wdx(ROAD);  // 無い名前でも null にならない（使うと失敗する）ので、pak128 にある名前を書く
   local c = function(x, y) { return coord3d(ox + x, oy + y, 0); };
   local s = r("R label", marker.work(pl, c(0, -3), "gate piers + road (" + rd.get_name() + ")"));
   s += r("R1 elev", way2(e, wo, c(2, 0), c(2, 10)));
@@ -326,7 +330,7 @@ function lay_roads(ox, oy) {
 // 門型の橋脚の区画（冒頭の表）。高架の single の区画・区画 WV の並び・区画 R
 function lay_gate(gx, gy) {
   mode.z = ELEV_UP;
-  mode.pier = way_desc_x(PIER_GATE);
+  mode.pier = wdx(PIER_GATE);
   if (mode.pier == null) { mode.z = 0; return PIER_GATE + " desc=[missing]\n"; }
   local s = lay(ELEVATED[0][0], ELEVATED[0][1], gx, gy);
   s += lay_pairs(gx, gy + SPACING, "", "elev");
@@ -338,14 +342,14 @@ function lay_gate(gx, gy) {
 
 // 橋とトンネルの区画（冒頭の表の「橋とトンネル」）。原点 (bx, by) は門型の橋脚の区画の南
 function lay_bt(bx, by) {
-  local br = bridge_desc_x(BRIDGE), tn = TUNNEL;
+  local br = bridge_desc_x(BRIDGE + SUFFIX), tn = TUNNEL + SUFFIX;
   if (br == null) return BRIDGE + " desc=[missing]\n";
   local wd = {}, od = {};
   foreach (v in VARIANTS) {
-    wd[v] <- way_desc_x(TRACK + "_base_" + v);
-    od[v] <- wayobj_desc_x("ami_wall_rail_" + v);
+    wd[v] <- wdx(TRACK + "_base_" + v);
+    od[v] <- wodx("ami_wall_rail_" + v);
   }
-  local ws = wayobj_desc_x("ami_wall_rail_single_catenary"), ev = way_desc_x(ELEVATED[0][0]), pr = way_desc_x(PIER);
+  local ws = wodx("ami_wall_rail_single_catenary"), ev = wdx(ELEVATED[0][0]), pr = wdx(PIER);
   local c = function(x, y, z = 0) { return coord3d(bx + x, by + y, z); };
   local s = r("BT label", marker.work(pl, c(0, -2), "bridge + tunnel"));
   // way を a から b へ敷き、壁を重ねる（橋は先に架けておく。way は橋の上も通して 1 本で敷く）
@@ -458,7 +462,7 @@ foreach (n, o in ORIGINS) {
   // 高架（ELEVATED・区画 WV・WVE・J）。地上の区画の東
   local ex = o[0] + ELEV_DX;
   mode.z = ELEV_UP;
-  mode.pier = way_desc_x(PIER);
+  mode.pier = wdx(PIER);
   if (mode.pier == null) report += PIER + " desc=[missing]\n";
   foreach (i, pr in ELEVATED) report += lay(pr[0], pr[1], ex, o[1] + i * SPACING);
   local vy = o[1] + ELEVATED.len() * SPACING;
