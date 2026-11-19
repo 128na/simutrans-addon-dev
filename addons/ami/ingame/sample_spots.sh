@@ -46,6 +46,8 @@ for v in LO:0 GE:22 EX:44; do
     JUNCTION_SPOTS="$JUNCTION_SPOTS ${n}_$((2 * a))x$((2 * b)):$((12 * k + 3 + a / 2)):$((4 + b / 2 + dy))"
     k=$((k + 1))
   done
+  # T字の組み合わせ（road_junction_sample.nut の TEES。x=96 から 12 ずつ）
+  JUNCTION_SPOTS="$JUNCTION_SPOTS ${n}_T4x2:100:$((4 + dy)) ${n}_T4x4:112:$((5 + dy))"
 done
 case "${NUT:-}" in
   *road_sample.nut) SPOTS=${SPOTS:-$ROAD_SPOTS} ;;
