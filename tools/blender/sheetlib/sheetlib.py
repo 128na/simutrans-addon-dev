@@ -114,6 +114,7 @@ from .cells import (  # noqa: F401
     ROAD_CY,
     _ground_mask,
     _junction,
+    near_frame,
     exits_of,
     load_rgba8,
     make_sheet,
@@ -521,7 +522,8 @@ def road_sheet(style="street"):
         if wall_sheet and any(ob.get("tall") for ob in obs):
             # 壁を way-object に分ける版: 本体（壁なし）は way のシート、壁は way-object のシート（夏の絵だけ）へ
             body_path, wback, wfront = render_layers(cname, obs, True, exits_of(name), slope, ROAD_CY, 0, WALL_RISE, solid, lower,
-                                                     side=side, separate=True, tall_layers=row0 == 0 and write_walls)
+                                                     side=side, separate=True, tall_layers=row0 == 0 and write_walls,
+                                                     frame=near_frame(name, paths))
             cells[(pos[0] + row0, pos[1])] = body_path
             if wback:
                 wcells[pos] = wback
@@ -529,7 +531,8 @@ def road_sheet(style="street"):
                 wcells[(pos[0] + WALL_FRONT_ROW, pos[1])] = wfront
         elif any(ob.get("tall") for ob in obs):
             cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, True, exits_of(name), slope, ROAD_CY, 0,
-                                                                  WALL_RISE, solid, lower, side=side)
+                                                                  WALL_RISE, solid, lower, side=side,
+                                                                  frame=near_frame(name, paths))
             if front:
                 cells[(pos[0] + row0 + prof["front_row"], pos[1])] = front
         else:
@@ -650,15 +653,10 @@ BALLAST_DY = -1
 def select_walls(obs, name, paths, side, wall_names=None, origin=None):
     """側壁のバリエーション（複線以上を並べて作るとき用）: back はカメラから遠い側の壁だけ、front は近い側の壁だけ、center は無し。
     残さない壁は消して obs から外し、残した壁（高さのある部品）を返す。行き止まりの端の壁は、壁のある版ならいつも残す。
-    手前/奥を分ける向き: T字は、まっすぐ通る道（東西か南北）に対して手前か奥かで決める（分岐の向きで壁が変わる）。
-    南北の道は東が手前、東西の道は南が手前。それ以外はカメラの向き（NEAR_AXIS）。origin を渡すと、手前/奥をその点から測る。
+    手前/奥の測り方は near_frame。origin を渡すと、その点から測る。
     架線の部品（catenary_parts）は壁に数えない: 柱は壁と同じ決め方で残すか消し（center は無し）、梁・トロリ線はいつも残す。
     返すのは壁だけ（基盤・端の壁の削りに使う）"""
-    axis = {"nse": Vector((1, 0, 0)), "nsw": Vector((1, 0, 0)),
-            "new": Vector((0, -1, 0)), "sew": Vector((0, -1, 0))}.get(_junction(name), NEAR_AXIS)
-    if origin is None and len(paths) > 1:
-        origin = Vector((0, 0, 0))
-    near = near_camera(obs, axis, origin=origin)
+    near = near_camera(obs, near_frame(name, paths, origin))
     keep = {"both": lambda ob: True, "center": lambda ob: False,
             "front": lambda ob: ob in near, "back": lambda ob: ob not in near}[side]
     walls = [ob for ob in obs if ob.get("tall") and not is_catenary(ob)]
@@ -918,8 +916,8 @@ def track_sheet(profile="new"):
             else:
                 obs = build(parts, paths)
             side = prof.get("walls", "both")
-            # 行き止まりの終点をタイルの中心から動かした版（end_from_edge）は、本体の重心が開いた側へ寄り、側壁の手前/奥の判定が
-            # ずれた（タイルの端まで延ばした手前の側壁が奥の絵になった）。手前/奥をタイルの中心から測る
+            # 行き止まりの終点をタイルの中心から動かした版（end_from_edge）は、経路の中心が開いた側へ寄り、側壁の手前/奥の判定が
+            # ずれる（タイルの端まで延ばした手前の側壁が奥の絵になる）。手前/奥をタイルの中心から測る
             origin = Vector((0, 0, 0)) if "end_from_edge" in prof and name in ("s", "w", "n", "e") else None
             kept = select_walls(obs, name, paths, side, origin=origin)
             if side in ("back", "center") and name.startswith("diag_"):
@@ -967,7 +965,8 @@ def track_sheet(profile="new"):
                 # 壁を way-object に分ける版: 本体（壁なし）は way のシート、壁は way-object のシート（夏の絵だけ）へ
                 body, wback, wfront = render_layers(cname, obs, True, exits_of(name), mask_slope, cy, prof["spill"], prof.get("rise", WALL_RISE),
                                                     prof.get("solid", False), lower, separate=True,
-                                                    tall_layers=row0 == 0 and write_walls, origin=origin)
+                                                    tall_layers=row0 == 0 and write_walls,
+                                                    frame=near_frame(name, paths, origin))
                 cells[(pos[0] + row0, pos[1])] = body
                 if wback:
                     wcells[pos] = wback
@@ -976,7 +975,7 @@ def track_sheet(profile="new"):
             elif any(ob.get("tall") for ob in obs):
                 cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, True, exits_of(name), mask_slope, cy,
                                                                       prof["spill"], WALL_RISE, prof.get("solid", False),
-                                                                      lower, origin=origin)
+                                                                      lower, frame=near_frame(name, paths, origin))
                 if front:
                     cells[(pos[0] + row0 + prof["front_row"], pos[1])] = front
             else:

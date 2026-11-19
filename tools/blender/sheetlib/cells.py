@@ -20,7 +20,9 @@ from .core import (  # noqa: F401
     THIN_ALPHA,
     TRANSPARENT,
     WORK,
+    NEAR_AXIS,
     near_camera,
+    path_centre,
 )
 
 
@@ -90,6 +92,19 @@ def exits_of(name):
 def _junction(name):
     """分岐の絵の名前（nse1・nsew2 など）を、元の T字・十字の名前に戻す。それ以外はそのまま。"""
     return name[:-1] if name[-1:] in ("1", "2") and name[:-1] in ("nse", "new", "nsw", "sew", "nsew") else name
+
+
+# T字の手前/奥の向き: まっすぐ通る道に対して決める。南北の道は東が手前、東西の道は南が手前
+_JUNCTION_AXIS = {"nse": Vector((1, 0, 0)), "nsw": Vector((1, 0, 0)), "new": Vector((0, -1, 0)), "sew": Vector((0, -1, 0))}
+
+
+def near_frame(name, paths, origin=None):
+    """手前/奥を測る向きと点 (axis, origin)。残す壁を選ぶとき（select_walls）と奥・手前の絵に分けるとき（render_layers）で同じものを使う。
+    向きは T字ならまっすぐ通る道に対して、それ以外はカメラの向き（NEAR_AXIS）。
+    点は、渡されなければ、経路が複数ならタイルの中心、1 本ならその経路の中心線の中心"""
+    if origin is None:
+        origin = Vector((0, 0, 0)) if len(paths) > 1 else path_centre(paths)
+    return _JUNCTION_AXIS.get(_junction(name), NEAR_AXIS), origin
 
 
 # ゲームが地面の菱形を塗る位置（セルの中で、タイル中心が何px目か）。dat のオフセット -64,-32 と対応し、
@@ -189,7 +204,7 @@ def render_cell(name, exits=None, slope=None, side=None, cy=GROUND_CY, spill=0, 
 
 
 def render_layers(name, obs, split, exits, slope, cy, spill, rise, solid=False, lower=0, side=None, separate=False, tall_layers=True,
-                  origin=None):
+                  frame=None):
     """高さのある部品（tall）を別の層として描いて重ねる。返すのは（奥の絵のパス, 手前の絵のパス または None）。
     - 本体: 持ち分（地面の範囲）で切る
     - 高さのある部品: 持ち分を上へ rise 行広げた範囲で切る（奥のタイルの絵の上に出る。建物と同じ）
@@ -198,7 +213,7 @@ def render_layers(name, obs, split, exits, slope, cy, spill, rise, solid=False, 
     separate なら重ねずに（本体の絵のパス, 高さのある部品の奥の絵のパス または None, 手前の絵のパス または None）を返す
     （壁を way-object に分ける版。本体は way の絵、壁は way-object の絵になる。本体の絵は持ち分と特殊色を make_sheet が当てる）。
     tall_layers が偽なら、高さのある部品は描かない（separate の雪の絵。way-object には雪の絵が無い）。
-    origin は手前/奥を測る点（near_camera。無ければ本体の重心）"""
+    frame は手前/奥を測る向きと点（near_frame。split なら要る）"""
     tall = [ob for ob in obs if ob.get("tall")]
     body = [ob for ob in obs if not ob.get("tall")]
     for ob in tall:
@@ -226,7 +241,7 @@ def render_layers(name, obs, split, exits, slope, cy, spill, rise, solid=False, 
         wide[:, 1:] |= m[:, :-1]
         wide[:, :-1] |= m[:, 1:]
         m = wide
-    front = near_camera(obs, origin=origin) if split else []
+    front = near_camera(obs, frame) if split else []
     if split:
         # Part.front の部品（架線の梁・トロリ線）は、位置に関わらず手前の絵にする（車両の上に描く）
         front += [ob for ob in tall if ob.get("front") and ob not in front]
