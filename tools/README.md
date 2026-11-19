@@ -27,7 +27,17 @@ D:\bin\blender\blender.exe -b --factory-startup --python ..\..\tools\blender\com
 | `addons/<アドオン>/blender/` のそのほか | アドオンの dat の書き出し（`track_dat.py` など）・アドオン固有の確認（`preview.py`・`icons_only.py`）。dat の中身はアドオンの値なので共通には置かない |
 | `addons/<アドオン>/ingame/` | ゲームで見本を敷くスクリプト。アドオンの名前（`bpoc_*` など）を使うのでアドオンに置く |
 
-- `sheetlib` の `TRACK_PROFILES`・`ROAD_PROFILES` は、入口が登録する。共通の描画が名前で引くのは `TRACK_PROFILES["new"]`（トンネル）と `ROAD_PROFILES["street"]`・`["expressway"]`（道路の部品の選択）。アドオンはこの名前で登録する
+- `sheetlib` の `TRACK_PROFILES`・`ROAD_PROFILES` は、入口が登録する。共通の描画が名前で引くのは `TRACK_PROFILES["new"]`（トンネル）と、プロファイルを渡されなかったときの `ROAD_PROFILES["street"]`・`["expressway"]`（`build_road` の `prof`・`tunnel_sheet` の `road_profile` の既定。blender-poc が登録する）。`road_sheet` は自分のプロファイルを `build_road` に渡すので、ほかの名前で登録した道路（AMI の `road_local` など）でもこの名前は要らない
+- 道路の描き分けのキー（AMI の道路 3 種。#21）。どれも無くてよく、無ければ blender-poc の道路と同じ絵になる:
+  - `center`: 中央線の種類。`"solid"`（実線。既定）・`"dash"`（破線）・`None`（中央線なし）。破線は白線の種類 `"cdash"` で、タイルの中の長さ（直線 10・斜め 10/√2）を `road_parts.CENTER_DASHES` 本に割り、タイルの辺がすき間の中ほどに来るように置く（`core.tile_dashes`）。直線・斜め・坂の継ぎ目で区切りがそろう。分岐の口の路側線の点線（`"dash"`）は今までどおり
+  - `switches`: 真なら分岐の絵（OTRP の switch 画像）のセルを行 2・3 の列 10〜14 に描き、シートを 15 列にする（`expressway` の道路だけ。中身は `road_sheet` の `switch_lines`）
+  - `switch_ruts`: T字の分岐の絵の 1・2 を、どちらも枝の無い側を実線でふさいだ T字の白線にし、轍（走行跡）を直進と枝へのカーブ 1 本だけにする（カーブの向きは `road_parts.SWITCH_RUT_ARCS`）
+  - `priority_cross`: 十字の分岐の絵（`nsew1`・`nsew2`）を、優先道路のある十字にする（`nsew1` は南北、`nsew2` は東西が優先。従道路に停止線。`road_sheet` の `priority_lines`）
+  - `drive_left`: `priority_cross` の停止線の通行の側。真（既定）は左側通行、偽は右側通行
+  - `open_cross`: 通常の十字を、交差点の中に白線を通さない開いた十字にする。無ければ、東西の中央線と両側の点線（blender-poc の高速道路の十字）
+  - `corner_arcs`: 分岐の絵（T字・十字・1・2・優先道路の十字）で、隣り合う腕の路側線を角で円弧（`road_parts.EDGE_CORNER_R`）でつなぐ
+  - `switches` 以外のこの 5 つは、AMI の道路の分岐の絵の作り（記録 [2026-11-20_ami-road-switch-design](../docs/records/2026-11-20_ami-road-switch-design.md)）。AMI は今、分岐の絵を dat に入れていないが、シートには描く
+  - 路面の色を替えるときは `skin` に `road_parts.asphalt_skin(tag, 暗い色, 明るい色, spec)` を渡す。アスファルト・走行跡・路肩のまだらの雪を同じ 2 色から作る（blender-poc と AMI の高速道路は `EXPWY_ASPHALT`）
 - 線路の描き分けのうち、軌道の種類を増やすためのキー（#20 の前準備）。どれも無くてよく、無ければ今の線路と同じ絵になる。`replace`・`skin`・`groups` は今までどおり一緒に使える:
   - `track_parts`: 本体の部品（既定 `TRACK_PARTS`）を丸ごと置き換える。`track_sheet`・`tunnel_sheet`・線路のアイコンは `track_body_parts(prof)` で本体の部品を引く（アイコンには `replace` を当てない）
   - `parts`: 追加の部品。シートに描く部品は `track_sheet_parts(prof)` が決める（本体 + `parts` + `TRACK_EXTRAS` に `replace` を当てたもの）。アドオンの `R.TRACK_EXTRAS += ...` は `R` の名前を付け替えるだけで効かないので、このキーで渡す。足した部品の色は `sheetlib/layout_colors.py` に足す

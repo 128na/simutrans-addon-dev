@@ -26,4 +26,31 @@ WALLED_SPOTS="$WALLED_SPOTS WV1:86:125 WV2a:99:123 WV2b:99:133 WV3:82:133 WVE1:8
 # BT_B2 は坂から始まる橋（東西の 1 段・2 段）、BT_B2ns は南北、BT_B4 は高架と橋のつなぎ目、
 # BT_T1・BT_T1ns は壁だけのトンネル、BT_T2・BT_T2ns は架線つき、BT_T3 は複線
 BT_SPOTS="BT_B1:167:131 BT_B1ns:179:137 BT_B2:164:151 BT_B2ns:186:150 BT_B4:168:168 BT_T1:164:174 BT_T1ns:182:172 BT_T2:164:180 BT_T2ns:187:178 BT_T3:164:186"
+# 道路の見本（ingame/road_sample.nut。NUT に渡すと、SPOTS を渡さなければこちらを撮る）: 種類ごとに 30 ずつ南（LO 生活道路・GE 一般道路・EX 高速道路）。
+#   AFC・B・DE・G1・G2 は線路と同じ区画、HV・HH は分岐の自動選択（2 本を並べた渡り口。南北・東西）、K は pak128 標準の道路とのつなぎ目、L は隣り合う十字、
+#   I0〜I4 は分岐の絵の固定（nse・new・nsw・sew・nsew の 1・2）
+ROAD_SPOTS=""
+for v in LO:0 GE:30 EX:60; do
+  IFS=: read n dy <<< "$v"
+  ROAD_SPOTS="$ROAD_SPOTS ${n}_AFC:8:$((2 + dy)) ${n}_B:3:$((7 + dy)) ${n}_DE:14:$((7 + dy)) ${n}_G1:25:$((3 + dy)) ${n}_G2:25:$((15 + dy))"
+  ROAD_SPOTS="$ROAD_SPOTS ${n}_HV:34:$((4 + dy)) ${n}_HH:38:$((12 + dy)) ${n}_K:52:$((3 + dy)) ${n}_L:50:$((15 + dy))"
+  for j in 0 1 2 3 4; do ROAD_SPOTS="$ROAD_SPOTS ${n}_I$j:$((5 + 12 * j)):$((23 + dy))"; done
+done
+# 交差点の組み合わせ（ingame/road_junction_sample.nut）: 種類ごとに 22 ずつ南。名前は「南北の車線数x東西の車線数」（道路 1 本が 2 車線）
+JUNCTION_SPOTS=""
+for v in LO:0 GE:22 EX:44; do
+  IFS=: read n dy <<< "$v"
+  k=0
+  for cb in 2:1 1:2 3:1 1:3 2:2 2:3 3:2 3:3; do
+    IFS=: read a b <<< "$cb"
+    JUNCTION_SPOTS="$JUNCTION_SPOTS ${n}_$((2 * a))x$((2 * b)):$((12 * k + 3 + a / 2)):$((4 + b / 2 + dy))"
+    k=$((k + 1))
+  done
+  # T字の組み合わせ（road_junction_sample.nut の TEES。x=96 から 12 ずつ）
+  JUNCTION_SPOTS="$JUNCTION_SPOTS ${n}_T4x2:100:$((4 + dy)) ${n}_T4x4:112:$((5 + dy))"
+done
+case "${NUT:-}" in
+  *road_sample.nut) SPOTS=${SPOTS:-$ROAD_SPOTS} ;;
+  *road_junction_sample.nut) SPOTS=${SPOTS:-$JUNCTION_SPOTS} ;;
+esac
 SPOTS=${SPOTS:-"AFC:8:2 B:3:7 DE:14:7 G1:25:3 G2:25:15 I:5:14 H0:3:22 H1:11:22 H2:19:22 H3:27:22 H4:35:22 H5:43:22 H6:51:22 H7:59:22$WALLED_SPOTS W1:6:155 W2a:19:153 W2b:19:163 W3:2:163 WE1:6:305 WE2a:19:303 WE2b:19:313 WE3:2:313 $BT_SPOTS"}

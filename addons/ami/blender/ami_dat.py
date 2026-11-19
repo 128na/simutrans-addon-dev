@@ -44,6 +44,15 @@ IMAGES = (  # (キー, 添字, 行, 列)。セル配置は iss・blender-poc の
     ("image", "[nsew2]", 3, 14),
 )
 
+# 分岐の絵（switch 画像）の添字。dat の image[<添字>] の 1・2 の 10 枚
+SWITCH_IDX = {f"[{_s}{_n}]" for _s in ("nse", "new", "nsw", "sew", "nsew") for _n in (1, 2)}
+# 道路の way（waytype=road）の dat に分岐の絵を書くか。偽なら書かない（既定）。本体（OTRP）の道路の 1・2 は、自動では
+# 多車線の交差点向けに選ばれ（「2」は十字のタイルだけ）、固定の道具の名前（線路の分岐の意味）と合わない。本体の仕様を整理するまで外す
+# （2026-11-20、ユーザーの決定。README の「分岐の絵（switch 画像 1・2）」）。シートの分岐のセルは描いたまま残す。真にすれば戻る。
+# 戻すのは https://github.com/128na/simutrans-addon-dev/issues/46（本体の仕様の整理は https://github.com/128na/simutrans/issues/15）。
+# 真にしたら ingame/road_sample.nut の SWITCH_IMAGES も真にする
+ROAD_SWITCH_IMAGES = False
+
 # (速度 km/h, 費用, 維持費, 登場年)。費用・維持費は pak128 の way と同じ単位（1/100 cr）。iss の線路（15000・300）を基準にした
 VALUES = {
     "ami_tram": dict(waytype="tram_track", speed=60, cost=10000, maintenance=200, intro_year=1900),
@@ -56,7 +65,7 @@ VALUES = {
 
 # カーブを斜めの絵で表すシート（pak128 標準の線路と同じ。dat の image[sw]・[nw]・[ne]・[se] が diagonal と同じセルを指す。
 # シートのカーブのセル（行 2 の列 5〜8）は描かない。render.py の diag_curves と同じにする）
-DIAG_CURVES = {_t.way for _t in catalog.TRACKS}
+DIAG_CURVES = {_t.way for _t in catalog.TRACKS} | {_r.way for _r in catalog.ROADS}  # 道路 3 種もカーブは斜めの絵（README の「道路の作り」）
 CURVE_TO_DIAG = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
 
 # 絵を作った way（名前 → シート名）。dat と pak を作る
@@ -72,6 +81,9 @@ for _t in catalog.TRACKS:
         BUILT[_n] = _n
         VALUES[_n] = VALUES[_t.way]
         NO_CLOSE.add(_n)
+# 道路 3 種の通常の版（#21）。並びは線路の通常の版と同じ（近い斜め・分岐の絵を持つ）。waytype と値は VALUES
+for _r in catalog.ROADS:
+    BUILT[_r.way] = _r.way
 
 # ---------------------------------------------------------------- 高架の 4 版（#18）
 # 基盤の版と同じ並び（近い斜めの絵を持たない）で、system_type=1。値は仮: iss と同じく地上の 2 倍の費用・維持費（速さは地上と同じ）
@@ -212,6 +224,8 @@ def dat_text(name, sheet):
     for season in (0, 1):
         for key, idx, row, col in IMAGES:
             if name in NO_CLOSE and idx.startswith("[close"):
+                continue
+            if key == "image" and idx in SWITCH_IDX and v["waytype"] == "road" and not ROAD_SWITCH_IMAGES:
                 continue
             if key == "image" and sheet in DIAG_CURVES and idx in CURVE_TO_DIAG:
                 row, col = CURVE_TO_DIAG[idx]

@@ -61,7 +61,8 @@ DIAG_EDGE = 1 / math.sqrt(2)
 _M_ROAD_ASPHALT = lambda: noisy_material("road_asphalt", (0.013, 0.0135, 0.015), (0.028, 0.029, 0.031), scale=60, rough=0.9)
 
 # 高速道路は SIS に合わせて暗く青みのあるアスファルト（平均 20,20,27）。照り返しを切らないと空の色が映って明るくなる
-_M_EXPWY_ASPHALT = lambda: noisy_material("expwy_asphalt", (0.0027, 0.0027, 0.004), (0.016, 0.016, 0.023), scale=60,
+EXPWY_ASPHALT = ((0.0027, 0.0027, 0.004), (0.016, 0.016, 0.023))  # 高速道路のアスファルトの 2 色（暗い色・明るい色）
+_M_EXPWY_ASPHALT = lambda: noisy_material("expwy_asphalt", *EXPWY_ASPHALT, scale=60,
                                           rough=0.9, spec=0.0)
 
 _M_CURB = ("road_curb", (0.62, 0.61, 0.59))
@@ -207,6 +208,44 @@ ROAD_PARTS += (Part("rampbody", "bed", "lane", _M_BASE,
 
 # 橋の桁: iss の都市高速の橋（bridge/road の 0120_bridge1）と同じく、床の縁を青い鋼の帯に見せる（基盤の側面）
 _M_GIRDER = ("girder", (0.22, 0.40, 0.62))
+
+def asphalt_skin(tag, lo, hi, spec=None):
+    """路面の色を替えるときの材質の差し替え（部品の名前 → 材質）。アスファルト・走行跡（wear*）・路肩のまだらの雪（slush*）を、
+    同じ 2 色（lo・hi）から作る（走行跡と雪のぼかしは路面の色から混ぜるので、路面だけ替えると暗い路面に明るい帯が乗る）。
+    blender-poc の高速道路（tag="expwy"、暗く青みのある色）と AMI の高速道路が使う"""
+    return dict({"asphalt": lambda: noisy_material(f"{tag}_asphalt", lo, hi, scale=60, rough=0.9, spec=spec)},
+                **{f"wear{i}": _wear_material(tag, lo, hi, t, spec) for i, (_, t, _) in enumerate(WEAR_LAYERS)},
+                **{n: _slush_material(tag, lo, hi, t, spec) for n, _, t, _, _ in SNOW_LAYERS if t is not None})
+
+
+# 中央線の破線（RoadTile の白線の種類 "cdash"）: 区切りをタイルの辺にそろえる。タイルの中の線の長さを、直線は CENTER_DASHES[0] 本、
+# 斜めは CENTER_DASHES[1] 本に割り（直線 10・斜め 10/√2 のどちらも割り切れる）、タイルの辺がいつもすき間の中ほどに来るようにする。
+# 坂は経路を平面で切ってから傾けるので同じ所で切れ、直線・斜め・坂のどの継ぎ目でも破線の間隔がそろう。CENTER_DASH_FRAC は 1 周期のうち線の割合
+CENTER_DASHES = (4, 3)
+CENTER_DASH_FRAC = 0.5
+
+# 停止線（優先道路のある十字の、従道路の口。sheetlib の road_sheet の priority_cross）。
+# 位置は十字の部分の手前: 優先道路の路側線（EDGE_LINE）の延長より少し外で、タイルの辺の手前
+STOP_LINE_W = 0.35            # 幅（画面で約 2px。路側線・中央線の LINE_W は約 1px）
+STOP_LINE_D = 4.0             # 線の中心の、タイルの中心からの距離（EDGE_LINE 3.37 とタイルの辺 5 の間）
+STOP_LINE_SPAN = EDGE_LINE    # 線の端の、腕の中心線からの距離（路側線の中心まで）
+
+# 交差点の角の路側線（sheetlib の road_sheet の corner_arcs）。隣り合う腕の路側線を、角で 4 分の 1 の円弧でつなぐ。
+# 円弧の中心は路側線の交点 (EDGE_LINE, EDGE_LINE) から角の外へ (r, r)。円弧の中ほどは交点から縦横とも r(1 - 1/√2) 外で、
+# r = 0.8 で 0.234。中ほどが車道の半幅 ROAD_HW（3.6）の交点にちょうど来る大きさにした（それより大きいと路面の角の外へ出る）
+EDGE_CORNER_R = 0.8
+
+# T字の分岐の絵（switch 画像の 1・2。sheetlib の road_sheet の switch_ruts）の轍のカーブ: 絵の名前 → カーブの角（タイルの角の向き。
+# arc_se は南と東をつなぐ）。OTRP の固定の道具（feature/switch-image-override の gui/ground_info.cc）は、値 1 が「2」の絵、値 2 が「1」の絵で、
+# 名前の向きは sew の値 1 が東、nse が南、new が西、nsw が北（値 2 はその反対）。道路の轍は、枝と、名前の反対側の本線の端をつなぐ
+# （名前の向きへ走ってきた車が枝へ曲がる跡。sew1「西（左上）」は南–東、sew2「東（右下）」は南–西。2026-11-19、ユーザーの指定）。
+# 線路の分岐の絵（名前の側の端と枝をつなぐ。docs/reference/way-addon.md の 9.2）とは逆
+SWITCH_RUT_ARCS = {
+    "nse1": "se", "nse2": "ne",
+    "new1": "nw", "new2": "ne",
+    "nsw1": "nw", "nsw2": "sw",
+    "sew1": "se", "sew2": "sw",
+}
 
 # 雪の絵（dat の image[..][1]）: 道路は線路より除雪されている想定で、車道は夏と同じ（路面・白線・走行跡）。
 # 雪は路肩（group "snow" の snowbank）と、歩道・縁石だけ（2026-11-15、ゲームで確認して決めた）

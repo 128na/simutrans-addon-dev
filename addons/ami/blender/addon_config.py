@@ -12,7 +12,8 @@ for _t in catalog.TRACKS:
     SHEETS.update({_t.elev(v): _t.elev(v) for v in catalog.VARIANTS})
 SHEETS["ami_pier_rail"] = "ami_pier_rail"
 SHEETS["ami_pier_rail_gate"] = "ami_pier_rail_gate"
+SHEETS.update({_r.way: _r.way for _r in catalog.ROADS})
 
-# カーブに斜めの絵を使うシート（道路は作るステップで足す）。
+# カーブに斜めの絵を使うシート（道路 3 種も）。
 # 基盤の版はカーブを斜めの形の別のセル（基盤の壁の無い側を削らない）に描くので、ここには入れない
-DIAG_CURVE_SHEETS = {_t.way for _t in catalog.TRACKS}
+DIAG_CURVE_SHEETS = {_t.way for _t in catalog.TRACKS} | {_r.way for _r in catalog.ROADS}
