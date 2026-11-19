@@ -18,7 +18,13 @@
     src/ami_rail_ballast_bridge.png  橋（欄干なし。床はタイルの幅いっぱいで、壁は way-object を重ねる）。並びは blender-poc の橋と同じ
     src/ami_rail_ballast_tunnel.png  トンネルの坑口（覆いは blender-poc のトンネル、道床・レールは在来線の通常の版）
     src/ami_road_<種類>.png    道路の通常の版（local・general・expressway）。断面は blender-poc の高速道路で、中央線と路面の色が種類ごとに違う
-    work/                     セルごとの生の描画結果（確認用）
+    src/ami_wall_road_<版>.png  道路の壁の way-object（single・back・front。3 種で共有）。上 4 行が奥、下 4 行が手前の絵
+    src/ami_road_<種類>_base_<版>.png  道路の地上の基盤の版（4 版。置くかは仮）。壁の外を削り、カーブを斜めの形のセルに描く
+    src/ami_road_<種類>_elev_<版>.png  道路の高架の版（4 版）。床（路面と基盤）と躯体だけ（橋脚・壁は描かない）
+    src/ami_road_<種類>_bridge.png  道路の橋（欄干なし。床の縁の下に青い桁を見せる）
+    src/ami_road_<種類>_tunnel.png  道路のトンネルの坑口（覆いは blender-poc の高速道路のトンネル、路面・白線は道路の種類ごと）
+    src/ami_pier_road.png     道路の高架の真下の地面に敷く橋脚の way
+    work/                    セルごとの生の描画結果（確認用）
 """
 import dataclasses
 import math
@@ -204,7 +210,7 @@ for _v in catalog.ROAD_WALL_VARIANTS:
         groups=R.ROAD_PROFILES[_WR.key]["groups"] + ("wall",), wall_sheet=f"ami_wall_road_{_v}", wall_only=True,
         wall_label=ROAD_WALL_LABEL)
 
-# 地上の基盤の版（<道路>_base_<版>。名前は仮でユーザーの確定待ち）: 通常の版の路面から壁の外を削り、カーブのセルを斜めの形で描いて
+# 地上の基盤の版（<道路>_base_<版>。道路に基盤の版を置くかは仮で、ユーザーの確定待ち）: 通常の版の路面から壁の外を削り、カーブのセルを斜めの形で描いて
 # 壁の無い側をタイルの端まで延ばす（curve_cells。並べた車線の直角の曲がりで、内側の線との間に草の三角が出ない）。
 # 近い斜めの絵を持たない（本体が分け合うタイルに way を 2 本置き、ami_wall_road_twin を重ねられる。線路の基盤の版と同じ）。
 # 壁は way-object（ami_wall_road_<版>）を重ねるので、壁のシートは書かない
