@@ -70,6 +70,10 @@ RAIL_SLAB = Track("rail_slab")  # 高速線（スラブ軌道）
 TRACKS = (RAIL_BALLAST, RAIL_SLAB)
 WALL_TRACK = RAIL_BALLAST  # 共有の壁・架線のシートを描く元の軌道（ほかの種類の基盤の版は、壁のシートを書かない）
 
+# 路面軌道（60 km/h、tram で道路に重ねる。ADR 0002）。通常の版だけ（壁・基盤・高架・橋・トンネルを作らない）ので、TRACKS に入れない
+# （TRACKS の種類は基盤・高架・橋・トンネルの名前を導き、カーブを斜めの絵にする。路面軌道のカーブは曲線のまま。README の「残っていること」）
+TRAM = "ami_tram"
+
 ROAD_LOCAL = Road("road_local")  # 生活道路（40 km/h、中央線なし）
 ROAD_GENERAL = Road("road_general")  # 一般道路（120 km/h、中央線は白の実線）
 ROAD_EXPRESSWAY = Road("road_expressway")  # 高速道路（360 km/h、中央線は白の破線）

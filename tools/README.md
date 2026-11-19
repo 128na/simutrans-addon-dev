@@ -19,7 +19,7 @@ D:\bin\blender\blender.exe -b --factory-startup --python ..\..\tools\blender\com
 
 | どこ | 置くもの |
 |---|---|
-| `tools/blender/sheetlib/` | 描画の共通部分（パッケージ）。部品をそれが表す物ごとに分けてある: `core`（設定値・シーン・材質・形の部品・基準面 `Datum` と部品 `Part` の型）、`slab_parts`（スラブ軌道の部品。コンクリート道床・てん充層・スラブ・突起・締結装置と、スラブの上の汚れ。レールは `track_parts` のものを使う）、`track_parts`（線路: 道床・まくらぎ・レール・車止め・汚れ）、`wall_parts`（壁・基盤・橋・高架の橋脚。線路と道路で共通）、`catenary_parts`（架線: 柱・梁・吊り金具・トロリ線・ちょう架線・ハンガー）、`road_parts`（道路: 路面・縁石・歩道・白線・車線・汚れ・雪）、`assemble`（部品を経路ごとに組み立てる）、`cells`（セルの描画・特殊色・シート化）、`sheetlib`（線路・道路・トンネル・アイコンのシートと `run_targets`）。シート名や、部品をどの版に使うかは持たない |
+| `tools/blender/sheetlib/` | 描画の共通部分（パッケージ）。部品をそれが表す物ごとに分けてある: `core`（設定値・シーン・材質・形の部品・基準面 `Datum` と部品 `Part` の型）、`slab_parts`（スラブ軌道の部品。コンクリート道床・てん充層・スラブ・突起・締結装置と、スラブの上の汚れ。レールは `track_parts` のものを使う）、`tram_parts`（路面軌道の部品。コンクリートの床・縁の帯・レールの頭・溝・目地・さび。レールの横位置は `track_parts` と同じ）、`track_parts`（線路: 道床・まくらぎ・レール・車止め・汚れ）、`wall_parts`（壁・基盤・橋・高架の橋脚。線路と道路で共通）、`catenary_parts`（架線: 柱・梁・吊り金具・トロリ線・ちょう架線・ハンガー）、`road_parts`（道路: 路面・縁石・歩道・白線・車線・汚れ・雪）、`assemble`（部品を経路ごとに組み立てる）、`cells`（セルの描画・特殊色・シート化）、`sheetlib`（線路・道路・トンネル・アイコンのシートと `run_targets`）。シート名や、部品をどの版に使うかは持たない |
 | `tools/blender/sheet_settings.py` | 設定値: 並列数（`JOBS`、環境変数 `SHEET_JOBS`）・描画の優先度（`PRIORITY`、`SHEET_PRIORITY`。既定は低）・Blender の場所（`SHEET_BLENDER`）・モード（`SHEET_LAYOUT`・`SHEET_ONLY`）。Blender を使わないので `render_parallel.py` も読む |
 | `tools/blender/` のそのほか | 判定・比較・確認の道具（`profile_sheet`（描画の時間の内訳を測る）・`compose`・`ingame_diff`・`seam_judge`・`slope_measure`・`sheet_diff`・`sheet_audit`（dat が参照するセルの欠陥の候補を数値で探す）・`special`・`special_preview`・`zoom`・`hcat`・`ref_measure`・`check`）と並列描画（`render_parallel`） |
 | `addons/<アドオン>/blender/render.py` | アドオンのシートの入口。`sys.path` に `tools/blender` を足して `sheetlib` を import し、描き分け（`R.TRACK_PROFILES`・`R.ROAD_PROFILES` への登録）と、対象名 → 描く関数の対応（`SHEETS`）を決めて `R.run_targets(SHEETS, 既定の対象)` を呼ぶ |
@@ -44,6 +44,8 @@ D:\bin\blender\blender.exe -b --factory-startup --python ..\..\tools\blender\com
   - `parts`: 追加の部品。シートに描く部品は `track_sheet_parts(prof)` が決める（本体 + `parts` + `TRACK_EXTRAS` に `replace` を当てたもの）。アドオンの `R.TRACK_EXTRAS += ...` は `R` の名前を付け替えるだけで効かないので、このキーで渡す。足した部品の色は `sheetlib/layout_colors.py` に足す
   - `bed_fills`: 分岐（`diag_curves` の T字・十字）の直線と斜めの間のすき間を埋める層。`{部品の名前: (上面の半幅, 板の下面の高さ, 板の上面の高さ)}` で、書いた順に埋める（複数の層を埋められる）。斜めの部分の横幅の倍率は、その部品の `width` で決まる。無ければ `BED_FILLS`（`ballast` だけ。`ballast` が無い部品の組では何も埋めない）。指定した名前の部品が無いときは止まる
   - `snow_skin`: 雪の絵だけの材質の差し替え（部品の名前 → 材質）。`track_skin` の雪の結果に重ねる（`track_profile_skin`。夏の絵の `skin` と対）。`track_sheet` とトンネルの坑口の両方に効く
+  - `anchor`・`cy`: 絵の基準位置（タイルの中心をセルの何行目に映すか）と、持ち分の菱形の中心の行。無ければ線路と同じ `128 + BALLAST_DY`・`GROUND_CY`。道路の上に重ねる路面軌道（AMI の `ami_tram`。#23）は道路と同じ `ROAD_CY` にし、`spill` を 0 にする
+- 路面軌道の部品（`tram_parts`。AMI の `ami_tram`）: `TRAM_TRACK_PARTS`（`track_parts` に渡す。縁の帯の板・コンクリートの床・溝・目地・レールの頭。どれも路面の高さ 0 のすぐ上の薄い板）、`TRAM_WEAR_REPLACE`（`replace` に渡す。線路の汚れ `rust0`・`rust1`・`oil` を床の上の帯に差し替え、まくらぎのさびを消す）、`TRAM_SNOW_SKIN`（`snow_skin` に渡す。雪の絵でも汚れを夏の材質のままにする）。床と縁の帯は基準面 `tram_bed`（`FLAT` にある。スラブ軌道の `slab_bed` と同じく、分岐の絵で作り直さない）に乗る。縁の帯は床の全幅の明るい板を床の下に敷いて作るので、T字・十字ではつないだ床の外周にだけ出る
 - 線路の描き分けのうち、壁を way-object に分けるためのキー（AMI の基盤の版。#16）:
   - `wall_sheet`: 壁を way の絵に描かず、このシート名の壁の way-object のシートに描く。上 4 行が奥、下 4 行（`WALL_FRONT_ROW` から）が手前の絵。`diag_curves` と一緒に使える（斜めの部品は `assemble` の `path_opts` で、直線と斜めの部品を 1 回でまとめて切り分ける）
   - `curve_cells`: `diag_curves` でも、カーブのセルを斜めの形で別に描く（斜めのタイルの切り抜き `_diag_open_cut` をかけない）

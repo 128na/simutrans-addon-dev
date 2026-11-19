@@ -360,7 +360,7 @@ _SNOW = ("snow", (0.90, 0.93, 0.97), 0.9)
 
 SNOW_SKIN = {"ballast": _SNOW, "sleeper": ("snow_sleeper", (0.80, 0.84, 0.90), 0.9), "base": _SNOW}
 
-FLAT = {"bed": Datum(), "rail": Datum(), "slab_bed": Datum()}
+FLAT = {"bed": Datum(), "rail": Datum(), "slab_bed": Datum(), "tram_bed": Datum()}
 
 
 def _side(path, u):

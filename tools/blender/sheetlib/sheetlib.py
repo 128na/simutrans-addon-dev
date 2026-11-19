@@ -818,8 +818,10 @@ def track_sheet(profile="new"):
                 jobs[pos] = (name, [[p0 - (p1 - p0).normalized() * back, p1]], slope, *rest)
     # dat オフセット -64,-32 と対応。持ち分は地面の菱形のまま（新描画位置は絵が 4px 下だが、持ち分を 4 行下げると、
     # 手前のタイルへはみ出した 2〜4 行目を手前の地面が消し、どのつなぎ目にも草の線が出た）
-    cy = GROUND_CY
-    set_anchor(128 + BALLAST_DY)
+    # prof["anchor"]・prof["cy"]（無くてよい）: 絵の基準位置と持ち分の菱形の中心。路面軌道（道路の上に重ねる）は道路と同じ ROAD_CY
+    cy = prof.get("cy", GROUND_CY)
+    anchor = prof.get("anchor", 128 + BALLAST_DY)
+    set_anchor(anchor)
     cells = {}
     parts = track_sheet_parts(prof)
     # prof["bed_fills"]（無くてよい）: 分岐のすき間を埋める層。部品の名前 → (上面の半幅, 板の下面の高さ, 板の上面の高さ)。書いた順に埋める。
@@ -990,7 +992,7 @@ def track_sheet(profile="new"):
             clear_models()
             mesh_object("pier", *box(0, 0, H / 2, sx, sy, H), material(*pmat))
             cells[(2, col)] = render_cell(f"{prof['sheet']}_pier{col}")
-        set_anchor(128 + BALLAST_DY)
+        set_anchor(anchor)
 
     # 確認用: タイル菱形そのもの（基準位置の検証に使う。シートには入れない）
     set_anchor(128)

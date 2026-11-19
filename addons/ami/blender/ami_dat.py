@@ -81,6 +81,12 @@ for _t in catalog.TRACKS:
         BUILT[_n] = _n
         VALUES[_n] = VALUES[_t.way]
         NO_CLOSE.add(_n)
+# 路面軌道（#23）。通常の版だけで、並びは線路の通常の版と同じ（近い斜め・分岐の絵を持つ）。カーブはカーブのセル（曲線。DIAG_CURVES に入れない）
+BUILT[catalog.TRAM] = catalog.TRAM
+# 路面軌道の dat に分岐の絵（switch 画像 1・2）を書くか。tram_track は本体で線路と同じ選び方（weg_t::calc_image の track_wt →
+# select_switch_image。docs/reference/way-addon.md の 9.2）で、道路の 1・2 のような多車線の交差点の意味は無いので、線路と同じく入れる。
+# 道路（ROAD_SWITCH_IMAGES）とそろえて外すかはユーザーの確認待ち（#23）。偽にすると dat から 10 枚を外す（シートのセルは残る）
+TRAM_SWITCH_IMAGES = True
 # 道路 3 種の通常の版（#21）。並びは線路の通常の版と同じ（近い斜め・分岐の絵を持つ）。waytype と値は VALUES
 for _r in catalog.ROADS:
     BUILT[_r.way] = _r.way
@@ -255,6 +261,8 @@ def dat_text(name, sheet):
             if name in NO_CLOSE and idx.startswith("[close"):
                 continue
             if key == "image" and idx in SWITCH_IDX and v["waytype"] == "road" and not ROAD_SWITCH_IMAGES:
+                continue
+            if key == "image" and idx in SWITCH_IDX and name == catalog.TRAM and not TRAM_SWITCH_IMAGES:
                 continue
             if key == "image" and sheet in DIAG_CURVES and idx in CURVE_TO_DIAG:
                 row, col = CURVE_TO_DIAG[idx]

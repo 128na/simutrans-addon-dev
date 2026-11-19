@@ -62,7 +62,16 @@ for v in LO:0 GE:30 EX:60; do
   STRUCT_SPOTS="$STRUCT_SPOTS ${n}_B4:133:$((24 + dy)) ${n}_T1:153:$((19 + dy)) ${n}_T1ns:162:$((5 + dy)) ${n}_T3:153:$((24 + dy)) ${n}_P1:170:$((5 + dy)) ${n}_P2:181:$((2 + dy)) ${n}_P3:190:$((5 + dy))"
   for j in 0 1 2 3 4; do STRUCT_SPOTS="$STRUCT_SPOTS ${n}_IB$j:$((53 + 12 * j)):$((20 + dy)) ${n}_IV$j:$((53 + 12 * j)):$((25 + dy))"; done
 done
+# 路面軌道の見本（ingame/tram_sample.nut）: 下敷きごとに 30 ずつ南（GR 土の上・LO 生活道路・GE 一般道路・EX 高速道路・ST pak128 標準の Road_050）。
+#   区画は sample.nut と同じ（AFC・B・DE・G1・G2・I・H0〜H7）。H0〜H7 は土の上と一般道路の上だけ撮る。P は橋脚とのつながり（土の上だけ）
+TRAM_SPOTS="GR_P:42:0"
+for v in GR:0 LO:30 GE:60 EX:90 ST:120; do
+  IFS=: read n dy <<< "$v"
+  TRAM_SPOTS="$TRAM_SPOTS ${n}_AFC:8:$((2 + dy)) ${n}_B:3:$((7 + dy)) ${n}_DE:14:$((7 + dy)) ${n}_G1:25:$((3 + dy)) ${n}_G2:25:$((15 + dy)) ${n}_I:5:$((14 + dy))"
+  case $n in GR | GE) for j in 0 1 2 3 4 5 6 7; do TRAM_SPOTS="$TRAM_SPOTS ${n}_H$j:$((3 + 8 * j)):$((22 + dy))"; done ;; esac
+done
 case "${NUT:-}" in
+  *tram_sample.nut) SPOTS=${SPOTS:-$TRAM_SPOTS} ;;
   *road_sample.nut) SPOTS=${SPOTS:-$ROAD_SPOTS} ;;
   *road_junction_sample.nut) SPOTS=${SPOTS:-$JUNCTION_SPOTS} ;;
   *road_struct_sample.nut) SPOTS=${SPOTS:-$STRUCT_SPOTS} ;;
