@@ -27,6 +27,8 @@ ap.add_argument("--priority", choices=("low", "below_normal", "normal"), default
                 help="Blender のプロセスの優先度（既定は sheet_settings.PRIORITY = low。環境変数 SHEET_PRIORITY）")
 ap.add_argument("targets", nargs="+")
 args = ap.parse_args()
+if args.priority not in ("low", "below_normal", "normal"):  # choices は既定値（SHEET_PRIORITY）を検査しない
+    ap.error(f"SHEET_PRIORITY は low・below_normal・normal のどれか: {args.priority}")
 
 
 def priority_opts(level):
