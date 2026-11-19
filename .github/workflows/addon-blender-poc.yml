@@ -21,8 +21,5 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: 道具の版を読む
-        run: grep -E '^[A-Z_]+=' addons/blender-poc/ci.env >> "$GITHUB_ENV"
-
-      - name: ruff
-        run: pipx run "ruff==${RUFF}" check addons/blender-poc
+      - name: 検査（中身は addons/blender-poc/check.sh。手元でも同じものを回せる）
+        run: bash addons/blender-poc/check.sh

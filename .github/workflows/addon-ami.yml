@@ -1,7 +1,8 @@
 name: addon-ami
 
 # AMI に関わる変更のときだけ動く。tools/ は AMI も使うので含める。
-# 道具の版は addons/ami/ci.env。シートの描画（Blender）は CI ではしない（#50）。
+# 検査の中身は addons/ami/check.sh（手元でも同じものを回せる）。道具の版は addons/ami/ci.env。
+# シートの描画（Blender）は CI ではしない（#50）。
 on:
   push:
     branches: [main]
@@ -33,42 +34,13 @@ jobs:
       - name: 道具の版を読む
         run: grep -E '^[A-Z_]+=' addons/ami/ci.env >> "$GITHUB_ENV"
 
-      - name: ruff
-        run: pipx run "ruff==${RUFF}" check addons/ami tools
-
-      - name: dat の書き忘れ
-        run: |
-          # 先に消して、生成しなくなった dat の消し忘れも差に出す
-          rm -f addons/ami/src/*.dat
-          python -X utf8 addons/ami/blender/ami_dat.py > /dev/null
-          if [ -n "$(git status --porcelain -- addons/ami/src)" ]; then
-            git status --short -- addons/ami/src
-            git diff -- addons/ami/src | head -100
-            echo "::error::addons/ami/blender/ami_dat.py の出力と、コミットした src/ の dat が違う。手元で ami_dat.py を実行してコミットする"
-            exit 1
-          fi
-
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ env.TOOLS_DIR }}
           key: ci-tools-${{ runner.os }}-makeobj-${{ env.MAKEOBJ }}-datlinter-${{ env.DAT_LINTER }}
 
-      - name: 道具を用意する
-        run: |
-          bash tools/ci/setup-makeobj.sh "$MAKEOBJ" "$TOOLS_DIR/makeobj"
-          bash tools/ci/setup-dat-linter.sh "$DAT_LINTER" "$TOOLS_DIR/dat_linter"
-          echo "$TOOLS_DIR/makeobj" >> "$GITHUB_PATH"
-          echo "$TOOLS_DIR/dat_linter" >> "$GITHUB_PATH"
-
-      - name: dat_linter
-        working-directory: addons/ami/src
-        run: dat_linter lint --tile-size 256 .
-
-      - name: pak を作る
-        working-directory: addons/ami
-        run: |
-          { makeobj || true; } | head -1
-          python -X utf8 build.py
+      - name: 検査
+        run: bash addons/ami/check.sh
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
