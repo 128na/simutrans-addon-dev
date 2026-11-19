@@ -84,6 +84,7 @@ for _t in catalog.TRACKS:
 # 道路 3 種の通常の版（#21）。並びは線路の通常の版と同じ（近い斜め・分岐の絵を持つ）。waytype と値は VALUES
 for _r in catalog.ROADS:
     BUILT[_r.way] = _r.way
+# 道路の地上の基盤の版は作らない（路面がタイル全面で、壁の way-object を通常の版にそのまま重ねる。README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
 
 # ---------------------------------------------------------------- 高架の 4 版（#18）
 # 基盤の版と同じ並び（近い斜めの絵を持たない）で、system_type=1。値は仮: iss と同じく地上の 2 倍の費用・維持費（速さは地上と同じ）
@@ -97,6 +98,17 @@ for _t in catalog.TRACKS:
                           maintenance=VALUES[_t.way]["maintenance"] * ELEV_COST_K)
         NO_CLOSE.add(_n)
         ELEVATED.add(_n)
+# 道路の高架の 4 版（#22）: 線路の高架と同じく、近い斜めの絵を持たない（分け合うタイルに way が 2 本置かれ、奥の線と手前の線を別の版にできる）。
+# カーブは斜めの絵（道路の通常の版と同じ。シートにカーブのセルが無い）。値の倍率も線路と同じ
+for _r in catalog.ROADS:
+    for _v in BASE_VARIANTS:
+        _n = _r.elev(_v)
+        BUILT[_n] = _n
+        VALUES[_n] = dict(VALUES[_r.way], cost=VALUES[_r.way]["cost"] * ELEV_COST_K,
+                          maintenance=VALUES[_r.way]["maintenance"] * ELEV_COST_K)
+        NO_CLOSE.add(_n)
+        ELEVATED.add(_n)
+        DIAG_CURVES.add(_n)
 
 # ---------------------------------------------------------------- 橋脚の way（#18）
 # 高架の真下の地面のタイルに敷く。waytype は tram_track（iss と同じ。ユーザーの決定、2026-11-18。README の「高架と橋脚の作り」）。
@@ -104,6 +116,8 @@ for _t in catalog.TRACKS:
 # 値は仮（iss の橋脚と同じ費用・維持費）。topspeed は走らせる物ではないので 1
 PIER_VALUES = dict(waytype="tram_track", cost=1000, maintenance=100, intro_year=1900, topspeed=1)
 PIERS = {"ami_pier_rail": "ami_pier_rail", "ami_pier_rail_gate": "ami_pier_rail_gate"}  # 単柱と門型（門型は #18 の追加）
+# 道路用の橋脚（#22）: 線路用と同じ waytype（tram_track）と値（仮）。シートの並びは単柱の橋脚と同じ（README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
+PIERS[catalog.PIER_ROAD] = catalog.PIER_ROAD
 # 手前の絵（frontimage）を持つ橋脚: 名前 → 手前の絵の行のずらし。シートを描く側の tools/blender/sheetlib/sheetlib.py の
 # PIER_GATE_FRONT_ROW と同じ値にする。門型は柱・梁を手前の絵に描く
 PIER_FRONT_ROW = {"ami_pier_rail_gate": 4}
@@ -123,6 +137,12 @@ WALL_FRONT_ROW = 4  # 壁のシートの手前の絵の行（sheetlib の WALL_F
 WAYOBJ_KEYS = {"image": "image", "imageup": "imageup", "imageup2": "imageup2", "diagonal": "diagonal"}  # way のキー → way-object の back/front の後ろ
 # 近い斜めの分け合うタイル用: 斜めの向きごとに、タイルの角の側の壁を持つ版のシート（back は nw・sw、front は ne・se。README の「壁の敷き方」）
 TWIN_FROM = {"[nw]": "ami_wall_rail_back", "[sw]": "ami_wall_rail_back", "[ne]": "ami_wall_rail_front", "[se]": "ami_wall_rail_front"}
+
+# ---------------------------------------------------------------- 道路の壁の way-object（#22）
+# waytype=road・own_waytype=road。値は線路の壁と同じ（仮）。版は single・back・front（center の壁は無い）。シートの並びは線路の壁と同じ。
+# 近い斜めの分け合うタイル用の ami_wall_road_twin（仮の名前。ユーザーの確定待ち）は、線路の twin と同じ作りで、back・front の斜めのセルを指す
+ROAD_WALLS = {f"ami_wall_road_{_v}": f"ami_wall_road_{_v}" for _v in catalog.ROAD_WALL_VARIANTS}
+ROAD_TWIN_FROM = {k: v.replace("ami_wall_rail_", "ami_wall_road_") for k, v in TWIN_FROM.items()}
 
 # ---------------------------------------------------------------- 架線つきの壁の way-object（線路用、電化。#17）
 # 値は仮（README の「架線の作り」）。架線の way-object の topspeed は、電化した編成の速さを縛る（本体の max_wayobj_speed）ので、
@@ -152,10 +172,12 @@ BRIDGE_FRONT_KEYS = (("image", "ns ew".split()), ("start", "nsew"), ("ramp", "ns
                      ("image2", "ns ew".split()), ("start2", "nsew"), ("ramp2", "nsew"), ("pillar2", "sw"))
 BRIDGE_EMPTY_CELL = "0.9"
 BRIDGES = {_t.bridge: (_t.way, _t.bridge) for _t in catalog.TRACKS}  # 名前 → (地上の way, シート)
+BRIDGES.update({_r.bridge: (_r.way, _r.bridge) for _r in catalog.ROADS})  # 道路の橋（#22）。シートの並びは線路の橋と同じ
 # トンネルのシートの並び（sheetlib の tunnel_sheet）: 行 0 が奥の絵、行 1 が手前の絵（坑口の躯体）、行 2・3 が雪。列 2〜5 が n・s・e・w。
 # image[N] は北が高い坂のタイル。トンネルの中の way は地上の通常の版（way=）
 TUNNEL_DIRS = (("n", 2), ("s", 3), ("e", 4), ("w", 5))
 TUNNELS = {_t.tunnel: (_t.way, _t.tunnel) for _t in catalog.TRACKS}  # 名前 → (中の way, シート)
+TUNNELS.update({_r.tunnel: (_r.way, _r.tunnel) for _r in catalog.ROADS})  # 道路のトンネル（#22）。シートの並びは線路のトンネルと同じ
 
 
 def _head(name, kind, obj, base, cost_k, sheet):
@@ -233,15 +255,17 @@ def dat_text(name, sheet):
     return NL.join(out) + NL
 
 
-def wall_dat_text(name, sheet, twin=False, catenary=False):
+def wall_dat_text(name, sheet, twin=False, catenary=False, road=False):
     """壁の way-object の dat。セルは way と同じ位置（分岐の絵・近い斜めは持たない。壁は通常の T字・十字と同じ）。
     カーブは way と同じく斜めのセルを指す。twin は近い斜めの分け合うタイル用（斜めとカーブのキーだけ、TWIN_FROM のシートを指す）。
-    catenary は架線つき（電化。own_waytype=electrified_track、値は CATENARY_VALUES。twin は TWIN_FROM_CATENARY のシート）"""
+    catenary は架線つき（電化。own_waytype=electrified_track、値は CATENARY_VALUES。twin は TWIN_FROM_CATENARY のシート）。
+    road は道路の壁（waytype=road・own_waytype=road。twin は ROAD_TWIN_FROM のシート）"""
     v = CATENARY_VALUES if catenary else WALL_VALUES
-    twin_from = TWIN_FROM_CATENARY if catenary else TWIN_FROM
-    kind = "架線つき（電化）" if catenary else "壁だけ、架線なし"
+    twin_from = TWIN_FROM_CATENARY if catenary else ROAD_TWIN_FROM if road else TWIN_FROM
+    kind = "道路の壁" if road else "線路の壁の way-object（架線つき（電化））" if catenary else "線路の壁の way-object（壁だけ、架線なし）"
+    wt = "road" if road else "track"
     out = [
-        f"# AMI: {name}（CC BY 4.0）。線路の壁の way-object（{kind}）。シートは blender/render.py が描く",
+        f"# AMI: {name}（CC BY 4.0）。{kind}。シートは blender/render.py が描く",
         "obj=way-object",
         f"name={name}",
         "copyright=AMI (CC BY 4.0)",
@@ -249,8 +273,8 @@ def wall_dat_text(name, sheet, twin=False, catenary=False):
         "intro_month=1",
         "retire_year=2999",
         "retire_month=1",
-        "waytype=track",
-        f"own_waytype={'electrified_track' if catenary else 'track'}",
+        f"waytype={wt}",
+        f"own_waytype={'electrified_track' if catenary else wt}",
         f"cost={v['cost']}",
         f"maintenance={v['maintenance']}",
         f"topspeed={(CATENARY_TWIN_TOPSPEED if catenary else WALL_TWIN_TOPSPEED) if twin else v['topspeed']}",
@@ -326,6 +350,13 @@ def main():
     with open(os.path.join(SRC, "ami_wall_rail_twin_catenary.dat"), "w", encoding="utf8", newline=NL) as f:
         f.write(wall_dat_text("ami_wall_rail_twin_catenary", "ami_wall_rail_twin_catenary_back", twin=True, catenary=True))
     print("[dat] ami_wall_rail_twin_catenary.dat")
+    for name, sheet in ROAD_WALLS.items():
+        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
+            f.write(wall_dat_text(name, sheet, road=True))
+        print(f"[dat] {name}.dat")
+    with open(os.path.join(SRC, catalog.ROAD_WALL_TWIN + ".dat"), "w", encoding="utf8", newline=NL) as f:
+        f.write(wall_dat_text(catalog.ROAD_WALL_TWIN, "ami_wall_road_back", twin=True, road=True))
+    print(f"[dat] {catalog.ROAD_WALL_TWIN}.dat")
     for name, sheet in PIERS.items():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(pier_dat_text(name, sheet))

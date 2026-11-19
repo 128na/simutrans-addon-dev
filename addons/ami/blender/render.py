@@ -21,6 +21,7 @@
     work/                     セルごとの生の描画結果（確認用）
 """
 import dataclasses
+import math
 import os
 import sys
 
@@ -190,6 +191,48 @@ for _r in catalog.ROADS:
                                     "priority_cross": True, "open_cross": True, "corner_arcs": True,
                                     "drive_left": DRIVE_LEFT}, **ROAD_SETTINGS[_r.key])
 
+# ---------------------------------------------------------------- 道路の壁の way-object・高架の 4 版・橋・トンネル・道路用の橋脚（#22）
+# 道路の壁（ami_wall_road_<版>。single・back・front）: blender-poc の高速道路の壁（sheetlib の road_parts の wallL・wallR・endw。
+# iss の都市高速と同じくタイルの端に立つコンクリートの壁）を、way の絵に焼き込まず way-object のシートに分ける（sheetlib の road_sheet の
+# wall_sheet）。壁の形は 3 種で同じなので、シートは catalog.WALL_ROAD の道路から 1 回だけ描く（wall_only。way のシートは書かない）。
+# 地上は通常の版の way（路面がタイル全面）にそのまま重ねる。基盤の版は作らない（README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
+ROAD_WALL_LABEL = "W"  # 道路の壁のアイコンの文字（仮。アイコンはステップ 13 でまとめて作る）
+_WR = catalog.WALL_ROAD
+for _v in catalog.ROAD_WALL_VARIANTS:
+    R.ROAD_PROFILES[f"wall_road_{_v}"] = dict(
+        R.ROAD_PROFILES[_WR.key], sheet=f"ami_wall_road_{_v}_way", prefix=f"ami_wall_road_{_v}_", walls=BASE_VARIANTS[_v],
+        groups=R.ROAD_PROFILES[_WR.key]["groups"] + ("wall",), wall_sheet=f"ami_wall_road_{_v}", wall_only=True,
+        wall_label=ROAD_WALL_LABEL)
+
+# 高架の 4 版（<道路>_elev_<版>、dat は system_type=1）: 床（路面と基盤）と躯体だけ。橋脚は描かない（道路用の橋脚の way が描く）。
+# 基盤は壁の外の面で止まり、壁の無い側はタイルの端まで（線路の高架と同じ）。躯体は壁のある側で壁の外の面から ELEV_BODY_INSET 内で止める。
+# 壁は地上と同じ way-object（ami_wall_road_<版>）を重ねるので、壁のシートは書かない（write_walls）。
+# 持ち分は基盤と躯体の分だけ下へ広げる（道路の基盤は路面の板の下へ ROAD_BASE_DROP 下げてあるので、線路の ELEV_BODY_LOWER より深い）
+ROAD_ELEV_LOWER = math.ceil((R.BASE_H + R.ELEV_BODY_D + R.ROAD_BASE_DROP) * 16 / R.H) + 2
+for _r in catalog.ROADS:
+    for _v, _walls in BASE_VARIANTS.items():
+        R.ROAD_PROFILES[_p(_r.elev(_v))] = dict(
+            R.ROAD_PROFILES[_r.key], sheet=_r.elev(_v), prefix=_r.elev(_v) + "_", walls=_walls,
+            groups=R.ROAD_PROFILES[_r.key]["groups"] + ("wall",), wall_sheet=f"ami_wall_road_{_v}", write_walls=False,
+            elevated=True, elev_body=True, lower=ROAD_ELEV_LOWER, band="elevated")
+
+# 橋（<道路>_bridge）: 欄干を描かず、single の壁の way-object を重ねる（線路の橋と同じ）。床・躯体の高さは高架にそろえる。
+# 桁（POC の C6）: iss の都市高速の橋（../refs/iss/src/bridge/road/bridge.dat の iss_br_0120_bridge1）と同じく、床の縁の下に青い鋼の帯を見せる。
+# 基盤（BASE_H）と、その下の桁（ROAD_GIRDER_D）を青くし、壁の外の面まで出す（躯体のように内へ下げない）。
+# iss の帯は 256px のセルで 4px（../refs/iss/release/pak128/bridge/road/0120_bridge1.png の NS のセル。2026-11-19 に測った）。
+# 床の下を描くため、平らなセルは高架と同じだけ持ち分を下へ広げる（端の坂と坂から始まる端は広げない。sheetlib の road_sheet）
+ROAD_GIRDER_D = 0.15  # 桁の深さ（基盤の下面から）。基盤と合わせて約 4px
+ROAD_BRIDGE_CELLS = BRIDGE_CELLS
+# 橋脚: 道の全幅（両側の壁の下）まで横切る柱（blender-poc の高速道路の橋・高架と同じ考え方。床がタイルいっぱいなので、中央だけの柱は床に隠れる）
+ROAD_PIER_ACROSS = 2 * R.EXPWY_WALL_U
+ROAD_BRIDGE_PIER = (ROAD_PIER_ACROSS, R.PIER_SIZE, R._M_PIER)
+for _r in catalog.ROADS:
+    _single = R.ROAD_PROFILES[_p(_r.elev("single"))]
+    R.ROAD_PROFILES[_p(_r.bridge)] = dict(
+        _single, sheet=_r.bridge, prefix=_r.bridge + "_", elevated=False, bridge=True, solid=True, starts=True, piers=True,
+        groups=_single["groups"] + ("ramp",), only=ROAD_BRIDGE_CELLS, base_mat=R._M_GIRDER, body_mat=R._M_GIRDER, body_inset=0.0,
+        body_d=ROAD_GIRDER_D, pier_box=ROAD_BRIDGE_PIER, band="bridge")
+
 # ---------------------------------------------------------------- 対象（シート名 → 描く関数）
 # 基盤の版の対象は、way のシートと壁の way-object のシートを 1 つのプロセスで描く
 
@@ -218,8 +261,24 @@ SHEETS["ami_pier_rail_gate"] = lambda: R.pier_gate_sheet("ami_pier_rail_gate", _
 for _t in catalog.TRACKS:
     SHEETS[_t.bridge] = _track_target(_p(_t.bridge))
     SHEETS[_t.tunnel] = _tunnel_target(_t)
+_road_target = lambda key: lambda: R.road_sheet(key)
 for _r in catalog.ROADS:
-    SHEETS[_r.way] = (lambda key: lambda: R.road_sheet(key))(_r.key)
+    SHEETS[_r.way] = _road_target(_r.key)
+for _v in catalog.ROAD_WALL_VARIANTS:
+    SHEETS[f"ami_wall_road_{_v}"] = _road_target(f"wall_road_{_v}")
+for _r in catalog.ROADS:
+    for _v in BASE_VARIANTS:
+        SHEETS[_r.elev(_v)] = _road_target(_p(_r.elev(_v)))
+    SHEETS[_r.bridge] = _road_target(_p(_r.bridge))
+    # トンネル: 坑口は blender-poc の高速道路のトンネル（iss の都市高速の坑口が手本）で、路面・白線は道路の種類ごと。
+    # profile は線路の描き分けの名前（tunnel_sheet が引くだけで、道路の坑口では使わない）
+    SHEETS[_r.tunnel] = (lambda r: lambda: R.tunnel_sheet("expressway", profile=catalog.RAIL_BALLAST.key, sheet=r.tunnel,
+                                                          road_profile=R.ROAD_PROFILES[r.key]))(_r)
+# 道路用の橋脚の way（ami_pier_road）: 高架の道路の真下の地面に敷く。柱は道の全幅を横切り（ROAD_PIER_ACROSS。斜めは 1/√2）、
+# 上端は道路の高架の躯体の下面に合わせる。絵の位置・持ち分は道路と同じ（ROAD_CY）
+SHEETS[catalog.PIER_ROAD] = lambda: R.pier_sheet(catalog.PIER_ROAD, R.FLAT, label=PIER_LABEL, across=ROAD_PIER_ACROSS,
+                                                 anchor=R.ROAD_CY, cy=R.ROAD_CY, top_drop=R.ROAD_BASE_DROP, diag_k=R.DIAG_EDGE,
+                                                 style="road")
 
 if __name__ == "__main__":
     R.run_targets(SHEETS, list(SHEETS))
