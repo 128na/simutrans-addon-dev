@@ -43,7 +43,13 @@ case "$kind" in
     git init -q "$work/src"
     git -C "$work/src" fetch -q --depth 1 https://github.com/128na/simutrans "$ref"
     git -C "$work/src" checkout -q FETCH_HEAD
-    make -C "$work/src/makeobj" OSTYPE=linux OPTIMISE=1 -j"$(nproc)"
+    # makeobj は libpng・zlib・bzip2 を使う。無ければ入れる（CI の runner は sudo が使える）
+    if ! pkg-config --exists libpng 2> /dev/null; then
+      sudo apt-get install -y -q libpng-dev zlib1g-dev libbz2-dev > /dev/null
+    fi
+    # 本体の Makefile は config.default を前提にする（取り出したソースの中にだけ作る）
+    printf 'OSTYPE = linux\nOPTIMISE = 1\n' > "$work/src/config.default"
+    make -C "$work/src/makeobj" -j"$(nproc)"
     install -m 755 "$work/src/build/default/makeobj/makeobj" "$dest/$exe"
     ;;
   *)
