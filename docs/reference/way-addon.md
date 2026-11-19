@@ -237,7 +237,8 @@ T字のカーブの向きは、blender-poc の見本（`ingame/switch_auto.nut`�
   片側のカーブだけで全部を組むと、カーブの内側に丸い壁が立ち、隣のタイルとつながらない（blender-poc の側壁の版で確認、2026-11-14）
 - 道路の自動選択は「隣に T字がある」条件で switch 画像（`nw` = false）を使う（`select_switch_road_image`）。線路と意味が違うので、道路用の絵を作るときは `boden/wege/weg.cc` の条件を読んで合わせる。
   - 呼び分けは `weg_t::calc_image`（`OTRP-KUTAv6` の `boden/wege/weg.cc` 732〜739 行）。斜め・近い斜めでなく、dat が switch 画像を持つ way だけで、`track_wt` なら `select_switch_image`、`road_wt` なら `select_switch_road_image`（988 行〜）。この部分は `MULTI_THREAD` と `COLOUR_DEPTH` が 0 でないビルドでだけ働く（`#if`）。
-  - 道路の T字（たとえば `nse`）は、枝の隣（東）が三方分岐で、本線の両隣（北・南）が三方分岐でないときに `image[nse1]`（`nw` = false）になる。2 本の道路を隣り合わせに並べて渡り口でつないだ形が当たる。本線の隣が三方分岐のときは、ex 画像があればそちら、無ければ通常の T字。
+  - 道路の T字（たとえば `nse`）は、枝の隣（東）が三方分岐で、本線の両隣（北・南）が三方分岐でないときに `image[nse1]`（`nw` = false）になる。2 本の道路を隣り合わせに並べて渡り口でつないだ形が当たる。本線の隣が三方分岐のときは、ex 画像があればそちら、無ければ通常の T字。三方分岐の判定（`ribi_t::is_threeway`）は十字も含む。
+  - 道路の十字は、ex 画像が無い way では、隣のどれかが T字か十字のとき、その隣の向きの T字の switch 画像の `nw` = true（東なら `image[nse2]`、西なら `image[nsw2]`、北なら `image[new2]`、南なら `image[sew2]`。この順に見る）を十字のタイルに出す。つまり道路の T字の「2」は、自動では十字のタイルにだけ出る。T字の形に描くと、十字の 4 本目の腕の側が閉じて見える（AMI の道路の見本の区画 L、2026-11-19）。ex 画像がある way では、十字の 1・2 や ex 画像を選ぶ別の条件になる
   - AMI の道路（`addons/ami`）で確かめた: 区画 H の渡り口で、自動選択の絵が固定の `image[…1]` と同じで、通常の T字と違う（`way_x.get_image_id()`）。固定の道具 `tool_set_switch_image` は `"" + wt_road + ",1"` で `image[…2]`、`",2"` で `image[…1]` になる（2026-11-19、`OTRPv64_3.exe`。道具は本体の `feature/switch-image-override` の版にだけある）。
 - 確かめ方: ゲームで T字を作り、タイルを開いて選択肢を順に選ぶ。スクリプトなら `command_x(tool_set_switch_image).work(pl, pos, "" + wt_rail + ",1")` で選び、`way_x(...).get_image_id()` で絵が変わることを見る（OTRP 本体の自動テスト `test_switch_image_override.nut`）。
 

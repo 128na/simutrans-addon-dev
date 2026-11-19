@@ -14,14 +14,16 @@
 //   D 坂の十字: (11,7) を 1 段上げ、四方を坂にして越える                          … imageup 4
 //   E 急坂の十字: (17,7) を 2 段上げ、四方を 2 段の坂にして越える                  … imageup2 4
 //   G 近い斜め: (22,0) から南東へ・(22,18) から北東へ、1 タイルずらした斜め 2 本    … diagonal[close1] [close2]
-//   H 分岐の自動選択（道路の条件。本体の weg_t::select_switch_road_image）: T字の枝の側の隣も T字で、本線の両隣が分岐でないと「1」の絵。
+//   H 分岐の自動選択（道路の条件。本体の weg_t::select_switch_road_image）: T字の枝の側の隣が T字か十字で、本線の両隣が分岐でないと「1」の絵。
 //     2 本の道路を隣り合わせに並べ、渡り口でつなぐ: 南北 (34,0)-(34,8)・(35,0)-(35,8) を (34,4)-(35,4) でつなぐ（nse1・nsw1）、
 //     東西 (33,12)-(43,12)・(33,13)-(43,13) を (38,12)-(38,13) でつなぐ（sew1・new1）
 //   I 分岐の絵を固定（固定の道具がある OTRP だけ）: y=23 の行に x=2 から 6 ずつ、T字 4 種と十字を、選択 2（image[..1]）・選択 1（image[..2]）の順に
 //     （本体の apply_switch_image_override: 選択 1 は nw=true の絵 = dat の「2」、選択 2 は nw=false の絵 = dat の「1」）
 //   K pak128 標準の道路（STANDARD）とのつなぎ目: 東西 y=1 の (44)-(49) が標準・(49)-(55) が AMI、南北 x=58 の (0)-(4) が標準・(4)-(9) が AMI
+//   L 隣り合う十字: 南北 (50,11)-(50,19)・(51,11)-(51,19) を東西 (46,15)-(55,15) が横切る。十字の隣が T字か十字だと、ex 画像の無い way では
+//     十字のタイルに T字の「2」の絵（西の十字は image[nse2]、東の十字は image[nsw2]）が出る（select_switch_road_image の ribi_t::all）
 // [check] の行: 区画 G の分け合うタイルが way 1 本か（two_ways=false なら近い斜めの絵）、区画 H の自動選択の絵が区画 I の選択 2 と同じ絵で
-// 通常の T字（区画 B）と違うか、区画 I の選択 1 と 2 が違う絵か（get_image_id）、固定の道具があるか
+// 通常の T字（区画 B）と違うか、区画 I の選択 1 と 2 が違う絵か（get_image_id）、区画 L の十字が T字の「2」の絵になるか（t2）、固定の道具があるか
 local ROADS = ["ami_road_local", "ami_road_general", "ami_road_expressway"];
 local STANDARD = "Road_050";   // 区画 K でつなぐ pak128 標準の道路
 local ORIGINS = [[20, 20], [276, 20]];
@@ -126,6 +128,11 @@ function lay(name, ox, oy) {
     s += r("K ns ami", line(58, 4, 58, 9));
     s += r("K label", marker.work(pl, c(44, -1), STANDARD + " | AMI"));
   }
+  // L: 隣り合う十字
+  s += r("L ns", line(50, 11, 50, 19));
+  s += r("L ns", line(51, 11, 51, 19));
+  s += r("L ew", line(46, 15, 55, 15));
+  s += r("L label", marker.work(pl, c(46, 10), "auto: nsew next to nsew"));
   // [check]: 自動選択（H）と固定（I）の絵。通常の T字は区画 B の (0,7) nse・(6,7) nsw・(3,10) new・(3,4) sew
   local plain = {nse = img(ox, oy + 7), nsw = img(ox + 6, oy + 7), new = img(ox + 3, oy + 10), sew = img(ox + 3, oy + 4)};
   local auto = {nse = img(ox + 34, oy + 4), nsw = img(ox + 35, oy + 4), sew = img(ox + 38, oy + 12), new = img(ox + 38, oy + 13)};
@@ -136,6 +143,9 @@ function lay(name, ox, oy) {
               + (pin == null ? "" : (ok ? " ok" : " NG")) + (pinned[k + "1"] == pinned[k + "2"] ? " same12" : "") + "\n";
   }
   checks += "[check] " + name + " nsew pin1=" + pinned["nsew1"] + " pin2=" + pinned["nsew2"] + " plain=" + img(ox + 3, oy + 7) + "\n";
+  local lw = img(ox + 50, oy + 15), le = img(ox + 51, oy + 15);
+  checks += "[check] " + name + " L west=" + lw + " east=" + le + " plain=" + img(ox + 3, oy + 7)
+            + ((lw == pinned["nse2"] && le == pinned["nsw2"]) ? " t2" : "") + "\n";
   return s;
 }
 
