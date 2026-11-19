@@ -15,11 +15,13 @@
     assemble     部品を経路ごとに組み立てる
     cells        セルの描画・特殊色・シート化
     sheetlib     シートの組み立て（線路・道路・トンネル・アイコン）と run_targets
+    sidewalk     歩道の way のシート（sheetlib の render_icon を使う）
 
 アドオンの入口と判定の道具からは `import sheetlib as R` で、どのモジュールの名前も `R.名前` で引ける（下で全部をここに出す）。
 """
 from . import core, wall_parts, catenary_parts, track_parts, slab_parts, tram_parts, road_parts, assemble, cells
 from . import sheetlib as _sheets
+from . import sidewalk
 
-for _m in (core, track_parts, slab_parts, tram_parts, wall_parts, catenary_parts, road_parts, assemble, cells, _sheets):
+for _m in (core, track_parts, slab_parts, tram_parts, wall_parts, catenary_parts, road_parts, assemble, cells, _sheets, sidewalk):
     globals().update({_k: _v for _k, _v in vars(_m).items() if not _k.startswith("__")})

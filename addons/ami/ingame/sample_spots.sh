@@ -70,10 +70,18 @@ for v in GR:0 LO:30 GE:60 EX:90 ST:120; do
   TRAM_SPOTS="$TRAM_SPOTS ${n}_AFC:8:$((2 + dy)) ${n}_B:3:$((7 + dy)) ${n}_DE:14:$((7 + dy)) ${n}_G1:25:$((3 + dy)) ${n}_G2:25:$((15 + dy)) ${n}_I:5:$((14 + dy))"
   case $n in GR | GE) for j in 0 1 2 3 4 5 6 7; do TRAM_SPOTS="$TRAM_SPOTS ${n}_H$j:$((3 + 8 * j)):$((22 + dy))"; done ;; esac
 done
+# 歩道の見本（ingame/sidewalk_sample.nut。区画の原点は温暖側・降雪側の原点の 4 南）: 道路の種類ごとに 14 ずつ南（LO 生活道路・GE 一般道路・
+#   EX 高速道路・ST pak128 標準の Road_050）。R は交差点の四隅、Q は広場と 1 タイル、S は坂、T は急坂、D は斜めの道路、X は道路・運河の横切り
+SIDEWALK_SPOTS=""
+for v in LO:0 GE:14 EX:28 ST:42; do
+  IFS=: read n dy <<< "$v"
+  SIDEWALK_SPOTS="$SIDEWALK_SPOTS ${n}_R:6:$((6 + dy)) ${n}_Q:16:$((5 + dy)) ${n}_S:22:$((7 + dy)) ${n}_T:27:$((7 + dy)) ${n}_D:34:$((7 + dy)) ${n}_X:44:$((6 + dy))"
+done
 case "${NUT:-}" in
   *tram_sample.nut) SPOTS=${SPOTS:-$TRAM_SPOTS} ;;
   *road_sample.nut) SPOTS=${SPOTS:-$ROAD_SPOTS} ;;
   *road_junction_sample.nut) SPOTS=${SPOTS:-$JUNCTION_SPOTS} ;;
   *road_struct_sample.nut) SPOTS=${SPOTS:-$STRUCT_SPOTS} ;;
+  *sidewalk_sample.nut) SPOTS=${SPOTS:-$SIDEWALK_SPOTS} ;;
 esac
 SPOTS=${SPOTS:-"AFC:8:2 B:3:7 DE:14:7 G1:25:3 G2:25:15 I:5:14 H0:3:22 H1:11:22 H2:19:22 H3:27:22 H4:35:22 H5:43:22 H6:51:22 H7:59:22$WALLED_SPOTS W1:6:155 W2a:19:153 W2b:19:163 W3:2:163 WE1:6:305 WE2a:19:303 WE2b:19:313 WE3:2:313 $BT_SPOTS"}

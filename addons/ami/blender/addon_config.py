@@ -18,6 +18,7 @@ for _r in catalog.ROADS:
     SHEETS.update({_r.elev(v): _r.elev(v) for v in catalog.VARIANTS})
 SHEETS[catalog.PIER_ROAD] = catalog.PIER_ROAD
 SHEETS[catalog.TRAM] = catalog.TRAM
+SHEETS[catalog.SIDEWALK] = catalog.SIDEWALK
 
 # カーブに斜めの絵を使うシート（道路 3 種も）。
 # 基盤の版・高架の版（線路・道路）はカーブを斜めの形の別のセル（基盤の壁の無い側を削らない）に描くので、ここには入れない
