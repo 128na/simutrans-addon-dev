@@ -2,7 +2,7 @@
 
 pak128 用のインフラアドオン集。絵は Blender のスクリプトで描く（作り方は [blender-poc](../blender-poc/README.md) で確かめたもの）。
 
-**今あるのは在来線の通常の版（`ami_rail_ballast`）と、在来線の基盤の 4 版・壁だけの way-object・架線つきの壁の way-object（`ami_rail_ballast_base_*`・`ami_wall_rail_*`・`ami_wall_rail_*_catenary`）、高架の 4 版と橋脚の way（`ami_rail_ballast_elev_*`・`ami_pier_rail`・門型の `ami_pier_rail_gate`）、橋とトンネル（`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`）、高速線（スラブ軌道）の通常の版・基盤の 4 版・高架の 4 版・橋・トンネル（`ami_rail_slab`・`ami_rail_slab_base_*`・`ami_rail_slab_elev_*`・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`）。** 描画から pak までの骨組み（[#14](https://github.com/128na/simutrans-addon-dev/issues/14)）の上に、在来線の壁の無い通常の版を仕上げ（[#15](https://github.com/128na/simutrans-addon-dev/issues/15)。全方位・分岐の絵・近い斜め・雪・汚れ）、基盤の版と壁を足した（[#16](https://github.com/128na/simutrans-addon-dev/issues/16)。下の「壁の敷き方」）。壁に架線を持たせた版を足した（[#17](https://github.com/128na/simutrans-addon-dev/issues/17)。下の「架線の作り」）。高架の 4 版と、高架の真下の地面に敷く橋脚の way を足した（[#18](https://github.com/128na/simutrans-addon-dev/issues/18)。下の「高架と橋脚の作り」）。橋とトンネルを足した（[#19](https://github.com/128na/simutrans-addon-dev/issues/19)。下の「橋とトンネルの作り」）。高速線を足した（[#20](https://github.com/128na/simutrans-addon-dev/issues/20)。下の「高速線の作り」）。下の表の残りは作る予定のもの（開発ステップの一覧は [#27](https://github.com/128na/simutrans-addon-dev/issues/27)）。範囲と作りを決めた理由は次の ADR にある。
+**今あるのは在来線の通常の版（`ami_rail_ballast`）と、在来線の基盤の 4 版・壁だけの way-object・架線つきの壁の way-object（`ami_rail_ballast_base_*`・`ami_wall_rail_*`・`ami_wall_rail_*_catenary`）、高架の 4 版と橋脚の way（`ami_rail_ballast_elev_*`・`ami_pier_rail`・門型の `ami_pier_rail_gate`）、橋とトンネル（`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`）、高速線（スラブ軌道）の通常の版・基盤の 4 版・高架の 4 版・橋・トンネル（`ami_rail_slab`・`ami_rail_slab_base_*`・`ami_rail_slab_elev_*`・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`）、道路 3 種の通常の版（`ami_road_local`・`ami_road_general`・`ami_road_expressway`）。** 描画から pak までの骨組み（[#14](https://github.com/128na/simutrans-addon-dev/issues/14)）の上に、在来線の壁の無い通常の版を仕上げ（[#15](https://github.com/128na/simutrans-addon-dev/issues/15)。全方位・分岐の絵・近い斜め・雪・汚れ）、基盤の版と壁を足した（[#16](https://github.com/128na/simutrans-addon-dev/issues/16)。下の「壁の敷き方」）。壁に架線を持たせた版を足した（[#17](https://github.com/128na/simutrans-addon-dev/issues/17)。下の「架線の作り」）。高架の 4 版と、高架の真下の地面に敷く橋脚の way を足した（[#18](https://github.com/128na/simutrans-addon-dev/issues/18)。下の「高架と橋脚の作り」）。橋とトンネルを足した（[#19](https://github.com/128na/simutrans-addon-dev/issues/19)。下の「橋とトンネルの作り」）。高速線を足した（[#20](https://github.com/128na/simutrans-addon-dev/issues/20)。下の「高速線の作り」）。道路 3 種の通常の版を足した（[#21](https://github.com/128na/simutrans-addon-dev/issues/21)。下の「道路の作り」）。下の表の残りは作る予定のもの（開発ステップの一覧は [#27](https://github.com/128na/simutrans-addon-dev/issues/27)）。範囲と作りを決めた理由は次の ADR にある。
 
 - [ADR 0002](../../docs/adr/0002-ami-scope.md): 範囲・対象・ライセンス・配布
 - [ADR 0003](../../docs/adr/0003-ami-walls-base-piers-as-separate-objects.md): 壁・基盤・橋脚・歩道の分け方
@@ -22,7 +22,7 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 | 道路の壁 | `ami_wall_road_<版>`（`single`・`back`・`front`） |
 | 橋脚・歩道 | `ami_pier_rail`（門型は `ami_pier_rail_gate`）・`ami_pier_road`・`ami_sidewalk` |
 
-dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`。
+dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`・`ami_road_local`・`ami_road_general`・`ami_road_expressway`。
 
 ### 線路（新描画位置）
 
@@ -82,7 +82,46 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 | 高速道路 | 360 km/h | 破線 | `ami_road_expressway` | 同上 |
 
 - 断面はどれも blender-poc の高速道路と同じ（片側 1 車線、タイル全面が路面、歩道なし）
-- 地上の道路に基盤の 4 版が要るか（路面がタイル全面なので、壁を路面の上に立てるだけで足りるか）は、最初の実装で確かめて決める
+- 今あるのは通常の版だけ（#21）。高架・橋・トンネルと道路の壁は #22
+- 地上の道路に基盤の 4 版が要るか（路面がタイル全面なので、壁を路面の上に立てるだけで足りるか）は、道路の壁を作るとき（#22）に確かめて決める
+
+### 道路の作り（通常の版、#21）
+
+3 種とも blender-poc の高速道路（`../blender-poc/blender/render.py` の `ROAD_PROFILES["expressway"]`）と同じ作りで、`tools/blender/sheetlib` の `road_sheet` で描く（設定は `blender/render.py` の `ROAD_SETTINGS`）。種類ごとに変えたのは中央線・路面の色・アイコンだけ。
+
+| 種類 | 中央線 | 路面の色 | アイコン |
+|---|---|---|---|
+| 生活道路 | なし | blender-poc の街路と同じ灰色（`road_parts` の `_M_ROAD_ASPHALT`） | 道路の背景・40 |
+| 一般道路 | 白の実線 | 同上 | 道路の背景・120 |
+| 高速道路 | 白の破線 | blender-poc の高速道路と同じ暗く青みのある色（`EXPWY_ASPHALT`） | 高速道路の背景・360 |
+
+- 白線: 路側の白線は 3 種とも実線。T字は枝の側の路側線を点線（分岐の口）にし、十字と 1 タイルだけの道は東西の中央線と東西の点線（blender-poc の高速道路と同じ）。行き止まりは直線と同じ絵
+- 中央線の破線（高速道路）: タイルの中の長さを、直線は 4 本、斜めは 3 本に割り、タイルの辺がいつもすき間の中ほどに来るように置く（`road_parts` の `CENTER_DASHES`・`sheetlib` の `tile_dashes`）。直線（長さ 10）と斜め（10/√2）のどちらも割り切れるので、直線と斜め・坂と平地の継ぎ目で間隔がそろう。前の点線の作り（経路の始点から周期 1.6）は 10 を割り切れず、斜めは経路をタイルの外まで延ばすので、継ぎ目で間隔が崩れる。線の幅は実線の中央線と同じ（約 1px）。画面で横向きの斜めは、実線と同じく半画素ずらす
+- カーブ: 3 種とも斜めの絵（dat の `image[sw]` などが `diagonal` と同じセル）。手本では、iss の道路は速さで分かれる（`../refs/iss/src/way/road/ground.dat` の `iss_wrg_0030`・`0050`・`0120_*` は `image[ne]` が曲線のセル、`iss_wrg_1200_*` は `diagonal` と同じセル）。pak128 標準の `Road_030`（`../refs/pak128/infrastructure/roads/road_030.dat`）も曲線のセル。それでも 3 種をそろえたのは、道路の壁（`ami_wall_road_<版>`、#22）を 3 種で共通の way-object にするため（way-object のカーブの絵は 1 つなので、種類ごとにカーブの形が違うと壁が合わない）。断面も blender-poc の高速道路（斜めの絵）と同じ
+- 路面の色: 生活道路・一般道路は pak128 標準の道路（灰色）とつなぐことが多いので街路の灰色、高速道路は一般の道路と見分けられるよう暗い青み。走行跡と路肩のまだらの雪は、路面と同じ 2 色から作る（`sheetlib` の `asphalt_skin`。路面だけ替えると、暗い路面に明るい帯が乗る）
+- 雪: 車道は除雪されて夏と同じ（路面・白線・走行跡）。路側の白線の外から路肩に雪が積もり、白線の内側をまだらの雪でぼかす（blender-poc の道路と同じ `snow` の部品）
+- 汚れ: 走行跡（車輪の通る所が磨かれた明るい帯）と油の帯。交差点は右左折の経路にも付ける（blender-poc と同じ）
+- 近い斜め: `diagonal[close1]`・`[close2]` を持つ（斜めの 2 片を中心線で切って 1 枚に描く。blender-poc と同じ）
+
+#### 分岐の絵（switch 画像 1・2）
+
+道路でも switch 画像は使われる。本体のソース（`../simutrans`）で確かめた:
+
+- 自動選択: `boden/wege/weg.cc` の `weg_t::calc_image`（OTRP-KUTAv6 の 732〜739 行）が、switch 画像を持つ way の T字・十字で、`track` なら `select_switch_image`、`road` なら `select_switch_road_image`（988 行〜）を呼ぶ。道路の条件は線路と違い、T字の枝の側の隣も T字（`sew` だけは枝の隣が十字か T字）で、本線の両隣が分岐でないときに「1」（`nw` = false、dat の `image[nse1]` など）を選ぶ。T字の「2」と十字の 1・2 は、ex 画像が無いと自動では選ばれない
+- 固定: 固定の道具（`tool_set_switch_image`）は `128na/simutrans` の `feature/switch-image-override` のブランチにあり、OTRP-KUTAv6 には無い（`simtool.cc` の `tool_set_switch_image_t::work`、`boden/wege/weg.cc` の `can_fix_switch_image`・`apply_switch_image_override`）。waytype を問わず、道路でも T字・十字を固定できる。選択 1 が `nw` = true（dat の「2」）、選択 2 が `nw` = false（dat の「1」）。アドオンを確かめる `OTRPv64_3.exe` にはこの道具がある（見本の `[check] pin tool=true`）
+
+自動で「1」が選ばれるのは、道路を 2 本隣り合わせに並べ、渡り口でつないだ形（枝の先がすぐ隣の道路の T字）なので、絵は次のようにした（`sheetlib` の `road_sheet` の `switch_lines`）:
+
+| 絵 | 中身 | 出る場面 |
+|---|---|---|
+| 通常の T字 | 本線の中央線を通し、枝の側の路側線を点線 | 普通の T字路 |
+| 1（`image[nse1]` など） | 本線の中央線を通し、枝の側の路側線を描かない（隣の道路とのあいだを開ける） | 2 本並べた道路の渡り口（自動）・固定の選択 2 |
+| 2（`image[nse2]` など） | 交差点の中の中央線と枝の側の路側線を描かない（優先の無い交差点） | 固定の選択 1 だけ |
+| 十字の 1 | 南北の中央線を通し、南北の点線（南北を優先。通常の十字は東西を優先） | 固定だけ |
+| 十字の 2 | 線なし | 固定だけ |
+
+- 生活道路は中央線が無いので、T字の 1 と 2 は同じ絵になる
+- 線路の「カーブの向き」の考え方（[reference](../../docs/reference/way-addon.md) の 9.2）は持ち込んでいない。道路の自動選択は隣のタイルが曲がるかどうかを見ないため
 
 ### 版の並び
 
@@ -302,6 +341,18 @@ GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe bash ingame/sample_check.sh
 - 橋とトンネルは `rail_bridge_*.png`・`rail_tunnel_*.png`（`B1`（平地から立ち上がる橋。拡大）・`B2`（坂から始まる橋の 1 段・2 段）・`B4`（高架と橋のつなぎ目。拡大）・`snow_B2`（降雪側）・`T1`（壁だけのトンネル）・`T2`（架線つき。拡大）・`T3`（複線）、`ramp_before`・`ramp_after`（坂の低い側の灰色の帯を直す前と後。ユーザーの確認用の保存データの (190,184) の辺り。拡大）、`ramp_layout_before`・`ramp_layout_after`（同じ所のレイアウト検証用モード）。`rail_tunnel_layout_*` はレイアウト検証用モード。2026-11-18）
 - 保存・ロードやダイアログの見た目はスクリプトで確かめられないので、ユーザーが見る
 
+道路の見本は線路と別のゲームで敷く（`sample.nut` はコマンドラインの長さの上限に近いので、道路の区画を足さない）:
+
+```bash
+GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe NUT=ingame/road_sample.nut OUT=work/road_sample bash ingame/sample_parallel.sh
+# 1 台で敷いて開いたままにするなら NUT=ingame/road_sample.nut bash ingame/sample_check.sh（撮るのは NUT=ingame/road_sample.nut OUT=work/road_sample bash ingame/sample_capture.sh）
+```
+
+- `ingame/road_sample.nut` は道路 3 種（`ROADS`）を、温暖側 (20,20) と降雪側 (276,20) に 30 ずつ南へずらして敷く（生活道路・一般道路・高速道路の順）。区画は線路の見本と同じ A・F・C・B・D・E・G に、分岐の自動選択（H。2 本の道路を隣り合わせに並べて渡り口でつないだ形。南北と東西）、分岐の絵の固定（I。T字 4 種と十字を選択 2・1 の順に）、pak128 標準の `Road_050` とのつなぎ目（K）。表は `road_sample.nut` の冒頭
+- `[check]` の行: 近い斜めの分け合うタイルが way 1 本か（`two_ways=false`）、区画 H の自動選択の絵（`auto`）が固定の選択 2 の絵（`pin1`。dat の「1」）と同じで、通常の T字（`plain`）と違うか（`ok`）、固定の 1・2 が同じ絵か（`same12`。生活道路は中央線が無いので同じ）。値は `way_x.get_image_id()`
+- `NUT` に `road_sample.nut` を渡すと、撮る場所は `sample_spots.sh` の `ROAD_SPOTS`（`LO_*`・`GE_*`・`EX_*`）になる。`sample_parallel.sh` は全部敷けたときも 1 台目の報告（`[check]` の行）をログ（`work/parallel/<ポート>.log`）と画面に出す
+- 道路の確認画像は `road_*.png`（2026-11-19）。`LO`・`GE`・`EX` は生活道路・一般道路・高速道路。`B`（輪と十字）・`AFC`（行き止まり・1 タイル・斜め）・`DE`（坂と急坂の十字）・`G1`（近い斜め）・`HV`・`HH`（分岐の自動選択。2 本並べた道路の渡り口）・`I0`（T字 nse の固定の 1・2）・`I4`（十字の固定の 1・2）・`K`（pak128 標準の `Road_050` とのつなぎ目）、`snow_*` は降雪側、`layout_*` はレイアウト検証用モード、`EX_dash_zoom`（直線と斜めの継ぎ目の破線。4 倍）・`EX_slope_zoom`（坂と平地の継ぎ目。4 倍）
+
 塗りを実装する前に、レイアウト検証用モード（部品ごとに画像で見分けやすい単色で塗る）で、部品の配置とタイルどうしの接合を確かめる（[ADR 0005](../../docs/adr/0005-ami-render-tool-conventions.md)）。
 
 ## 今の決まりごと
@@ -323,6 +374,7 @@ GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe bash ingame/sample_check.sh
 - 壁（#16）: 壁の way-object の値（費用・維持費・登場年）は仮。線路の上を走る編成と壁の重なり（ACCEPTANCE の 2-3）はユーザーの確認待ち。高架・橋への重ね（2-1）は地上・高架・橋で確かめた。道路の壁は後のステップ
 - 高架と橋脚（#18）: 高架の行き止まりの端（今は平らな端の面）は仮で、確定が要る（「高架と橋脚の作り」）。橋脚は `tram_track` なので、地上の線路が高架の下を横切るタイルには敷かない（敷くと線路とつながるか、線路が切れる）。躯体と橋脚の寸法、高架と橋脚の値も仮。高さが 2 段なので、`back`・`center`・`front` を並べた幅の広い床や 1 タイルの高架では、橋脚の多くが床に隠れ、手前の列だけが見える（区画 VB・WV1）。高架の上を走る編成と壁・架線の重なり、電化した編成が高架を走れることは、ユーザーが手で走らせて見る
 - 橋とトンネル（#19）: 橋の高さ・橋脚の位置（POC の C6）、値・アイコンは仮で、確定が要る（床の幅は壁の位置で止めると決まった）（「橋とトンネルの作り」）。橋の上・トンネルの中を走る編成と壁・架線の重なり、電化した編成が橋とトンネルを走れることは、ユーザーが手で走らせて見る
+- 道路（#21）: 分岐の絵（switch 画像）の中身（上の「分岐の絵」の表）、中央線の破線の長さと間隔、路面の色は、ゲームの見た目でユーザーが確かめる。タイルの詳細ダイアログでの選択と、保存・ロードで固定が残ることは見ていない。画面で横向きになる急坂（東西の 2 段の坂）では、白線（実線・破線とも）が灰色に薄く見える（blender-poc の高速道路と同じ作りで、#21 では直していない）。道路を走る車両との重なりは見ていない
 - 近い斜めの壁は、西の線を `back`、東の線を `front` にした組だけ絵が合う。逆の組（西が `front`）の分け合うタイル用の way-object は作っていない
 - 路面軌道（#23）のカーブは今の曲線のままでよい（ユーザーの指摘、2026-11-17）。斜めの絵にするのは在来線（と、作るときに決める高速線）
 - 路面軌道を tram（道路に重ねる）にすると、写真のような縁石と柵で分けた専用の軌道には見えない。どちらに寄せるかは、路面軌道を作るステップ（#23）で絵を見て決める
