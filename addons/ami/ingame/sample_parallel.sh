@@ -1,12 +1,12 @@
 #!/bin/bash
 # AMI の見本を複数のゲームで敷いて撮る。208 画面が 8 台で準備込み約 40 秒（1 台で順に撮ると 2 分以上）。
 # 使い方（アドオンのディレクトリで。python -X utf8 build.py で dist/ami.pak を作っておく）:
-#   GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe TRACK=ami_rail_slab bash ingame/sample_parallel.sh
+#   GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> TRACK=ami_rail_slab bash ingame/sample_parallel.sh
 # 台数は JOBS（既定 8）、出力先は OUT（既定 work/sample）。PAK・NUT・TRACK・SAVE・SPOTS・ZOOM は sample_check.sh・sample_capture.sh と同じ。
 # ゲームは work/parallel/<番号>/ の写しで起動し、撮り終えたら閉じる。GAME_DIR には書き込まない。
 # 同じフォルダで同時に起動すると settings.xml が消えることがある（docs/reference/way-addon.md の 8.2）ので、GAME_DIR では起動しない。
-GAME_DIR=${GAME_DIR:?GAME_DIR を指定する（例: F:/Simutrans/addon_check）}
-EXE=${EXE:?EXE を指定する（例: OTRPv64_3.exe）}
+GAME_DIR=${GAME_DIR:?GAME_DIR に検証用のフォルダを指定する}
+EXE=${EXE:?EXE に実行ファイルの名前を指定する}
 JOBS=${JOBS:-8}
 BASE_PORT=${BASE_PORT:-47140}
 SAVE=${SAVE:-flat_512}
