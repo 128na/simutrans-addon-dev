@@ -107,6 +107,7 @@ bash addons/blender-poc/check.sh         # ruff だけ
 
 - 手元で要るもの: Python、gh（サインイン済み。道具を取るとき）、uvx か pipx（ruff）。makeobj と dat_linter は `~/.cache/simutrans-addon-dev/ci-tools` に取ってくる（`TOOLS_DIR` で変えられる）。`MAKEOBJ_FROM_PATH=1` で `PATH` の makeobj を使う
 - AMI の pak は、CI（本家 125.0 の Linux 版 60.10）と手元（Windows 版 60.12）でバイト単位で同じだった（2026-11-20）
+- OTRP の fork の makeobj（`OTRP-KUTAv6` の `20ed249`。60.5、「Simutrans 122.0.1 Nightly」用）は、`otrp:` でビルドできるが、近い斜めの画像のキー（`diagonal[close1]`・`[close2]`）を知らず、AMI の pak は作れなかった（2026-11-20）。今の AMI には本家の makeobj が要る
 - `ci/setup-makeobj.sh <指定> <置き場所>`: makeobj を用意する。`upstream:<tag>` は本家のリリースの配布物（Linux 版か Windows 版）、`otrp:<ref>` は OTRP の fork を `<ref>` で取り出して makeobj だけをビルドする（Linux だけ）。キャッシュのキーに指定を使うので、`<ref>` はタグかコミットにする
 - `ci/setup-dat-linter.sh <版> <置き場所>`: dat_linter（Linux 版か Windows 版）を用意する。`fmt`（整形）は使わない（dat は生成するので、整形しても次の生成で戻る）
 - ruff は、動かすと止まる誤りだけを見る（各アドオンと `tools/` の `ruff.toml`）
