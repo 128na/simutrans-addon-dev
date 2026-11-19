@@ -570,8 +570,9 @@ def tile_dashes(path, counts=(4, 3), frac=0.5):
     c0 = a + d * (-a.dot(d))  # 経路の上でタイルの中心にいちばん近い点（直線は中心、斜めは斜めの部分の中ほど）
     ta, tb = (a - c0).dot(d), (b - c0).dot(d)
     out = []
-    j0 = math.floor((ta - span / 2) / period) - 1
-    j1 = math.ceil((tb - span / 2) / period) + 1
+    # mid は j が増えるほど負の側へ寄るので、tb（正の端）が j の小さい側、ta（負の端）が大きい側になる
+    j0 = math.floor((span / 2 - tb) / period - 0.5) - 1
+    j1 = math.ceil((span / 2 - ta) / period - 0.5) + 1
     for j in range(j0, j1 + 1):
         mid = span / 2 - (j + 0.5) * period  # 線の中心。辺（span / 2）から半周期ずつずれる
         s0, s1 = max(mid - period * frac / 2, ta), min(mid + period * frac / 2, tb)
