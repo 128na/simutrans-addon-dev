@@ -125,14 +125,15 @@ from .cells import (  # noqa: F401
 
 def build_road(paths, lines, slope=None, scale=1.0, clip=True, size=TILE + 4, corners=(), half=None, hw=ROAD_HW,
                sidewalk=True, curb_w=CURB_W, half_over=DIAG_OVERFILL, groups=None, skin=None, datums=FLAT, div=1, ends=False,
-               wear_paths=None, prof=None):
+               wear_paths=None, prof=None, tall_pad=None):
     """道路を部品（ROAD_PARTS）の組み立てで作る。paths は車道の中心線（複数で分岐・十字）、lines は (path, u)・(path, u, "dash")
     （分岐の口の点線）・(path, u, "cdash")（中央線の破線。区切りはタイルの辺）の白線。
     corners は歩道の角を丸くするタイルの角、half は斜めのタイルで残す半分を決める経路。
     prof は道路の描き分け（ROAD_PROFILES の値の辞書。groups・skin を使う）。無ければ sidewalk で ROAD_PROFILES の "street"（歩道あり）か
     "expressway"（歩道なし）を引く（blender-poc が登録する名前）。sidewalk=False は歩道・縁石を作らず、タイル全面をアスファルトにする
     （groups・skin を渡すとそちらが優先）。
-    wear_paths を渡すと、路面の痛み（group "weathering"）を paths ではなくそちらに沿って作る（交差点の右左折、行き止まりの手前で止める跡）"""
+    wear_paths を渡すと、路面の痛み（group "weathering"）を paths ではなくそちらに沿って作る（交差点の右左折、行き止まりの手前で止める跡）。
+    tall_pad（無くてよい）は assemble に渡す、高さのある部品（壁）をタイルの辺の外へ残す幅"""
     if prof is None:
         prof = ROAD_PROFILES["street" if sidewalk else "expressway"]
     groups = groups or prof["groups"]
@@ -142,7 +143,7 @@ def build_road(paths, lines, slope=None, scale=1.0, clip=True, size=TILE + 4, co
     skin = dict(prof["skin"], **(skin or {}))
     main = groups if wear_paths is None else tuple(g for g in groups if g != "weathering")
     obs = assemble(ROAD_PARTS, paths, datums, slope, clip, widths, div, main, ends,
-                   skin=skin, tile=tile, half=half, half_over=half_over)
+                   skin=skin, tile=tile, half=half, half_over=half_over, **({} if tall_pad is None else {"tall_pad": tall_pad}))
     if wear_paths is not None and "weathering" in groups:
         obs += assemble(ROAD_PARTS, wear_paths, datums, slope, clip, widths, div, ("weathering",), skin=skin, half=half,
                         half_over=half_over)
@@ -159,6 +160,10 @@ DIAG_CENTER_SHIFT = 0.5 / DIAG_PX
 # 斜めの道路の経路をタイルの辺の中点からどれだけ外へ延ばすか（車道・縁石の型と白線）
 DIAG_EXT = 8.0
 
+# 高架・橋の道路の基盤を、路面の板（厚み 0.04）の下へ下げる量。上面が路面と同じ高さだと重なって基盤の色が出た（2026-11-14、ゲームで確認）。
+# 躯体・桁も同じだけ下げる。道路用の橋脚（pier_sheet の top_drop）も同じ値で上端を合わせる
+ROAD_BASE_DROP = 0.05
+
 
 def road_sheet(style="street"):
     """道路のシート。style は ROAD_PROFILES の名前。プロファイルのキーのうち、無くてよいもの:
@@ -172,7 +177,15 @@ def road_sheet(style="street"):
     corner_arcs: 真なら分岐の絵（T字・十字・1・2・優先道路の十字）で、隣り合う腕の路側線を角で円弧（EDGE_CORNER_R）でつなぐ
     switch_ruts: 真なら T字の分岐の絵の 1・2 を、どちらも「1」と同じ T字の白線にし、走行跡（轍）を直進と右左折のカーブ 1 本だけにする
         （カーブは下の SWITCH_RUT_ARCS）。1 と 2 の違いは轍だけ
-    drive_left: priority_cross の停止線の通行の側。真（既定）なら左側通行、偽なら右側通行（停止線が進入する車線の反対の半分へ移る）"""
+    drive_left: priority_cross の停止線の通行の側。真（既定）なら左側通行、偽なら右側通行（停止線が進入する車線の反対の半分へ移る）
+    以下は壁を way-object に分ける版（AMI の道路の壁・高架・橋。ADR 0003）で使う。線路の track_sheet の同じ名前のキーと同じ意味:
+    wall_sheet: 壁を way の絵に焼き込まず、この名前の way-object のシートに分ける（奥の絵 4 行 → 手前の絵 4 行。雪の行は無い）
+    write_walls: 偽なら壁を way の絵から分けるが、壁のシートは書かない（高架・橋。壁は地上と同じ way-object を重ねる）
+    wall_only: way のシートを書かず、壁のシートだけを書く（雪の絵も描かない）
+    elev_body: 基盤の下に躯体を足す（深さ body_d、壁のある側は壁の外の面から body_inset 内で止める、材質 body_mat。
+        既定は高架の ELEV_BODY_D・ELEV_BODY_INSET・_M_ELEV_BODY。橋の桁は body_inset=0 と桁の材質）
+    curve_cells: カーブのセル（2, 5〜8）も斜めの形で描き、タイルの半分で切らない（壁の無い側をタイルの端まで。地上の基盤の版・高架）
+    lower と solid を両方持つ橋は、平らなセルだけ持ち分を下へ広げる（端の坂と坂から始まる端は広げない。track_sheet と同じ）"""
     prof = ROAD_PROFILES[style]
     expwy = prof.get("expressway", False)
     prefix, groups = prof["prefix"], prof["groups"]
@@ -364,6 +377,7 @@ def road_sheet(style="street"):
                 jobs[(2, 10 + col)] = (f"{base_name}1", paths, lines1, None)
                 jobs[(3, 10 + col)] = (f"{base_name}2", paths, lines2, None)
     walls = prof.get("walls")
+    wall_sheet, write_walls, wall_only = prof.get("wall_sheet"), prof.get("write_walls", True), prof.get("wall_only", False)
     if walls:
         # 側壁の版: 分岐は枝の経路も通す（壁を枝の口で開ける。白線はそのまま）。行き止まりは、閉じた側の辺の手前に端の壁を立てる
         # （経路の始点を壁の内側に置く。端の壁は経路の始点の奥に立つ）
@@ -373,10 +387,22 @@ def road_sheet(style="street"):
             (3, 7): ("nsw", [sn, straight(O, W)], jobs[(3, 7)][2], None),
             (3, 8): ("sew", [we, straight(O, S)], jobs[(3, 8)][2], None),
         })
+        if wall_sheet:
+            # 壁を way-object に分ける版の分岐の絵も、元の T字・十字と同じ経路（枝つき）で壁・基盤・躯体を作る（白線だけが違う）。
+            # 本線だけの経路にすると、枝の口に壁があるものとして床と躯体が削られる。blender-poc の壁の版は分岐の絵を持たない
+            tee_paths = {"nse": [sn, straight(O, E)], "new": [we, straight(O, N)], "nsw": [sn, straight(O, W)],
+                         "sew": [we, straight(O, S)], "nsew": [sn, we]}
+            for pos_, job in list(jobs.items()):
+                base_name = job[0].rstrip("12")
+                if pos_[1] >= 10 and base_name in tee_paths:
+                    jobs[pos_] = (job[0], tee_paths[base_name], *job[2:])
         for pos, name, closed, open_ in (((0, 5), "s", N, S), ((0, 6), "w", E, W), ((0, 7), "n", S, N), ((0, 8), "e", W, E)):
             d = Vector(open_).normalized()
-            jobs[pos] = (name, [[Vector(closed).normalized() * EXPWY_WALL_U, Vector(open_) + d * PATH_EXT]],
-                         both(sn if name in "ns" else we), None)
+            p_end = [Vector(closed).normalized() * EXPWY_WALL_U, Vector(open_) + d * PATH_EXT]
+            # 壁を way-object に分ける版は、白線も端の壁の内側の面（経路の始点）で止める。タイルの辺まで引くと、壁と別に描いた way の絵で
+            # 白線の端が壁の下の縁から 1px 出て、明るい点に見えた（AMI の道路の高架の行き止まり、2026-11-19、ゲームで確認）。
+            # 壁を焼き込む版は壁の外側を削る型で消えるので変えない
+            jobs[pos] = (name, [p_end], both(p_end if wall_sheet else (sn if name in "ns" else we)), None)
     # 斜めの経路はタイルの外まで十分に延ばす。45° の向きでは型の端の角が内側に入り込み、
     # 延長が短い（2.5）とタイルの端の近くで縁石が削り残されて、つなぎ目に切り欠きが出た
     diag = {
@@ -385,9 +411,18 @@ def road_sheet(style="street"):
         (2, 2): ("diag_ne", straight(N, E, ext=DIAG_EXT)),
         (2, 3): ("diag_se", straight(S, E, ext=DIAG_EXT)),
     }
+    # prof["curve_cells"]（無くてよい）: カーブのセル（2, 5〜8）も斜めの形で描く（線路の基盤の版の curve_cells と同じ。dat の image[sw] などが
+    # このセルを指す）。斜めのセルはタイルの半分で切るので、並べた車線の直角の曲がりで、内側の線のカーブのタイルとの間に三角のすき間が出た
+    # （AMI の道路の高架の複線。2026-11-19、ゲームで確認）
+    curve_cells = ({(2, 5): "curve_sw", (2, 6): "curve_nw", (2, 7): "curve_ne", (2, 8): "curve_se"}
+                   if prof.get("curve_cells") else {})
     if "only" in prof:
         jobs = {k_: v for k_, v in jobs.items() if v[0] in prof["only"]}
         diag = {}
+        curve_cells = {}
+    if wall_only:
+        # 壁の way-object は分岐の絵を持たない（壁は通常の T字・十字と同じ）
+        jobs = {k_: v for k_, v in jobs.items() if k_[1] < 10}
     # 走行跡の経路: 分岐・十字は直進に右左折のカーブを足す。行き止まりは中ほどから開いた側へ（閉じた側の手前で止める。WearPath.fade）
     wear = {"nse": [sn, arc_ne, arc_se], "new": [we, arc_nw, arc_ne], "nsw": [sn, arc_nw, arc_sw], "sew": [we, arc_sw, arc_se],
             "nsew": [sn, we, arc_sw, arc_nw, arc_ne, arc_se]}
@@ -416,6 +451,9 @@ def road_sheet(style="street"):
     # 行の並びは線路と同じ: 奥の絵 4 行 →（手前の絵 4 行。側壁の版）→ 雪の奥の絵 4 行 →（雪の手前の絵 4 行）。白線は雪に隠れるので描かない
     block = 8 if "front_row" in prof else 4
     variants = [(0, "", {}, groups), (block, "_snow", ROAD_SNOW_SKIN, groups + ROAD_SNOW_GROUPS)]
+    wcells = {}
+    if wall_only:
+        variants = variants[:1]  # way-object には雪の絵が無い
     k = DIAG_EDGE / ROAD_DIAG  # 経路からの距離の倍率（scale=ROAD_DIAG を掛けると直線の 1/√2）
 
     def shoot(pos, row0, cname, name, paths, slope, obs, side=None):
@@ -462,13 +500,34 @@ def road_sheet(style="street"):
                                   ww=EXPWY_WALL_W)
                 # 路面の板（厚み 0.04）の下に入れる。上面が路面と同じ高さだと重なって基盤の灰色が出た（2026-11-14、ゲームで確認）
                 for v in base.data.vertices:
-                    v.co.z -= 0.05
+                    v.co.z -= ROAD_BASE_DROP
                 obs.append(base)
+                if prof.get("elev_body"):
+                    # 躯体（高架）・桁（橋）: 基盤の下の板。基盤と同じ決め方で削り、壁のある側は壁の外の面から body_inset 内で止める
+                    body = build_base(kept, paths, kl, FLAT["bed"], slope, 1, prof.get("body_mat", _M_ELEV_BODY),
+                                      wu=EXPWY_WALL_U - prof.get("body_inset", ELEV_BODY_INSET), ww=EXPWY_WALL_W, z0=-BASE_H,
+                                      depth=prof.get("body_d", ELEV_BODY_D), name="elev_body")
+                    for v in body.data.vertices:
+                        v.co.z -= ROAD_BASE_DROP
+                    obs.append(body)
                 if name in grounds:
                     obs.append(build_start_body(paths[0], grounds[name], FLAT["bed"], _M_BASE, u=EXPWY_WALL_U + EXPWY_WALL_W))
                     slope = grounds[name]  # 持ち分を、坂の地面まで下へ広げる
         lower, solid = prof.get("lower", 0), prof.get("solid", False)
-        if any(ob.get("tall") for ob in obs):
+        if solid and (slope or name in grounds):
+            # 地面に接する橋の端（端の坂・坂から始まる端）では持ち分を下へ広げない（坂の低い側で地面より下の基盤・躯体が描かれる。
+            # track_sheet と同じ）。blender-poc の橋は lower を持たないので変わらない
+            lower = 0
+        if wall_sheet and any(ob.get("tall") for ob in obs):
+            # 壁を way-object に分ける版: 本体（壁なし）は way のシート、壁は way-object のシート（夏の絵だけ）へ
+            body_path, wback, wfront = render_layers(cname, obs, True, exits_of(name), slope, ROAD_CY, 0, WALL_RISE, solid, lower,
+                                                     side=side, separate=True, tall_layers=row0 == 0 and write_walls)
+            cells[(pos[0] + row0, pos[1])] = body_path
+            if wback:
+                wcells[pos] = wback
+            if wfront:
+                wcells[(pos[0] + WALL_FRONT_ROW, pos[1])] = wfront
+        elif any(ob.get("tall") for ob in obs):
             cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, True, exits_of(name), slope, ROAD_CY, 0,
                                                                   WALL_RISE, solid, lower, side=side)
             if front:
@@ -482,11 +541,14 @@ def road_sheet(style="street"):
         cn = lambda name: prefix + suffix.lstrip("_") + ("_" if suffix else "") + name
         for pos, (name, paths, lines, slope, *rest) in jobs.items():
             clear_models()
+            # 壁を way-object に分ける版の坂: 壁をタイルの外へ長めに残す（track_sheet と同じ。坂の上がった側の端で壁の最後の列が欠ける）
             obs = build_road(paths, lines, slope, corners=rest[0] if rest else (), ends=name in ("s", "w", "n", "e"),
-                             wear_paths=wear.get(name, wear.get(_junction(name))), **kw)
+                             wear_paths=wear.get(name, wear.get(_junction(name))),
+                             tall_pad=SLOPE_WALL_PAD if wall_sheet and slope else None, **kw)
             shoot(pos, row0, cn(name), name, paths, slope, obs)
 
-        def build_diag(name, path, over=DIAG_OVERFILL):
+        def build_diag(name, path, over=DIAG_OVERFILL, cut_half=True):
+            """斜めのタイル 1 枚を組み立てる。cut_half なら Simutrans の斜めの絵と同じく角の側の半分だけを残す（カーブのセルは偽）"""
             # 画面で横向きになる斜め（se・nw）は、中央線がちょうど画素の行の境に乗り、2行に分かれて灰色に見える。
             # 半画素ずらして1行に収める（どちらも南東の側へ。sweep の +u は se で南東、nw で北西）
             c = {"diag_se": DIAG_CENTER_SHIFT, "diag_nw": -DIAG_CENTER_SHIFT}.get(name, 0.0) / ROAD_DIAG
@@ -496,12 +558,20 @@ def road_sheet(style="street"):
                 # 縦向きの斜め（sw・ne）はそのままで列に収まる。両方を同時に収める EDGE_LINE は無い
                 e = (math.floor(EDGE_LINE * DIAG_EDGE * DIAG_PX) + 0.5) / DIAG_PX / ROAD_DIAG
             return build_road([path], [(path, -e)] + center(path, c) + [(path, e)], scale=ROAD_DIAG,
-                              half=path, hw=ROAD_HW * k, curb_w=CURB_W * DIAG_EDGE, half_over=over, **kw)
+                              half=path if cut_half else None, hw=ROAD_HW * k, curb_w=CURB_W * DIAG_EDGE, half_over=over, **kw)
 
         for pos, (name, path) in diag.items():
             clear_models()
             obs = build_diag(name, path)
             shoot(pos, row0, cn(name), name, [path], None, obs, side=DIAG_HALF[name])
+        for pos, name in curve_cells.items():
+            # カーブのセルを斜めの形で描く（prof["curve_cells"]）。斜めのセルとの違いは、タイルの半分で切らないことだけ。
+            # 路面・基盤・躯体は、壁の無い側をタイルの端まで延ばす（壁のある側は _beyond_prisms と基盤の決め方で壁の外の面で止まる）
+            d_name = name.replace("curve_", "diag_")
+            clear_models()
+            path = next(p for n, p in diag.values() if n == d_name)
+            obs = build_diag(d_name, path, cut_half=False)
+            shoot(pos, row0, cn(name), d_name, [path], None, obs)
         if walls:
             # 側壁の版は近い斜めの絵を持たない（線路と同じ。本体が分け合うタイルに 2 本の way を置き、back と front を組み合わせられる）
             continue
@@ -516,10 +586,12 @@ def road_sheet(style="street"):
 
     if prof.get("piers"):
         # 橋脚: 橋の下の地面のタイルに立つ柱（高さ 1 段）。道を横切る向きに、両側の壁の下まで長い。(2, 0) が南北の橋、(2, 1) が東西の橋
+        # prof["pier_box"]（無くてよい）: (道を横切る向きの長さ, 道に沿う向きの長さ, 材質)。無ければ POC の橋の柱
         set_anchor(128)
-        for col, (sx, sy) in enumerate(((2 * EXPWY_WALL_U, PIER_W), (PIER_W, 2 * EXPWY_WALL_U))):
+        across, along, pmat = prof.get("pier_box", (2 * EXPWY_WALL_U, PIER_W, _M_BASE))
+        for col, (sx, sy) in enumerate(((across, along), (along, across))):
             clear_models()
-            mesh_object("pier", *box(0, 0, H / 2, sx, sy, H), material(*_M_BASE))
+            mesh_object("pier", *box(0, 0, H / 2, sx, sy, H), material(*pmat))
             cells[(2, col)] = render_cell(f"{prof['sheet']}_pier{col}")
         set_anchor(ROAD_CY)
 
@@ -537,7 +609,18 @@ def road_sheet(style="street"):
     if walls:
         select_walls(obs, "ns", [sn], walls)
     cells[(0, 1)] = render_cursor(prefix + "cursor", prof["label"], prof["style"])
-    make_sheet(cells, 2 * block, 15 if prof.get("switches") else 10, os.path.join(SRC, prof["sheet"] + ".png"))
+    if not wall_only:
+        make_sheet(cells, 2 * block, 15 if prof.get("switches") else 10, os.path.join(SRC, prof["sheet"] + ".png"))
+    if wall_sheet and write_walls:
+        # 壁の way-object のアイコン（仮の絵。道路と同じ絵に、印と文字を書く）とカーソル（直線の壁）
+        clear_models()
+        build_road([long], both(long), clip=False, size=(TILE, 26), sidewalk=not expwy, groups=groups, prof=prof)
+        wcells[(0, 0)] = render_icon(wall_sheet + "_icon", 0.5, shift=(-0.14, 0.2), label=prof.get("wall_label", "W"),
+                                     style=prof["style"], badge=badge)
+        ns = wcells.get((0, 2)) or wcells.get((WALL_FRONT_ROW, 2))  # front の版の直線は手前の絵だけ
+        if ns:
+            wcells[(0, 1)] = ns
+        make_sheet(wcells, 2 * WALL_FRONT_ROW, 15 if any(c >= 10 for _, c in wcells) else 10, os.path.join(SRC, wall_sheet + ".png"))
 
 
 # ---------------------------------------------------------------- 各アドオン
@@ -1006,10 +1089,11 @@ def _pier_place(ob, datums, name, slope):
         apply_slope(ob, slope)
 
 
-def _pier_cell(cname, slope):
-    """橋脚のセルを描き、持ち分（地面の菱形を上へ PIER_RISE 行広げた範囲）で切る。輪郭の半透明の画素は捨てる"""
+def _pier_cell(cname, slope, cy=GROUND_CY):
+    """橋脚のセルを描き、持ち分（地面の菱形を上へ PIER_RISE 行広げた範囲）で切る。輪郭の半透明の画素は捨てる。
+    cy は菱形の中心の行（道路用の橋脚は道路と同じ ROAD_CY）"""
     img = load_rgba8(render_cell(cname)).copy()
-    m = _ground_mask(slope, None, GROUND_CY)
+    m = _ground_mask(slope, None, cy)
     base = m.copy()
     for k in range(1, PIER_RISE + 1):
         m[:-k] |= base[k:]
@@ -1019,27 +1103,33 @@ def _pier_cell(cname, slope):
     return path
 
 
-def pier_sheet(sheet, datums, label="P", across=PIER_SIZE * PIER_ACROSS_K):
+def pier_sheet(sheet, datums, label="P", across=PIER_SIZE * PIER_ACROSS_K, anchor=128 + BALLAST_DY, cy=GROUND_CY, top_drop=0.0,
+               diag_k=1.0, style="track"):
     """高架の真下の地面のタイルに敷く、橋脚の way のシート（AMI。ADR 0003）。セルの位置は線路の way と同じ（行 0〜3）。
     柱は経路の中ほど（直線・行き止まり・T字・十字はタイルの中心、斜めは斜めの部分の中ほど）の下に、線路を横切る向きに長く立つ。
     T字・十字は通り抜ける線（T字）・南北の線（十字）の向き。近い斜めの分け合うタイル（close1・close2）は 2 本の柱。
     上端は高架の躯体の下面（地面から ELEV_STEPS 段 − BASE_H − ELEV_BODY_D）より PIER_TOP_OVERLAP 上で、躯体に隠れる。
     高架の床と同じ基準面（datums["bed"]）で動かし、坂は高架と同じく地面の坂を当てる（本体の高架は地面の坂を引き継ぐ）。
-    持ち分は地面の菱形を上へ PIER_RISE 行広げた範囲で、輪郭の半透明の画素は捨てる（高さのある部品の層と同じ）"""
+    持ち分は地面の菱形を上へ PIER_RISE 行広げた範囲で、輪郭の半透明の画素は捨てる（高さのある部品の層と同じ）。
+    anchor・cy は絵の基準位置と持ち分の菱形の中心（既定は線路の way と同じ。道路用の橋脚は道路の ROAD_CY）、
+    top_drop は上端を下げる量（道路の高架は基盤を路面の板の下へ ROAD_BASE_DROP 下げてあり、躯体の下面もその分低い）。
+    diag_k は斜め（近い斜めを含む）の柱の横切る向きの長さの倍率（道路は斜めの幅が直線の 1/√2）。style はアイコンの背景"""
     top, bottom = _pier_top_bottom()
-    set_anchor(128 + BALLAST_DY)  # 線路の way と同じ（dat のオフセット -64,-32）
+    top -= top_drop
+    set_anchor(anchor)  # 線路の way と同じ（dat のオフセット -64,-32）
     cells = {}
     for pos, (name, piers, slope) in _pier_jobs().items():
         clear_models()
+        ac = across * (diag_k if name.startswith(("diag_", "close")) else 1.0)
         for c, d in piers:
-            ob = mesh_object("pier", *box(c.x, c.y, (top + bottom) / 2, PIER_SIZE, across, top - bottom, rot=math.atan2(d.y, d.x)),
+            ob = mesh_object("pier", *box(c.x, c.y, (top + bottom) / 2, PIER_SIZE, ac, top - bottom, rot=math.atan2(d.y, d.x)),
                              material(*_M_PIER))
             _pier_place(ob, datums, name, slope)
-        cells[pos] = _pier_cell(f"{sheet}_{name}", slope)
+        cells[pos] = _pier_cell(f"{sheet}_{name}", slope, cy)
     # アイコン（仮の絵。ステップ 13 でまとめて作る）: 直線の柱に、文字と高架の帯。カーソルは南北の直線の柱
     clear_models()
     mesh_object("pier", *box(0, 0, (top + bottom) / 2, PIER_SIZE, across, top - bottom), material(*_M_PIER))
-    cells[(0, 0)] = render_icon(sheet + "_icon", 0.5, shift=(-0.14, 0.2), label=label, style="track", band="elevated")
+    cells[(0, 0)] = render_icon(sheet + "_icon", 0.5, shift=(-0.14, 0.2), label=label, style=style, band="elevated")
     cells[(0, 1)] = cells[(0, 2)]
     make_sheet(cells, 4, 10, os.path.join(SRC, sheet + ".png"))
 
@@ -1294,7 +1384,7 @@ TUNNEL_RISE = 36      # 躯体の高さ（画面の px。持ち分を上へ広�
 
 
 def tunnel_sheet(kind="track", profile="new", sheet=None, label="100", road_profile="expressway"):
-    """坑口 4 方向（kind: track・expressway）。profile は線路の描き分け（TRACK_PROFILES の名前。部品の差し替え replace と夏の材質 skin も使う）、
+    """坑口 4 方向（kind: track・expressway）。profile は kind="track" のときの線路の描き分け（TRACK_PROFILES の名前。部品の差し替え replace と夏の材質 skin も使う）、
     road_profile は kind="expressway" のときの道路の描き分け（ROAD_PROFILES の名前か、その値の辞書。groups・skin・label・style を使う）、
     sheet はシート名（無ければ track_tunnel・expressway_tunnel）、label はアイコンの最高速度。pak128 では坑口は 2 段の坂にしか置けない（本体の tunnelbauer）。BackImage[N] は北が高い坂（南から入る）。シートは 行 0: 奥の絵、行 1: 手前の絵、行 2・3: 雪。"""
     half = TILE / 2
@@ -1305,15 +1395,22 @@ def tunnel_sheet(kind="track", profile="new", sheet=None, label="100", road_prof
         "e": (4, straight(W, E), Vector((1, 0)), lambda x, y: 2 * H * (x + half) / TILE),
         "w": (5, straight(W, E), Vector((-1, 0)), lambda x, y: 2 * H * (half - x) / TILE),
     }
-    prof = TRACK_PROFILES[profile]
     expwy = kind == "expressway"
+    prof = None if expwy else TRACK_PROFILES[profile]  # 道路の坑口は線路の描き分けを使わない
     road_prof = (ROAD_PROFILES[road_profile] if isinstance(road_profile, str) else road_profile) if expwy else None
-    parts = track_sheet_parts(prof)
+    parts = None if expwy else track_sheet_parts(prof)
     # 高速道路: iss の都市高速の坑口（tunnel/road。タイルいっぱいの箱と口の上の名板）が手本。穴は両側の壁の内側まで広げる。
     # 道路は地面の菱形より 1px 下に描く（ROAD_CY）。持ち分も同じだけ下げ、隣の道路と同じく spill は 0
     bore_w = EXPWY_WALL_U - 0.1 if expwy else TUNNEL_BORE[0]
     cy, spill = (ROAD_CY, 0) if expwy else (GROUND_CY, prof["spill"])
-    pre = "expwy_tunnel" if expwy else (sheet or "tunnel")
+    # 道路の作業ファイルの名前と白線: sheet を渡したとき（AMI の道路 3 種）は sheet を名前にし、中央線は道路の描き分けの center
+    # （None は無し・"dash" は破線。road_sheet と同じ）。渡さない blender-poc の高速道路は今までどおり（名前は expwy_tunnel、中央線は実線）
+    pre = (sheet or "expwy_tunnel") if expwy else (sheet or "tunnel")
+    if expwy and sheet:
+        ck = road_prof.get("center", "solid")
+        road_lines = lambda p: [(p, -EDGE_LINE)] + ([] if ck is None else [(p, 0.0, "cdash") if ck == "dash" else (p, 0.0)]) + [(p, EDGE_LINE)]
+    else:
+        road_lines = lambda p: [(p, -EDGE_LINE), (p, 0.0), (p, EDGE_LINE)]
     set_anchor(ROAD_CY if expwy else 128 + BALLAST_DY)
     cells = {}
     a0, a1 = -half + TUNNEL_FACE, half  # 坑口の面と、躯体の奥の端（経路に沿った位置）
@@ -1343,7 +1440,7 @@ def tunnel_sheet(kind="track", profile="new", sheet=None, label="100", road_prof
             if expwy:
                 # 道路は路面の板がタイル全面にあるので床は要らない。雪の絵は路肩だけに雪（道路のシートと同じ）
                 grp = road_prof["groups"]
-                build_road([path], [(path, -EDGE_LINE), (path, 0.0), (path, EDGE_LINE)], sidewalk=False, skin=skin, prof=road_prof,
+                build_road([path], road_lines(path), sidewalk=False, skin=skin, prof=road_prof,
                            groups=grp + ROAD_SNOW_GROUPS if skin else grp)
             else:
                 # 線路の本体と同じく汚れを入れる（雪の絵は雪の上の汚れ）
@@ -1386,8 +1483,8 @@ def tunnel_sheet(kind="track", profile="new", sheet=None, label="100", road_prof
     clear_models()
     long = straight((0, -12), (0, 12), ext=0.6)
     if expwy:
-        build_road([long], [(long, -EDGE_LINE), (long, 0.0), (long, EDGE_LINE)], clip=False, size=(TILE, 26), sidewalk=False, prof=road_prof)
-        cells[(0, 0)] = render_icon("expwy_tunnel_icon", 0.5, shift=(-0.14, 0.2), label=road_prof["label"], style=road_prof["style"],
+        build_road([long], road_lines(long), clip=False, size=(TILE, 26), sidewalk=False, prof=road_prof)
+        cells[(0, 0)] = render_icon(f"{pre}_icon", 0.5, shift=(-0.14, 0.2), label=road_prof["label"], style=road_prof["style"],
                                     band="tunnel")
     else:
         assemble(track_body_parts(prof), [long], clip=False)
