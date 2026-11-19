@@ -45,15 +45,15 @@ def _slopes():
     return out
 
 
-def _extent(exits, side, inset):
+def _side_extent(exits, side, inset):
     """辺 side（n/s/e/w）の端の座標の絶対値。つながる辺はタイルの外へ SIDEWALK_PAD 延ばし、つながらない辺は inset だけ内へ"""
     half = TILE / 2
     return half + SIDEWALK_PAD if side in exits else half - inset
 
 
 def _slab(exits, inset, z0, z1, mat, name, slope):
-    w, e = -_extent(exits, "w", inset), _extent(exits, "e", inset)
-    s, n = -_extent(exits, "s", inset), _extent(exits, "n", inset)
+    w, e = -_side_extent(exits, "w", inset), _side_extent(exits, "e", inset)
+    s, n = -_side_extent(exits, "s", inset), _side_extent(exits, "n", inset)
     ob = mesh_object(name, *box((w + e) / 2, (s + n) / 2, (z0 + z1) / 2, e - w, n - s, z1 - z0), mat)
     if slope:
         apply_slope(ob, slope)
