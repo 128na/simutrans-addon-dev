@@ -45,6 +45,7 @@ from .road_parts import (  # noqa: F401
     CENTER_DASHES,
     CENTER_DASH_FRAC,
     LINE_W,
+    STOP_LINE_W,
 )
 
 
@@ -67,6 +68,8 @@ class RoadTile:
         for path, u, *kind in self.lines:
             if kind and kind[0] == "dash":
                 out += [(d, u, LINE_W * 2) for d in dashes(path, dash=0.45)]
+            elif kind and kind[0] == "stop":
+                out.append((path, u, STOP_LINE_W))
             elif kind and kind[0] == "cdash":
                 out += [(d, u, LINE_W) for d in tile_dashes(path, CENTER_DASHES, CENTER_DASH_FRAC)]
             else:

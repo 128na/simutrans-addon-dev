@@ -224,6 +224,12 @@ def asphalt_skin(tag, lo, hi, spec=None):
 CENTER_DASHES = (4, 3)
 CENTER_DASH_FRAC = 0.5
 
+# 停止線（分岐の絵「2」。十字が隣り合うとき、本体が十字のタイルに出す絵。sheetlib の road_sheet の stop_lines）。
+# 位置は十字の部分の手前: 横切る道路の路側線（EDGE_LINE）の延長より少し外で、タイルの辺の手前
+STOP_LINE_W = 0.35            # 幅（画面で約 2px。路側線・中央線の LINE_W は約 1px）
+STOP_LINE_D = 4.0             # 線の中心の、タイルの中心からの距離（EDGE_LINE 3.37 とタイルの辺 5 の間）
+STOP_LINE_SPAN = EDGE_LINE    # 線の端の、腕の中心線からの距離（路側線の中心まで）
+
 # 雪の絵（dat の image[..][1]）: 道路は線路より除雪されている想定で、車道は夏と同じ（路面・白線・走行跡）。
 # 雪は路肩（group "snow" の snowbank）と、歩道・縁石だけ（2026-11-15、ゲームで確認して決めた）
 ROAD_SNOW_SKIN = {"curb": _SNOW, "paving": _SNOW}

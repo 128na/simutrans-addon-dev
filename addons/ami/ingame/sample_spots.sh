@@ -36,5 +36,19 @@ for v in LO:0 GE:30 EX:60; do
   ROAD_SPOTS="$ROAD_SPOTS ${n}_HV:34:$((4 + dy)) ${n}_HH:38:$((12 + dy)) ${n}_K:52:$((3 + dy)) ${n}_L:50:$((15 + dy))"
   for j in 0 1 2 3 4; do ROAD_SPOTS="$ROAD_SPOTS ${n}_I$j:$((5 + 12 * j)):$((23 + dy))"; done
 done
-case "${NUT:-}" in *road_sample.nut) SPOTS=${SPOTS:-$ROAD_SPOTS} ;; esac
+# 交差点の組み合わせ（ingame/road_junction_sample.nut）: 種類ごとに 22 ずつ南。名前は「南北の車線数x東西の車線数」（道路 1 本が 2 車線）
+JUNCTION_SPOTS=""
+for v in LO:0 GE:22 EX:44; do
+  IFS=: read n dy <<< "$v"
+  k=0
+  for cb in 2:1 1:2 3:1 1:3 2:2 2:3 3:2 3:3; do
+    IFS=: read a b <<< "$cb"
+    JUNCTION_SPOTS="$JUNCTION_SPOTS ${n}_$((2 * a))x$((2 * b)):$((12 * k + 3 + a / 2)):$((4 + b / 2 + dy))"
+    k=$((k + 1))
+  done
+done
+case "${NUT:-}" in
+  *road_sample.nut) SPOTS=${SPOTS:-$ROAD_SPOTS} ;;
+  *road_junction_sample.nut) SPOTS=${SPOTS:-$JUNCTION_SPOTS} ;;
+esac
 SPOTS=${SPOTS:-"AFC:8:2 B:3:7 DE:14:7 G1:25:3 G2:25:15 I:5:14 H0:3:22 H1:11:22 H2:19:22 H3:27:22 H4:35:22 H5:43:22 H6:51:22 H7:59:22$WALLED_SPOTS W1:6:155 W2a:19:153 W2b:19:163 W3:2:163 WE1:6:305 WE2a:19:303 WE2b:19:313 WE3:2:313 $BT_SPOTS"}

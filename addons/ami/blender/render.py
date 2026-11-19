@@ -169,7 +169,15 @@ for _t in catalog.TRACKS:
 #   skin: 路面の色。生活道路・一般道路は blender-poc の街路と同じ灰色（pak128 標準の道路とつなぐ色）、高速道路は blender-poc の
 #         高速道路と同じ暗く青みのある色（走行跡と路肩の雪のぼかしも同じ色から作る。sheetlib の asphalt_skin）
 # カーブは 3 種とも斜めの絵（dat の image[sw] などが diagonal と同じセル）。道路の壁（#22）は 3 種で共通の way-object にするので、
-# カーブの形を種類でそろえる（README の「道路の作り」）。分岐の絵（switch 画像 1・2）の中身は sheetlib の road_sheet の switch_lines
+# カーブの形を種類でそろえる（README の「道路の作り」）。分岐の絵（switch 画像 1・2）の中身は sheetlib の road_sheet の switch_lines。
+# T字の「2」は十字の形に停止線を引く（stop_lines。2026-11-19、ユーザーの決定。README の「道路の作り」）
+# 分岐の絵「2」（十字が隣り合うとき、本体が十字のタイルに出す絵）の作り。どちらも sheetlib の road_sheet に渡す:
+#   STOP_LINES: 真なら十字の形に停止線を引く。偽なら通常の十字と同じ絵（stop_lines）
+#   DRIVE_LEFT: 停止線の通行の側。日本は左側通行。右側通行の版を作るときは偽にしたプロファイルを別に作る（停止線が左右反転する。
+#     今は作らない）（drive_left）
+STOP_LINES = True
+DRIVE_LEFT = True
+
 ROAD_SETTINGS = {
     catalog.ROAD_LOCAL.key: {"label": "40", "style": "road", "center": None, "skin": {}},
     catalog.ROAD_GENERAL.key: {"label": "120", "style": "road", "center": "solid", "skin": {}},
@@ -178,7 +186,8 @@ ROAD_SETTINGS = {
 }
 for _r in catalog.ROADS:
     R.ROAD_PROFILES[_r.key] = dict({"sheet": _r.way, "prefix": _r.way + "_", "groups": ("body", "marking", "weathering"),
-                                    "expressway": True, "switches": True}, **ROAD_SETTINGS[_r.key])
+                                    "expressway": True, "switches": True, "stop_lines": STOP_LINES,
+                                    "drive_left": DRIVE_LEFT}, **ROAD_SETTINGS[_r.key])
 
 # ---------------------------------------------------------------- 対象（シート名 → 描く関数）
 # 基盤の版の対象は、way のシートと壁の way-object のシートを 1 つのプロセスで描く
