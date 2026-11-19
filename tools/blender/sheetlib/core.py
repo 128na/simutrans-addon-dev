@@ -324,7 +324,6 @@ class Part:
     carve: Callable = None  # tile の板から、全部の経路に沿って車道を抜く。carve(tile, k) は抜く半幅（k を掛ける前）
     transfer: bool = False  # 抜いた切り口に型の材質を移す（縁石の立ち上がり）
     thick: float = 0.0      # 側壁の厚み（corridor で後の経路の壁を削る幅に足す。0 は線路の WALL_W）
-    centre: bool = True     # 手前/奥を決める重心（near_camera）に数えるか
     front: bool = False     # 高さのある部品を、位置に関わらず手前の絵（車両より後に描く）に描く（架線の梁・トロリ線。render_layers）
     thin: bool = False      # 1px ほどの細い部品。高さのある部品の層で、半透明の画素を THIN_ALPHA 以上なら残す（架線の線。render_layers）
     widen: bool = False     # 斜めのタイルで角の先まで切り残し（WIDEN_PAD。assemble）、高さのある部品の層で持ち分を左右へ 1 列広げて描く
@@ -409,22 +408,60 @@ def open_ends(ob, pad):
     ob.data.update()
 
 
-def _centre(objs):
-    vs = [v.co for ob in objs for v in ob.data.vertices]
-    return sum(vs, Vector()) / max(1, len(vs))
+def _extent_centre(ob):
+    """物の範囲（頂点の最小と最大）の中心。頂点の多さに左右されない。"""
+    vs = [v.co for v in ob.data.vertices]
+    if not vs:
+        return Vector((0, 0, 0))
+    return Vector([(min(v[i] for v in vs) + max(v[i] for v in vs)) / 2 for i in range(3)])
+
+
+def _in_tile(a, b):
+    """線分 a-b のうちタイルの中の部分の両端（無ければ None）。"""
+    t0, t1 = 0.0, 1.0
+    d = b - a
+    for i in (0, 1):
+        for s in (1, -1):
+            p, q = s * d[i], TILE / 2 - s * a[i]
+            if abs(p) < 1e-12:
+                if q < 0:
+                    return None
+            elif p > 0:
+                t1 = min(t1, q / p)
+            else:
+                t0 = max(t0, q / p)
+    return (a + d * t0, a + d * t1) if t0 < t1 else None
+
+
+def path_centre(paths):
+    """経路の中心線のうち、タイルの中の部分の中心（長さで重みを付ける）。部品の数や頂点の多さに左右されない。"""
+    total, c = 0.0, Vector((0, 0))
+    for path in paths:
+        for a, b in zip(path, path[1:]):
+            seg = _in_tile(a.to_2d(), b.to_2d())
+            if seg:
+                n = (seg[1] - seg[0]).length
+                total += n
+                c += (seg[0] + seg[1]) / 2 * n
+    return (c / total if total else c).to_3d()
 
 
 # 手前/奥を決める向き。カメラは南東にあるので南東が手前。北東と南西は奥行きが同じなので、iss と同じく東寄りを手前にする
 NEAR_AXIS = Vector((1.0, -0.5, 0.0)).normalized()
+NEAR_MARGIN = 0.3  # 測る点から axis の向きにこれより離れた部品を手前にする
 
 
-def near_camera(obs, axis=NEAR_AXIS, kind="tall", origin=None):
-    """部品（kind="tall": 高さのある部品、それ以外は名前の頭）のうち、手前の側にあるもの（重心が、本体の重心より axis の向きにある）。
-    origin を渡すと、本体の重心の代わりにその点から測る"""
-    # Part.centre が偽の部品（線路の汚れ）は数えない。頂点が多く、重心がずれて手前/奥の判定が変わった（カーブの壁の版が入れ替わった）
-    ref = _centre([ob for ob in obs if not ob.get("tall") and ob.get("centre", True)]) if origin is None else origin
-    pick = (lambda ob: ob.get("tall")) if kind == "tall" else (lambda ob: ob.name.startswith(kind))
-    return [ob for ob in obs if pick(ob) and (_centre([ob]) - ref).dot(axis) > 0.3]
+def near_camera(obs, frame):
+    """高さのある部品のうち、手前の側にあるもの。frame は (axis, origin)（cells.near_frame）。
+    部品の範囲の中心が、origin から axis の向きに NEAR_MARGIN より離れていれば手前。
+    行き止まりの端の壁（outward）は位置ではなく、線路の外へ向く向きで決める（タイル幅の壁は、残す側の削りで範囲が左右へ寄る）。
+    本体の部品の頂点から測ると、頂点の多い部品を足すだけで手前と奥が入れ替わった（スラブ軌道の締結装置。2026-11-19）"""
+    axis, origin = frame
+    def near(ob):
+        if "outward" in ob:
+            return Vector(ob["outward"]).dot(axis) > 0
+        return (_extent_centre(ob) - origin).to_2d().dot(axis.to_2d()) > NEAR_MARGIN
+    return [ob for ob in obs if ob.get("tall") and near(ob)]
 
 
 def apply_slope(ob, slope):

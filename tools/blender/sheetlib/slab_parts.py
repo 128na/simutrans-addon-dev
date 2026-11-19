@@ -230,9 +230,9 @@ SLAB_TRACK_PARTS = (
     Part("slab_bed", "slab_bed", "bed", _M_BED, _bed_shape),
     Part("slab_fill", "rail", "gauge", _M_FILL, _fill_shape),
     Part("slab", "rail", "gauge", _M_SLAB, _slab_shape),
-    Part("slab_notch", "rail", "gauge", _M_FILL, _notch_shape, centre=False),
-    Part("slab_stud", "rail", "gauge", _M_STUD, _stud_shape, centre=False),
-    Part("slab_fastener", "rail", "gauge", _M_FASTENER, _fastener_shape, centre=False),
+    Part("slab_notch", "rail", "gauge", _M_FILL, _notch_shape),
+    Part("slab_stud", "rail", "gauge", _M_STUD, _stud_shape),
+    Part("slab_fastener", "rail", "gauge", _M_FASTENER, _fastener_shape),
 ) + tuple(p for p in TRACK_PARTS if p.name in ("railL", "railR"))
 
 # 分岐のすき間埋め（TRACK_PROFILES の "bed_fills"）: 部品の名前 → (上面の半幅, 板の下面の高さ, 板の上面の高さ)。
