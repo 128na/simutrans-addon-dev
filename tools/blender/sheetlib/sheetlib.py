@@ -377,6 +377,7 @@ def road_sheet(style="street"):
                 jobs[(2, 10 + col)] = (f"{base_name}1", paths, lines1, None)
                 jobs[(3, 10 + col)] = (f"{base_name}2", paths, lines2, None)
     walls = prof.get("walls")
+    wall_sheet_ = prof.get("wall_sheet")
     if walls:
         # 側壁の版: 分岐は枝の経路も通す（壁を枝の口で開ける。白線はそのまま）。行き止まりは、閉じた側の辺の手前に端の壁を立てる
         # （経路の始点を壁の内側に置く。端の壁は経路の始点の奥に立つ）
@@ -397,8 +398,11 @@ def road_sheet(style="street"):
                     jobs[pos_] = (job[0], tee_paths[base_name], *job[2:])
         for pos, name, closed, open_ in (((0, 5), "s", N, S), ((0, 6), "w", E, W), ((0, 7), "n", S, N), ((0, 8), "e", W, E)):
             d = Vector(open_).normalized()
-            jobs[pos] = (name, [[Vector(closed).normalized() * EXPWY_WALL_U, Vector(open_) + d * PATH_EXT]],
-                         both(sn if name in "ns" else we), None)
+            p_end = [Vector(closed).normalized() * EXPWY_WALL_U, Vector(open_) + d * PATH_EXT]
+            # 壁を way-object に分ける版は、白線も端の壁の内側の面（経路の始点）で止める。タイルの辺まで引くと、壁と別に描いた way の絵で
+            # 白線の端が壁の下の縁から 1px 出て、明るい点に見えた（AMI の道路の高架の行き止まり、2026-11-19、ゲームで確認）。
+            # 壁を焼き込む版は壁の外側を削る型で消えるので変えない
+            jobs[pos] = (name, [p_end], both(p_end if wall_sheet_ else (sn if name in "ns" else we)), None)
     # 斜めの経路はタイルの外まで十分に延ばす。45° の向きでは型の端の角が内側に入り込み、
     # 延長が短い（2.5）とタイルの端の近くで縁石が削り残されて、つなぎ目に切り欠きが出た
     diag = {

@@ -51,7 +51,8 @@ for v in LO:0 GE:22 EX:44; do
 done
 # 道路の構造物の見本（ingame/road_struct_sample.nut）: 種類ごとに 30 ずつ南（LO・GE・EX）。
 #   WA_* は地上の壁（AFC・B・DE・G1・G2）、WP・WP3・WP2 は地上の複線（基盤の版）、V_* は高架（AFC・B・DE と隣り合う十字 L）、VP1〜VP3 は高架の複線、
-#   B1・B1ns・B2・B4 は橋、T1・T1ns・T3 はトンネル、P1〜P3 は橋脚のつながり（pak128 の道路・AMI の道路・線路）
+#   B1・B1ns・B2・B4 は橋、T1・T1ns・T3 はトンネル、P1〜P3 は橋脚のつながり（pak128 の道路・AMI の道路・線路）、
+#   IB0〜IB4・IV0〜IV4 は分岐の絵の固定（基盤の版 single・高架 single。nse・new・nsw・sew・nsew の 1 と 2 を 1 画面に 2 つずつ）
 STRUCT_SPOTS=""
 for v in LO:0 GE:30 EX:60; do
   IFS=: read n dy <<< "$v"
@@ -59,6 +60,7 @@ for v in LO:0 GE:30 EX:60; do
   STRUCT_SPOTS="$STRUCT_SPOTS ${n}_WP:38:$((5 + dy)) ${n}_WP3:34:$((13 + dy)) ${n}_WP2:40:$((15 + dy)) ${n}_V_AFC:58:$((2 + dy)) ${n}_V_B:53:$((7 + dy)) ${n}_V_DE:64:$((7 + dy)) ${n}_V_L:72:$((4 + dy))"
   STRUCT_SPOTS="$STRUCT_SPOTS ${n}_VP1:96:$((5 + dy)) ${n}_VP2:109:$((3 + dy)) ${n}_VP3:92:$((13 + dy)) ${n}_B1:132:$((1 + dy)) ${n}_B1ns:144:$((7 + dy)) ${n}_B2:129:$((19 + dy))"
   STRUCT_SPOTS="$STRUCT_SPOTS ${n}_B4:133:$((24 + dy)) ${n}_T1:153:$((19 + dy)) ${n}_T1ns:162:$((5 + dy)) ${n}_T3:153:$((24 + dy)) ${n}_P1:170:$((5 + dy)) ${n}_P2:181:$((2 + dy)) ${n}_P3:190:$((5 + dy))"
+  for j in 0 1 2 3 4; do STRUCT_SPOTS="$STRUCT_SPOTS ${n}_IB$j:$((53 + 12 * j)):$((20 + dy)) ${n}_IV$j:$((53 + 12 * j)):$((25 + dy))"; done
 done
 case "${NUT:-}" in
   *road_sample.nut) SPOTS=${SPOTS:-$ROAD_SPOTS} ;;

@@ -14,6 +14,9 @@
 //     L 隣り合う十字（南北 (22,0)-(22,8)・(23,0)-(23,8) を東西 (18,4)-(27,4) が横切る。T字の「2」の絵が高架でも出るか）
 //   高架の複線（x=90〜）: WV1 輪（elev の back・front と同じ版の壁）、WV2 近い斜め (16,0) から南東へ 5 段（分け合うタイルに ami_wall_road_twin）、
 //     WV3 行き止まりを並べる（y=12・13・14 に back・center・front。地上の W3 と同じく同じ版の壁を重ねる）
+//   分岐の絵の固定（x=50〜。固定の道具がある OTRP だけ）: IB は y=20 に基盤の版 single、IV は y=25 に高架 single（壁 single を重ね、高架は真下に橋脚）。
+//     x=50 から 6 ずつ、T字 4 種と十字を、選択 2（dat の「1」）・選択 1（dat の「2」）の順に敷いて固定する（road_sample.nut の区画 I と同じ並び）。
+//     [check] の行に、固定した絵の番号（get_image_id）を名前ごとに出す
 //   橋とトンネル（x=125〜）: B1 平地から立ち上がる橋（東西 y=1 の (4)-(10)、南北 x=19 の (4)-(10)。前後の道路を先に敷いて端を押して架け、壁 single を橋の上も通して重ねる）、
 //     B2 2 段の坂から始まる橋（東西 y=19 の (1)-(7)）、B4 高架と橋のつなぎ目（y=24。高架 (0)-(4)・(12)-(15) の間を橋 (5)-(11)）、
 //     T1 トンネル（東西 y=19 の x=24〜32、南北 x=37 の y=0〜10）、T3 複線のトンネル（東西 y=24・25 に back・front の壁）
@@ -114,6 +117,32 @@ function lay_one(w, wo, ox, oy, tag) {
   return s;
 }
 
+// 分岐の絵を固定する道具（OTRP の改修版だけにある）。無ければ null
+local pin = null;
+try { pin = command_x(tool_set_switch_image); } catch (e) { pin = null; }
+// 区画 IB・IV の並び（road_sample.nut の区画 I と同じ）: [dat の絵の名前, 本線の向き, 枝の向き dx, dy（十字は 0, 0）]
+local PINS = [["nse", "ns", 1, 0], ["new", "ew", 0, -1], ["nsw", "ns", -1, 0], ["sew", "ew", 0, 1], ["nsew", "ns", 0, 0]];
+// x=50 から 6 ずつ、T字 4 種と十字を、選択 2（dat の「1」）・選択 1（dat の「2」）の順に敷いて固定する。壁 single を同じ経路に重ねる
+function pins(tag, w, wo, ox, oy, iy, z, pier, name) {
+  local c = function(x, y) { return coord3d(ox + x, oy + y, 0); };
+  local line = function(x0, y0, x1, y1) { return way2(w, wo, c(x0, y0), c(x1, y1)); };
+  local s = r(tag + " label", marker.work(pl, c(46, iy), tag));
+  local got = "";
+  foreach (j, p in PINS) {
+    foreach (k, choice in [2, 1]) {
+      local ix = 50 + 6 * (2 * j + k);
+      if (p[1] == "ns") s += r(tag + " main", line(ix, iy - 2, ix, iy + 2));
+      else s += r(tag + " main", line(ix - 2, iy, ix + 2, iy));
+      if (p[0] == "nsew") s += r(tag + " cross", line(ix - 2, iy, ix + 2, iy));
+      else s += r(tag + " branch", line(ix, iy, ix + 2 * p[2], iy + 2 * p[3]));
+      if (pin != null) s += r(tag + " pin" + choice, pin.work(pl, coord3d(ox + ix, oy + iy, z), "" + wt_road + "," + choice));
+      got += " " + p[0] + (choice == 2 ? "1" : "2") + "=" + img(ox + ix, oy + iy, z);
+    }
+  }
+  checks += "[check] " + name + " " + tag + got + "\n";
+  return s;
+}
+
 function lay(name, ox, oy) {
   local w = way_desc_x(name), std = way_desc_x(STANDARD), rail = way_desc_x(RAIL), pier = way_desc_x(PIER);
   local od = {}, ev = {}, bd = {};
@@ -205,6 +234,13 @@ function lay(name, ox, oy) {
   foreach (k, v in ["back", "center", "front"]) {
     s += r("WV3 way", way2(ev[v], od[v], c(vx, 12 + k), c(vx + 3, 12 + k)));
   }
+  mode.z = 0;
+  mode.pier = null;
+  // 分岐の絵の固定（IB 基盤の版・IV 高架）
+  s += pins("IB", bd["single"], od["single"], ox, oy, 20, 0, null, name);
+  mode.z = ELEV_UP;
+  mode.pier = pier;
+  s += pins("IV", ev["single"], od["single"], ox, oy, 25, ELEV_UP, pier, name);
   mode.z = 0;
   mode.pier = null;
   // 橋とトンネル
