@@ -301,3 +301,20 @@ ex 画像を持つ way だけが対象。形は blender-poc の見本（`ingame/
 | 橋の上の手前の絵 | 橋のタイルでも、way-object の手前の絵（`frontimage`）は車両の後に描かれる（地上と同じ）。橋に欄干・壁を描かず、壁を way-object で重ねても、手前の壁・柱は車両より手前に出る | `boden/grund.cc` の描く順。iss の `iss_bt_0120_center` に AMI の架線つきの壁を重ね、編成を置いて撮った（`OTRPv64_3.exe`、2026-11-18） |
 | トンネルの坑口と way-object | 坑口のタイルの way-object は、平らなタイルの絵で描かれ、坑口の覆いに隠れる（覆いから突き出さない）。坑口のタイルに way-object が無いと、隣のタイルの壁は行き止まりの絵になるので、壁・架線は坑口とトンネルの中を通して敷く。トンネルの中の way も電化の way-object で電化される | `boden/tunnelboden.cc`（`get_weg_hang` が平らを返す）、`obj/tunnel.cc`。AMI の見本の T1〜T3 と、iss のトンネルに iss の架線を重ねて見た（`OTRPv64_3.exe`、2026-11-18） |
 | 手本 | iss の線路の壁は、架線の way-object に入っている（`../refs/iss/src/way-object/rail/catenary_new.dat` の `iss_ot_new_position_catenary_{single,back,center,front}`。`own_waytype=electrified_track`）。道路の壁と中央分離帯も、1 つにまとめた way-object がある（`way-object/road/wall_with_center_divider.dat`）。道路の側壁は way-object（`../refs/iss/src/way-object/road/wall_1.dat`。`waytype=road`・`own_waytype=road`・`topspeed=65535`）。橋脚（`util/pier/ground`、`waytype=tram_track`）と歩道（`util/sidewalk`、`waytype=water`）は、別の waytype の way を隣や下のタイルに敷く | `../refs/iss/src/`（2026-11-15） |
+
+## 11. くどさの物差し（描き込みの量の目安。2026-11-20）
+
+AMI の精細化のラウンド（#56）で、描き込みが足りないか多すぎるかを AI が判定するための目安。測るのは `tools/blender/busy_measure.py`（way を敷く前と後を同じ場所・等倍で撮り、差の画素から縁の 1px を削った所だけを測る）。
+
+| 判定 | 細かさ（等倍） | 孤立点（way の画素 1000 あたり） |
+|---|---|---|
+| 物足りない | 0.059 未満 | 6.1 未満 |
+| 許容 | 0.059〜0.079 | 6.1〜34 |
+| くどい | 0.079 を超える | 34 を超える |
+
+- 決め方: 在来線を描き込みの度合いで 5 段に分けた試作（`addons/ami/blender/calib.py`）を、ユーザーが見て決めた。段 3 がちょうどよく、段 2 も許容、段 4 はくどい（2026-11-20、ユーザーの判断）。境は、隣り合う段の値の中間にした。各段の値は記録 `docs/records/2026-11-20_ami-busyness-calibration.md`
+- くどいは、どちらか 1 つが上の境を超えたとき。物足りないは、両方が下の境を下回ったとき。細かさは段 3 と 4 の差が 0.004 しかないので、孤立点のほうが見分けやすい
+- 確かめた範囲: 温暖の地面の在来線（通常の版）を、`flat_512.sve` と `OTRPv64_3.exe` で撮った値だけ。雪の絵・ほかの種類（道路・高架・壁）・ズームを変えた画面には、まだ当てはめていない
+- 手本は目安にならない: pak128 の `Rail_160_Tracks`（細かさ 0.106・孤立点 63）と iss の `iss_wtg_0240_single`（0.101・90）は、どちらも「くどい」の側に出る。レールの明るい線や広い砕石の明暗差まで数えるため。「手本の幅に収まれば良い」という決め方は使えない
+- 使えなかった数値: 「つぶれ」（ゲームが 1/2 に縮めた画面の細かさ ÷ 等倍を 2x2 で平均した絵の細かさ）は、どれも 0.91〜1.02 で差が出なかった。ゲームの縮小が平均に近いため。「車両比」（pak128 の機関車 5 両の細かさとの比）は、手本も含めて全部の線路が車両より細かく、区別に使えなかった
+- AI の盲検（別のエージェント 3 体に、伏せて並べ替えた画像の順位を付けさせる）は、iss を一番くどいとそろって選んだが、段 0〜4 の順位はばらばらだった。この程度の差は見分けられない
