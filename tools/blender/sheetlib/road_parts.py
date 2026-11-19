@@ -224,8 +224,8 @@ def asphalt_skin(tag, lo, hi, spec=None):
 CENTER_DASHES = (4, 3)
 CENTER_DASH_FRAC = 0.5
 
-# 停止線（分岐の絵「2」。十字が隣り合うとき、本体が十字のタイルに出す絵。sheetlib の road_sheet の stop_lines）。
-# 位置は十字の部分の手前: 横切る道路の路側線（EDGE_LINE）の延長より少し外で、タイルの辺の手前
+# 停止線（優先道路のある十字の、従道路の口。sheetlib の road_sheet の priority_cross）。
+# 位置は十字の部分の手前: 優先道路の路側線（EDGE_LINE）の延長より少し外で、タイルの辺の手前
 STOP_LINE_W = 0.35            # 幅（画面で約 2px。路側線・中央線の LINE_W は約 1px）
 STOP_LINE_D = 4.0             # 線の中心の、タイルの中心からの距離（EDGE_LINE 3.37 とタイルの辺 5 の間）
 STOP_LINE_SPAN = EDGE_LINE    # 線の端の、腕の中心線からの距離（路側線の中心まで）

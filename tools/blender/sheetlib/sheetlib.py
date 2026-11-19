@@ -163,10 +163,11 @@ def road_sheet(style="street"):
     center: 中央線の種類。"solid"（実線。既定）・"dash"（破線。区切りはタイルの辺。tile_dashes）・None（中央線なし）
     switches: 真なら分岐の絵（OTRP の switch 画像。dat の image[nse1]〜image[nsew2]）を行 2・3 の列 10〜14 に描く（シートは 15 列）。
         expressway（歩道なし）の道路だけ。絵の中身は下の switch_lines
-    stop_lines: T字の「2」の絵（nse2・new2・nsw2・sew2）の作り。本体はこの絵を、十字が隣り合うときの十字のタイルに出す。
-        真なら十字の形に停止線を引く（下の stop_arms）、偽なら通常の十字（nsew）と同じ絵。キーが無ければ、枝の側の路側線だけを
-        描く T字の形（前からの作り）
-    drive_left: stop_lines の通行の側。真（既定）なら左側通行、偽なら右側通行（停止線が左右反転する）"""
+    switch2_cross: 真なら T字の「2」の絵（nse2・new2・nsw2・sew2）を通常の十字（nsew）と同じ絵にする。本体はこの絵を、
+        十字が隣り合うときの十字のタイルに出す。無ければ、枝の側の路側線だけを描く T字の形（前からの作り）
+    priority_cross: 真なら十字の分岐の絵（nsew1・nsew2。固定の道具・詳細ダイアログでだけ選べる）を、優先道路のある十字にする
+        （nsew1 は南北が優先、nsew2 は東西が優先。下の priority_lines）。無ければ、nsew1 は南北の中央線と点線、nsew2 は線なし
+    drive_left: priority_cross の停止線の通行の側。真（既定）なら左側通行、偽なら右側通行（停止線が進入する車線の反対の半分へ移る）"""
     prof = ROAD_PROFILES[style]
     expwy = prof.get("expressway", False)
     prefix, groups = prof["prefix"], prof["groups"]
@@ -191,23 +192,26 @@ def road_sheet(style="street"):
     # 行き止まり: 車道は奥の歩道の手前（両脇の歩道と同じ幅を残す）まで
     end = lambda d: [-Vector(d).normalized() * ROAD_HW, Vector(d) * 1.12]
     sides = lambda p: [(p, -EDGE_LINE), (p, EDGE_LINE)]
-    # 停止線（stop_lines）: T字の名前ごとに (幅いっぱいに引く腕, 半分だけ引く腕, その半分の側)。左側通行の値で、右側通行は
-    # 幅いっぱいの腕を反対の腕へ、半分を反対の半分へ移す。向きはタイルの中心から見た単位ベクトル（北が +y、東が +x）
-    stop_arms = {"nse": ((0, -1), (-1, 0), (0, 1)), "nsw": ((0, 1), (1, 0), (0, -1)),
-                 "sew": ((-1, 0), (0, 1), (1, 0)), "new": ((1, 0), (0, -1), (-1, 0))}
     drive_left = prof.get("drive_left", True)
     # 十字の形で描く分岐の絵の名前 → 形の元の名前（持ち分・壁の選び方・走行跡は十字と同じにする）
-    cross_shape = {f"{n}2": "nsew" for n in stop_arms} if "stop_lines" in prof else {}
+    cross_shape = {f"{n}2": "nsew" for n in ("nse", "new", "nsw", "sew")} if prof.get("switch2_cross") else {}
 
-    def stop_lines(base_name):
-        """T字の「2」の停止線（白線の (経路, 横位置, "stop")）。経路は線の両端の 2 点で、延ばさない"""
-        full, part, side = (Vector(v) for v in stop_arms[base_name])
-        if not drive_left:
-            full, side = -full, -side
-        across = Vector((-full.y, full.x))
-        c, cp = full * STOP_LINE_D, part * STOP_LINE_D
-        return [([c - across * STOP_LINE_SPAN, c + across * STOP_LINE_SPAN], 0.0, "stop"),
-                ([cp, cp + side * STOP_LINE_SPAN], 0.0, "stop")]
+    def priority_lines(main):
+        """優先道路のある十字の白線。main は優先道路の向き（"ns" か "ew"）。優先道路は中央線を交差点の中も通し、路側線は
+        交差点の口を点線で渡す（高速道路の十字の点線と同じ）。従道路は、2 つの口の進入する車線（半分）に停止線を引き、
+        中央線を停止線からタイルの辺まで引く。停止線の位置・幅は STOP_LINE_*（road_parts）"""
+        p, cross_dirs = (sn, ((1, 0), (-1, 0))) if main == "ns" else (we, ((0, 1), (0, -1)))
+        out = center(p) + [(p, -EDGE_LINE, "dash"), (p, EDGE_LINE, "dash")]
+        for a in cross_dirs:
+            a = Vector(a)
+            d = -a  # 口から交差点へ進入する向き
+            side = Vector((-d.y, d.x))  # 進入する向きの左。左側通行では進入する車線の側
+            if not drive_left:
+                side = -side
+            c = a * STOP_LINE_D
+            out.append(([c, c + side * STOP_LINE_SPAN], 0.0, "stop"))
+            out += center([c, a * (half + PATH_EXT)])
+        return out
     NE_, NW_, SE_, SW_ = (half, half), (-half, half), (half, -half), (-half, -half)
     jobs = {
         # セル位置は線路と同じ（行, 列）。最後の要素は歩道の角を丸くするタイルの角
@@ -268,6 +272,7 @@ def road_sheet(style="street"):
             # 本線の両隣が分岐でないときに「1」を選ぶ。道路を 2 本隣り合わせに並べて渡り口でつないだ形で、枝の先はすぐ隣の道路。
             #   1: 渡り口。枝の側の路側線を描かない（隣の道路とのあいだを開ける）。十字の 1 は南北を優先（南北の中央線を通し、東西の口を点線）
             #   2: 優先の無い交差点（固定の道具で選んだときだけ出る）。交差点の中の中央線と、枝の側の路側線を描かない。十字の 2 は線なし
+            #   （switch2_cross・priority_cross で下のとおり置き換える）
             switch_lines = {
                 "nse": ([(sn, -EDGE_LINE)] + center(sn), [(sn, -EDGE_LINE)]),
                 "new": ([(we, EDGE_LINE)] + center(we), [(we, EDGE_LINE)]),
@@ -275,17 +280,17 @@ def road_sheet(style="street"):
                 "sew": ([(we, -EDGE_LINE)] + center(we), [(we, -EDGE_LINE)]),
                 "nsew": (center(sn) + [dash(sn, -EDGE_LINE), dash(sn, EDGE_LINE)], []),
             }
-            if "stop_lines" in prof:
-                # T字の「2」を十字の形にして停止線を引く（2026-11-19、ユーザーの決定）。本体（weg_t::select_switch_road_image の
-                # ribi_t::all）は、ex 画像が無い way の十字で、隣が T字か十字のとき、その隣の向きの T字の「2」をこの十字のタイルに出す:
-                #   nse2 は東の隣（南北に並べた 2 本の西の道路）、nsw2 は西の隣（東の道路）、new2 は北の隣（東西に並べた 2 本の南の道路）、
-                #   sew2 は南の隣（北の道路）。並べた 2 本を上りと下りの一方通行として扱い、
-                #   並べた道路の口（進入する側）は道路 1 本の幅いっぱい、横切る道路の口は進入する車線（半分）だけに引く。
-                #   隣の交差点へつながる腕（nse2 の東など）には引かない
-                #   stop_lines が偽なら、停止線を引かず通常の十字と同じ白線にする
-                for base_name in stop_arms:
-                    lines2 = stop_lines(base_name) if prof["stop_lines"] else jobs[(3, 9)][2]
-                    switch_lines[base_name] = (switch_lines[base_name][0], lines2)
+            if prof.get("switch2_cross"):
+                # T字の「2」は通常の十字と同じ絵（2026-11-19、ユーザーの決定。停止線を引いた作りは、複雑な十字交差と
+                # 干渉するのでやめた）。本体（weg_t::select_switch_road_image の ribi_t::all）は、ex 画像が無い way の十字で、
+                # 隣が T字か十字のとき、その隣の向きの T字の「2」をこの十字のタイルに出す
+                for base_name in ("nse", "new", "nsw", "sew"):
+                    switch_lines[base_name] = (switch_lines[base_name][0], jobs[(3, 9)][2])
+            if prof.get("priority_cross"):
+                # 十字の分岐の絵は優先道路のある十字（2026-11-19、ユーザーの決定）。自動では出ず、固定の道具・詳細ダイアログでだけ選ぶ。
+                # 本体の選択肢（feature/switch-image-override の gui/ground_info.cc）は、値 1「十字（左右が直進）」が nsew2、
+                # 値 2「十字（上下が直進）」が nsew1。nsew1 は南北、nsew2 は東西を優先する（前からの nsew1 の南北優先に合わせた）
+                switch_lines["nsew"] = (priority_lines("ns"), priority_lines("ew"))
             for col, (base_name, (lines1, lines2)) in enumerate(switch_lines.items()):
                 paths = [sn, we] if base_name == "nsew" else [sn if "ns" in base_name else we]
                 jobs[(2, 10 + col)] = (f"{base_name}1", paths, lines1, None)

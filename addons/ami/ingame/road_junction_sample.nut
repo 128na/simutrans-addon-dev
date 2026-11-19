@@ -1,6 +1,6 @@
 // AMI の道路の見本（交差点の組み合わせ）: 道路を何本か隣り合わせに並べた「多車線」どうしの交差点で、本体が十字のタイルにどの絵を選ぶかを見る。
 // 本体（OTRP の boden/wege/weg.cc の select_switch_road_image）は、ex 画像の無い way の十字で、隣が T字か十字なら、その隣の向きの
-// T字の「2」の絵（dat の image[nse2] など）を十字のタイルに出す。AMI の道路の「2」は十字の形に停止線を引いた絵（README の「道路の作り」）。
+// T字の「2」の絵（dat の image[nse2] など）を十字のタイルに出す。AMI の道路の「2」は通常の十字と同じ絵（README の「道路の作り」）。
 // 検証用の flat_512.sve の温暖側 (20,20) に敷く。道路は ROADS の順に、SPACING タイルずつ南へずらして 1 種ずつ。
 // 使い方（アドオンのディレクトリで）: sample_check.sh・sample_parallel.sh に NUT=ingame/road_junction_sample.nut を付ける
 // （撮る場所は sample_spots.sh の JUNCTION_SPOTS）。返り値の先頭が ok なら全部敷けた。最後に確かめた値（[check] の行）が続く。
