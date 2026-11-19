@@ -3,7 +3,7 @@
 # 使い方（アドオンのディレクトリで。python -X utf8 build.py で dist/ami.pak を作っておく）:
 #   GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> TRACK=ami_rail_slab bash ingame/sample_parallel.sh
 # 台数は JOBS（既定 8）、出力先は OUT（既定 work/sample）。PAK・NUT・TRACK・SAVE・SPOTS・ZOOM は sample_check.sh・sample_capture.sh と同じ。
-# ゲームは work/parallel/<番号>/ の写しで起動し、撮り終えたら閉じる。GAME_DIR には書き込まない。
+# ゲームは work/parallel/<BASE_PORT>/ の写しで起動し、撮り終えたら閉じて写しも消す。GAME_DIR には書き込まない。
 # 同じフォルダで同時に起動すると settings.xml が消えることがある（docs/reference/way-addon.md の 8.2）ので、GAME_DIR では起動しない。
 GAME_DIR=${GAME_DIR:?GAME_DIR に検証用のフォルダを指定する}
 EXE=${EXE:?EXE に実行ファイルの名前を指定する}
@@ -16,18 +16,19 @@ OUT=${OUT:-work/sample}
 ZOOM=${ZOOM:-3}
 WAIT=${WAIT:-0.3}     # 移動してから撮るまでの秒数
 SETTLE=${SETTLE:-5}   # 敷いた後、建設費の表示が消えるまで待つ秒数
-WORK=work/parallel
+WORK="work/parallel/$BASE_PORT"
+LOG="work/parallel/$BASE_PORT.log"
 CLIENT=${MCP_CLIENT:-../../../simutrans/.agents/skills/simutrans-mcp-gui-debug/scripts/mcp_client.py}
 source "$(dirname "$0")/sample_spots.sh"
 
 mcp() { local port=$1; shift; python -X utf8 "$CLIENT" --port "$port" "$@"; }
 pids() { netstat -ano | tr -d '\r' | awk -v p=":$1" '$4 == "LISTENING" && $2 ~ p "$" {print $NF}' | sort -u; }
+# 写しの中の exe で動いているものだけを止める（ポートを開く前のゲームも含む）
 stop_games() {
-  for ((i = 0; i < JOBS; i++)); do
-    for pid in $(pids $((BASE_PORT + i))); do taskkill //PID "$pid" //F > /dev/null 2>&1; done
-  done
+  [ "${#pids_w[@]}" -eq 0 ] || kill "${pids_w[@]}" 2> /dev/null
+  powershell.exe -NoProfile -Command "\$d = '$WORK_WIN'.Replace('/', '\') + '\'; Get-Process | Where-Object { \$_.Path -and \$_.Path.StartsWith(\$d, 'OrdinalIgnoreCase') } | Stop-Process -Force" > /dev/null 2>&1
   sleep 1
-  rm -rf "$WORK"/[0-9]*
+  rm -rf "$WORK"
 }
 
 for ((i = 0; i < JOBS; i++)); do
@@ -35,17 +36,20 @@ for ((i = 0; i < JOBS; i++)); do
 done
 [ -f "$PAK" ] || { echo "[parallel] $PAK が無い"; exit 1; }
 
-# 写しの元を作る（2 回目からは更新分だけ）。台ごとのフォルダはハードリンクなので容量も時間もほとんど使わない
-rm -rf "$WORK"/[0-9]*
+# 写しの元を毎回作り直す（GAME_DIR の今の状態で撮る）。台ごとのフォルダはハードリンクなので容量も時間もほとんど使わない
+rm -rf "$WORK"
 BASE="$WORK/base"
 mkdir -p "$BASE/save" "$OUT"
-cp -u "$GAME_DIR/$EXE" "$GAME_DIR"/*.dll "$BASE/" || exit 1
-for d in config font themes text script music pak128 addons; do
-  [ -d "$GAME_DIR/$d" ] && { cp -ru "$GAME_DIR/$d" "$BASE/" || exit 1; }
-done
-cp -u "$GAME_DIR/save/$SAVE.sve" "$BASE/save/" || exit 1
-cp "$PAK" "$BASE/addons/pak128/ami.pak" || exit 1
+WORK_WIN=$(cd "$WORK" && pwd -W)
+pids_w=()
 trap stop_games EXIT
+trap 'exit 130' INT TERM
+cp "$GAME_DIR/$EXE" "$GAME_DIR"/*.dll "$BASE/" || exit 1
+for d in config font themes text script music pak128 addons; do
+  [ -d "$GAME_DIR/$d" ] && { cp -r "$GAME_DIR/$d" "$BASE/" || exit 1; }
+done
+cp "$GAME_DIR/save/$SAVE.sve" "$BASE/save/" || exit 1
+cp "$PAK" "$BASE/addons/pak128/ami.pak" || exit 1
 for ((i = 0; i < JOBS; i++)); do
   D="$WORK/$i"; mkdir "$D"
   for e in "$BASE"/*; do [ "$(basename "$e")" = config ] || cp -al "$e" "$D/" || exit 1; done
@@ -66,7 +70,11 @@ worker() {
   (cd "$WORK/$i" && "./$EXE" -objects pak128/ -addons -load "$SAVE" -mcp-port "$port" > /dev/null 2>&1 &)
   for r in $(seq 1 120); do timeout 10 python -X utf8 "$CLIENT" --port "$port" --timeout 5 --run-squirrel "return 1;" > /dev/null 2>&1 && break; sleep 1; done
   r=$(mcp "$port" --run-squirrel "$SCRIPT" --timeout 300 2>&1)
-  case $r in *'"result":"ok'*) ;; *) echo "[parallel] $i 台目: 見本を敷けない: ${r:0:200}"; return 1 ;; esac
+  case $r in
+    *'"result":"ok'*) ;;
+    *'"result":"check'*) [ "$i" -ne 0 ] || echo "[parallel] 見本の報告: $r" ;;
+    *) echo "[parallel] $i 台目: 見本を敷けない: ${r:0:200}"; return 1 ;;
+  esac
   sleep "$SETTLE"
   for item in "${ALL[@]}"; do
     if [ $((n % JOBS)) -eq "$i" ]; then
@@ -81,8 +89,7 @@ worker() {
   done
 }
 
-LOG="$WORK/capture.log"; : > "$LOG"
-pids_w=()
+: > "$LOG"
 for ((i = 0; i < JOBS; i++)); do worker "$i" >> "$LOG" 2>&1 & pids_w+=($!); done
 status=0
 for p in "${pids_w[@]}"; do wait "$p" || status=1; done
