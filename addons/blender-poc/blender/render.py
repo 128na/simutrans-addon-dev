@@ -27,11 +27,7 @@ R.ROAD_PROFILES.update({
     "street": {"sheet": "road", "prefix": "road_", "groups": ("body", "sidewalk", "marking", "weathering"), "skin": {},
                "label": "50", "style": "road"},
     "expressway": {"sheet": "expressway", "prefix": "expwy_", "groups": ("body", "marking", "weathering"),
-                   "skin": dict({"asphalt": R._M_EXPWY_ASPHALT},
-                                **{f"wear{i}": R._wear_material("expwy", (0.0027, 0.0027, 0.004), (0.016, 0.016, 0.023), t, 0.0)
-                                   for i, (_, t, _) in enumerate(R.WEAR_LAYERS)},
-                                **{n: R._slush_material("expwy", (0.0027, 0.0027, 0.004), (0.016, 0.016, 0.023), t, 0.0)
-                                   for n, _, t, _, _ in R.SNOW_LAYERS if t is not None}),
+                   "skin": R.asphalt_skin("expwy", *R.EXPWY_ASPHALT, spec=0.0),
                    "expressway": True, "label": "120", "style": "expressway"},
 })
 for _variant, _walls in (("single", "both"), ("back", "back"), ("center", "center"), ("front", "front")):

@@ -558,6 +558,28 @@ def recalc_normals(ob):
     bm.free()
 
 
+def tile_dashes(path, counts=(4, 3), frac=0.5):
+    """2点の経路 path（直線か斜め。タイルの中心の近くを通る）を、区切りがタイルの辺にそろう破線に分ける。
+    タイルの中の長さ（直線は TILE、斜めは TILE/√2）を counts（直線, 斜め）本に割り、タイルの辺がすき間の中ほどに来る位置に線を置く。
+    経路のタイルの外へ延びた部分も同じ周期で続ける（隣のタイルの絵と同じ所で切れる）"""
+    a, b = Vector(path[0]), Vector(path[-1])
+    d = (b - a).normalized()
+    axis = abs(d.x) < 1e-6 or abs(d.y) < 1e-6
+    span = TILE if axis else TILE / math.sqrt(2)
+    period = span / counts[0 if axis else 1]
+    c0 = a + d * (-a.dot(d))  # 経路の上でタイルの中心にいちばん近い点（直線は中心、斜めは斜めの部分の中ほど）
+    ta, tb = (a - c0).dot(d), (b - c0).dot(d)
+    out = []
+    j0 = math.floor((ta - span / 2) / period) - 1
+    j1 = math.ceil((tb - span / 2) / period) + 1
+    for j in range(j0, j1 + 1):
+        mid = span / 2 - (j + 0.5) * period  # 線の中心。辺（span / 2）から半周期ずつずれる
+        s0, s1 = max(mid - period * frac / 2, ta), min(mid + period * frac / 2, tb)
+        if s1 > s0:
+            out.append([c0 + d * s0, c0 + d * s1])
+    return out
+
+
 def dashes(path, dash=0.6, period=1.6):
     """2点の経路 path を点線の短い経路に分ける。"""
     a, b = path[0], path[-1]

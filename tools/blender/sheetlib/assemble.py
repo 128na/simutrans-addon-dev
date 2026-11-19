@@ -33,6 +33,7 @@ from .core import (  # noqa: F401
     prism,
     recalc_normals,
     sweep,
+    tile_dashes,
 )
 from .wall_parts import (  # noqa: F401
     BASE_H,
@@ -41,6 +42,8 @@ from .wall_parts import (  # noqa: F401
     WALL_W,
 )
 from .road_parts import (  # noqa: F401
+    CENTER_DASHES,
+    CENTER_DASH_FRAC,
     LINE_W,
 )
 
@@ -58,11 +61,14 @@ class RoadTile:
     turns: list = ()  # 右左折の経路（走行跡と同じ）。路肩の雪は、これにも沿って抜く（高速道路の分岐の口を雪でふさがない）
 
     def line_paths(self):
-        """白線を (経路, 横位置, 幅) に開く。点線は SIS に合わせて太め（約2px の四角）の短い経路に分ける。"""
+        """白線を (経路, 横位置, 幅) に開く。点線（"dash"。分岐の口の路側線）は SIS に合わせて太め（約2px の四角）の短い経路に分ける。
+        破線（"cdash"。中央線）は実線と同じ幅で、区切りをタイルの辺にそろえる（tile_dashes）"""
         out = []
         for path, u, *kind in self.lines:
             if kind and kind[0] == "dash":
                 out += [(d, u, LINE_W * 2) for d in dashes(path, dash=0.45)]
+            elif kind and kind[0] == "cdash":
+                out += [(d, u, LINE_W) for d in tile_dashes(path, CENTER_DASHES, CENTER_DASH_FRAC)]
             else:
                 out.append((path, u, LINE_W))
         return out

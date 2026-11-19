@@ -61,7 +61,8 @@ DIAG_EDGE = 1 / math.sqrt(2)
 _M_ROAD_ASPHALT = lambda: noisy_material("road_asphalt", (0.013, 0.0135, 0.015), (0.028, 0.029, 0.031), scale=60, rough=0.9)
 
 # 高速道路は SIS に合わせて暗く青みのあるアスファルト（平均 20,20,27）。照り返しを切らないと空の色が映って明るくなる
-_M_EXPWY_ASPHALT = lambda: noisy_material("expwy_asphalt", (0.0027, 0.0027, 0.004), (0.016, 0.016, 0.023), scale=60,
+EXPWY_ASPHALT = ((0.0027, 0.0027, 0.004), (0.016, 0.016, 0.023))  # 高速道路のアスファルトの 2 色（暗い色・明るい色）
+_M_EXPWY_ASPHALT = lambda: noisy_material("expwy_asphalt", *EXPWY_ASPHALT, scale=60,
                                           rough=0.9, spec=0.0)
 
 _M_CURB = ("road_curb", (0.62, 0.61, 0.59))
@@ -207,6 +208,21 @@ ROAD_PARTS += (Part("rampbody", "bed", "lane", _M_BASE,
 
 # 橋の桁: iss の都市高速の橋（bridge/road の 0120_bridge1）と同じく、床の縁を青い鋼の帯に見せる（基盤の側面）
 _M_GIRDER = ("girder", (0.22, 0.40, 0.62))
+
+def asphalt_skin(tag, lo, hi, spec=None):
+    """路面の色を替えるときの材質の差し替え（部品の名前 → 材質）。アスファルト・走行跡（wear*）・路肩のまだらの雪（slush*）を、
+    同じ 2 色（lo・hi）から作る（走行跡と雪のぼかしは路面の色から混ぜるので、路面だけ替えると暗い路面に明るい帯が乗る）。
+    blender-poc の高速道路（tag="expwy"、暗く青みのある色）と AMI の高速道路が使う"""
+    return dict({"asphalt": lambda: noisy_material(f"{tag}_asphalt", lo, hi, scale=60, rough=0.9, spec=spec)},
+                **{f"wear{i}": _wear_material(tag, lo, hi, t, spec) for i, (_, t, _) in enumerate(WEAR_LAYERS)},
+                **{n: _slush_material(tag, lo, hi, t, spec) for n, _, t, _, _ in SNOW_LAYERS if t is not None})
+
+
+# 中央線の破線（RoadTile の白線の種類 "cdash"）: 区切りをタイルの辺にそろえる。タイルの中の線の長さを、直線は CENTER_DASHES[0] 本、
+# 斜めは CENTER_DASHES[1] 本に割り（直線 10・斜め 10/√2 のどちらも割り切れる）、タイルの辺がいつもすき間の中ほどに来るようにする。
+# 坂は経路を平面で切ってから傾けるので同じ所で切れ、直線・斜め・坂のどの継ぎ目でも破線の間隔がそろう。CENTER_DASH_FRAC は 1 周期のうち線の割合
+CENTER_DASHES = (4, 3)
+CENTER_DASH_FRAC = 0.5
 
 # 雪の絵（dat の image[..][1]）: 道路は線路より除雪されている想定で、車道は夏と同じ（路面・白線・走行跡）。
 # 雪は路肩（group "snow" の snowbank）と、歩道・縁石だけ（2026-11-15、ゲームで確認して決めた）

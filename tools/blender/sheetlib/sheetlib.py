@@ -121,12 +121,16 @@ from .cells import (  # noqa: F401
 
 def build_road(paths, lines, slope=None, scale=1.0, clip=True, size=TILE + 4, corners=(), half=None, hw=ROAD_HW,
                sidewalk=True, curb_w=CURB_W, half_over=DIAG_OVERFILL, groups=None, skin=None, datums=FLAT, div=1, ends=False,
-               wear_paths=None):
-    """道路を部品（ROAD_PARTS）の組み立てで作る。paths は車道の中心線（複数で分岐・十字）、lines は (path, u) か (path, u, "dash") の白線。
+               wear_paths=None, prof=None):
+    """道路を部品（ROAD_PARTS）の組み立てで作る。paths は車道の中心線（複数で分岐・十字）、lines は (path, u)・(path, u, "dash")
+    （分岐の口の点線）・(path, u, "cdash")（中央線の破線。区切りはタイルの辺）の白線。
     corners は歩道の角を丸くするタイルの角、half は斜めのタイルで残す半分を決める経路。
-    sidewalk=False（高速道路）は歩道・縁石を作らず、タイル全面をアスファルトにする（groups・skin を渡すとそちらが優先）。
+    prof は道路の描き分け（ROAD_PROFILES の値の辞書。groups・skin を使う）。無ければ sidewalk で ROAD_PROFILES の "street"（歩道あり）か
+    "expressway"（歩道なし）を引く（blender-poc が登録する名前）。sidewalk=False は歩道・縁石を作らず、タイル全面をアスファルトにする
+    （groups・skin を渡すとそちらが優先）。
     wear_paths を渡すと、路面の痛み（group "weathering"）を paths ではなくそちらに沿って作る（交差点の右左折、行き止まりの手前で止める跡）"""
-    prof = ROAD_PROFILES["street" if sidewalk else "expressway"]
+    if prof is None:
+        prof = ROAD_PROFILES["street" if sidewalk else "expressway"]
     groups = groups or prof["groups"]
     tile = RoadTile(paths, lines, corners, size if isinstance(size, tuple) else (size, size), hw, curb_w, wear_paths or ())
     # 車線の倍率: 斜め（scale が 1 でない）は直線の 1/√2（タイルの辺で直線の車線と同じ点を通る）
@@ -153,6 +157,10 @@ DIAG_EXT = 8.0
 
 
 def road_sheet(style="street"):
+    """道路のシート。style は ROAD_PROFILES の名前。プロファイルのキーのうち、無くてよいもの:
+    center: 中央線の種類。"solid"（実線。既定）・"dash"（破線。区切りはタイルの辺。tile_dashes）・None（中央線なし）
+    switches: 真なら分岐の絵（OTRP の switch 画像。dat の image[nse1]〜image[nsew2]）を行 2・3 の列 10〜14 に描く（シートは 15 列）。
+        expressway（歩道なし）の道路だけ。絵の中身は下の switch_lines"""
     prof = ROAD_PROFILES[style]
     expwy = prof.get("expressway", False)
     prefix, groups = prof["prefix"], prof["groups"]
@@ -163,7 +171,17 @@ def road_sheet(style="street"):
     arc_ne = arc((half, half), 180, 270)
     arc_se = arc((half, -half), 90, 180)
     sn, we = straight(S, N), straight(W, E)
-    both = lambda p: [(p, -EDGE_LINE), (p, 0.0), (p, EDGE_LINE)]  # 両側の白線と中央線
+    center_kind = prof.get("center", "solid")
+    if center_kind not in ("solid", "dash", None):
+        raise SystemExit(f"[road_sheet] {style}: center は solid・dash・None のどれか: {center_kind}")
+
+    def center(p, u=0.0):
+        """中央線（無しなら空）。破線は区切りをタイルの辺にそろえる"""
+        if center_kind is None:
+            return []
+        return [(p, u, "cdash")] if center_kind == "dash" else [(p, u)]
+
+    both = lambda p: [(p, -EDGE_LINE)] + center(p) + [(p, EDGE_LINE)]  # 両側の白線と中央線
     # 行き止まり: 車道は奥の歩道の手前（両脇の歩道と同じ幅を残す）まで
     end = lambda d: [-Vector(d).normalized() * ROAD_HW, Vector(d) * 1.12]
     sides = lambda p: [(p, -EDGE_LINE), (p, EDGE_LINE)]
@@ -202,21 +220,42 @@ def road_sheet(style="street"):
         # （経路の右が +u。南→北の経路は +u が東、西→東の経路は +u が南）。
         # 十字と単独のタイルは東西の中央線と両側の点線。カーブは dat で斜めの絵を使う（SIS と同じ）ので描かない
         dash = lambda p, u: (p, u, "dash")
-        cross = [(we, 0.0), dash(we, -EDGE_LINE), dash(we, EDGE_LINE)]
+        cross = center(we) + [dash(we, -EDGE_LINE), dash(we, EDGE_LINE)]
+        # T字: (本線, 枝の無い側の路側線の横位置, 枝の側)。経路の右が +u（南→北は +u が東、西→東は +u が南）
+        tees = {"nse": (sn, -EDGE_LINE, EDGE_LINE), "new": (we, EDGE_LINE, -EDGE_LINE),
+                "nsw": (sn, EDGE_LINE, -EDGE_LINE), "sew": (we, -EDGE_LINE, EDGE_LINE)}
+        tee = lambda n: center(tees[n][0]) + [(tees[n][0], tees[n][1]), dash(tees[n][0], tees[n][2])]
         jobs.update({
             (0, 5): ("s", [sn], both(sn), None),
             (0, 6): ("w", [we], both(we), None),
             (0, 7): ("n", [sn], both(sn), None),
             (0, 8): ("e", [we], both(we), None),
             (0, 9): ("single", [sn, we], cross, None),
-            (3, 5): ("nse", [sn], [(sn, 0.0), (sn, -EDGE_LINE), dash(sn, EDGE_LINE)], None),
-            (3, 6): ("new", [we], [(we, 0.0), (we, EDGE_LINE), dash(we, -EDGE_LINE)], None),
-            (3, 7): ("nsw", [sn], [(sn, 0.0), (sn, EDGE_LINE), dash(sn, -EDGE_LINE)], None),
-            (3, 8): ("sew", [we], [(we, 0.0), (we, -EDGE_LINE), dash(we, EDGE_LINE)], None),
+            (3, 5): ("nse", [sn], tee("nse"), None),
+            (3, 6): ("new", [we], tee("new"), None),
+            (3, 7): ("nsw", [sn], tee("nsw"), None),
+            (3, 8): ("sew", [we], tee("sew"), None),
             (3, 9): ("nsew", [sn, we], cross, None),
         })
         for pos in ((2, 5), (2, 6), (2, 7), (2, 8)):
             del jobs[pos]
+        if prof.get("switches"):
+            # 分岐の絵（OTRP の switch 画像）。行 2 の列 10〜14 が「1」（本体の nw=false）、行 3 が「2」（nw=true）。並びは nse・new・nsw・sew・nsew
+            # （線路の track_sheet と同じ）。道路の自動選択（本体の weg_t::select_switch_road_image）は、T字の枝の側の隣も T字（sew は十字も）で、
+            # 本線の両隣が分岐でないときに「1」を選ぶ。道路を 2 本隣り合わせに並べて渡り口でつないだ形で、枝の先はすぐ隣の道路。
+            #   1: 渡り口。枝の側の路側線を描かない（隣の道路とのあいだを開ける）。十字の 1 は南北を優先（南北の中央線を通し、東西の口を点線）
+            #   2: 優先の無い交差点（固定の道具で選んだときだけ出る）。交差点の中の中央線と、枝の側の路側線を描かない。十字の 2 は線なし
+            switch_lines = {
+                "nse": ([(sn, -EDGE_LINE)] + center(sn), [(sn, -EDGE_LINE)]),
+                "new": ([(we, EDGE_LINE)] + center(we), [(we, EDGE_LINE)]),
+                "nsw": ([(sn, EDGE_LINE)] + center(sn), [(sn, EDGE_LINE)]),
+                "sew": ([(we, -EDGE_LINE)] + center(we), [(we, -EDGE_LINE)]),
+                "nsew": (center(sn) + [dash(sn, -EDGE_LINE), dash(sn, EDGE_LINE)], []),
+            }
+            for col, (base_name, (lines1, lines2)) in enumerate(switch_lines.items()):
+                paths = [sn, we] if base_name == "nsew" else [sn if "ns" in base_name else we]
+                jobs[(2, 10 + col)] = (f"{base_name}1", paths, lines1, None)
+                jobs[(3, 10 + col)] = (f"{base_name}2", paths, lines2, None)
     walls = prof.get("walls")
     if walls:
         # 側壁の版: 分岐は枝の経路も通す（壁を枝の口で開ける。白線はそのまま）。行き止まりは、閉じた側の辺の手前に端の壁を立てる
@@ -327,12 +366,12 @@ def road_sheet(style="street"):
                                                          lower=lower)
 
     for row0, suffix, skin, grp in variants:
-        kw = dict(sidewalk=not expwy, groups=grp, skin=skin)
+        kw = dict(sidewalk=not expwy, groups=grp, skin=skin, prof=prof)
         cn = lambda name: prefix + suffix.lstrip("_") + ("_" if suffix else "") + name
         for pos, (name, paths, lines, slope, *rest) in jobs.items():
             clear_models()
             obs = build_road(paths, lines, slope, corners=rest[0] if rest else (), ends=name in ("s", "w", "n", "e"),
-                             wear_paths=wear.get(name), **kw)
+                             wear_paths=wear.get(_junction(name)), **kw)
             shoot(pos, row0, cn(name), name, paths, slope, obs)
 
         def build_diag(name, path, over=DIAG_OVERFILL):
@@ -344,7 +383,7 @@ def road_sheet(style="street"):
                 # 路側の白線も、経路（画素の行の境）からの距離を「整数 + 0.5」px に丸めて1行に収める（約 0.3px 内へ）。
                 # 縦向きの斜め（sw・ne）はそのままで列に収まる。両方を同時に収める EDGE_LINE は無い
                 e = (math.floor(EDGE_LINE * DIAG_EDGE * DIAG_PX) + 0.5) / DIAG_PX / ROAD_DIAG
-            return build_road([path], [(path, -e), (path, c), (path, e)], scale=ROAD_DIAG,
+            return build_road([path], [(path, -e)] + center(path, c) + [(path, e)], scale=ROAD_DIAG,
                               half=path, hw=ROAD_HW * k, curb_w=CURB_W * DIAG_EDGE, half_over=over, **kw)
 
         for pos, (name, path) in diag.items():
@@ -375,18 +414,18 @@ def road_sheet(style="street"):
     # アイコン: 道路を大きく斜めに通し、左上に最高速度を書く
     clear_models()
     long = straight((0, -12), (0, 12), ext=0.6)
-    build_road([long], both(long), clip=False, size=(TILE, 26), sidewalk=not expwy, groups=groups)
+    build_road([long], both(long), clip=False, size=(TILE, 26), sidewalk=not expwy, groups=groups, prof=prof)
     # 線路のシリーズと同じ型: 背景の色（道路・高速道路）、左上の最高速度、右下の印（側壁の版 S・B・C・F）、下の帯（高架・橋）
     badge = ICON_BADGE[walls] if walls and not prof.get("bridge") else None
     cells[(0, 0)] = render_icon(prefix + "icon", 0.5, shift=(-0.14, 0.2), label=prof["label"], style=prof["style"], badge=badge,
                                 band=prof.get("band"))
     # カーソル: 南北の直線の絵（壁は版のとおり）の上に、アイコンと同じ色の札と最高速度
     clear_models()
-    obs = build_road([sn], both(sn), sidewalk=not expwy, groups=groups)
+    obs = build_road([sn], both(sn), sidewalk=not expwy, groups=groups, prof=prof)
     if walls:
         select_walls(obs, "ns", [sn], walls)
     cells[(0, 1)] = render_cursor(prefix + "cursor", prof["label"], prof["style"])
-    make_sheet(cells, 2 * block, 10, os.path.join(SRC, prof["sheet"] + ".png"))
+    make_sheet(cells, 2 * block, 15 if prof.get("switches") else 10, os.path.join(SRC, prof["sheet"] + ".png"))
 
 
 # ---------------------------------------------------------------- 各アドオン
@@ -1142,8 +1181,9 @@ TUNNEL_HOOD = (TILE / 2, 2 * H)         # 躯体の半幅と高さ
 TUNNEL_RISE = 36      # 躯体の高さ（画面の px。持ち分を上へ広げる行数）
 
 
-def tunnel_sheet(kind="track", profile="new", sheet=None, label="100"):
+def tunnel_sheet(kind="track", profile="new", sheet=None, label="100", road_profile="expressway"):
     """坑口 4 方向（kind: track・expressway）。profile は線路の描き分け（TRACK_PROFILES の名前。部品の差し替え replace と夏の材質 skin も使う）、
+    road_profile は kind="expressway" のときの道路の描き分け（ROAD_PROFILES の名前か、その値の辞書。groups・skin・label・style を使う）、
     sheet はシート名（無ければ track_tunnel・expressway_tunnel）、label はアイコンの最高速度。pak128 では坑口は 2 段の坂にしか置けない（本体の tunnelbauer）。BackImage[N] は北が高い坂（南から入る）。シートは 行 0: 奥の絵、行 1: 手前の絵、行 2・3: 雪。"""
     half = TILE / 2
     N, S, E, W = (0, half), (0, -half), (half, 0), (-half, 0)
@@ -1155,6 +1195,7 @@ def tunnel_sheet(kind="track", profile="new", sheet=None, label="100"):
     }
     prof = TRACK_PROFILES[profile]
     expwy = kind == "expressway"
+    road_prof = (ROAD_PROFILES[road_profile] if isinstance(road_profile, str) else road_profile) if expwy else None
     parts = track_sheet_parts(prof)
     # 高速道路: iss の都市高速の坑口（tunnel/road。タイルいっぱいの箱と口の上の名板）が手本。穴は両側の壁の内側まで広げる。
     # 道路は地面の菱形より 1px 下に描く（ROAD_CY）。持ち分も同じだけ下げ、隣の道路と同じく spill は 0
@@ -1189,8 +1230,8 @@ def tunnel_sheet(kind="track", profile="new", sheet=None, label="100"):
             n = Vector((d.y, -d.x))
             if expwy:
                 # 道路は路面の板がタイル全面にあるので床は要らない。雪の絵は路肩だけに雪（道路のシートと同じ）
-                grp = ROAD_PROFILES["expressway"]["groups"]
-                build_road([path], [(path, -EDGE_LINE), (path, 0.0), (path, EDGE_LINE)], sidewalk=False, skin=skin,
+                grp = road_prof["groups"]
+                build_road([path], [(path, -EDGE_LINE), (path, 0.0), (path, EDGE_LINE)], sidewalk=False, skin=skin, prof=road_prof,
                            groups=grp + ROAD_SNOW_GROUPS if skin else grp)
             else:
                 # 線路の本体と同じく汚れを入れる（雪の絵は雪の上の汚れ）
@@ -1233,8 +1274,9 @@ def tunnel_sheet(kind="track", profile="new", sheet=None, label="100"):
     clear_models()
     long = straight((0, -12), (0, 12), ext=0.6)
     if expwy:
-        build_road([long], [(long, -EDGE_LINE), (long, 0.0), (long, EDGE_LINE)], clip=False, size=(TILE, 26), sidewalk=False)
-        cells[(0, 0)] = render_icon("expwy_tunnel_icon", 0.5, shift=(-0.14, 0.2), label="120", style="expressway", band="tunnel")
+        build_road([long], [(long, -EDGE_LINE), (long, 0.0), (long, EDGE_LINE)], clip=False, size=(TILE, 26), sidewalk=False, prof=road_prof)
+        cells[(0, 0)] = render_icon("expwy_tunnel_icon", 0.5, shift=(-0.14, 0.2), label=road_prof["label"], style=road_prof["style"],
+                                    band="tunnel")
     else:
         assemble(track_body_parts(prof), [long], clip=False)
         cells[(0, 0)] = render_icon(f"{sheet}_icon" if sheet else "track_tunnel_icon", 0.5, shift=(-0.14, 0.2), label=label, style="track",
@@ -1244,7 +1286,7 @@ def tunnel_sheet(kind="track", profile="new", sheet=None, label="100"):
     cursor = np.where(front[..., 3:] >= 128, front, back)
     if expwy:
         # 道路のシリーズは、カーソルにアイコンと同じ色の札と最高速度を足す
-        cells[(0, 1)] = render_cursor(f"{pre}_cursor", "120", "expressway", base=cursor)
+        cells[(0, 1)] = render_cursor(f"{pre}_cursor", road_prof["label"], road_prof["style"], base=cursor)
     else:
         cells[(0, 1)] = os.path.join(WORK, f"{pre}_cursor.png")
         save_rgba(cells[(0, 1)], cursor)
