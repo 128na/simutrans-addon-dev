@@ -170,9 +170,10 @@ for _t in catalog.TRACKS:
 #         高速道路と同じ暗く青みのある色（走行跡と路肩の雪のぼかしも同じ色から作る。sheetlib の asphalt_skin）
 # カーブは 3 種とも斜めの絵（dat の image[sw] などが diagonal と同じセル）。道路の壁（#22）は 3 種で共通の way-object にするので、
 # カーブの形を種類でそろえる（README の「道路の作り」）。分岐の絵（switch 画像 1・2）の中身は sheetlib の road_sheet の switch_lines。
-# T字の「2」（十字が隣り合うとき、本体が十字のタイルに出す絵）は通常の十字と同じ絵（switch2_cross）。十字の分岐の絵
-# （nsew1・nsew2。固定の道具・詳細ダイアログでだけ選べる）は優先道路のある十字（priority_cross。nsew1 が南北優先、nsew2 が東西優先）。
-# どちらも 2026-11-19、ユーザーの決定（README の「道路の作り」）。sheetlib の road_sheet に渡す:
+# T字の 1・2 は、どちらも枝の無い側を実線でふさいだ T字の形で、違いは轍（走行跡）のカーブの向きだけ（switch_ruts。向きは
+# sheetlib の road_parts の SWITCH_RUT_ARCS）。十字の分岐の絵（nsew1・nsew2。固定の道具・詳細ダイアログでだけ選べる）は
+# 優先道路のある十字（priority_cross。nsew1 が南北優先、nsew2 が東西優先）。どちらも 2026-11-19、ユーザーの決定
+# （README の「道路の作り」）。sheetlib の road_sheet に渡す:
 #   DRIVE_LEFT: 優先道路の十字の停止線の通行の側。日本は左側通行。右側通行の版を作るときは偽にしたプロファイルを別に作る
 #     （停止線が進入する車線の反対の半分へ移る。今は作らない）（drive_left）
 DRIVE_LEFT = True
@@ -185,7 +186,7 @@ ROAD_SETTINGS = {
 }
 for _r in catalog.ROADS:
     R.ROAD_PROFILES[_r.key] = dict({"sheet": _r.way, "prefix": _r.way + "_", "groups": ("body", "marking", "weathering"),
-                                    "expressway": True, "switches": True, "switch2_cross": True,
+                                    "expressway": True, "switches": True, "switch_ruts": True,
                                     "priority_cross": True, "open_cross": True, "corner_arcs": True,
                                     "drive_left": DRIVE_LEFT}, **ROAD_SETTINGS[_r.key])
 

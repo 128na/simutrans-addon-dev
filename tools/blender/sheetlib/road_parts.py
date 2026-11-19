@@ -235,6 +235,18 @@ STOP_LINE_SPAN = EDGE_LINE    # 線の端の、腕の中心線からの距離（
 # r = 0.8 で 0.234。中ほどが車道の半幅 ROAD_HW（3.6）の交点にちょうど来る大きさにした（それより大きいと路面の角の外へ出る）
 EDGE_CORNER_R = 0.8
 
+# T字の分岐の絵（switch 画像の 1・2。sheetlib の road_sheet の switch_ruts）の轍のカーブ: 絵の名前 → カーブの角（タイルの角の向き。
+# arc_se は南と東をつなぐ）。OTRP の固定の道具（feature/switch-image-override の gui/ground_info.cc）は、値 1 が「2」の絵、値 2 が「1」の絵で、
+# 名前の向きは sew の値 1 が東、nse が南、new が西、nsw が北（値 2 はその反対）。道路の轍は、枝と、名前の反対側の本線の端をつなぐ
+# （名前の向きへ走ってきた車が枝へ曲がる跡。sew1「西（左上）」は南–東、sew2「東（右下）」は南–西。2026-11-19、ユーザーの指定）。
+# 線路の分岐の絵（名前の側の端と枝をつなぐ。docs/reference/way-addon.md の 9.2）とは逆
+SWITCH_RUT_ARCS = {
+    "nse1": "se", "nse2": "ne",
+    "new1": "nw", "new2": "ne",
+    "nsw1": "nw", "nsw2": "sw",
+    "sew1": "se", "sew2": "sw",
+}
+
 # 雪の絵（dat の image[..][1]）: 道路は線路より除雪されている想定で、車道は夏と同じ（路面・白線・走行跡）。
 # 雪は路肩（group "snow" の snowbank）と、歩道・縁石だけ（2026-11-15、ゲームで確認して決めた）
 ROAD_SNOW_SKIN = {"curb": _SNOW, "paving": _SNOW}

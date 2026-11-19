@@ -98,6 +98,7 @@ from .road_parts import (  # noqa: F401
     STOP_LINE_D,
     STOP_LINE_SPAN,
     EDGE_CORNER_R,
+    SWITCH_RUT_ARCS,
     WearPath,
 )
 from .assemble import (  # noqa: F401
@@ -171,6 +172,8 @@ def road_sheet(style="street"):
     open_cross: 真なら通常の十字（nsew。switch2_cross の「2」も同じ絵）を、交差点の中に白線を通さない開いた十字にする
         （どちらも優先道路に見せない）。無ければ、東西の中央線と両側の点線（高速道路の十字の作り）
     corner_arcs: 真なら分岐の絵（T字・十字・1・2・優先道路の十字）で、隣り合う腕の路側線を角で円弧（EDGE_CORNER_R）でつなぐ
+    switch_ruts: 真なら T字の分岐の絵の 1・2 を、どちらも「1」と同じ T字の白線にし、走行跡（轍）を直進と右左折のカーブ 1 本だけにする
+        （カーブは下の SWITCH_RUT_ARCS）。1 と 2 の違いは轍だけ。switch2_cross と一緒には使わない
     drive_left: priority_cross の停止線の通行の側。真（既定）なら左側通行、偽なら右側通行（停止線が進入する車線の反対の半分へ移る）"""
     prof = ROAD_PROFILES[style]
     expwy = prof.get("expressway", False)
@@ -198,6 +201,8 @@ def road_sheet(style="street"):
     sides = lambda p: [(p, -EDGE_LINE), (p, EDGE_LINE)]
     drive_left = prof.get("drive_left", True)
     # 十字の形で描く分岐の絵の名前 → 形の元の名前（持ち分・壁の選び方・走行跡は十字と同じにする）
+    if prof.get("switch_ruts") and prof.get("switch2_cross"):
+        raise SystemExit(f"[road_sheet] {style}: switch_ruts と switch2_cross は一緒に使えない")
     cross_shape = {f"{n}2": "nsew" for n in ("nse", "new", "nsw", "sew")} if prof.get("switch2_cross") else {}
 
     corner_r = EDGE_CORNER_R if prof.get("corner_arcs") else 0.0
@@ -350,6 +355,10 @@ def road_sheet(style="street"):
             if prof.get("corner_arcs"):
                 for base_name in ("nse", "new", "nsw", "sew"):
                     switch_lines[base_name] = (tee_lines(base_name, mouth=False), switch_lines[base_name][1])
+            if prof.get("switch_ruts"):
+                # T字の 1・2 はどちらも「1」の白線（枝の無い側は実線、渡り口の点線なし）。違いは轍（走行跡）だけ（下の wear）
+                for base_name in ("nse", "new", "nsw", "sew"):
+                    switch_lines[base_name] = (switch_lines[base_name][0], switch_lines[base_name][0])
             if prof.get("switch2_cross"):
                 # T字の「2」は通常の十字と同じ絵（2026-11-19、ユーザーの決定。停止線を引いた作りは、複雑な十字交差と
                 # 干渉するのでやめた）。本体（weg_t::select_switch_road_image の ribi_t::all）は、ex 画像が無い way の十字で、
@@ -396,6 +405,11 @@ def road_sheet(style="street"):
     for d_name, open_ in (("s", S), ("w", W), ("n", N), ("e", E)):
         dv = Vector(open_).normalized()
         wear[d_name] = [WearPath([-dv * 1.0, Vector(open_) + dv * PATH_EXT], fade=True)]
+    if prof.get("switch_ruts"):
+        # T字の分岐の絵の轍: 直進と、枝とつなぐカーブ 1 本（SWITCH_RUT_ARCS の向き）
+        arcs = {"sw": arc_sw, "nw": arc_nw, "ne": arc_ne, "se": arc_se}
+        for sname, corner_name in SWITCH_RUT_ARCS.items():
+            wear[sname] = [sn if sname[:2] == "ns" else we, arcs[corner_name]]
     # 坂のタイルから始まる橋の端（Start・Start2）: 平らな橋の絵の下に、坂の地面までの躯体を足す（線路の橋と同じ）。
     # 本体の slope_t::north は南が高い坂で、そのとき Start[N] が使われる（東西も同じく、名前と反対の側が高い）
     grounds = {}
@@ -481,7 +495,7 @@ def road_sheet(style="street"):
         for pos, (name, paths, lines, slope, *rest) in jobs.items():
             clear_models()
             obs = build_road(paths, lines, slope, corners=rest[0] if rest else (), ends=name in ("s", "w", "n", "e"),
-                             wear_paths=wear.get(_junction(cross_shape.get(name, name))), **kw)
+                             wear_paths=wear.get(name, wear.get(_junction(cross_shape.get(name, name)))), **kw)
             shoot(pos, row0, cn(name), name, paths, slope, obs)
 
         def build_diag(name, path, over=DIAG_OVERFILL):
