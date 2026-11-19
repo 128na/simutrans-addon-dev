@@ -94,3 +94,11 @@ $env:SHEET_LAYOUT = "1"; D:\bin\blender\blender.exe -b --factory-startup --pytho
 - 部品ごとに単色で、光の当たり方に関わらず一様に塗る。色の割り当ては `sheetlib/layout_colors.py`。部品を足したらそこにも足す（無いと `[layout] 色が未登録の部品` と出て、名前から決めた色で描く）
 - シートと dat は `work/layout/` に書く。`src/` は変えない
 - 通常の出力は変わらない（モードを付けたときだけ働く）
+
+## CI の道具（`ci/`）
+
+アドオンごとのワークフロー（`.github/workflows/addon-<アドオン>.yml`）が使う。道具の版はアドオンの `ci.env` に書く（[#50](https://github.com/128na/simutrans-addon-dev/issues/50)）。
+
+- `ci/setup-makeobj.sh <指定> <置き場所>`: makeobj を用意する。`upstream:<tag>` は本家のリリースの Linux 版の配布物、`otrp:<ref>` は OTRP の fork を `<ref>` で取り出して makeobj だけをビルドする。キャッシュのキーに指定を使うので、`<ref>` はタグかコミットにする
+- `ci/setup-dat-linter.sh <版> <置き場所>`: dat_linter の Linux 版を用意する。`fmt`（整形）は使わない（dat は生成するので、整形しても次の生成で戻る）
+- ruff は、動かすと止まる誤りだけを見る（各アドオンと `tools/` の `ruff.toml`）

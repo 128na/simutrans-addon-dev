@@ -1,0 +1,28 @@
+name: addon-blender-poc
+
+# blender-poc に関わる変更のときだけ動く。POC なので Python の検査だけ（pak は作らない。#50）。
+on:
+  push:
+    branches: [main]
+    paths:
+      - "addons/blender-poc/**"
+      - ".github/workflows/addon-blender-poc.yml"
+  pull_request:
+    paths:
+      - "addons/blender-poc/**"
+      - ".github/workflows/addon-blender-poc.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  blender-poc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: 道具の版を読む
+        run: grep -E '^[A-Z_]+=' addons/blender-poc/ci.env >> "$GITHUB_ENV"
+
+      - name: ruff
+        run: pipx run "ruff==${RUFF}" check addons/blender-poc
