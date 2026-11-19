@@ -53,7 +53,7 @@ AMI の初版を「できた」と言うための条件。blender-poc の [ACCEP
 | # | 条件 | 状態 | 確かめ方 |
 |---|---|---|---|
 | 5-1 | 歩道の way を道路の隣のタイルに敷くと、縁石が道路とつながる | × | |
-| 5-2 | 壁・橋脚・歩道が別の pak にあり、配布に同梱される | △（線路の壁と架線つきの壁、道路の壁、線路用と道路用の橋脚。`ami_extra.pak` にある。歩道・配布の同梱は未対応） | `python -X utf8 build.py` の出力（`ami_extra.pak` に `ami_wall_*` の dat 10（壁だけの 4 版と twin、架線つきの 4 版と twin_catenary）と `ami_pier_rail`・`ami_pier_rail_gate`（2026-11-18）） 道路の壁・道路用の橋脚を足した後: `ami_extra.pak` に dat 17（線路の壁 10、道路の壁 4（3 版と twin）、`ami_pier_rail`・`ami_pier_rail_gate`・`ami_pier_road`）（2026-11-19） |
+| 5-2 | 壁・橋脚・歩道が別の pak にあり、配布に同梱される | △（線路の壁と架線つきの壁、道路の壁、線路用と道路用の橋脚。`ami_extra.pak` にある。歩道・配布の同梱は未対応） | `python -X utf8 build.py` の出力（`ami_extra.pak` に `ami_wall_*` の dat 10（壁だけの 4 版と twin、架線つきの 4 版と twin_catenary）と `ami_pier_rail`・`ami_pier_rail_gate`（2026-11-18）） 道路の壁・道路用の橋脚を足した後: `ami_extra.pak` に dat 17（線路の壁 10、道路の壁 4（3 版と twin）、`ami_pier_rail`・`ami_pier_rail_gate`・`ami_pier_road`）（2026-11-19）。`ami_wall_road_center` を足した後は dat 18（道路の壁 5: `single`・`back`・`center`・`front`・`twin`）（2026-11-20） |
 
 ## 6. 配布
 

@@ -377,7 +377,7 @@ def road_sheet(style="street"):
                 jobs[(2, 10 + col)] = (f"{base_name}1", paths, lines1, None)
                 jobs[(3, 10 + col)] = (f"{base_name}2", paths, lines2, None)
     walls = prof.get("walls")
-    wall_sheet_ = prof.get("wall_sheet")
+    wall_sheet, write_walls, wall_only = prof.get("wall_sheet"), prof.get("write_walls", True), prof.get("wall_only", False)
     if walls:
         # 側壁の版: 分岐は枝の経路も通す（壁を枝の口で開ける。白線はそのまま）。行き止まりは、閉じた側の辺の手前に端の壁を立てる
         # （経路の始点を壁の内側に置く。端の壁は経路の始点の奥に立つ）
@@ -387,7 +387,7 @@ def road_sheet(style="street"):
             (3, 7): ("nsw", [sn, straight(O, W)], jobs[(3, 7)][2], None),
             (3, 8): ("sew", [we, straight(O, S)], jobs[(3, 8)][2], None),
         })
-        if prof.get("wall_sheet"):
+        if wall_sheet:
             # 壁を way-object に分ける版の分岐の絵も、元の T字・十字と同じ経路（枝つき）で壁・基盤・躯体を作る（白線だけが違う）。
             # 本線だけの経路にすると、枝の口に壁があるものとして床と躯体が削られる。blender-poc の壁の版は分岐の絵を持たない
             tee_paths = {"nse": [sn, straight(O, E)], "new": [we, straight(O, N)], "nsw": [sn, straight(O, W)],
@@ -402,7 +402,7 @@ def road_sheet(style="street"):
             # 壁を way-object に分ける版は、白線も端の壁の内側の面（経路の始点）で止める。タイルの辺まで引くと、壁と別に描いた way の絵で
             # 白線の端が壁の下の縁から 1px 出て、明るい点に見えた（AMI の道路の高架の行き止まり、2026-11-19、ゲームで確認）。
             # 壁を焼き込む版は壁の外側を削る型で消えるので変えない
-            jobs[pos] = (name, [p_end], both(p_end if wall_sheet_ else (sn if name in "ns" else we)), None)
+            jobs[pos] = (name, [p_end], both(p_end if wall_sheet else (sn if name in "ns" else we)), None)
     # 斜めの経路はタイルの外まで十分に延ばす。45° の向きでは型の端の角が内側に入り込み、
     # 延長が短い（2.5）とタイルの端の近くで縁石が削り残されて、つなぎ目に切り欠きが出た
     diag = {
@@ -420,7 +420,7 @@ def road_sheet(style="street"):
         jobs = {k_: v for k_, v in jobs.items() if v[0] in prof["only"]}
         diag = {}
         curve_cells = {}
-    if prof.get("wall_only"):
+    if wall_only:
         # 壁の way-object は分岐の絵を持たない（壁は通常の T字・十字と同じ）
         jobs = {k_: v for k_, v in jobs.items() if k_[1] < 10}
     # 走行跡の経路: 分岐・十字は直進に右左折のカーブを足す。行き止まりは中ほどから開いた側へ（閉じた側の手前で止める。WearPath.fade）
@@ -451,7 +451,6 @@ def road_sheet(style="street"):
     # 行の並びは線路と同じ: 奥の絵 4 行 →（手前の絵 4 行。側壁の版）→ 雪の奥の絵 4 行 →（雪の手前の絵 4 行）。白線は雪に隠れるので描かない
     block = 8 if "front_row" in prof else 4
     variants = [(0, "", {}, groups), (block, "_snow", ROAD_SNOW_SKIN, groups + ROAD_SNOW_GROUPS)]
-    wall_sheet, write_walls, wall_only = prof.get("wall_sheet"), prof.get("write_walls", True), prof.get("wall_only", False)
     wcells = {}
     if wall_only:
         variants = variants[:1]  # way-object には雪の絵が無い
@@ -548,7 +547,8 @@ def road_sheet(style="street"):
                              tall_pad=SLOPE_WALL_PAD if wall_sheet and slope else None, **kw)
             shoot(pos, row0, cn(name), name, paths, slope, obs)
 
-        def build_diag(name, path, over=DIAG_OVERFILL, half=True):
+        def build_diag(name, path, over=DIAG_OVERFILL, cut_half=True):
+            """斜めのタイル 1 枚を組み立てる。cut_half なら Simutrans の斜めの絵と同じく角の側の半分だけを残す（カーブのセルは偽）"""
             # 画面で横向きになる斜め（se・nw）は、中央線がちょうど画素の行の境に乗り、2行に分かれて灰色に見える。
             # 半画素ずらして1行に収める（どちらも南東の側へ。sweep の +u は se で南東、nw で北西）
             c = {"diag_se": DIAG_CENTER_SHIFT, "diag_nw": -DIAG_CENTER_SHIFT}.get(name, 0.0) / ROAD_DIAG
@@ -558,7 +558,7 @@ def road_sheet(style="street"):
                 # 縦向きの斜め（sw・ne）はそのままで列に収まる。両方を同時に収める EDGE_LINE は無い
                 e = (math.floor(EDGE_LINE * DIAG_EDGE * DIAG_PX) + 0.5) / DIAG_PX / ROAD_DIAG
             return build_road([path], [(path, -e)] + center(path, c) + [(path, e)], scale=ROAD_DIAG,
-                              half=path if half else None, hw=ROAD_HW * k, curb_w=CURB_W * DIAG_EDGE, half_over=over, **kw)
+                              half=path if cut_half else None, hw=ROAD_HW * k, curb_w=CURB_W * DIAG_EDGE, half_over=over, **kw)
 
         for pos, (name, path) in diag.items():
             clear_models()
@@ -570,7 +570,7 @@ def road_sheet(style="street"):
             d_name = name.replace("curve_", "diag_")
             clear_models()
             path = next(p for n, p in diag.values() if n == d_name)
-            obs = build_diag(d_name, path, half=False)
+            obs = build_diag(d_name, path, cut_half=False)
             shoot(pos, row0, cn(name), d_name, [path], None, obs)
         if walls:
             # 側壁の版は近い斜めの絵を持たない（線路と同じ。本体が分け合うタイルに 2 本の way を置き、back と front を組み合わせられる）
@@ -1384,7 +1384,7 @@ TUNNEL_RISE = 36      # 躯体の高さ（画面の px。持ち分を上へ広�
 
 
 def tunnel_sheet(kind="track", profile="new", sheet=None, label="100", road_profile="expressway"):
-    """坑口 4 方向（kind: track・expressway）。profile は線路の描き分け（TRACK_PROFILES の名前。部品の差し替え replace と夏の材質 skin も使う）、
+    """坑口 4 方向（kind: track・expressway）。profile は kind="track" のときの線路の描き分け（TRACK_PROFILES の名前。部品の差し替え replace と夏の材質 skin も使う）、
     road_profile は kind="expressway" のときの道路の描き分け（ROAD_PROFILES の名前か、その値の辞書。groups・skin・label・style を使う）、
     sheet はシート名（無ければ track_tunnel・expressway_tunnel）、label はアイコンの最高速度。pak128 では坑口は 2 段の坂にしか置けない（本体の tunnelbauer）。BackImage[N] は北が高い坂（南から入る）。シートは 行 0: 奥の絵、行 1: 手前の絵、行 2・3: 雪。"""
     half = TILE / 2
@@ -1395,10 +1395,10 @@ def tunnel_sheet(kind="track", profile="new", sheet=None, label="100", road_prof
         "e": (4, straight(W, E), Vector((1, 0)), lambda x, y: 2 * H * (x + half) / TILE),
         "w": (5, straight(W, E), Vector((-1, 0)), lambda x, y: 2 * H * (half - x) / TILE),
     }
-    prof = TRACK_PROFILES[profile]
     expwy = kind == "expressway"
+    prof = None if expwy else TRACK_PROFILES[profile]  # 道路の坑口は線路の描き分けを使わない
     road_prof = (ROAD_PROFILES[road_profile] if isinstance(road_profile, str) else road_profile) if expwy else None
-    parts = track_sheet_parts(prof)
+    parts = None if expwy else track_sheet_parts(prof)
     # 高速道路: iss の都市高速の坑口（tunnel/road。タイルいっぱいの箱と口の上の名板）が手本。穴は両側の壁の内側まで広げる。
     # 道路は地面の菱形より 1px 下に描く（ROAD_CY）。持ち分も同じだけ下げ、隣の道路と同じく spill は 0
     bore_w = EXPWY_WALL_U - 0.1 if expwy else TUNNEL_BORE[0]

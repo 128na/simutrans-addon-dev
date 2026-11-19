@@ -2,7 +2,7 @@
 
 pak128 用のインフラアドオン集。絵は Blender のスクリプトで描く（作り方は [blender-poc](../blender-poc/README.md) で確かめたもの）。
 
-**今あるのは在来線の通常の版（`ami_rail_ballast`）と、在来線の基盤の 4 版・壁だけの way-object・架線つきの壁の way-object（`ami_rail_ballast_base_*`・`ami_wall_rail_*`・`ami_wall_rail_*_catenary`）、高架の 4 版と橋脚の way（`ami_rail_ballast_elev_*`・`ami_pier_rail`・門型の `ami_pier_rail_gate`）、橋とトンネル（`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`）、高速線（スラブ軌道）の通常の版・基盤の 4 版・高架の 4 版・橋・トンネル（`ami_rail_slab`・`ami_rail_slab_base_*`・`ami_rail_slab_elev_*`・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`）、道路 3 種の通常の版（`ami_road_local`・`ami_road_general`・`ami_road_expressway`）。** 描画から pak までの骨組み（[#14](https://github.com/128na/simutrans-addon-dev/issues/14)）の上に、在来線の壁の無い通常の版を仕上げ（[#15](https://github.com/128na/simutrans-addon-dev/issues/15)。全方位・分岐の絵・近い斜め・雪・汚れ）、基盤の版と壁を足した（[#16](https://github.com/128na/simutrans-addon-dev/issues/16)。下の「壁の敷き方」）。壁に架線を持たせた版を足した（[#17](https://github.com/128na/simutrans-addon-dev/issues/17)。下の「架線の作り」）。高架の 4 版と、高架の真下の地面に敷く橋脚の way を足した（[#18](https://github.com/128na/simutrans-addon-dev/issues/18)。下の「高架と橋脚の作り」）。橋とトンネルを足した（[#19](https://github.com/128na/simutrans-addon-dev/issues/19)。下の「橋とトンネルの作り」）。高速線を足した（[#20](https://github.com/128na/simutrans-addon-dev/issues/20)。下の「高速線の作り」）。道路 3 種の通常の版を足した（[#21](https://github.com/128na/simutrans-addon-dev/issues/21)。下の「道路の作り」）。下の表の残りは作る予定のもの（開発ステップの一覧は [#27](https://github.com/128na/simutrans-addon-dev/issues/27)）。範囲と作りを決めた理由は次の ADR にある。
+**今あるのは在来線の通常の版（`ami_rail_ballast`）と、在来線の基盤の 4 版・壁だけの way-object・架線つきの壁の way-object（`ami_rail_ballast_base_*`・`ami_wall_rail_*`・`ami_wall_rail_*_catenary`）、高架の 4 版と橋脚の way（`ami_rail_ballast_elev_*`・`ami_pier_rail`・門型の `ami_pier_rail_gate`）、橋とトンネル（`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`）、高速線（スラブ軌道）の通常の版・基盤の 4 版・高架の 4 版・橋・トンネル（`ami_rail_slab`・`ami_rail_slab_base_*`・`ami_rail_slab_elev_*`・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`）、道路 3 種の通常の版（`ami_road_local`・`ami_road_general`・`ami_road_expressway`）と、道路の基盤の 4 版・高架の 4 版・橋・トンネル（`ami_road_*_base_*`・`ami_road_*_elev_*`・`ami_road_*_bridge`・`ami_road_*_tunnel`）、道路の壁の way-object（`ami_wall_road_*`）、道路用の橋脚（`ami_pier_road`）。** 描画から pak までの骨組み（[#14](https://github.com/128na/simutrans-addon-dev/issues/14)）の上に、在来線の壁の無い通常の版を仕上げ（[#15](https://github.com/128na/simutrans-addon-dev/issues/15)。全方位・分岐の絵・近い斜め・雪・汚れ）、基盤の版と壁を足した（[#16](https://github.com/128na/simutrans-addon-dev/issues/16)。下の「壁の敷き方」）。壁に架線を持たせた版を足した（[#17](https://github.com/128na/simutrans-addon-dev/issues/17)。下の「架線の作り」）。高架の 4 版と、高架の真下の地面に敷く橋脚の way を足した（[#18](https://github.com/128na/simutrans-addon-dev/issues/18)。下の「高架と橋脚の作り」）。橋とトンネルを足した（[#19](https://github.com/128na/simutrans-addon-dev/issues/19)。下の「橋とトンネルの作り」）。高速線を足した（[#20](https://github.com/128na/simutrans-addon-dev/issues/20)。下の「高速線の作り」）。道路 3 種の通常の版を足した（[#21](https://github.com/128na/simutrans-addon-dev/issues/21)。下の「道路の作り」）。道路の壁・基盤の版・高架・橋脚・橋・トンネルを足した（[#22](https://github.com/128na/simutrans-addon-dev/issues/22)。下の「道路の壁・高架・橋脚・橋・トンネルの作り」）。下の表の残りは作る予定のもの（開発ステップの一覧は [#27](https://github.com/128na/simutrans-addon-dev/issues/27)）。範囲と作りを決めた理由は次の ADR にある。
 
 - [ADR 0002](../../docs/adr/0002-ami-scope.md): 範囲・対象・ライセンス・配布
 - [ADR 0003](../../docs/adr/0003-ami-walls-base-piers-as-separate-objects.md): 壁・基盤・橋脚・歩道の分け方
@@ -22,7 +22,7 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 | 道路の壁 | `ami_wall_road_<版>`（`single`・`back`・`center`・`front`。`center` は行き止まりの端の壁だけ）。近い斜めの分け合うタイル用に `ami_wall_road_twin`（名前は確定。2026-11-19、ユーザーの決定。下の「道路の壁・高架・橋脚・橋・トンネルの作り」） |
 | 橋脚・歩道 | `ami_pier_rail`（門型は `ami_pier_rail_gate`）・`ami_pier_road`・`ami_sidewalk` |
 
-dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`・`ami_road_local`・`ami_road_general`・`ami_road_expressway`・道路 3 種それぞれの `_base_<版>`（4 版。置くかは仮）・`_elev_<版>`（4 版）・`_bridge`・`_tunnel`・`ami_wall_road_<版>`（4 版）・`ami_wall_road_twin`・`ami_pier_road`。
+dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`・`ami_road_local`・`ami_road_general`・`ami_road_expressway`・道路 3 種それぞれの `_base_<版>`（4 版）・`_elev_<版>`（4 版）・`_bridge`・`_tunnel`・`ami_wall_road_<版>`（4 版）・`ami_wall_road_twin`・`ami_pier_road`。
 
 ### 線路（新描画位置）
 
@@ -77,7 +77,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 | 種類 | 速度 | 中央線 | way | 版 |
 |---|---|---|---|---|
-| 生活道路 | 40 km/h | なし | `ami_road_local` | 通常・基盤 4 版（仮）・高架 4 版・橋・トンネル |
+| 生活道路 | 40 km/h | なし | `ami_road_local` | 通常・基盤 4 版・高架 4 版・橋・トンネル |
 | 一般道路 | 120 km/h | 白線 | `ami_road_general` | 同上 |
 | 高速道路 | 360 km/h | 破線 | `ami_road_expressway` | 同上 |
 
@@ -398,7 +398,7 @@ SEASONS=temperate:20:20 GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe NU
 道路の壁・基盤の版・高架・橋脚・橋・トンネルの見本も別のゲームで敷く:
 
 ```bash
-GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe NUT=ingame/road_struct_sample.nut OUT=work/struct bash ingame/sample_parallel.sh
+GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe NUT=ingame/road_struct_sample.nut OUT=work/struct bash ingame/sample_parallel.sh
 ```
 
 - `ingame/road_struct_sample.nut` は道路 3 種を、温暖側 (20,20) と降雪側 (276,20) に 30 ずつ南へずらして敷く。1 種ずつ東へ、地上の壁（通常の版に `single` の壁。近い斜めの区画 G は `back`・`front`）・地上の複線（基盤の版と同じ版の壁。輪 W1・行き止まりの並び W3・近い斜め W2）・高架（`single` と壁と真下の橋脚。隣り合う十字 L）・高架の複線（WV1〜WV3）・分岐の絵の固定（IB は基盤の版、IV は高架）・橋とトンネル（B1・B2・B4・T1・T3）・橋脚のつながり（P1 は `Road_050`、P2 は AMI の道路、P3 は地上の線路）。表は `road_struct_sample.nut` の冒頭

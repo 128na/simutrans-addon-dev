@@ -239,7 +239,6 @@ for _r in catalog.ROADS:
 # iss の帯は 256px のセルで 4px（../refs/iss/release/pak128/bridge/road/0120_bridge1.png の NS のセル。2026-11-19 に測った）。
 # 床の下を描くため、平らなセルは高架と同じだけ持ち分を下へ広げる（端の坂と坂から始まる端は広げない。sheetlib の road_sheet）
 ROAD_GIRDER_D = 0.15  # 桁の深さ（基盤の下面から）。基盤と合わせて約 4px
-ROAD_BRIDGE_CELLS = BRIDGE_CELLS
 # 橋脚: 道の全幅（両側の壁の下）まで横切る柱（blender-poc の高速道路の橋・高架と同じ考え方。床がタイルいっぱいなので、中央だけの柱は床に隠れる）
 ROAD_PIER_ACROSS = 2 * R.EXPWY_WALL_U
 ROAD_BRIDGE_PIER = (ROAD_PIER_ACROSS, R.PIER_SIZE, R._M_PIER)
@@ -247,7 +246,7 @@ for _r in catalog.ROADS:
     _single = R.ROAD_PROFILES[_p(_r.elev("single"))]
     R.ROAD_PROFILES[_p(_r.bridge)] = dict(
         _single, sheet=_r.bridge, prefix=_r.bridge + "_", elevated=False, bridge=True, solid=True, starts=True, piers=True,
-        groups=_single["groups"] + ("ramp",), only=ROAD_BRIDGE_CELLS, base_mat=R._M_GIRDER, body_mat=R._M_GIRDER, body_inset=0.0,
+        groups=_single["groups"] + ("ramp",), only=BRIDGE_CELLS, base_mat=R._M_GIRDER, body_mat=R._M_GIRDER, body_inset=0.0,
         body_d=ROAD_GIRDER_D, pier_box=ROAD_BRIDGE_PIER, band="bridge")
 
 # ---------------------------------------------------------------- 対象（シート名 → 描く関数）
@@ -289,9 +288,7 @@ for _r in catalog.ROADS:
         SHEETS[_r.elev(_v)] = _road_target(_p(_r.elev(_v)))
     SHEETS[_r.bridge] = _road_target(_p(_r.bridge))
     # トンネル: 坑口は blender-poc の高速道路のトンネル（iss の都市高速の坑口が手本）で、路面・白線は道路の種類ごと。
-    # profile は線路の描き分けの名前（tunnel_sheet が引くだけで、道路の坑口では使わない）
-    SHEETS[_r.tunnel] = (lambda r: lambda: R.tunnel_sheet("expressway", profile=catalog.RAIL_BALLAST.key, sheet=r.tunnel,
-                                                          road_profile=R.ROAD_PROFILES[r.key]))(_r)
+    SHEETS[_r.tunnel] = (lambda r: lambda: R.tunnel_sheet("expressway", sheet=r.tunnel, road_profile=R.ROAD_PROFILES[r.key]))(_r)
 # 道路用の橋脚の way（ami_pier_road）: 高架の道路の真下の地面に敷く。柱は道の全幅を横切り（ROAD_PIER_ACROSS。斜めは 1/√2）、
 # 上端は道路の高架の躯体の下面に合わせる。絵の位置・持ち分は道路と同じ（ROAD_CY）
 SHEETS[catalog.PIER_ROAD] = lambda: R.pier_sheet(catalog.PIER_ROAD, R.FLAT, label=PIER_LABEL, across=ROAD_PIER_ACROSS,
