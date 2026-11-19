@@ -184,6 +184,7 @@ def road_sheet(style="street"):
     wall_only: way のシートを書かず、壁のシートだけを書く（雪の絵も描かない）
     elev_body: 基盤の下に躯体を足す（深さ body_d、壁のある側は壁の外の面から body_inset 内で止める、材質 body_mat。
         既定は高架の ELEV_BODY_D・ELEV_BODY_INSET・_M_ELEV_BODY。橋の桁は body_inset=0 と桁の材質）
+    curve_cells: カーブのセル（2, 5〜8）も斜めの形で描き、タイルの半分で切らない（壁の無い側をタイルの端まで。地上の基盤の版・高架）
     lower と solid を両方持つ橋は、平らなセルだけ持ち分を下へ広げる（端の坂と坂から始まる端は広げない。track_sheet と同じ）"""
     prof = ROAD_PROFILES[style]
     expwy = prof.get("expressway", False)
@@ -406,9 +407,15 @@ def road_sheet(style="street"):
         (2, 2): ("diag_ne", straight(N, E, ext=DIAG_EXT)),
         (2, 3): ("diag_se", straight(S, E, ext=DIAG_EXT)),
     }
+    # prof["curve_cells"]（無くてよい）: カーブのセル（2, 5〜8）も斜めの形で描く（線路の基盤の版の curve_cells と同じ。dat の image[sw] などが
+    # このセルを指す）。斜めのセルはタイルの半分で切るので、並べた車線の直角の曲がりで、内側の線のカーブのタイルとの間に三角のすき間が出た
+    # （AMI の道路の高架の複線。2026-11-19、ゲームで確認）
+    curve_cells = ({(2, 5): "curve_sw", (2, 6): "curve_nw", (2, 7): "curve_ne", (2, 8): "curve_se"}
+                   if prof.get("curve_cells") else {})
     if "only" in prof:
         jobs = {k_: v for k_, v in jobs.items() if v[0] in prof["only"]}
         diag = {}
+        curve_cells = {}
     if prof.get("wall_only"):
         # 壁の way-object は分岐の絵を持たない（壁は通常の T字・十字と同じ）
         jobs = {k_: v for k_, v in jobs.items() if k_[1] < 10}
@@ -537,7 +544,7 @@ def road_sheet(style="street"):
                              tall_pad=SLOPE_WALL_PAD if wall_sheet and slope else None, **kw)
             shoot(pos, row0, cn(name), name, paths, slope, obs)
 
-        def build_diag(name, path, over=DIAG_OVERFILL):
+        def build_diag(name, path, over=DIAG_OVERFILL, half=True):
             # 画面で横向きになる斜め（se・nw）は、中央線がちょうど画素の行の境に乗り、2行に分かれて灰色に見える。
             # 半画素ずらして1行に収める（どちらも南東の側へ。sweep の +u は se で南東、nw で北西）
             c = {"diag_se": DIAG_CENTER_SHIFT, "diag_nw": -DIAG_CENTER_SHIFT}.get(name, 0.0) / ROAD_DIAG
@@ -547,12 +554,20 @@ def road_sheet(style="street"):
                 # 縦向きの斜め（sw・ne）はそのままで列に収まる。両方を同時に収める EDGE_LINE は無い
                 e = (math.floor(EDGE_LINE * DIAG_EDGE * DIAG_PX) + 0.5) / DIAG_PX / ROAD_DIAG
             return build_road([path], [(path, -e)] + center(path, c) + [(path, e)], scale=ROAD_DIAG,
-                              half=path, hw=ROAD_HW * k, curb_w=CURB_W * DIAG_EDGE, half_over=over, **kw)
+                              half=path if half else None, hw=ROAD_HW * k, curb_w=CURB_W * DIAG_EDGE, half_over=over, **kw)
 
         for pos, (name, path) in diag.items():
             clear_models()
             obs = build_diag(name, path)
             shoot(pos, row0, cn(name), name, [path], None, obs, side=DIAG_HALF[name])
+        for pos, name in curve_cells.items():
+            # カーブのセルを斜めの形で描く（prof["curve_cells"]）。斜めのセルとの違いは、タイルの半分で切らないことだけ。
+            # 路面・基盤・躯体は、壁の無い側をタイルの端まで延ばす（壁のある側は _beyond_prisms と基盤の決め方で壁の外の面で止まる）
+            d_name = name.replace("curve_", "diag_")
+            clear_models()
+            path = next(p for n, p in diag.values() if n == d_name)
+            obs = build_diag(d_name, path, half=False)
+            shoot(pos, row0, cn(name), d_name, [path], None, obs)
         if walls:
             # 側壁の版は近い斜めの絵を持たない（線路と同じ。本体が分け合うタイルに 2 本の way を置き、back と front を組み合わせられる）
             continue

@@ -42,12 +42,16 @@ def profile(name):
 @dataclass(frozen=True)
 class Road:
     """道路の種類 1 つ。key は way の名前から PREFIX を除いたもの（render.py の ROAD_PROFILES の名前の元）。
-    通常の版の way・高架の 4 版・橋・トンネル（#21・#22）。地上の基盤の版は作らない（README の「道路の壁・高架・橋脚・橋・トンネルの作り」）"""
+    通常の版の way・地上の基盤の版と高架の 4 版・橋・トンネル（#21・#22）。基盤の版の名前は仮（ユーザーの確定待ち。
+    README の「道路の壁・高架・橋脚・橋・トンネルの作り」）"""
     key: str
 
     @property
     def way(self):
         return PREFIX + self.key
+
+    def base(self, variant):
+        return f"{self.way}_base_{variant}"
 
     def elev(self, variant):
         return f"{self.way}_elev_{variant}"

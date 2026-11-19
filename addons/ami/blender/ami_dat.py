@@ -84,7 +84,14 @@ for _t in catalog.TRACKS:
 # 道路 3 種の通常の版（#21）。並びは線路の通常の版と同じ（近い斜め・分岐の絵を持つ）。waytype と値は VALUES
 for _r in catalog.ROADS:
     BUILT[_r.way] = _r.way
-# 道路の地上の基盤の版は作らない（路面がタイル全面で、壁の way-object を通常の版にそのまま重ねる。README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
+# 道路の地上の基盤の版（#22。名前は仮でユーザーの確定待ち）: 線路の基盤の版と同じく近い斜めの絵を持たず、カーブはカーブのセル（斜めの形）。
+# 値は通常の版と同じ（README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
+for _r in catalog.ROADS:
+    for _v in BASE_VARIANTS:
+        _n = _r.base(_v)
+        BUILT[_n] = _n
+        VALUES[_n] = VALUES[_r.way]
+        NO_CLOSE.add(_n)
 
 # ---------------------------------------------------------------- 高架の 4 版（#18）
 # 基盤の版と同じ並び（近い斜めの絵を持たない）で、system_type=1。値は仮: iss と同じく地上の 2 倍の費用・維持費（速さは地上と同じ）
@@ -99,7 +106,7 @@ for _t in catalog.TRACKS:
         NO_CLOSE.add(_n)
         ELEVATED.add(_n)
 # 道路の高架の 4 版（#22）: 線路の高架と同じく、近い斜めの絵を持たない（分け合うタイルに way が 2 本置かれ、奥の線と手前の線を別の版にできる）。
-# カーブは斜めの絵（道路の通常の版と同じ。シートにカーブのセルが無い）。値の倍率も線路と同じ
+# カーブはカーブのセル（斜めの形で、壁の無い側をタイルの端まで。render.py の curve_cells）。値の倍率も線路と同じ
 for _r in catalog.ROADS:
     for _v in BASE_VARIANTS:
         _n = _r.elev(_v)
@@ -108,7 +115,6 @@ for _r in catalog.ROADS:
                           maintenance=VALUES[_r.way]["maintenance"] * ELEV_COST_K)
         NO_CLOSE.add(_n)
         ELEVATED.add(_n)
-        DIAG_CURVES.add(_n)
 
 # ---------------------------------------------------------------- 橋脚の way（#18）
 # 高架の真下の地面のタイルに敷く。waytype は tram_track（iss と同じ。ユーザーの決定、2026-11-18。README の「高架と橋脚の作り」）。

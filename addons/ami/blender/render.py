@@ -195,7 +195,7 @@ for _r in catalog.ROADS:
 # 道路の壁（ami_wall_road_<版>。single・back・front）: blender-poc の高速道路の壁（sheetlib の road_parts の wallL・wallR・endw。
 # iss の都市高速と同じくタイルの端に立つコンクリートの壁）を、way の絵に焼き込まず way-object のシートに分ける（sheetlib の road_sheet の
 # wall_sheet）。壁の形は 3 種で同じなので、シートは catalog.WALL_ROAD の道路から 1 回だけ描く（wall_only。way のシートは書かない）。
-# 地上は通常の版の way（路面がタイル全面）にそのまま重ねる。基盤の版は作らない（README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
+# 地上は通常の版の way にも重ねられるが、並べた車線の直角の曲がりと近い斜めは、地上の基盤の版（下）と組む
 ROAD_WALL_LABEL = "W"  # 道路の壁のアイコンの文字（仮。アイコンはステップ 13 でまとめて作る）
 _WR = catalog.WALL_ROAD
 for _v in catalog.ROAD_WALL_VARIANTS:
@@ -203,6 +203,17 @@ for _v in catalog.ROAD_WALL_VARIANTS:
         R.ROAD_PROFILES[_WR.key], sheet=f"ami_wall_road_{_v}_way", prefix=f"ami_wall_road_{_v}_", walls=BASE_VARIANTS[_v],
         groups=R.ROAD_PROFILES[_WR.key]["groups"] + ("wall",), wall_sheet=f"ami_wall_road_{_v}", wall_only=True,
         wall_label=ROAD_WALL_LABEL)
+
+# 地上の基盤の版（<道路>_base_<版>。名前は仮でユーザーの確定待ち）: 通常の版の路面から壁の外を削り、カーブのセルを斜めの形で描いて
+# 壁の無い側をタイルの端まで延ばす（curve_cells。並べた車線の直角の曲がりで、内側の線との間に草の三角が出ない）。
+# 近い斜めの絵を持たない（本体が分け合うタイルに way を 2 本置き、ami_wall_road_twin を重ねられる。線路の基盤の版と同じ）。
+# 壁は way-object（ami_wall_road_<版>）を重ねるので、壁のシートは書かない
+for _r in catalog.ROADS:
+    for _v, _walls in BASE_VARIANTS.items():
+        R.ROAD_PROFILES[_p(_r.base(_v))] = dict(
+            R.ROAD_PROFILES[_r.key], sheet=_r.base(_v), prefix=_r.base(_v) + "_", walls=_walls,
+            groups=R.ROAD_PROFILES[_r.key]["groups"] + ("wall",), wall_sheet=f"ami_wall_road_{_v}", write_walls=False,
+            curve_cells=True)
 
 # 高架の 4 版（<道路>_elev_<版>、dat は system_type=1）: 床（路面と基盤）と躯体だけ。橋脚は描かない（道路用の橋脚の way が描く）。
 # 基盤は壁の外の面で止まり、壁の無い側はタイルの端まで（線路の高架と同じ）。躯体は壁のある側で壁の外の面から ELEV_BODY_INSET 内で止める。
@@ -214,7 +225,7 @@ for _r in catalog.ROADS:
         R.ROAD_PROFILES[_p(_r.elev(_v))] = dict(
             R.ROAD_PROFILES[_r.key], sheet=_r.elev(_v), prefix=_r.elev(_v) + "_", walls=_walls,
             groups=R.ROAD_PROFILES[_r.key]["groups"] + ("wall",), wall_sheet=f"ami_wall_road_{_v}", write_walls=False,
-            elevated=True, elev_body=True, lower=ROAD_ELEV_LOWER, band="elevated")
+            elevated=True, elev_body=True, lower=ROAD_ELEV_LOWER, band="elevated", curve_cells=True)
 
 # 橋（<道路>_bridge）: 欄干を描かず、single の壁の way-object を重ねる（線路の橋と同じ）。床・躯体の高さは高架にそろえる。
 # 桁（POC の C6）: iss の都市高速の橋（../refs/iss/src/bridge/road/bridge.dat の iss_br_0120_bridge1）と同じく、床の縁の下に青い鋼の帯を見せる。
@@ -268,6 +279,7 @@ for _v in catalog.ROAD_WALL_VARIANTS:
     SHEETS[f"ami_wall_road_{_v}"] = _road_target(f"wall_road_{_v}")
 for _r in catalog.ROADS:
     for _v in BASE_VARIANTS:
+        SHEETS[_r.base(_v)] = _road_target(_p(_r.base(_v)))
         SHEETS[_r.elev(_v)] = _road_target(_p(_r.elev(_v)))
     SHEETS[_r.bridge] = _road_target(_p(_r.bridge))
     # トンネル: 坑口は blender-poc の高速道路のトンネル（iss の都市高速の坑口が手本）で、路面・白線は道路の種類ごと。
