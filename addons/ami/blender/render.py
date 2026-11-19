@@ -88,14 +88,14 @@ for _t in catalog.TRACKS:
 # tram（waytype=tram_track）で道路の上に重ねて敷く（ADR 0002）。コンクリートで固めた床・縁の明るい帯・レールの頭・溝・さび（sheetlib の
 # tram_parts）。床は道路の路面と同じ高さ（基準面は動かさない FLAT）で、絵の基準位置と持ち分は道路と同じ ROAD_CY（spill 0）。
 # pak128 標準の Tram_Track_050_A もレールは地面の菱形の位置（ref_measure で直線のずれ +0。AMI の在来線は +2）で、下げていない。
-# カーブは曲線のまま（diag_curves を使わない。2026-11-17 のユーザーの指摘。README の「残っていること」）。行き止まりはタイルの中心で止め、
-# 車止めは置かない（道路の上に立つので）。雪の絵は道路の車道と同じく除雪された夏の絵（TRAM_SNOW_SKIN）
+# カーブは曲線のまま（diag_curves を使わない。2026-11-17 のユーザーの指摘。README の「残っていること」）。行き止まりのレールは在来線と同じく
+# 閉じた側の端から END_FROM_EDGE で止め（床はタイルの端まで。2026-11-20 のユーザーの指摘）、車止めは置かない（道路の上に立つので）。雪の絵は道路の車道と同じく除雪された夏の絵（TRAM_SNOW_SKIN）
 TRAM_KEY = catalog.profile(catalog.TRAM)
 TRAM_DATUMS = R.FLAT  # tram_bed（床と縁の帯）は分岐の絵で作り直さない基準面（スラブ軌道の slab_bed と同じ考え方）
 R.TRACK_PROFILES[TRAM_KEY] = {
     "sheet": catalog.TRAM, "label": "60", "spill": 0, "datums": TRAM_DATUMS, "snow": True, "anchor": R.ROAD_CY, "cy": R.ROAD_CY,
     "groups": ("body", "weathering"), "track_parts": R.TRAM_TRACK_PARTS, "replace": R.TRAM_WEAR_REPLACE,
-    "snow_skin": R.TRAM_SNOW_SKIN,
+    "snow_skin": R.TRAM_SNOW_SKIN, "end_from_edge": END_FROM_EDGE,
 }
 
 # ---------------------------------------------------------------- 基盤の版と壁の way-object（ADR 0003。#16）

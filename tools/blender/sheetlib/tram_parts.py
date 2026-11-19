@@ -8,7 +8,7 @@ TRACK_PROFILES の "track_parts"・"replace"・"snow_skin" に渡す（共通の
 from dataclasses import replace
 
 from .core import Part, merge, sweep
-from .track_parts import RAIL_IN, RAIL_OUT, TRACK_EXTRAS, _mix, _trim_inner_ends, track_noise
+from .track_parts import RAIL_IN, RAIL_OUT, TRACK_EXTRAS, _edge_reach, _mix, _trim_inner_ends, track_noise
 
 # ---------------------------------------------------------------- 断面（部品の 1 単位 ≈ 9px。高さは路面 0 から上へ薄く積む）
 # 床の上面を路面（道路の asphalt の上面 0）よりわずかに上にし、道路の上に重ねたときに路面を隠す。厚みは画面で 1px 未満（段に見せない）
@@ -58,6 +58,18 @@ def _slab_shape(u, z0, z1):
     return shape
 
 
+def _to_edge(shape, inset=0.0):
+    """形 shape(path, k) を、行き止まりの経路（始点だけがタイルの中）では始点を閉じた側のタイルの端から inset 手前まで延ばして作る。
+    レールの終点（TRACK_PROFILES の end_from_edge）より奥まで床を敷く（在来線の道床 bed_to_edge_shape と同じ考え方）"""
+    def f(path, k):
+        e = _edge_reach(path)
+        if e is not None:
+            reach, d = e
+            path = [path[0] - d * (reach - inset)] + list(path)
+        return shape(path, k)
+    return f
+
+
 def _pair_shape(u0, u1, z0, z1):
     """経路の両側に 1 本ずつの帯（中心から u0〜u1）。"""
     def shape(path, k):
@@ -73,9 +85,12 @@ def _rail_shape(side):
 
 
 # 縁の帯と床は線路の道床と同じ横幅の倍率（bed）で、斜めでも直線と辺で同じ幅になる。溝・目地はレールと同じ倍率（gauge）
+# 行き止まりでは、レールと溝はタイルの中（end_from_edge の所）で止め、縁の帯は閉じた側のタイルの端まで、床はそこから縁の帯の幅だけ手前まで
+# 延ばす（閉じた端にも縁の帯が回る。在来線の道床もタイルの端まで。2026-11-20 のユーザーの指摘）
+TRAM_END_BAND = TRAM_BED_U - TRAM_EDGE_U0
 TRAM_TRACK_PARTS = (
-    Part("tram_edge", "tram_bed", "bed", _M_TRAM_EDGE, _slab_shape(TRAM_BED_U, TRAM_BED_Z0, TRAM_EDGE_Z1)),
-    Part("tram_bed", "tram_bed", "bed", _M_TRAM_BED, _slab_shape(TRAM_EDGE_U0, TRAM_BED_Z0, TRAM_BED_Z1)),
+    Part("tram_edge", "tram_bed", "bed", _M_TRAM_EDGE, _to_edge(_slab_shape(TRAM_BED_U, TRAM_BED_Z0, TRAM_EDGE_Z1))),
+    Part("tram_bed", "tram_bed", "bed", _M_TRAM_BED, _to_edge(_slab_shape(TRAM_EDGE_U0, TRAM_BED_Z0, TRAM_BED_Z1), TRAM_END_BAND)),
     Part("tram_groove", "rail", "gauge", _M_TRAM_GROOVE,
          _pair_shape(RAIL_IN - TRAM_GROOVE_W, RAIL_IN, TRAM_GROOVE_Z, TRAM_GROOVE_Z + TRAM_TH), centre=False),
     Part("tram_seam", "rail", "gauge", _M_TRAM_GROOVE,
