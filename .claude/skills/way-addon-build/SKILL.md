@@ -73,7 +73,7 @@ description: Simutrans の way 系アドオン（AMI・blender-poc の線路・�
 | 部品の出方 | `SHEET_LAYOUT=1` で描いて `work/layout/` を見る。部品の色は `sheetlib/layout_colors.py` に足す |
 | 一部のセルだけ試す | `SHEET_ONLY=ew,nse,diag_nw` を付けて描く。シートは `work/only/` に書かれ、`src/` は変わらない |
 | 既存の絵が変わらない | `git status` の `src/` の差分と `tools/blender/sheet_diff.py` |
-| AMI の全体 | README の「導入と検証」の順に `blender/ami_dat.py`・`build.py`・`ingame/sample_check.sh`・`ingame/sample_capture.sh` |
+| AMI の全体 | README の「導入と検証」の順に `blender/ami_dat.py`・`build.py`・`ingame/sample_check.sh`・`ingame/sample_capture.sh`。全区画をまとめて撮るだけなら `ingame/sample_parallel.sh`（8 台） |
 | blender-poc の全体 | README の手順と `addons/blender-poc/ingame/` の各スクリプト |
 | シート全体の欠陥の候補 | `tools/blender/sheet_audit.py`（参照先の空セル、端の切れ、小さな穴と点、つないだときのすき間）。同じ作りの軌道は `--compare` で塗りの範囲を比べる |
 | ドットの欠け・はみ出し・接続部のずれ | 見たい所を `tools/blender/zoom.py` で 3 倍以上に拡大して読む。等倍の画像だけで「問題なし」としない（限界はリファレンスの 8.3） |
