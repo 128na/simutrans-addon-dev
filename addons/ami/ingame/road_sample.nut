@@ -22,9 +22,12 @@
 //   K pak128 標準の道路（STANDARD）とのつなぎ目: 東西 y=1 の (44)-(49) が標準・(49)-(55) が AMI、南北 x=58 の (0)-(4) が標準・(4)-(9) が AMI
 //   L 隣り合う十字: 南北 (50,11)-(50,19)・(51,11)-(51,19) を東西 (46,15)-(55,15) が横切る。十字の隣が T字か十字だと、ex 画像の無い way では
 //     十字のタイルに T字の「2」の絵（西の十字は image[nse2]、東の十字は image[nsw2]）が出る（select_switch_road_image の ribi_t::all）
-// [check] の行: 区画 G の分け合うタイルが way 1 本か（two_ways=false なら近い斜めの絵）、区画 H の自動選択の絵が区画 I の選択 2 と同じ絵で
-// 通常の T字（区画 B）と違うか、区画 I の選択 1 と 2 が違う絵か（get_image_id）、区画 L の十字が T字の「2」の絵になるか（t2）、固定の道具があるか
+// [check] の行: 区画 G の分け合うタイルが way 1 本か（two_ways=false なら近い斜めの絵）、区画 H・I・L の絵（get_image_id）、固定の道具があるか。
+// H・I・L の判定は SWITCH_IMAGES で変わる（blender/ami_dat.py の ROAD_SWITCH_IMAGES に合わせる。#46）:
+//   偽（今）: 分岐の絵が無いので、自動選択（H）・固定（I）・隣り合う十字（L）がどれも通常の T字・十字と同じ絵なら ok
+//   真: H の自動選択の絵が I の選択 2 と同じで通常の T字と違えば ok、I の選択 1 と 2 が同じなら same12、L の十字が T字の「2」なら t2
 local ROADS = ["ami_road_local", "ami_road_general", "ami_road_expressway"];
+local SWITCH_IMAGES = false;  // dat に分岐の絵（switch 画像 1・2）があるか（ami_dat.py の ROAD_SWITCH_IMAGES と同じにする）
 local STANDARD = "Road_050";   // 区画 K でつなぐ pak128 標準の道路
 local ORIGINS = [[20, 20], [276, 20]];
 local SNOW = 1;          // ORIGINS の何番目を降雪に塗り直すか
@@ -136,16 +139,21 @@ function lay(name, ox, oy) {
   // [check]: 自動選択（H）と固定（I）の絵。通常の T字は区画 B の (0,7) nse・(6,7) nsw・(3,10) new・(3,4) sew
   local plain = {nse = img(ox, oy + 7), nsw = img(ox + 6, oy + 7), new = img(ox + 3, oy + 10), sew = img(ox + 3, oy + 4)};
   local auto = {nse = img(ox + 34, oy + 4), nsw = img(ox + 35, oy + 4), sew = img(ox + 38, oy + 12), new = img(ox + 38, oy + 13)};
+  local cross = img(ox + 3, oy + 7);
   foreach (k, v in auto) {
-    // 1 と 2 が同じ絵なら same12（前は生活道路で出た。轍のカーブで分けたので出ない）
-    local ok = v == pinned[k + "1"] && v != plain[k];
+    local ok = SWITCH_IMAGES ? (v == pinned[k + "1"] && v != plain[k])
+                             : (v == plain[k] && pinned[k + "1"] == plain[k] && pinned[k + "2"] == plain[k]);
     checks += "[check] " + name + " " + k + " auto=" + v + " pin1=" + pinned[k + "1"] + " pin2=" + pinned[k + "2"] + " plain=" + plain[k]
-              + (pin == null ? "" : (ok ? " ok" : " NG")) + (pinned[k + "1"] == pinned[k + "2"] ? " same12" : "") + "\n";
+              + (pin == null ? "" : (ok ? " ok" : " NG")) + (SWITCH_IMAGES && pinned[k + "1"] == pinned[k + "2"] ? " same12" : "") + "\n";
   }
-  checks += "[check] " + name + " nsew pin1=" + pinned["nsew1"] + " pin2=" + pinned["nsew2"] + " plain=" + img(ox + 3, oy + 7) + "\n";
+  local nsew_ok = SWITCH_IMAGES ? (pinned["nsew1"] != cross && pinned["nsew2"] != cross && pinned["nsew1"] != pinned["nsew2"])
+                                : (pinned["nsew1"] == cross && pinned["nsew2"] == cross);
+  checks += "[check] " + name + " nsew pin1=" + pinned["nsew1"] + " pin2=" + pinned["nsew2"] + " plain=" + cross
+            + (pin == null ? "" : (nsew_ok ? " ok" : " NG")) + "\n";
   local lw = img(ox + 50, oy + 15), le = img(ox + 51, oy + 15);
-  checks += "[check] " + name + " L west=" + lw + " east=" + le + " plain=" + img(ox + 3, oy + 7)
-            + ((lw == pinned["nse2"] && le == pinned["nsw2"]) ? " t2" : "") + "\n";
+  local l_ok = SWITCH_IMAGES ? (lw == pinned["nse2"] && le == pinned["nsw2"]) : (lw == cross && le == cross);
+  checks += "[check] " + name + " L west=" + lw + " east=" + le + " plain=" + cross
+            + (l_ok ? (SWITCH_IMAGES ? " t2" : " ok") : " NG") + "\n";
   return s;
 }
 
