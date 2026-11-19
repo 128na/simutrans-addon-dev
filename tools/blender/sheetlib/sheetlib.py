@@ -165,15 +165,13 @@ def road_sheet(style="street"):
     center: 中央線の種類。"solid"（実線。既定）・"dash"（破線。区切りはタイルの辺。tile_dashes）・None（中央線なし）
     switches: 真なら分岐の絵（OTRP の switch 画像。dat の image[nse1]〜image[nsew2]）を行 2・3 の列 10〜14 に描く（シートは 15 列）。
         expressway（歩道なし）の道路だけ。絵の中身は下の switch_lines
-    switch2_cross: 真なら T字の「2」の絵（nse2・new2・nsw2・sew2）を通常の十字（nsew）と同じ絵にする。本体はこの絵を、
-        十字が隣り合うときの十字のタイルに出す。無ければ、枝の側の路側線だけを描く T字の形（前からの作り）
     priority_cross: 真なら十字の分岐の絵（nsew1・nsew2。固定の道具・詳細ダイアログでだけ選べる）を、優先道路のある十字にする
         （nsew1 は南北が優先、nsew2 は東西が優先。下の priority_lines）。無ければ、nsew1 は南北の中央線と点線、nsew2 は線なし
-    open_cross: 真なら通常の十字（nsew。switch2_cross の「2」も同じ絵）を、交差点の中に白線を通さない開いた十字にする
+    open_cross: 真なら通常の十字（nsew）を、交差点の中に白線を通さない開いた十字にする
         （どちらも優先道路に見せない）。無ければ、東西の中央線と両側の点線（高速道路の十字の作り）
     corner_arcs: 真なら分岐の絵（T字・十字・1・2・優先道路の十字）で、隣り合う腕の路側線を角で円弧（EDGE_CORNER_R）でつなぐ
     switch_ruts: 真なら T字の分岐の絵の 1・2 を、どちらも「1」と同じ T字の白線にし、走行跡（轍）を直進と右左折のカーブ 1 本だけにする
-        （カーブは下の SWITCH_RUT_ARCS）。1 と 2 の違いは轍だけ。switch2_cross と一緒には使わない
+        （カーブは下の SWITCH_RUT_ARCS）。1 と 2 の違いは轍だけ
     drive_left: priority_cross の停止線の通行の側。真（既定）なら左側通行、偽なら右側通行（停止線が進入する車線の反対の半分へ移る）"""
     prof = ROAD_PROFILES[style]
     expwy = prof.get("expressway", False)
@@ -201,9 +199,6 @@ def road_sheet(style="street"):
     sides = lambda p: [(p, -EDGE_LINE), (p, EDGE_LINE)]
     drive_left = prof.get("drive_left", True)
     # 十字の形で描く分岐の絵の名前 → 形の元の名前（持ち分・壁の選び方・走行跡は十字と同じにする）
-    if prof.get("switch_ruts") and prof.get("switch2_cross"):
-        raise SystemExit(f"[road_sheet] {style}: switch_ruts と switch2_cross は一緒に使えない")
-    cross_shape = {f"{n}2": "nsew" for n in ("nse", "new", "nsw", "sew")} if prof.get("switch2_cross") else {}
 
     corner_r = EDGE_CORNER_R if prof.get("corner_arcs") else 0.0
     E_ = EDGE_LINE
@@ -344,7 +339,7 @@ def road_sheet(style="street"):
             # 本線の両隣が分岐でないときに「1」を選ぶ。道路を 2 本隣り合わせに並べて渡り口でつないだ形で、枝の先はすぐ隣の道路。
             #   1: 渡り口。枝の側の路側線を描かない（隣の道路とのあいだを開ける）。十字の 1 は南北を優先（南北の中央線を通し、東西の口を点線）
             #   2: 優先の無い交差点（固定の道具で選んだときだけ出る）。交差点の中の中央線と、枝の側の路側線を描かない。十字の 2 は線なし
-            #   （switch2_cross・priority_cross で下のとおり置き換える）
+            #   （switch_ruts・priority_cross で下のとおり置き換える）
             switch_lines = {
                 "nse": ([(sn, -EDGE_LINE)] + center(sn), [(sn, -EDGE_LINE)]),  # corner_arcs なら下で置き換える
                 "new": ([(we, EDGE_LINE)] + center(we), [(we, EDGE_LINE)]),
@@ -359,12 +354,6 @@ def road_sheet(style="street"):
                 # T字の 1・2 はどちらも「1」の白線（枝の無い側は実線、渡り口の点線なし）。違いは轍（走行跡）だけ（下の wear）
                 for base_name in ("nse", "new", "nsw", "sew"):
                     switch_lines[base_name] = (switch_lines[base_name][0], switch_lines[base_name][0])
-            if prof.get("switch2_cross"):
-                # T字の「2」は通常の十字と同じ絵（2026-11-19、ユーザーの決定。停止線を引いた作りは、複雑な十字交差と
-                # 干渉するのでやめた）。本体（weg_t::select_switch_road_image の ribi_t::all）は、ex 画像が無い way の十字で、
-                # 隣が T字か十字のとき、その隣の向きの T字の「2」をこの十字のタイルに出す
-                for base_name in ("nse", "new", "nsw", "sew"):
-                    switch_lines[base_name] = (switch_lines[base_name][0], jobs[(3, 9)][2])
             if prof.get("priority_cross"):
                 # 十字の分岐の絵は優先道路のある十字（2026-11-19、ユーザーの決定）。自動では出ず、固定の道具・詳細ダイアログでだけ選ぶ。
                 # 本体の選択肢（feature/switch-image-override の gui/ground_info.cc）は、値 1「十字（左右が直進）」が nsew2、
@@ -373,7 +362,7 @@ def road_sheet(style="street"):
             for col, (base_name, (lines1, lines2)) in enumerate(switch_lines.items()):
                 paths = [sn, we] if base_name == "nsew" else [sn if "ns" in base_name else we]
                 jobs[(2, 10 + col)] = (f"{base_name}1", paths, lines1, None)
-                jobs[(3, 10 + col)] = (f"{base_name}2", [sn, we] if f"{base_name}2" in cross_shape else paths, lines2, None)
+                jobs[(3, 10 + col)] = (f"{base_name}2", paths, lines2, None)
     walls = prof.get("walls")
     if walls:
         # 側壁の版: 分岐は枝の経路も通す（壁を枝の口で開ける。白線はそのまま）。行き止まりは、閉じた側の辺の手前に端の壁を立てる
@@ -431,7 +420,6 @@ def road_sheet(style="street"):
 
     def shoot(pos, row0, cname, name, paths, slope, obs, side=None):
         """組み立てた 1 タイルを描いてシートのセルに置く。側壁の版は、残す壁を選び、壁を別の層（奥の絵・手前の絵）で描く。"""
-        name = cross_shape.get(name, name)
         if walls:
             kl = DIAG_EDGE if name.startswith("diag_") else 1.0
             kept = select_walls(obs, name, paths, walls)
@@ -495,7 +483,7 @@ def road_sheet(style="street"):
         for pos, (name, paths, lines, slope, *rest) in jobs.items():
             clear_models()
             obs = build_road(paths, lines, slope, corners=rest[0] if rest else (), ends=name in ("s", "w", "n", "e"),
-                             wear_paths=wear.get(name, wear.get(_junction(cross_shape.get(name, name)))), **kw)
+                             wear_paths=wear.get(name, wear.get(_junction(name))), **kw)
             shoot(pos, row0, cn(name), name, paths, slope, obs)
 
         def build_diag(name, path, over=DIAG_OVERFILL):
