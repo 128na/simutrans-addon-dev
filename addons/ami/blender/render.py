@@ -25,6 +25,7 @@
     src/ami_road_<種類>_tunnel.png  道路のトンネルの坑口（覆いは blender-poc の高速道路のトンネル、路面・白線は道路の種類ごと）
     src/ami_pier_road.png     道路の高架の真下の地面に敷く橋脚の way
     src/ami_tram.png          路面軌道（tram_track）の通常の版。道路の上に重ねて敷く想定で、コンクリートの床・縁の帯・レールの頭・溝だけ（段も壁も無い）
+    src/ami_sidewalk.png      歩道の way（道路の隣のタイルに敷く。敷石と、つながらない辺の縁石）
     work/                    セルごとの生の描画結果（確認用）
 """
 import dataclasses
@@ -310,6 +311,10 @@ for _r in catalog.ROADS:
 SHEETS[catalog.PIER_ROAD] = lambda: R.pier_sheet(catalog.PIER_ROAD, R.FLAT, label=PIER_LABEL, across=ROAD_PIER_ACROSS,
                                                  anchor=R.ROAD_CY, cy=R.ROAD_CY, top_drop=R.ROAD_BASE_DROP, diag_k=R.DIAG_EDGE,
                                                  style="road")
+# 歩道の way（ami_sidewalk）: 道路の隣のタイルに敷く。絵は自分のつながりだけで決まる（sheetlib の sidewalk_sheet）。
+# 絵の位置・持ち分は道路と同じ（ROAD_CY）
+SIDEWALK_LABEL = "S"  # アイコンの文字（仮。アイコンはステップ 13 でまとめて作る）
+SHEETS[catalog.SIDEWALK] = lambda: R.sidewalk_sheet(catalog.SIDEWALK, label=SIDEWALK_LABEL)
 
 if __name__ == "__main__":
     R.run_targets(SHEETS, list(SHEETS))

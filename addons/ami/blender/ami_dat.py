@@ -344,6 +344,39 @@ def pier_dat_text(name, sheet):
                 out.append(f"{'front' if dr else ''}{key}{idx}[{season}]={sheet}.{row + dr}.{col},-64,-32")
     return NL.join(out) + NL
 
+# 歩道の way（ami_sidewalk。#24）。waytype は iss の歩道（../refs/iss/src/util/sidewalk/ground.dat）と同じ water（README の「歩道の作り」）。
+# 値は仮（費用・維持費は橋脚と同じ考え方の小さい値。速さ 1 は橋脚と同じ）
+SIDEWALK_VALUES = dict(waytype="water", cost=1000, maintenance=20, intro_year=1900, topspeed=1)
+# 歩道のシートにあるセル（sheetlib の sidewalk_sheet）。斜めの絵・分岐の絵は持たない（本体はカーブの絵を使う）
+SIDEWALK_KEYS = ("image", "imageup", "imageup2")
+
+
+def sidewalk_dat_text(name, sheet):
+    """歩道の way の dat。カーブはシートのカーブのセル（行 2 の列 5〜8）。雪の絵（[1]）は SNOW_ROWS 下の行"""
+    v = SIDEWALK_VALUES
+    out = [
+        f"# AMI: {name}（CC BY 4.0）。道路の隣のタイルに敷く歩道の way。シートは blender/render.py が描く",
+        "obj=way",
+        f"name={name}",
+        "copyright=AMI (CC BY 4.0)",
+        f"intro_year={v['intro_year']}",
+        "intro_month=1",
+        "retire_year=2999",
+        "retire_month=1",
+        f"waytype={v['waytype']}",
+        f"cost={v['cost']}",
+        f"maintenance={v['maintenance']}",
+        f"topspeed={v['topspeed']}",
+        "system_type=0",
+        f"icon=> {sheet}.0.0",
+        f"cursor={sheet}.0.1,-64,-32",
+    ]
+    for season in (0, 1):
+        for key, idx, row, col in IMAGES:
+            if key in SIDEWALK_KEYS and idx not in SWITCH_IDX:
+                out.append(f"{key}{idx}[{season}]={sheet}.{row + season * SNOW_ROWS}.{col},-64,-32")
+    return NL.join(out) + NL
+
 
 def main():
     os.makedirs(SRC, exist_ok=True)
@@ -376,6 +409,9 @@ def main():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(pier_dat_text(name, sheet))
         print(f"[dat] {name}.dat")
+    with open(os.path.join(SRC, catalog.SIDEWALK + ".dat"), "w", encoding="utf8", newline=NL) as f:
+        f.write(sidewalk_dat_text(catalog.SIDEWALK, catalog.SIDEWALK))
+    print(f"[dat] {catalog.SIDEWALK}.dat")
     for table, text in ((BRIDGES, bridge_dat_text), (TUNNELS, tunnel_dat_text)):
         for name, (base, sheet) in table.items():
             with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
