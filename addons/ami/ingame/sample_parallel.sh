@@ -71,8 +71,8 @@ worker() {
   for r in $(seq 1 120); do timeout 10 python -X utf8 "$CLIENT" --port "$port" --timeout 5 --run-squirrel "return 1;" > /dev/null 2>&1 && break; sleep 1; done
   r=$(mcp "$port" --run-squirrel "$SCRIPT" --timeout 300 2>&1)
   case $r in
-    *'"result":"ok'*) ;;
-    *'"result":"check'*) [ "$i" -ne 0 ] || echo "[parallel] 見本の報告: $r" ;;
+    # 1 台目の報告（[check] の行を含む）は、全部敷けたときも出す
+    *'"result":"ok'* | *'"result":"check'*) [ "$i" -ne 0 ] || echo "[parallel] 見本の報告: $r" ;;
     *) echo "[parallel] $i 台目: 見本を敷けない: ${r:0:200}"; return 1 ;;
   esac
   sleep "$SETTLE"

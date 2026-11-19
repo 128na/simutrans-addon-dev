@@ -17,6 +17,7 @@
     src/ami_pier_rail_gate.png  門型の橋脚の way（柱をタイルの角の近くに立て、直下に道路を通せる）
     src/ami_rail_ballast_bridge.png  橋（欄干なし。床はタイルの幅いっぱいで、壁は way-object を重ねる）。並びは blender-poc の橋と同じ
     src/ami_rail_ballast_tunnel.png  トンネルの坑口（覆いは blender-poc のトンネル、道床・レールは在来線の通常の版）
+    src/ami_road_<種類>.png    道路の通常の版（local・general・expressway）。断面は blender-poc の高速道路で、中央線と路面の色が種類ごとに違う
     work/                     セルごとの生の描画結果（確認用）
 """
 import dataclasses
@@ -161,6 +162,24 @@ for _t in catalog.TRACKS:
 # 在来線の通常の版の道床（砕石のまだら）・まくらぎ・レール・汚れを入れたもの。壁・架線は坑口のタイルにも way-object を重ねる
 # （坑口の躯体は way の手前の絵で、way-object の絵より後に描かれるので、躯体の中へ入る壁・架線は躯体に隠れる。README の「橋とトンネルの作り」）
 
+# ---------------------------------------------------------------- 道路 3 種の通常の版（#21）
+# 断面は blender-poc の高速道路（ROAD_PROFILES["expressway"]）と同じ: 片側 1 車線、タイル全面が路面、歩道なし、路側の白線は実線
+# （分岐の口は点線）。描くのは sheetlib の road_sheet（expressway=True が歩道なしの作り）。種類ごとに変えるのは中央線・路面の色・アイコン:
+#   center: 中央線。生活道路は無し、一般道路は白の実線、高速道路は白の破線（区切りはタイルの辺。sheetlib の tile_dashes）
+#   skin: 路面の色。生活道路・一般道路は blender-poc の街路と同じ灰色（pak128 標準の道路とつなぐ色）、高速道路は blender-poc の
+#         高速道路と同じ暗く青みのある色（走行跡と路肩の雪のぼかしも同じ色から作る。sheetlib の asphalt_skin）
+# カーブは 3 種とも斜めの絵（dat の image[sw] などが diagonal と同じセル）。道路の壁（#22）は 3 種で共通の way-object にするので、
+# カーブの形を種類でそろえる（README の「道路の作り」）。分岐の絵（switch 画像 1・2）の中身は sheetlib の road_sheet の switch_lines
+ROAD_SETTINGS = {
+    catalog.ROAD_LOCAL.key: {"label": "40", "style": "road", "center": None, "skin": {}},
+    catalog.ROAD_GENERAL.key: {"label": "120", "style": "road", "center": "solid", "skin": {}},
+    catalog.ROAD_EXPRESSWAY.key: {"label": "360", "style": "expressway", "center": "dash",
+                                  "skin": R.asphalt_skin("expwy", *R.EXPWY_ASPHALT, spec=0.0)},
+}
+for _r in catalog.ROADS:
+    R.ROAD_PROFILES[_r.key] = dict({"sheet": _r.way, "prefix": _r.way + "_", "groups": ("body", "marking", "weathering"),
+                                    "expressway": True, "switches": True}, **ROAD_SETTINGS[_r.key])
+
 # ---------------------------------------------------------------- 対象（シート名 → 描く関数）
 # 基盤の版の対象は、way のシートと壁の way-object のシートを 1 つのプロセスで描く
 
@@ -189,6 +208,8 @@ SHEETS["ami_pier_rail_gate"] = lambda: R.pier_gate_sheet("ami_pier_rail_gate", _
 for _t in catalog.TRACKS:
     SHEETS[_t.bridge] = _track_target(_p(_t.bridge))
     SHEETS[_t.tunnel] = _tunnel_target(_t)
+for _r in catalog.ROADS:
+    SHEETS[_r.way] = (lambda key: lambda: R.road_sheet(key))(_r.key)
 
 if __name__ == "__main__":
     R.run_targets(SHEETS, list(SHEETS))

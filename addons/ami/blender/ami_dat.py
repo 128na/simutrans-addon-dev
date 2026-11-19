@@ -56,7 +56,7 @@ VALUES = {
 
 # カーブを斜めの絵で表すシート（pak128 標準の線路と同じ。dat の image[sw]・[nw]・[ne]・[se] が diagonal と同じセルを指す。
 # シートのカーブのセル（行 2 の列 5〜8）は描かない。render.py の diag_curves と同じにする）
-DIAG_CURVES = {_t.way for _t in catalog.TRACKS}
+DIAG_CURVES = {_t.way for _t in catalog.TRACKS} | {_r.way for _r in catalog.ROADS}  # 道路 3 種もカーブは斜めの絵（README の「道路の作り」）
 CURVE_TO_DIAG = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
 
 # 絵を作った way（名前 → シート名）。dat と pak を作る
@@ -72,6 +72,9 @@ for _t in catalog.TRACKS:
         BUILT[_n] = _n
         VALUES[_n] = VALUES[_t.way]
         NO_CLOSE.add(_n)
+# 道路 3 種の通常の版（#21）。並びは線路の通常の版と同じ（近い斜め・分岐の絵を持つ）。waytype と値は VALUES
+for _r in catalog.ROADS:
+    BUILT[_r.way] = _r.way
 
 # ---------------------------------------------------------------- 高架の 4 版（#18）
 # 基盤の版と同じ並び（近い斜めの絵を持たない）で、system_type=1。値は仮: iss と同じく地上の 2 倍の費用・維持費（速さは地上と同じ）
