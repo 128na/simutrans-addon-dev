@@ -8,6 +8,10 @@ import os
 # 12・16・24・28 で測ると 16 が最速（287 秒）で、それより増やしても速くならない（2026-11-17）。メモリは 1 プロセスあたり数百 MB
 JOBS = int(os.environ.get("SHEET_JOBS", "16"))
 
+# 描画のプロセスの優先度（render_parallel.py の --priority の既定）。low・below_normal・normal のどれか。
+# 既定は low。描画が CPU を使い切っても、ほかの作業（エディタ・ブラウザ・ゲームの確認）が重くならないようにする
+PRIORITY = os.environ.get("SHEET_PRIORITY", "low")
+
 # Blender の実行ファイル（render_parallel.py の --blender の既定）
 BLENDER = os.environ.get("SHEET_BLENDER", r"D:\bin\blender\blender.exe")
 
