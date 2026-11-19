@@ -186,7 +186,8 @@ ROAD_SETTINGS = {
 for _r in catalog.ROADS:
     R.ROAD_PROFILES[_r.key] = dict({"sheet": _r.way, "prefix": _r.way + "_", "groups": ("body", "marking", "weathering"),
                                     "expressway": True, "switches": True, "switch2_cross": True,
-                                    "priority_cross": True, "drive_left": DRIVE_LEFT}, **ROAD_SETTINGS[_r.key])
+                                    "priority_cross": True, "open_cross": True, "corner_arcs": True,
+                                    "drive_left": DRIVE_LEFT}, **ROAD_SETTINGS[_r.key])
 
 # ---------------------------------------------------------------- 対象（シート名 → 描く関数）
 # 基盤の版の対象は、way のシートと壁の way-object のシートを 1 つのプロセスで描く

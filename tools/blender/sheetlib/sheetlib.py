@@ -97,6 +97,7 @@ from .road_parts import (  # noqa: F401
     ROAD_SNOW_SKIN,
     STOP_LINE_D,
     STOP_LINE_SPAN,
+    EDGE_CORNER_R,
     WearPath,
 )
 from .assemble import (  # noqa: F401
@@ -167,6 +168,9 @@ def road_sheet(style="street"):
         十字が隣り合うときの十字のタイルに出す。無ければ、枝の側の路側線だけを描く T字の形（前からの作り）
     priority_cross: 真なら十字の分岐の絵（nsew1・nsew2。固定の道具・詳細ダイアログでだけ選べる）を、優先道路のある十字にする
         （nsew1 は南北が優先、nsew2 は東西が優先。下の priority_lines）。無ければ、nsew1 は南北の中央線と点線、nsew2 は線なし
+    open_cross: 真なら通常の十字（nsew。switch2_cross の「2」も同じ絵）を、交差点の中に白線を通さない開いた十字にする
+        （どちらも優先道路に見せない）。無ければ、東西の中央線と両側の点線（高速道路の十字の作り）
+    corner_arcs: 真なら分岐の絵（T字・十字・1・2・優先道路の十字）で、隣り合う腕の路側線を角で円弧（EDGE_CORNER_R）でつなぐ
     drive_left: priority_cross の停止線の通行の側。真（既定）なら左側通行、偽なら右側通行（停止線が進入する車線の反対の半分へ移る）"""
     prof = ROAD_PROFILES[style]
     expwy = prof.get("expressway", False)
@@ -196,12 +200,55 @@ def road_sheet(style="street"):
     # 十字の形で描く分岐の絵の名前 → 形の元の名前（持ち分・壁の選び方・走行跡は十字と同じにする）
     cross_shape = {f"{n}2": "nsew" for n in ("nse", "new", "nsw", "sew")} if prof.get("switch2_cross") else {}
 
+    corner_r = EDGE_CORNER_R if prof.get("corner_arcs") else 0.0
+    E_ = EDGE_LINE
+    reach = half + PATH_EXT  # 腕の白線をタイルの辺の外まで延ばす
+
+    def arm_edge(a, s):
+        """腕 a（タイルの中心から見た単位ベクトル）の、s の側（a に直角な単位ベクトル）の路側線。角の円弧の端からタイルの辺の外まで"""
+        a, s = Vector(a), Vector(s)
+        return ([a * (E_ + corner_r) + s * E_, a * reach + s * E_], 0.0)
+
+    def corner_arc(a, b, n=12):
+        """腕 a と腕 b（隣り合う 2 本）のあいだの角の路側線（4 分の 1 の円弧）。corner_r が 0 なら無し"""
+        if not corner_r:
+            return []
+        a, b = Vector(a), Vector(b)
+        c = (a + b) * (E_ + corner_r)
+        pts = [c - a * corner_r * math.cos(t) - b * corner_r * math.sin(t)
+               for t in (math.pi / 2 * i / n for i in range(n + 1))]
+        # t=0 で c - a r = b(E+r) + a E（腕 b の、a の側の路側線の端）、t=π/2 で a(E+r) + b E（腕 a の、b の側の路側線の端）
+        return [(pts, 0.0)]
+
+    def corner(a, b):
+        """角の円弧と、その両側の腕の路側線"""
+        return corner_arc(a, b) + [arm_edge(a, b), arm_edge(b, a)]
+
+    def mouth_dash(m, s):
+        """道路（軸 m）の s の側の路側線のうち、s の向きの腕の口を渡る点線（口の幅 = その腕の両側の路側線のあいだ）"""
+        m, s = Vector(m), Vector(s)
+        return ([s * E_ - m * E_, s * E_ + m * E_], 0.0, "dash")
+
+    def arm_center(a, start=None):
+        """腕 a の中央線。start（タイルの中心からの距離）からタイルの辺の外まで"""
+        a = Vector(a)
+        return center([a * (E_ + corner_r if start is None else start), a * reach])
+
+    AX = {"n": (0, 1), "s": (0, -1), "e": (1, 0), "w": (-1, 0)}
+
     def priority_lines(main):
         """優先道路のある十字の白線。main は優先道路の向き（"ns" か "ew"）。優先道路は中央線を交差点の中も通し、路側線は
         交差点の口を点線で渡す（高速道路の十字の点線と同じ）。従道路は、2 つの口の進入する車線（半分）に停止線を引き、
         中央線を停止線からタイルの辺まで引く。停止線の位置・幅は STOP_LINE_*（road_parts）"""
         p, cross_dirs = (sn, ((1, 0), (-1, 0))) if main == "ns" else (we, ((0, 1), (0, -1)))
-        out = center(p) + [(p, -EDGE_LINE, "dash"), (p, EDGE_LINE, "dash")]
+        if prof.get("corner_arcs"):
+            # 優先道路の路側線は、角の円弧の端までを実線、口を点線にする。従道路の路側線は円弧で優先道路の路側線へつなぐ
+            m = Vector((0, 1)) if main == "ns" else Vector((1, 0))
+            out = center(p)
+            for a in cross_dirs:
+                out += [mouth_dash(m, a)] + corner(a, m) + corner(a, -m)
+        else:
+            out = center(p) + [(p, -EDGE_LINE, "dash"), (p, EDGE_LINE, "dash")]
         for a in cross_dirs:
             a = Vector(a)
             d = -a  # 口から交差点へ進入する向き
@@ -252,6 +299,26 @@ def road_sheet(style="street"):
         tees = {"nse": (sn, -EDGE_LINE, EDGE_LINE), "new": (we, EDGE_LINE, -EDGE_LINE),
                 "nsw": (sn, EDGE_LINE, -EDGE_LINE), "sew": (we, -EDGE_LINE, EDGE_LINE)}
         tee = lambda n: center(tees[n][0]) + [(tees[n][0], tees[n][1]), dash(tees[n][0], tees[n][2])]
+        # 枝の向きと、本線の軸（T字の名前 → (枝, 本線の軸)）
+        tee_axes = {"nse": ("e", "n"), "new": ("n", "e"), "nsw": ("w", "n"), "sew": ("s", "e")}
+
+        def tee_lines(n, mouth=True):
+            """corner_arcs の T字の白線: 本線の中央線と、枝の無い側の実線（通り抜ける道路の路側線はそのまま）。枝の側は、
+            本線の路側線を角の円弧の端まで実線にし、円弧で枝の路側線へつなぐ。mouth なら枝の口を点線で渡す（通常の T字）、
+            偽なら渡さない（「1」の渡り口。枝の先はすぐ隣の道路）"""
+            b, m = (Vector(AX[k]) for k in tee_axes[n])
+            out = center(tees[n][0]) + [(tees[n][0], tees[n][1])] + corner(b, m) + corner(b, -m)
+            return out + ([mouth_dash(m, b)] if mouth else [])
+        if prof.get("corner_arcs"):
+            tee = tee_lines
+        if prof.get("open_cross"):
+            # 開いた十字（2026-11-19、ユーザーの決定）: 交差点の中に走行車線を横切る白線を引かない（どちらも優先道路に見せない）。
+            # 腕の路側線は角まで（corner_arcs なら円弧でつなぐ）、中央線は腕の口まで
+            cross = []
+            for a, b in (("n", "e"), ("e", "s"), ("s", "w"), ("w", "n")):
+                cross += corner(AX[a], AX[b])
+            for a in "nesw":
+                cross += arm_center(AX[a])
         jobs.update({
             (0, 5): ("s", [sn], both(sn), None),
             (0, 6): ("w", [we], both(we), None),
@@ -274,12 +341,15 @@ def road_sheet(style="street"):
             #   2: 優先の無い交差点（固定の道具で選んだときだけ出る）。交差点の中の中央線と、枝の側の路側線を描かない。十字の 2 は線なし
             #   （switch2_cross・priority_cross で下のとおり置き換える）
             switch_lines = {
-                "nse": ([(sn, -EDGE_LINE)] + center(sn), [(sn, -EDGE_LINE)]),
+                "nse": ([(sn, -EDGE_LINE)] + center(sn), [(sn, -EDGE_LINE)]),  # corner_arcs なら下で置き換える
                 "new": ([(we, EDGE_LINE)] + center(we), [(we, EDGE_LINE)]),
                 "nsw": ([(sn, EDGE_LINE)] + center(sn), [(sn, EDGE_LINE)]),
                 "sew": ([(we, -EDGE_LINE)] + center(we), [(we, -EDGE_LINE)]),
                 "nsew": (center(sn) + [dash(sn, -EDGE_LINE), dash(sn, EDGE_LINE)], []),
             }
+            if prof.get("corner_arcs"):
+                for base_name in ("nse", "new", "nsw", "sew"):
+                    switch_lines[base_name] = (tee_lines(base_name, mouth=False), switch_lines[base_name][1])
             if prof.get("switch2_cross"):
                 # T字の「2」は通常の十字と同じ絵（2026-11-19、ユーザーの決定。停止線を引いた作りは、複雑な十字交差と
                 # 干渉するのでやめた）。本体（weg_t::select_switch_road_image の ribi_t::all）は、ex 画像が無い way の十字で、
