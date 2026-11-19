@@ -20,7 +20,7 @@ D:\bin\blender\blender.exe -b --factory-startup --python ..\..\tools\blender\com
 | どこ | 置くもの |
 |---|---|
 | `tools/blender/sheetlib/` | 描画の共通部分（パッケージ）。部品をそれが表す物ごとに分けてある: `core`（設定値・シーン・材質・形の部品・基準面 `Datum` と部品 `Part` の型）、`slab_parts`（スラブ軌道の部品。コンクリート道床・てん充層・スラブ・突起・締結装置と、スラブの上の汚れ。レールは `track_parts` のものを使う）、`track_parts`（線路: 道床・まくらぎ・レール・車止め・汚れ）、`wall_parts`（壁・基盤・橋・高架の橋脚。線路と道路で共通）、`catenary_parts`（架線: 柱・梁・吊り金具・トロリ線・ちょう架線・ハンガー）、`road_parts`（道路: 路面・縁石・歩道・白線・車線・汚れ・雪）、`assemble`（部品を経路ごとに組み立てる）、`cells`（セルの描画・特殊色・シート化）、`sheetlib`（線路・道路・トンネル・アイコンのシートと `run_targets`）。シート名や、部品をどの版に使うかは持たない |
-| `tools/blender/sheet_settings.py` | 設定値: 並列数（`JOBS`、環境変数 `SHEET_JOBS`）・Blender の場所（`SHEET_BLENDER`）・モード（`SHEET_LAYOUT`・`SHEET_ONLY`）。Blender を使わないので `render_parallel.py` も読む |
+| `tools/blender/sheet_settings.py` | 設定値: 並列数（`JOBS`、環境変数 `SHEET_JOBS`）・描画の優先度（`PRIORITY`、`SHEET_PRIORITY`。既定は低）・Blender の場所（`SHEET_BLENDER`）・モード（`SHEET_LAYOUT`・`SHEET_ONLY`）。Blender を使わないので `render_parallel.py` も読む |
 | `tools/blender/` のそのほか | 判定・比較・確認の道具（`profile_sheet`（描画の時間の内訳を測る）・`compose`・`ingame_diff`・`seam_judge`・`slope_measure`・`sheet_diff`・`sheet_audit`（dat が参照するセルの欠陥の候補を数値で探す）・`special`・`special_preview`・`zoom`・`hcat`・`ref_measure`・`check`）と並列描画（`render_parallel`） |
 | `addons/<アドオン>/blender/render.py` | アドオンのシートの入口。`sys.path` に `tools/blender` を足して `sheetlib` を import し、描き分け（`R.TRACK_PROFILES`・`R.ROAD_PROFILES` への登録）と、対象名 → 描く関数の対応（`SHEETS`）を決めて `R.run_targets(SHEETS, 既定の対象)` を呼ぶ |
 | `addons/<アドオン>/blender/addon_config.py` | 判定・比較の道具が読む設定。`PREFIX`（ゲームのタイル一覧でこのアドオンの道を見分ける名前の接頭辞）・`SHEETS`（道の名前 → シート名）・`DIAG_CURVE_SHEETS`（カーブに斜めの絵を使うシート） |
@@ -79,6 +79,7 @@ blender-poc の `src/` のシート 28 枚（描画対象 29 個からアイコ�
 - `boolean()` の `use_self`（既定 True）は、削る形が自分自身と重なるときに要る。外すだけだと、分岐・十字で重なり合う帯が正しく抜けず絵が壊れる（2026-11-17 に確認）。重ならない形（帯 1 本）を 1 つずつ削るなら `use_self=False` でよく、同じ絵で速い（`assemble._place` の通り道の切り抜き）。道路の車道の型（`assemble._carve`）と壁の外側の切り抜き（`sheetlib.road_sheet` の `roadcut`）も 1 つずつ削る（絵は路面のざらつきが最大 5 ほど変わるだけ）。基盤の切り抜き（`build_base`）は `use_self` が要る（外すと絵が変わる）。新しく Boolean を足すときは、削る形が自己交差しないよう 1 つずつに分けられないかを先に考える
 - 時間は、削る側の形の面数で決まる。新しい分岐の形（通り道）を足して遅くなったら、`profile_sheet.py` で測る（アドオンのディレクトリで `SHEET_ONLY=ns,diag_nw,up12 blender -b --factory-startup --python ../../tools/blender/profile_sheet.py -- 対象名`。内訳は `work/profile_<対象>.txt`）
 - 並列数は 16 が最速だった（12・24・28 は遅い）。PC を替えたときだけ `SHEET_JOBS` を測り直す
+- `render_parallel.py` は Blender を優先度「低」で起動する（`--priority`、環境変数 `SHEET_PRIORITY`。`low`・`below_normal`・`normal`）。描画が CPU を使い切っても、ほかの作業が重くならないようにするため（ほかの作業が CPU を使う間は、描画のほうが遅くなる）。Blender を直接 `blender -b` で動かすときは、優先度は下がらない（PowerShell なら `Start-Process -Priority` は無いので、起動後に `(Get-Process blender).PriorityClass = 'Idle'`）
 - 絵を変えない改善は、描き直したシートが前と全画素同じ（`git status` の `src/` の差分なし）であることで確かめる。形（透明の範囲）が同じで色の差が数程度のノイズなら、差分図（`sheet_diff.py`）で見て許す
 
 ## レイアウト検証用モード
