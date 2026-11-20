@@ -181,7 +181,7 @@ TRAM_DATUMS = R.FLAT  # tram_bed（床と縁の帯）は分岐の絵で作り直
 R.TRACK_PROFILES[TRAM_KEY] = {
     "sheet": catalog.TRAM, "label": "60", "spill": 0, "datums": TRAM_DATUMS, "snow": True, "anchor": R.ROAD_CY, "cy": R.ROAD_CY,
     "groups": ("body", "weathering"), "track_parts": R.TRAM_TRACK_PARTS, "replace": R.TRAM_WEAR_REPLACE,
-    "snow_skin": R.TRAM_SNOW_SKIN, "end_from_edge": END_FROM_EDGE,
+    "snow_skin": R.TRAM_SNOW_SKIN, "end_from_edge": END_FROM_EDGE, "cell_fills": R.TRAM_CELL_FILLS,
 }
 
 # ---------------------------------------------------------------- 基盤の版と壁の way-object（ADR 0003。#16）

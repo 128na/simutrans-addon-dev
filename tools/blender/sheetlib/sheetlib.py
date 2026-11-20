@@ -901,6 +901,14 @@ def track_sheet(profile="new"):
                 opts = {i: (DIAG_WIDTHS, 2 if diag_of[id(p)] in ("diag_nw", "diag_se") else 1)
                         for i, p in enumerate(pths) if id(p) in diag_of}
                 out = assemble(ps, pths, prof["datums"], slope, **dict(kw, path_opts=opts or None))
+                # prof["cell_fills"]（無くてよい）: セルの経路全部から作る部品。(部品, make) の組で、make(経路の一覧) が形（path, k → 形）か
+                # None を返す。部品の基準面の部品が ps にあるときだけ作る（分岐の絵の走行面の組には入れない）。路面軌道の T字のすき間埋め
+                for fpart, make in prof.get("cell_fills", ()):
+                    if not any(p.datum == fpart.datum for p in ps):
+                        continue
+                    fshape = make(pths)
+                    if fshape is not None:
+                        out += assemble([replace(fpart, shape=fshape)], pths[:1], prof["datums"], slope, **dict(kw, path_opts=None))
                 for pname, spec in bed_fills.items() if opts else ():
                     layer = next((p for p in ps if p.name == pname), None)
                     if layer is None:
