@@ -348,7 +348,11 @@ def _beyond_prisms(walls, paths, k, wu=None, ww=None, zr=(-2, 2), ref_move=None)
             d = (path[1] - path[0]).normalized()
             n, p0 = Vector((d.y, -d.x)), path[0] - d * ww
             if w["pname"] == "endw_edge":  # 端の壁がタイルの端に立つ（end_wall_at_edge）: 奥はタイルの外
-                p0 = path[0] - d * _reach_edge(path)
+                # 削られる物（基盤）は削った後に基準面の分だけ動き、タイルより余白 CLIP_PAD だけ大きく切り抜かれる。壁は動いた後に
+                # タイルの辺で切られる。動きがタイルの外向き（カメラの側を向く端）だと、基盤だけが動いた分（在来線の bed で約 0.31）
+                # 壁の外の面より外に残り、端の面の下に薄い板が出た（#44 の 7 番。2026-11-20）。外向きに動く分だけ内で削る
+                out = max(0.0, -Vector(ref_move).to_2d().dot(d)) if ref_move is not None else 0.0
+                p0 = path[0] - d * (_reach_edge(path) - out)
             pts = [p0 + n * 30, p0 - n * 30, p0 - n * 30 - d * 30, p0 + n * 30 - d * 30]
         elif len(path) > 4:  # カーブ
             c, r = _arc_circle(path)

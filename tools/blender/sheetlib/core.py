@@ -358,7 +358,8 @@ def make_material(spec, part=None):
 # 雪の絵（dat の image[..][1]）で差し替える材質。道床とまくらぎに雪が積もり、レールは見える
 _SNOW = ("snow", (0.90, 0.93, 0.97), 0.9)
 
-SNOW_SKIN = {"ballast": _SNOW, "sleeper": ("snow_sleeper", (0.80, 0.84, 0.90), 0.9), "base": _SNOW}
+# ballast_fill はまくらぎの間を埋めた砕石（AMI の在来線。#56）。道床と同じ雪にする
+SNOW_SKIN = {"ballast": _SNOW, "ballast_fill": _SNOW, "sleeper": ("snow_sleeper", (0.80, 0.84, 0.90), 0.9), "base": _SNOW}
 
 FLAT = {"bed": Datum(), "rail": Datum(), "slab_bed": Datum(), "tram_bed": Datum()}
 

@@ -44,6 +44,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - カーブ: pak128 標準の線路と同じく、曲線ではなく斜めの絵で表す（dat の `image[sw]` などが `diagonal` と同じセルを指す。シートのカーブのセルは描かない）。T字・十字と分岐の絵（switch 画像 1・2）も、カーブの代わりに同じ 2 辺をつなぐ斜めの直線にした。斜めの部分は斜めのタイルと同じ幅・下げ幅で作り、直線と斜めの道床の間のすき間は道床の上面の凸包で埋める（`tools/blender/sheetlib` の `diag_curves`）
 - 行き止まり: レールを POC（タイルの中心まで）より延ばし、閉じた側のタイルの端からタイル 1 辺の 1/4 の所を終点にした（`blender/render.py` の `END_FROM_EDGE`）。道床は終点より奥、タイルの端まで敷く。レールの末端に車止めを置く（下の「車止めの手本」）
 - 行き止まりのまくらぎが直線より白く見えた: レールの間の油の帯を 2 本に分けて作っていて、中心で辺を分け合う形が、行き止まりのタイルでは切り抜きで消えていた（油の帯が無いぶん白く見えた）。油の帯を中心をまたぐ 1 本にした。blender-poc の線路にも同じ欠けがある（POC のシートは変えないので直していない）
+- 精細化（#56。ラウンド 1〜7 で試し、ラウンド 8 で本番に入れた。2026-11-20）: 砕石のまだらを濃く細かくして暗く（使い込んだ砕石）、まくらぎを明るい PC の色にしてタイル 1 辺に 18 本・継ぎ目でそろう間隔に、まくらぎの間を砕石で埋め、レールを暗い側面 1px と磨かれた明るい頭の 2 色に、道床の形をまくらぎの上面の高さの肩とのり面にした。雪の絵は積もったばかりの雪（汚れの帯もまくらぎも雪で、レールだけが出る）で、道床の雪は地面の雪と同じ青み。値は `blender/render.py` の「在来線の精細化」、決め方は `docs/records/2026-11-20_ami-refine-round1.md`〜`round8.md`。壁のある版の行き止まりでは、道床を端の壁の内側の面で止める（`_EDGE_BALLAST`）
 
 #### 車止めの手本（ユーザーから受け取った画像、2026-11-17）
 
@@ -373,7 +374,7 @@ python -X utf8 build.py                                                        #
 - レイアウト検証用モードの pak は `SHEET_LAYOUT=1` で描いた後、`SHEET_LAYOUT=1 python -X utf8 build.py`（`work/layout/dist/` に作る）
 - 同じシートの通常の描画とレイアウト検証用の描画を同時に動かさない。セルごとの生の絵（`work/<シート>_<セル>.png`）の名前が同じで、互いのセルを取り込んだシートができた（2026-11-17）
 - `src/`（dat とシート）はコミットする。`dist/` と `work/` はコミットしない
-- 精細化のラウンドの版（#56）: `blender/round.py` が、在来線一式を `_round<n>` の名前で描いて `rounds/ami_round<n>.pak` を作る（`src/`・`dist/` は変えない）。ラウンドの描き分けは `round.py` の `ROUND_SETTINGS`。`rounds/` の pak は記録としてコミットする。見本は `SUFFIX=_round<n> EXTRA_PAKS=rounds/ami_round<n>.pak bash ingame/sample_parallel.sh`、くどさは `ingame/calib_capture.sh`（`WAYS_NUT`・`PAKS`）と `tools/blender/busy_measure.py` で測る（物差しは [way-addon.md](../../docs/reference/way-addon.md) の 11 章）
+- 精細化のラウンドの版（#56）: `blender/round.py` が、在来線一式を `_round<n>` の名前で描いて `rounds/ami_round<n>.pak` を作る（`src/`・`dist/` は変えない）。ラウンドの描き分けは `round.py` の `ROUND_SETTINGS`（ラウンド 1〜7 の値は、ラウンド 8 で本番に入れる前の `render.py` に重ねる値。今の `render.py` に重ねると二重にかかる）。描かずに `python -X utf8 blender/round.py <n>` だけを流すと、今の `src/` の絵を `_round<n>` の名前にした pak を作る（本番の絵をラウンドの版と並べて撮るとき）。`rounds/` の pak は記録としてコミットする。見本は `SUFFIX=_round<n> EXTRA_PAKS=rounds/ami_round<n>.pak bash ingame/sample_parallel.sh`、くどさは `ingame/calib_capture.sh`（`WAYS_NUT`・`PAKS`）と `tools/blender/busy_measure.py` で測る（物差しは [way-addon.md](../../docs/reference/way-addon.md) の 11 章）
 - 設定は `blender/catalog.py`（軌道の種類と、そこから導く way・基盤・高架・橋・トンネルの名前）、`blender/render.py`（描き分け・シート名）、`blender/ami_dat.py`（dat と値）、`blender/addon_config.py`（判定の道具が読む対応表）
 
 ## 導入と検証

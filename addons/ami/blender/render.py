@@ -51,8 +51,19 @@ _DATUMS = {"bed": R.Datum(2, 1), "rail": R.Datum(4, 1)}
 # 坂の測り方（slope_measure.py）はレールを「赤 − 青」の大きい行で探すので、赤みを足さない
 BALLAST_STONE_LO = (0.32, 0.305, 0.28)
 BALLAST_STONE_HI = (0.52, 0.495, 0.46)
-BALLAST_GRAIN = 6.0  # まだらの細かさ（ノイズの Scale。部品の座標 1 単位 ≈ 9px なので、粒は 1〜2px）
-_BALLAST_STONE = R.track_noise("ami_ballast_stone", BALLAST_STONE_LO, BALLAST_STONE_HI, BALLAST_GRAIN)
+BALLAST_GRAIN = 12.0  # まだらの細かさ（ノイズの Scale。部品の座標 1 単位 ≈ 9px なので、粒は約 1px）
+# 精細化（#56）で決めた描き分け。値の決め方は docs/records/2026-11-20_ami-refine-round1.md〜round7.md（ラウンド 8 で本番に入れた）
+BALLAST_CONTRAST = 2.4  # まだらの明暗差を、平均の色（sheetlib の _BALLAST_RGB）から何倍離すか（ラウンド 1）
+BALLAST_DARK = 0.82     # 砕石の色の倍率。使い込んだ砕石は床のコンクリートより暗い（ラウンド 5）
+
+
+def _away(c, w, mean=R._BALLAST_RGB):
+    """色 c を平均の色 mean から w 倍離す（0〜1 に収める）。"""
+    return tuple(min(1.0, max(0.0, m + w * (x - m))) for x, m in zip(c, mean))
+
+
+_BALLAST_STONE = R.track_noise("ami_ballast_stone", tuple(x * BALLAST_DARK for x in _away(BALLAST_STONE_LO, BALLAST_CONTRAST)),
+                               tuple(x * BALLAST_DARK for x in _away(BALLAST_STONE_HI, BALLAST_CONTRAST)), BALLAST_GRAIN)
 
 # 形の差し替え（blender-poc の線路から変えたもの。ユーザーの指摘、2026-11-17）:
 #   ballast: 行き止まりで、道床をレールの末端より奥（タイルの端）まで敷く
@@ -64,6 +75,79 @@ _REPLACE = {
     "oil": dataclasses.replace(next(p for p in R.TRACK_EXTRAS if p.name == "oil"), shape=R.centre_strip_shape(OIL_U, OIL_Z, OIL_TH)),
 }
 
+# ---- 在来線の精細化（#56）。どれも在来線（TRACK_SETTINGS の RAIL_BALLAST）だけに効く
+# まくらぎ: 間隔 SLEEPER_PITCH（タイル 1 辺 10 に 18 本）。直線の経路はタイルの辺の外へ PATH_EXT 延びるので、まくらぎを辺から半ピッチの
+# 位置にそろえ、タイルの継ぎ目でも同じ間隔にする（ラウンド 2）。色は明るい PC（コンクリート）のくすみのまだら（ラウンド 4）
+SLEEPER_PITCH = 10 / 18
+SLEEPER_FIRST = (R.PATH_EXT + SLEEPER_PITCH / 2) % SLEEPER_PITCH
+SLEEPER_RGB = ((0.66, 0.65, 0.62), (0.78, 0.77, 0.74))
+# レール: 側面を暗いさび色の 1px にし（幅 0.14、高さは元の 0.30）、頭頂面に車輪で磨かれた明るい帯を載せる（ラウンド 2・3）
+RAIL_IN, RAIL_OUT, RAIL_Z1 = 0.41, 0.55, 0.30
+RAIL_SIDE_RGB = (0.30, 0.19, 0.15)
+RAIL_HEAD_RGB = (0.92, 0.91, 0.88)
+# まくらぎの間を、まくらぎの上面の少し下まで砕石で埋める（ラウンド 2）。汚れの帯はその上に出す
+EMBED_TOP = R.SLEEPER_Z + R.SLEEPER_H / 2 - 0.012
+# 汚れの帯（sheetlib の TRACK_WEAR）の色: 道床の色からの寄せ具合（無ければ sheetlib の値）と、道床の色から離す倍率。
+# 離す倍率 1.8 はラウンド 1、油（レールの間）の 0.5・1.0 はラウンド 4（黒い梯子に見えた）
+WEAR_T = {"oil": 0.5}
+WEAR_K = {"rust0": 1.8, "rust1": 1.8, "oil": 1.0}
+# 道床の肩: まくらぎの上面の高さの平らな肩を ±BALLAST_SHOULDER まで延ばし、そこから床（±1.9）まで斜面（ラウンド 5）
+BALLAST_SHOULDER = 1.45
+# 雪の絵: 積もったばかりの雪（汚れの帯もまくらぎも雪。レールだけが出る。ラウンド 6）。道床の雪は地面の雪と同じ青みで明るく（ラウンド 7）
+SNOW_BED_RGB = (0.945, 0.945, 1.0)
+
+_snow_bed = ("ami_snow_bed", SNOW_BED_RGB) + tuple(R.SNOW_SKIN["ballast"][2:])
+_wear = {}
+for _n, _u, (_lo, _hi), _t, _ in R.TRACK_WEAR:
+    _t = WEAR_T.get(_n, _t)
+    _wear[_n] = R.track_noise(f"ami_track_{_n}", _away(R._mix(R._BALLAST_RGB, _lo, _t), WEAR_K[_n]),
+                              _away(R._mix(R._BALLAST_RGB, _hi, _t), WEAR_K[_n]), 3.0)
+
+
+def _lifted(shape, dz):
+    """形 shape を dz だけ上げる（汚れの帯を、まくらぎの間を埋めた砕石の上に出す）。"""
+    def lifted(path, k):
+        geo = shape(path, k)
+        if geo is None:
+            return None
+        verts, faces = geo
+        return [v + type(v)((0, 0, dz)) for v in verts], faces
+    return lifted
+
+
+def _rail_shape(side):
+    def shape(path, k):
+        a, b = RAIL_IN * k, RAIL_OUT * k
+        prof = [(a, R.RAIL_Z0), (b, R.RAIL_Z0), (b, RAIL_Z1), (a, RAIL_Z1)]
+        return R.sweep(path, [(side * u, v) for u, v in prof][::side])
+    return shape
+
+
+_FILL_HALF = R.SLEEPER_LEN / 2 + 0.05
+_rail_mat = ("rail_side", RAIL_SIDE_RGB) + tuple(next(p for p in R.TRACK_PARTS if p.name == "railL").material[2:])
+_old = {p.name: p for p in R.TRACK_PARTS + R.TRACK_EXTRAS}
+_BALLAST_SECTION = [(-1.9, 0.0), (1.9, 0.0), (BALLAST_SHOULDER, EMBED_TOP - 0.001), (-BALLAST_SHOULDER, EMBED_TOP - 0.001)]
+_BALLAST_REPLACE = dict(
+    _REPLACE,
+    ballast=dataclasses.replace(_old["ballast"], shape=R.bed_to_edge(_BALLAST_SECTION)),
+    sleeper=dataclasses.replace(_old["sleeper"], shape=R.sleeper_shape(SLEEPER_PITCH, SLEEPER_FIRST)),
+    sleeper_rust=dataclasses.replace(_old["sleeper_rust"], shape=R._sleeper_patch_shape(
+        R.RAIL_IN - 0.16, R.RAIL_OUT + 0.16, SLEEPER_PITCH, SLEEPER_FIRST)),
+    railL=R.Part("railL", "rail", "gauge", _rail_mat, _rail_shape(-1)),
+    railR=R.Part("railR", "rail", "gauge", _rail_mat, _rail_shape(1)),
+    **{_n: R.Part(_n, _old[_n].datum, _old[_n].width, _m, _lifted(_REPLACE.get(_n, _old[_n]).shape, EMBED_TOP - R.BALLAST_H),
+                  _old[_n].group, centre=False) for _n, _m in _wear.items()})
+_BALLAST_PARTS = (
+    R.Part("rail_head", "rail", "gauge", ("rail_head", RAIL_HEAD_RGB, 0.4, 0.0),
+           R._strip_shape(RAIL_IN + 0.01, RAIL_OUT - 0.01, RAIL_Z1 + 0.001, 0.004)),
+    R.Part("ballast_fill", "rail", "gauge", _old["ballast"].material,
+           lambda path, k: R.sweep(path, [(-_FILL_HALF * k, R.BALLAST_H - 0.01), (_FILL_HALF * k, R.BALLAST_H - 0.01),
+                                          (_FILL_HALF * k, EMBED_TOP), (-_FILL_HALF * k, EMBED_TOP)])),
+)
+_BALLAST_SKIN = {"ballast": _BALLAST_STONE, "ballast_fill": _BALLAST_STONE,
+                 "sleeper": R.track_noise("ami_track_sleeper", *SLEEPER_RGB, 5.0)}
+_BALLAST_SNOW_SKIN = dict({_n: _snow_bed for _n in ("ballast", "ballast_fill", "base", "oil", "rust0", "rust1", "sleeper_rust", "sleeper")})
+
 # 行き止まりのレールの終点（車止めの位置）: 閉じた側のタイルの端から、タイル 1 辺のこの割合の所（ユーザーの指摘、2026-11-17。
 # blender-poc はタイルの中心 = 0.5）。道床はタイルの端まで
 END_FROM_EDGE = 0.25
@@ -73,7 +157,8 @@ _SLAB_DATUMS = dict(_DATUMS, slab_bed=_DATUMS["rail"])
 
 # 軌道の種類ごとの描き分け（catalog.Track.key → TRACK_PROFILES のキー）。label はアイコンの最高速度の数字
 TRACK_SETTINGS = {
-    catalog.RAIL_BALLAST.key: {"label": "160", "skin": {"ballast": _BALLAST_STONE}, "replace": _REPLACE},
+    catalog.RAIL_BALLAST.key: {"label": "160", "skin": _BALLAST_SKIN, "snow_skin": _BALLAST_SNOW_SKIN, "replace": _BALLAST_REPLACE,
+                               "parts": _BALLAST_PARTS},
     # 高速線（スラブ軌道）: 部品は sheetlib の slab_parts。レール・基準面・カーブや行き止まりの作りは在来線と同じ
     catalog.RAIL_SLAB.key: {"label": "480", "datums": _SLAB_DATUMS, "track_parts": R.SLAB_TRACK_PARTS, "bed_fills": R.SLAB_BED_FILLS,
                             "replace": R.SLAB_WEAR_REPLACE, "snow_skin": R.SLAB_SNOW_SKIN},
@@ -112,6 +197,8 @@ _EDGE_WALLS = {n: dataclasses.replace(p, shape=R.to_edge_shape(p.shape))
                for p in R.TRACK_EXTRAS for n in ("wallL", "wallR") if p.name == n}
 _EDGE_WALLS["endw"] = dataclasses.replace(next(p for p in R.TRACK_EXTRAS if p.name == "endw"), name="endw_edge",
                                           shape=R.end_wall_edge_shape())
+# 在来線の道床は、端の壁の内側の面で止める（タイルの外まで延ばすと、端の壁の外の面の下にのぞいた。#44 の 7 番）
+_EDGE_BALLAST = {"ballast": dataclasses.replace(_old["ballast"], shape=R.bed_to_edge(_BALLAST_SECTION, beyond=-R.WALL_W))}
 
 for _t in catalog.TRACKS:
     # 壁の way-object は軌道の種類に属さない共有の物なので、シートは catalog.WALL_TRACK の基盤の版だけが書く
@@ -120,7 +207,8 @@ for _t in catalog.TRACKS:
         R.TRACK_PROFILES[_p(_t.base(_v))] = dict(
             R.TRACK_PROFILES[_t.key], sheet=_t.base(_v), walls=_walls,
             groups=("body", "base", "weathering", "buffer", "wall"),
-            replace=dict(R.TRACK_PROFILES[_t.key].get("replace", {}), **_EDGE_WALLS), wall_sheet=f"ami_wall_rail_{_v}",
+            replace=dict(R.TRACK_PROFILES[_t.key].get("replace", {}), **_EDGE_WALLS,
+                         **(_EDGE_BALLAST if _t == catalog.RAIL_BALLAST else {})), wall_sheet=f"ami_wall_rail_{_v}",
             # カーブのセルを斜めの形で描き、基盤の壁の無い側を削らない（複線の直角の曲がりで、内側の線の外側半分を埋める）
             curve_cells=True, **_shared)
 

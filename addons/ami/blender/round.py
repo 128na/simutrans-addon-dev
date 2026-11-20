@@ -10,6 +10,9 @@
 描かなかったシート（ラウンド 0 の全部、ラウンドで変えない絵）は src/ のものを使う。
 dat は src/ のものを写し、ami_ で始まる名前を全部 _round<n> 付きにする（画像の参照・トンネルの way= も）。
 ラウンドごとの描き分けは ROUND_SETTINGS（render.py の設定の上に重ねる）。
+ラウンド 8（2026-11-20）で、ラウンド 7 の描き分けを render.py（と共有の sheetlib）に入れた。ROUND_SETTINGS の 1〜7 は、入れる前の
+render.py に重ねる値として残してある（記録のため）。今の render.py に重ねると二重にかかるので、そのまま描き直さない。
+次のラウンドは、今の render.py を土台にした設定を新しく足す。
 """
 import glob
 import os
