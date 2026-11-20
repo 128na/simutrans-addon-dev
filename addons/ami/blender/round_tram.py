@@ -65,6 +65,21 @@ ROUND_SETTINGS.update({
     # 孤立点 9.09 → 11.65。帯を全部消す 3nowear は、床のまだらがむき出しになり孤立点が 33.6 に上がった（汚れの帯がまだらをならしている）
     "3": dict(_R2, drop=("oil",)),
 })
+_R3 = ROUND_SETTINGS["3"]
+ROUND_SETTINGS.update({
+    # ラウンド 4: 画面で横向きの斜め（diag_nw・diag_se・close1）のレール。本番からレールの線が見えない（頭も溝も 1px に満たない）。
+    #   hdiag<n>: 横向きの斜めだけ、頭と溝の幅を n/10 倍にする（頭の中心は同じ）
+    "4hdiag18": dict(_R3, hdiag=1.8),
+    "4hdiag22": dict(_R3, hdiag=2.2),
+    "4hdiag26": dict(_R3, hdiag=2.6),
+    # 曲線にも点ごとの向きで効かせた版（var_sweep）。横向きの所で 2 本の溝がくっつき、暗い太い帯になったので、溝の倍率を下げる
+    "4hd22g14": dict(_R3, hdiag=2.2, hdiag_groove=1.4),
+    "4hd22g17": dict(_R3, hdiag=2.2, hdiag_groove=1.7),
+    "4hd18g14": dict(_R3, hdiag=1.8, hdiag_groove=1.4),
+    # ラウンド 4: 横向きの斜めと曲線の横向きの所で、頭を 2.2 倍・溝を 1.4 倍（= 4hd22g14）。斜めの切り口で頭 198・溝 102〜132、
+    # 曲線の中ほどで 頭 203・溝 86・床 152・溝 83・頭 202（直線と同じ並び）
+    "4": dict(_R3, hdiag=2.2, hdiag_groove=1.4),
+})
 
 
 def apply(cfg, n, R, render):
