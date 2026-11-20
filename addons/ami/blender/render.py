@@ -189,11 +189,13 @@ TRACK_SETTINGS = {
                             "replace": R.SLAB_WEAR_REPLACE, "snow_skin": R.SLAB_SNOW_SKIN},
 }
 
+# ex_switches: 分岐の追加画像（Y字分岐・三方分岐。sheetlib の track_sheet の ex_switches。#57）のセルを描く。基盤・高架の版と架線つきの壁も
+# この設定を引き継ぐ（dat は blender/ami_dat.py の EX_WAYS・EX_WAYOBJS、pak への継ぎ足しは ex_graft.py）
 for _t in catalog.TRACKS:
     # diag_curves: カーブを斜めの絵で表す（pak128 標準の線路と同じ。T字・十字・分岐の絵も斜めの直線）。buffer: 行き止まりの車止め
     R.TRACK_PROFILES[_t.key] = dict({"sheet": _t.way, "spill": 1, "datums": _DATUMS, "snow": True,
                                      "groups": ("body", "weathering", "buffer"), "diag_curves": True,
-                                     "end_from_edge": END_FROM_EDGE}, **TRACK_SETTINGS[_t.key])
+                                     "end_from_edge": END_FROM_EDGE, "ex_switches": True}, **TRACK_SETTINGS[_t.key])
 
 # ---------------------------------------------------------------- 路面軌道（ami_tram。#23）
 # tram（waytype=tram_track）で道路の上に重ねて敷く（ADR 0002）。コンクリートで固めた床・縁の明るい帯・レールの頭・溝・さび（sheetlib の
@@ -206,7 +208,7 @@ TRAM_DATUMS = R.FLAT  # tram_bed（床と縁の帯）は分岐の絵で作り直
 R.TRACK_PROFILES[TRAM_KEY] = {
     "sheet": catalog.TRAM, "label": "60", "spill": 0, "datums": TRAM_DATUMS, "snow": True, "anchor": R.ROAD_CY, "cy": R.ROAD_CY,
     "groups": ("body", "weathering"), "track_parts": R.TRAM_TRACK_PARTS, "replace": R.TRAM_WEAR_REPLACE,
-    "snow_skin": R.TRAM_SNOW_SKIN, "end_from_edge": END_FROM_EDGE, "cell_fills": R.TRAM_CELL_FILLS,
+    "snow_skin": R.TRAM_SNOW_SKIN, "end_from_edge": END_FROM_EDGE, "cell_fills": R.TRAM_CELL_FILLS, "ex_switches": True,
 }
 
 # ---------------------------------------------------------------- 基盤の版と壁の way-object（ADR 0003。#16）
@@ -280,7 +282,7 @@ for _v in TWIN_FROM:
     _cat = R.TRACK_PROFILES[f"{_p(_WT.base(_v))}_catenary"]
     R.TRACK_PROFILES[f"{_p(_WT.base(_v))}_twin_catenary"] = dict(
         _cat, sheet=f"{_WT.base(_v)}_twcat", wall_sheet=f"ami_wall_rail_twin_catenary_{_v}",
-        replace=dict(_cat["replace"], cat_beam=R.beam_part(R.CAT_BEAM_REACH_TWIN)))
+        replace=dict(_cat["replace"], cat_beam=R.beam_part(R.CAT_BEAM_REACH_TWIN)), ex_switches=False)  # dat は斜めのキーだけ
 
 # ---------------------------------------------------------------- 高架の 4 版と橋脚の way（ADR 0003。#18）
 # 高架の版の way（ami_rail_ballast_elev_<版>、dat は system_type=1）は、基盤の版と同じ絵（道床・基盤。基盤は壁の位置で止まる）の下に、

@@ -104,7 +104,8 @@ def near_frame(name, paths, origin=None):
     点は、渡されなければ、経路が複数ならタイルの中心、1 本ならその経路の中心線の中心"""
     if origin is None:
         origin = Vector((0, 0, 0)) if len(paths) > 1 else path_centre(paths)
-    return _JUNCTION_AXIS.get(_junction(name), NEAR_AXIS), origin
+    # 名前の最後の _ の後ろで引く（分岐の追加画像の y_nse・threee_nsew。diag_sw・up2_12 などは T字に当たらない）
+    return _JUNCTION_AXIS.get(_junction(name.split("_")[-1]), NEAR_AXIS), origin
 
 
 # ゲームが地面の菱形を塗る位置（セルの中で、タイル中心が何px目か）。dat のオフセット -64,-32 と対応し、

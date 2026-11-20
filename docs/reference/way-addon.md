@@ -162,6 +162,7 @@
 - ゲーム: 同じフォルダで複数のゲームを同時に起動すると、`settings.xml` が消えることがある。起動のたびに `settings_old.xml` を消し、`settings.xml` をそこへ改名してテーマを読み、名前を戻す（OTRP の `simmain.cc`）ので、別の台の削除が退避中の設定に当たる。4 台同時で 26 回中 2 回消えた。並列で動かすときは台ごとに別のフォルダで起動する（`addons/ami/ingame/sample_parallel.sh`）。`settings.xml` を読み取り専用にすると削除は失敗して設定は残るが、ゲームの終了時に設定が保存されなくなる（2026-11-19）
 - 描画: 雪のような明るい青みの色は、まだらや発光で明るい粒が透明色（231,255,255）に近づき、`sheet_audit.py` の透明色に近い画素（near_key）の候補になる。雪の色は赤を緑より上にして透明色から離す（AMI の道路の雪は 0.88・0.86・0.97。0.86・0.86・0.97 では歩道のセルに候補が 3 つ出た。`docs/records/2026-11-20_ami-road-refine-round3.md`、2026-11-20）
 - シェル: 標準入力で Python に日本語を流すと cp932 で壊れる。heredoc で `\\n` を含む文字列を書くと改行が壊れることがある
+- ゲームのスクリプト（Squirrel）: `local a = d[1], b = d[2];` のように 1 つの `local` で 2 つ以上を宣言すると、2 つ目以降に違う値が入った（`b` が 2 になった。MCP の `run_squirrel`、`OTRPv64_3.exe`、2026-11-21）。`local` は 1 つずつ書く
 
 ### 8.3 画像を読んで判定するときの限界（2026-11-19）
 
@@ -279,6 +280,8 @@ ex 画像を持つ way だけが対象。形は blender-poc の見本（`ingame/
 - 列車の予約で switch 画像に切り替わる処理は、ex 画像のタイルでは働かない（`schiene_t::reserve` の `!get_is_ex_image()`）。
 - ダイアログの選択肢 3・4 の名前（`gui/ground_info.cc` の「Y-junction」「Double crossover」）は、`128na/simutrans` の改修（2026-11-14）で付けた仮のもの。線路の十字の 3・4 は自動では使われないので、名前は見直す余地がある。
 - 敷くときの癖: スクリプトの `build_way` で、カーブになったタイルから 3 本目を足すと、タイルの向きが崩れた（つながらない絵になる）。両側を先に 1 本で通してから枝を足すと正しく敷ける（`OTRPv64_3.exe`、2026-11-14）。
+- 実際の絵で確かめた（AMI の `addons/ami/ingame/ex_sample.nut` で敷いた 8 組: 在来線・弾性まくらぎ直結軌道・高速線の通常の版、路面軌道、在来線の基盤 4 版に架線つきの壁を重ねたもの。`OTRPv64_3.exe`、2026-11-21）: Y字分岐・三方分岐とも根元の 4 向きで、自動で選ばれた絵が固定の道具（`tool_set_switch_image` の値 4 = 26〜30、値 3 = 31〜35）の T字の枠の絵と同じになった。温暖・降雪とも。三方分岐の絵は十字のタイル（向き 15）に出るので、十字の道床・壁の上に描く
+- 公開版の OTRP は `v63_4`（2026-11-21 から。それまでは `teamhimeh/simutrans` の `v63_3`）。`v63_3` は 9.1 の KUTA_v6 のコミットを含む。`v63_3` と、`128na/simutrans` の `feature/script-save`（`1cc2e78b9`）・`v63_4`（2026-11-21）の間で、選ぶ処理と読む処理のファイル（`boden/wege/weg.cc`・`boden/grund.cc`・`obj/wayobj.cc`・`obj/wayobj.h`・`descriptor/way_desc.h`・`descriptor/way_obj_desc.h`・`descriptor/reader/way_reader.cc`・`way_obj_reader.cc`）の差は、`v63_4` の `weg.cc` の情報表示の 1 行（車両のずれの表示）だけ（`git diff`、2026-11-21）。v63.3・v63.4 でも同じ絵が選ばれると読める（ゲームでは確かめていない）
 
 ### 9.5 本家での読み込み
 
@@ -291,6 +294,7 @@ ex 画像を持つ way だけが対象。形は blender-poc の見本（`ingame/
 |---|---|---|
 | 絵のキー | `backimage`・`frontimage`（16 方向）、`backimageup`・`frontimageup`（`[3]` `[6]` `[9]` `[12]`）、`backimageup2`・`frontimageup2`、`backdiagonal`・`frontdiagonal` | `descriptor/writer/way_obj_writer.cc` |
 | 雪の絵 | キーが無い（way の `[1]` に当たるものが無い） | 同上 |
+| 分岐の絵・ex 画像 | way-object も分岐の絵（16〜25 番）と ex 画像（26〜35 番）を読む。T字・十字のタイルで分岐の絵を探すのは、16 番が空でないとき（`has_switch_image`）だけ。ex 画像を選ぶのは、絵の数が 26 を超え 26 番が空でなく（`has_switch_ex_image`）、隣のタイルにも way-object があって way が ex の形のとき（`grund_t::is_use_wayobj_ex_image`）。makeobj（60.12）は手前・奥とも 26 枚の並びを書き（キーの無い絵は空）、ex は way と同じく pak への継ぎ足しで入る（9.1）。分岐の絵を持たない way-object は ex を足しても使われないので、16〜25 番に通常の T字・十字の絵を入れて道を開く | `obj/wayobj.h` の `get_front_image`・`get_image`、`obj/wayobj.cc` の `is_need_crossing_image`（754 行〜）、`descriptor/way_obj_desc.h` の `has_switch_image`・`has_switch_ex_image`、`boden/grund.cc`（2519 行）。AMI の架線つきの壁で、Y字・三方分岐に ex の線が出ることを画面で見た（`OTRPv64_3.exe`、2026-11-21） |
 | 近い斜めの絵 | 本体は読む（`get_back_close_diagonal_image_id` など。絵があるときだけ、十字のタイルで使う）。makeobj（60.12）の書く側のキーの表（`ribi_codes`、`-`〜`nsew2` の 26 個）に close が無く、書けない | `descriptor/way_obj_desc.h`・`descriptor/reader/way_obj_reader.cc`・`obj/wayobj.cc`・`descriptor/writer/way_obj_writer.cc`（OTRP、2026-11-15） |
 | 1 タイルに置ける数 | waytype ごとに 1 つ。tram は track と同じに数える。同じ waytype の別の way-object を置くと、前のものを置き換える（遅い物を速い物で置き換える設定のときは、速さで決まる）。架線も `waytype=track` の way-object なので、線路の壁と架線は同じタイルに両方は置けない | `boden/grund.cc` の `grund_t::get_wayobj`、`obj/wayobj.cc` の `wayobj_t::extend_wayobj` |
 | 重ねたときの置き換え | 前のものより速い（`topspeed` が大きい）別の way-object を置くと置き換わり、向きは前のものとの和になる。同じ速さ以下なら前のものが残り、向きだけ足される。スクリプトの `command_x.build_wayobj` はこの「速い物だけ置き換える」動き。1 タイルだけ（始点と終点が同じ）で敷くと、向きは前のものと同じ | `obj/wayobj.cc` の `wayobj_t::extend_wayobj`（OTRP、2026-11-17） |
