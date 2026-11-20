@@ -44,6 +44,16 @@ IMAGES = (  # (キー, 添字, 行, 列)。セル配置は iss・blender-poc の
     ("image", "[nsew2]", 3, 14),
 )
 
+# 分岐の追加画像（ex 画像。本体の絵の番号 26〜35。docs/reference/way-addon.md の 9.4）: makeobj の dat のキーが無いので、
+# 26〜35 番に入れる絵を 1・2 の 10 枚のキー（16〜25 番）に割り当てた提供用の物（名前 + ex_graft.DONOR_SUFFIX）を EX_DONORS_DAT に書き、
+# build.py が別の pak に作って、ex_graft.py で対象の物の画像リストの末尾へ写す。添字 → (行, 列)。並びは 26〜30 が「1」、31〜35 が「2」の枠:
+#   [nse1]〜[sew1]: Y字分岐（26〜29。根元が東・北・西・南）。シートの行 0 の列 10〜13（sheetlib の ex_switches）
+#   [nse2]〜[sew2]: 三方分岐（31〜34。十字のタイルに出る。根元が東・北・西・南）。行 1 の列 10〜13
+#   [nsew1]・[nsew2]: 30・35 番。自動では使われないので、通常の十字のセル（その形の標準の絵。#57）
+EX_CELLS = {"[nse1]": (0, 10), "[new1]": (0, 11), "[nsw1]": (0, 12), "[sew1]": (0, 13), "[nsew1]": (3, 9),
+            "[nse2]": (1, 10), "[new2]": (1, 11), "[nsw2]": (1, 12), "[sew2]": (1, 13), "[nsew2]": (3, 9)}
+EX_DONORS_DAT = "ex_donors.dat"  # src/ の中。build.py の pak（ami_*.dat）には入らない
+DONOR_SUFFIX = "__ex_donor"  # ex_graft.py の DONOR_SUFFIX と同じにする
 # 分岐の絵（switch 画像）の添字。dat の image[<添字>] の 1・2 の 10 枚
 SWITCH_IDX = {f"[{_s}{_n}]" for _s in ("nse", "new", "nsw", "sew", "nsew") for _n in (1, 2)}
 # 道路の way（waytype=road）の dat に分岐の絵を書くか。偽なら書かない（既定）。本体（OTRP）の道路の 1・2 は、自動では
@@ -168,6 +178,14 @@ CATENARY_TWIN_TOPSPEED = CATENARY_VALUES["topspeed"] + 1
 CATENARY = {f"ami_wall_rail_{_v}_catenary": f"ami_wall_rail_{_v}_catenary" for _v in BASE_VARIANTS}
 TWIN_FROM_CATENARY = {k: v.replace("ami_wall_rail_", "ami_wall_rail_twin_catenary_") for k, v in TWIN_FROM.items()}
 
+# ---------------------------------------------------------------- 分岐の追加画像を継ぎ足す物（#57）
+# 線路（線路・基盤・高架の版）と路面軌道の way: 本体が Y字分岐・三方分岐で ex 画像を自動で選ぶのは track_wt（tram を含む）だけ（9.4）。道路は入れない
+EX_WAYS = [_n for _n in BUILT if VALUES[_n]["waytype"] in ("track", "tram_track")]
+# 架線つきの壁の way-object（twin を除く）: トロリ線を Y字・三方分岐の走行面に合わせた絵を持つ（壁だけの版は絵が T字・十字と同じなので持たない）。
+# 本体（obj/wayobj.cc）は、way-object の 26 番の絵があると、隣のタイルの way-object の向きから way と同じ条件で ex 画像を選ぶ。
+# 分岐の絵（16 番）が無いとその処理に入らないので、1・2 の 10 枚は T字・十字と同じセルを指す
+EX_WAYOBJS = list(CATENARY)
+
 
 # ---------------------------------------------------------------- 橋とトンネル（#19）
 # 橋は欄干を描かず、壁・架線は地上と同じ way-object を重ねる（ADR 0003）。値は仮: 費用・維持費は地上の BRIDGE_COST_K・TUNNEL_COST_K 倍、
@@ -238,12 +256,14 @@ def tunnel_dat_text(name, base, sheet):
     return NL.join(out) + NL
 
 
-def dat_text(name, sheet):
+def dat_text(name, sheet, donor=False):
+    """way の dat。donor なら分岐の追加画像の提供用の物（名前 + DONOR_SUFFIX。1・2 の 10 枚のキーが EX_CELLS を指す）"""
     v = VALUES[name]
     out = [
-        f"# AMI: {name}（CC BY 4.0）。{v['speed']} km/h。シートは blender/render.py が描く",
+        f"# AMI: {name}（CC BY 4.0）。{v['speed']} km/h。シートは blender/render.py が描く"
+        + ("。分岐の追加画像の提供用（build.py が ex_graft.py で写す。ゲームには入れない）" if donor else ""),
         "obj=way",
-        f"name={name}",
+        f"name={name}{DONOR_SUFFIX if donor else ''}",
         "copyright=AMI (CC BY 4.0)",
         f"intro_year={v['intro_year']}",
         "intro_month=1",
@@ -267,23 +287,28 @@ def dat_text(name, sheet):
                 continue
             if key == "image" and sheet in DIAG_CURVES and idx in CURVE_TO_DIAG:
                 row, col = CURVE_TO_DIAG[idx]
+            if donor and key == "image" and idx in EX_CELLS:
+                row, col = EX_CELLS[idx]
             out.append(f"{key}{idx}[{season}]={sheet}.{row + season * SNOW_ROWS}.{col},-64,-32")
     return NL.join(out) + NL
 
 
-def wall_dat_text(name, sheet, twin=False, catenary=False, road=False):
+def wall_dat_text(name, sheet, twin=False, catenary=False, road=False, donor=False):
     """壁の way-object の dat。セルは way と同じ位置（分岐の絵・近い斜めは持たない。壁は通常の T字・十字と同じ）。
     カーブは way と同じく斜めのセルを指す。twin は近い斜めの分け合うタイル用（斜めとカーブのキーだけ、TWIN_FROM のシートを指す）。
     catenary は架線つき（電化。own_waytype=electrified_track、値は CATENARY_VALUES。twin は TWIN_FROM_CATENARY のシート）。
-    road は道路の壁（waytype=road・own_waytype=road。twin は ROAD_TWIN_FROM のシート）"""
+    road は道路の壁（waytype=road・own_waytype=road。twin は ROAD_TWIN_FROM のシート）。
+    架線つき（twin を除く）は、分岐の追加画像（EX_WAYOBJS）のために 1・2 の 10 枚のキーも書く: 通常は T字・十字と同じセル（本体が way-object の
+    分岐の絵を選ぶ処理に入るが、絵は変わらない）、donor（提供用の物。名前 + DONOR_SUFFIX）は EX_CELLS"""
     v = CATENARY_VALUES if catenary else WALL_VALUES
     twin_from = TWIN_FROM_CATENARY if catenary else ROAD_TWIN_FROM if road else TWIN_FROM
     kind = "道路の壁" if road else "線路の壁の way-object（架線つき（電化））" if catenary else "線路の壁の way-object（壁だけ、架線なし）"
     wt = "road" if road else "track"
     out = [
-        f"# AMI: {name}（CC BY 4.0）。{kind}。シートは blender/render.py が描く",
+        f"# AMI: {name}（CC BY 4.0）。{kind}。シートは blender/render.py が描く"
+        + ("。分岐の追加画像の提供用（build.py が ex_graft.py で写す。ゲームには入れない）" if donor else ""),
         "obj=way-object",
-        f"name={name}",
+        f"name={name}{DONOR_SUFFIX if donor else ''}",
         "copyright=AMI (CC BY 4.0)",
         f"intro_year={v['intro_year']}",
         "intro_month=1",
@@ -297,9 +322,15 @@ def wall_dat_text(name, sheet, twin=False, catenary=False, road=False):
         f"icon=> {sheet}.0.0",
         f"cursor={sheet}.0.1,-64,-32",
     ]
+    ex = name in EX_WAYOBJS or donor
+    cell = {(key, idx): (row, col) for key, idx, row, col in IMAGES}
     for key, idx, row, col in IMAGES:
-        if key not in WAYOBJ_KEYS or idx.startswith("[close") or idx[1:-1].endswith(("1", "2")) and key == "image":
+        if key not in WAYOBJ_KEYS or idx.startswith("[close"):
             continue
+        if key == "image" and idx in SWITCH_IDX:
+            if not ex:
+                continue
+            row, col = EX_CELLS[idx] if donor else cell[("image", PIER_SWITCH[idx])]
         if key == "image" and idx in CURVE_TO_DIAG:
             row, col = CURVE_TO_DIAG[idx]
         src = sheet
@@ -413,6 +444,12 @@ def main():
     with open(os.path.join(SRC, catalog.SIDEWALK + ".dat"), "w", encoding="utf8", newline=NL) as f:
         f.write(sidewalk_dat_text(catalog.SIDEWALK, catalog.SIDEWALK))
     print(f"[dat] {catalog.SIDEWALK}.dat")
+    # 分岐の追加画像の提供用の物（build.py が別の pak に作り、ex_graft.py で写す）。1 つの dat に --- で区切って並べる
+    donors = [dat_text(n, BUILT[n], donor=True) for n in EX_WAYS]
+    donors += [wall_dat_text(n, CATENARY[n], catenary=True, donor=True) for n in EX_WAYOBJS]
+    with open(os.path.join(SRC, EX_DONORS_DAT), "w", encoding="utf8", newline=NL) as f:
+        f.write(("---" + NL).join(donors))
+    print(f"[dat] {EX_DONORS_DAT}（{len(donors)} 個）")
     for table, text in ((BRIDGES, bridge_dat_text), (TUNNELS, tunnel_dat_text)):
         for name, (base, sheet) in table.items():
             with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:

@@ -6,6 +6,8 @@ src/ の dat から、全部入りのまとめ（dist/ami.pak）と、種類別�
     dist/ami_road.pak   道路（ami_road_*）
     dist/ami_extra.pak  付属（壁・橋脚・歩道: ami_wall_*・ami_pier_*・ami_sidewalk*）
 dat が 1 つも無い種類の pak は作らない。makeobj の出力に WARNING か ERROR があれば、出力を見せて 1 で終わる（ACCEPTANCE 1-5）。
+作った後、分岐の追加画像（Y字分岐・三方分岐。絵の番号 26〜35）を継ぎ足す: src/ex_donors.dat（blender/ami_dat.py が書く提供用の物）を
+work/ex/donors.pak に作り、ex_graft.py で dist/ の各 pak の対象の物（線路・路面軌道の way と架線つきの壁）へ写す。提供用の物は dist/ に入らない。
 dat は先に blender/ami_dat.py で書き出す。画像（シート）は blender/render.py で描く。
 SHEET_LAYOUT=1 を付けると、work/layout/ のシートと dat から work/layout/dist/ に作る（レイアウト検証用モード。ADR 0005）。
 """
@@ -13,6 +15,8 @@ import glob
 import os
 import subprocess
 import sys
+
+import ex_graft
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 # SHEET_LAYOUT=1 のときは、レイアウト検証用モードのシートと dat（render.py が work/layout/ に書く）から、
@@ -30,8 +34,12 @@ KINDS = {
 }
 
 
-def makeobj(out, dats):
-    cmd = ["makeobj", PAKSET, os.path.join(DIST, out)] + [os.path.basename(d) for d in dats]
+EX_DONORS = "ex_donors.dat"  # blender/ami_dat.py の EX_DONORS_DAT
+EX_WORK = os.path.join(SRC, "dist", "ex") if LAYOUT else os.path.join(HERE, "work", "ex")
+
+
+def makeobj(out, dats, dist=DIST):
+    cmd = ["makeobj", PAKSET, os.path.join(dist, out)] + [os.path.basename(d) for d in dats]
     r = subprocess.run(cmd, cwd=SRC, capture_output=True, text=True, encoding="utf8", errors="replace")
     text = r.stdout + r.stderr
     bad = [l for l in text.splitlines() if "warning" in l.lower() or "error" in l.lower()]
@@ -47,10 +55,29 @@ def main():
     if not dats:
         sys.exit("[build] src/ に ami_*.dat が無い（先に blender/ami_dat.py）")
     makeobj("ami.pak", dats)
+    outs = ["ami.pak"]
     for out, prefixes in KINDS.items():
         part = [d for d in dats if os.path.basename(d).startswith(prefixes)]
         if part:
             makeobj(out, part)
+            outs.append(out)
+    graft_ex(outs)
+
+
+def graft_ex(outs):
+    """分岐の追加画像を継ぎ足す。提供用の物が全部、全部入りのまとめ（ami.pak）の対象に写ったことを確かめる"""
+    donors_dat = os.path.join(SRC, EX_DONORS)
+    if not os.path.exists(donors_dat):
+        sys.exit(f"[build] {donors_dat} が無い（先に blender/ami_dat.py）")
+    os.makedirs(EX_WORK, exist_ok=True)
+    makeobj("donors.pak", [donors_dat], dist=EX_WORK)
+    _, root = ex_graft.read_pak(os.path.join(EX_WORK, "donors.pak"))
+    donors = {n: node for n, node in ex_graft.objects(root).items() if n.endswith(ex_graft.DONOR_SUFFIX)}
+    for out in outs:
+        done = ex_graft.graft(os.path.join(DIST, out), donors)
+        print(f"[build] {out}: 分岐の追加画像を {len(done)} 個に継ぎ足した")
+        if out == "ami.pak" and len(done) != len(donors):
+            sys.exit(f"[build] ami.pak: 提供用の物 {len(donors)} 個のうち {len(done)} 個しか対象が無い")
 
 
 if __name__ == "__main__":

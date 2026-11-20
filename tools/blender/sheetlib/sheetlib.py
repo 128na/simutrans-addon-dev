@@ -816,6 +816,21 @@ def track_sheet(profile="new"):
                     elif k == 0:
                         rails = list(arcs)
                 jobs[(2 + k, 10 + col)] = (f"{base_name}{k + 1}", full, None, rails)
+    # prof["ex_switches"]（無くてよい）: 分岐の追加画像（ex 画像。OTRP の絵の番号 26〜35。docs/reference/way-addon.md の 9.4）の走行面を描く。
+    # dat のキーが無いので、AMI は別に作った pak から絵を継ぎ足す（addons/ami/ex_graft.py）。並びは T字の nse・new・nsw・sew（根元が東・北・西・南）:
+    #   行 0 の列 10〜13: Y字分岐（26〜29）。T字のタイルに出る。走行面は根元と両隣をつなぐ 2 本のカーブだけ（直線なし）。道床・壁・基盤は T字のまま
+    #   行 1 の列 10〜13: 三方分岐（31〜34）。十字のタイルに出る（番号は T字の枠）。走行面は根元を通る直線と、根元と両隣をつなぐ 2 本のカーブ。
+    #     道床・壁・基盤・持ち分は十字（T字で描くと 4 本目の腕がふさがる）
+    # 十字の枠の 30・35 番は自動では使われないので描かない（dat では通常の十字のセルを指す）。セルの名前の最後の _ の後ろが元の T字・十字で、
+    # つながる辺（exits_of）と手前/奥の向き（near_frame）はそこから決まる
+    if prof.get("ex_switches"):
+        cross = next(v[1] for v in jobs.values() if v[0] == "nsew")
+        for col, (base_name, root) in enumerate((("nse", "e"), ("new", "n"), ("nsw", "w"), ("sew", "s"))):
+            tee = next(v[1] for v in jobs.values() if v[0] == base_name)
+            arcs = list(switch_arcs[base_name])
+            jobs[(0, 10 + col)] = (f"y_{base_name}", tee, None, arcs)
+            through = straight(W, E) if root in "ew" else straight(S, N)
+            jobs[(1, 10 + col)] = (f"three{root}_nsew", cross, None, [through] + arcs)
     # prof["end_from_edge"]（無くてよい）: 行き止まりのレールの終点を、閉じた側のタイルの端からタイル 1 辺のこの割合の所にする
     # （無ければタイルの中心。車止め・まくらぎ・汚れの帯は終点＝経路の始点に合わせて動く）
     if "end_from_edge" in prof:
@@ -928,9 +943,13 @@ def track_sheet(profile="new"):
                     out += assemble([fill], pths[:1], prof["datums"], slope, **dict(kw, widths=None))
                 return out
             if rails:
-                # 分岐の絵: 走行面（rail の基準面の部品）だけを分岐の経路で作る
-                obs = (build([p for p in parts if p.datum != "rail"], paths)
-                       + build([p for p in parts if p.datum == "rail"], rails[0]))
+                # 分岐の絵: 走行面（rail の基準面の部品）だけを分岐の経路で作る。分岐の追加画像（ex_switches のセル）は、架線の線
+                # （まとまり catenary: トロリ線・ちょう架線・ドロッパ）も走行面の経路に張る（Y字で、無い直線の上に線が残らないように）。
+                # 柱・梁（catenary_support）は経路が複数のセルでは作らない（cell_grp）。1・2 の分岐の絵の線は T字・十字のまま
+                ex_cell = name.startswith(("y_", "three"))
+                on_rails = lambda p: p.datum == "rail" or (ex_cell and p.group == "catenary")
+                obs = (build([p for p in parts if not on_rails(p)], paths)
+                       + build([p for p in parts if on_rails(p)], rails[0]))
             else:
                 obs = build(parts, paths)
             if slope and prof.get("ramp_body_under_base"):
