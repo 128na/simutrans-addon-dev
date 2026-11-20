@@ -65,7 +65,7 @@ def main():
 
 
 def graft_ex(outs):
-    """分岐の追加画像を継ぎ足す。提供用の物が全部、全部入りのまとめ（ami.pak）の対象に写ったことを確かめる"""
+    """分岐の追加画像を継ぎ足す。pak ごとに、名前で当たる提供用の物が全部写ったことと、継ぎ足した絵の中身（ex_graft.check_ex）を確かめる"""
     donors_dat = os.path.join(SRC, EX_DONORS)
     if not os.path.exists(donors_dat):
         sys.exit(f"[build] {donors_dat} が無い（先に blender/ami_dat.py）")
@@ -74,10 +74,16 @@ def graft_ex(outs):
     _, root = ex_graft.read_pak(os.path.join(EX_WORK, "donors.pak"))
     donors = {n: node for n, node in ex_graft.objects(root).items() if n.endswith(ex_graft.DONOR_SUFFIX)}
     for out in outs:
-        done = ex_graft.graft(os.path.join(DIST, out), donors)
+        path = os.path.join(DIST, out)
+        done = ex_graft.graft(path, donors)
         print(f"[build] {out}: 分岐の追加画像を {len(done)} 個に継ぎ足した")
-        if out == "ami.pak" and len(done) != len(donors):
-            sys.exit(f"[build] ami.pak: 提供用の物 {len(donors)} 個のうち {len(done)} 個しか対象が無い")
+        prefixes = KINDS.get(out, ("",))  # ami.pak は全部
+        want = [n for n in donors if n.startswith(prefixes)]
+        if len(done) != len(want):
+            sys.exit(f"[build] {out}: 継ぎ足す対象 {len(want)} 個のうち {len(done)} 個にしか継ぎ足せなかった")
+        problems = ex_graft.check_ex(path)
+        if problems:
+            sys.exit(f"[build] {out}: 継ぎ足した絵がおかしい\n" + "\n".join(problems))
 
 
 if __name__ == "__main__":

@@ -280,8 +280,8 @@ ex 画像を持つ way だけが対象。形は blender-poc の見本（`ingame/
 - 列車の予約で switch 画像に切り替わる処理は、ex 画像のタイルでは働かない（`schiene_t::reserve` の `!get_is_ex_image()`）。
 - ダイアログの選択肢 3・4 の名前（`gui/ground_info.cc` の「Y-junction」「Double crossover」）は、`128na/simutrans` の改修（2026-11-14）で付けた仮のもの。線路の十字の 3・4 は自動では使われないので、名前は見直す余地がある。
 - 敷くときの癖: スクリプトの `build_way` で、カーブになったタイルから 3 本目を足すと、タイルの向きが崩れた（つながらない絵になる）。両側を先に 1 本で通してから枝を足すと正しく敷ける（`OTRPv64_3.exe`、2026-11-14）。
-- 実際の絵で確かめた（AMI の線路の way 27 種・路面軌道と架線つきの壁 4 種、`addons/ami/ingame/ex_sample.nut`。`OTRPv64_3.exe`、2026-11-21）: Y字分岐・三方分岐とも根元の 4 向きで、自動で選ばれた絵が固定の道具（`tool_set_switch_image` の値 4 = 26〜30、値 3 = 31〜35）の T字の枠の絵と同じになった。温暖・降雪とも。三方分岐の絵は十字のタイル（向き 15）に出るので、十字の道床・壁の上に描く
-- 公開版の OTRP（`teamhimeh/simutrans` の `v63_3`）は 9.1 の KUTA_v6 のコミットを含む。`v63_3` から今の `128na/simutrans` までに、選ぶ処理と読む処理のファイル（`boden/wege/weg.cc`・`boden/grund.cc`・`obj/wayobj.cc`・`obj/wayobj.h`・`descriptor/way_desc.h`・`descriptor/way_obj_desc.h`・`descriptor/reader/way_reader.cc`・`way_obj_reader.cc`）の差は無い（`git diff v63_3 HEAD`、2026-11-21）。v63.3 でも同じ絵が選ばれると読める（ゲームでは確かめていない）
+- 実際の絵で確かめた（AMI の `addons/ami/ingame/ex_sample.nut` で敷いた 8 組: 在来線・弾性まくらぎ直結軌道・高速線の通常の版、路面軌道、在来線の基盤 4 版に架線つきの壁を重ねたもの。`OTRPv64_3.exe`、2026-11-21）: Y字分岐・三方分岐とも根元の 4 向きで、自動で選ばれた絵が固定の道具（`tool_set_switch_image` の値 4 = 26〜30、値 3 = 31〜35）の T字の枠の絵と同じになった。温暖・降雪とも。三方分岐の絵は十字のタイル（向き 15）に出るので、十字の道床・壁の上に描く
+- 公開版の OTRP（`teamhimeh/simutrans` の `v63_3`）は 9.1 の KUTA_v6 のコミットを含む。`v63_3` と、`128na/simutrans` の `feature/script-save`（`1cc2e78b9`）・`v63_4`（2026-11-21）の間で、選ぶ処理と読む処理のファイル（`boden/wege/weg.cc`・`boden/grund.cc`・`obj/wayobj.cc`・`obj/wayobj.h`・`descriptor/way_desc.h`・`descriptor/way_obj_desc.h`・`descriptor/reader/way_reader.cc`・`way_obj_reader.cc`）の差は、`v63_4` の `weg.cc` の情報表示の 1 行（車両のずれの表示）だけ（`git diff`、2026-11-21）。v63.3・v63.4 でも同じ絵が選ばれると読める（ゲームでは確かめていない）
 
 ### 9.5 本家での読み込み
 

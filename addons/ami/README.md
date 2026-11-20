@@ -352,7 +352,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - pak への入れ方: makeobj は 26 番以降のキーを持たないので、ex の絵を `image[nse1]`〜`[nsew2]` に割り当てた提供用の way（`src/ex_donors.dat`、名前は `<対象>__ex_donor`）を作り、その 10 枚を対象の画像リストの末尾へ写す（`ex_graft.py`。reference の 9.1）。`build.py` が pak を作った後に自動で行う。提供用の way は継ぎ足しにだけ使い、配る pak には入れない
 - 架線つきの壁: 本体は、way-object の分岐の絵（16 番）が空でないときだけ、分岐のタイルで ex 画像を探す（reference の 10 章）。そのため 16〜25 番には通常の T字・十字の絵を入れた（見た目は今までと同じ）。壁だけの way-object（`ami_wall_rail_<版>`）は分岐で絵が変わらないので入れていない
 - 二重架線（`ami_wall_rail_twin_catenary`）と道路（#46）、高架の橋脚は対象外
-- 確認画像は `docs/rail_switch_ex_<気候>_<区画>_<形><根元の向き>.png`（左が前、右が後。2 倍）。区画は `ingame/ex_sample.nut` の `WAYS` の順で、0 = 在来線、2 = 高速線、3 = 路面軌道、4 = 在来線の基盤 single と架線つきの壁 single。経緯は記録 [2026-11-21_ami-rail-switch-ex](../../docs/records/2026-11-21_ami-rail-switch-ex.md)
+- 確認画像は `docs/rail_switch_ex_<気候>_<区画>_<形><根元の向き>.png`（左が前、右が後。2 倍）。壁だけの way-object を重ねたところは `docs/rail_switch_ex_wallonly.png`（壁は通常の T字・十字の絵のまま）。区画は `ingame/ex_sample.nut` の `WAYS` の順で、0 = 在来線、2 = 高速線、3 = 路面軌道、4 = 在来線の基盤 single と架線つきの壁 single。経緯は記録 [2026-11-21_ami-rail-switch-ex](../../docs/records/2026-11-21_ami-rail-switch-ex.md)
 
 ### 付属（別の pak にして同梱）
 
@@ -410,7 +410,7 @@ python -X utf8 build.py                                                        #
 ```
 
 - `build.py` は、全部入りのまとめ `dist/ami.pak` と、種類別の `ami_rail.pak`（線路）・`ami_tram.pak`（路面軌道）・`ami_road.pak`（道路）・`ami_extra.pak`（付属）を作る。dat が無い種類は作らない。makeobj の出力に警告かエラーがあれば止まる
-- `build.py` は続けて、`src/ex_donors.dat` から提供用の pak（`work/ex/donors.pak`）を作り、各 pak の線路・路面軌道・架線つきの壁へ ex 画像を継ぎ足す（上の「分岐の追加画像」）。継ぎ足した数を出し、`ami.pak` に入らなかった提供用の way があれば止まる。pak の中の ex 画像の数は `python -X utf8 ex_graft.py --list dist/ami.pak` で見られる
+- `build.py` は続けて、`src/ex_donors.dat` から提供用の pak（`work/ex/donors.pak`）を作り、各 pak の線路・路面軌道・架線つきの壁へ ex 画像を継ぎ足す（上の「分岐の追加画像」）。継ぎ足した数を出し、pak ごとに名前で当たる提供用の物が全部写ったことと、継ぎ足した絵（26〜29・31〜34 番が空でなく、通常の T字・十字と違うこと、30・35 番が通常の十字と同じこと）を確かめ、違えば止まる。pak の中の ex 画像の数は `python -X utf8 ex_graft.py --list dist/ami.pak` で見られる
 - シートを複数描くときは `python -X utf8 ..\..\tools\blender\render_parallel.py <対象>...`。レイアウト検証用モードは `SHEET_LAYOUT=1`（`work/layout/` に書く）
 - レイアウト検証用モードの pak は `SHEET_LAYOUT=1` で描いた後、`SHEET_LAYOUT=1 python -X utf8 build.py`（`work/layout/dist/` に作る）
 - 同じシートの通常の描画とレイアウト検証用の描画を同時に動かさない。セルごとの生の絵（`work/<シート>_<セル>.png`）の名前が同じで、互いのセルを取り込んだシートができた（2026-11-17）

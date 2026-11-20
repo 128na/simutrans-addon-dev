@@ -4,7 +4,7 @@ makeobj の dat のキーは image[nsew2]（25 番）までで、26〜35 番を�
 26〜35 番に入れたい絵を 16〜25 番（image[nse1]〜image[nsew2]）に割り当てた「提供用」の物を makeobj で別の pak に作り、
 その 10 枚の画像ノードを、対象の物の画像リストの末尾へ写す。写す順がそのまま 26〜35 番になる。
 
-    python -X utf8 ex_graft.py --donor work/ex/donor.pak dist/ami.pak dist/ami_rail.pak   # 対象の pak を書き換える
+    python -X utf8 ex_graft.py --donor work/ex/donors.pak dist/ami.pak dist/ami_rail.pak   # 対象の pak を書き換える
     python -X utf8 ex_graft.py --list dist/ami_rail.pak                                    # 物ごとの画像リストの枚数を出す
 
 - 提供用の物の名前は、対象の名前 + DONOR_SUFFIX。対象の pak に同じ名前の物（way か way-object）があるものだけを書き換える
@@ -120,6 +120,34 @@ def graft(target_path, donors):
         done.append(f"{name}（{len(dst)} リスト）")
     write_pak(target_path, head, root)
     return done
+
+
+EMPTY_IMAGE = 10  # 空の絵の画像ノードのデータの長さ（makeobj 60.12）
+EX_PAIRS = ((26, 7), (27, 11), (28, 13), (29, 14), (31, 15), (32, 15), (33, 15), (34, 15))  # ex の絵と、同じタイルの通常の絵（T字 nse・new・nsw・sew、十字）
+
+
+def check_ex(path):
+    """継ぎ足した pak を読み、36 枚のリストの中身を確かめる。問題の文の並びを返す（空なら問題なし）。
+    - 絵のあるリスト（15 番の十字が空でないもの）では、26〜29・31〜34 番が空でなく、30・35 番が 15 番（通常の十字）と同じ
+    - 物ごとに、ex の 8 枚のそれぞれが、どれかのリストで通常の T字・十字と違う（way-object の奥の絵は同じでもよい）"""
+    _, root = read_pak(path)
+    problems = []
+    for name, node in objects(root).items():
+        lists = [c for c in node.children if c.type == IMG_LIST and len(c.children) == SWITCH_COUNT + EX_COUNT]
+        drawn = [lst for lst in lists if len(lst.children[15].data) > EMPTY_IMAGE]
+        if lists and not drawn:
+            problems.append(f"{name}: 絵のあるリストが無い")
+        for i, lst in enumerate(drawn):
+            img = [c.data for c in lst.children]
+            empty = [n for n, _ in EX_PAIRS if len(img[n]) <= EMPTY_IMAGE]
+            if empty:
+                problems.append(f"{name}: {i} 番目のリストの {empty} 番が空")
+            if img[30] != img[15] or img[35] != img[15]:
+                problems.append(f"{name}: {i} 番目のリストの 30・35 番が通常の十字と違う")
+        same = [ex for ex, plain in EX_PAIRS if drawn and all(lst.children[ex].data == lst.children[plain].data for lst in drawn)]
+        if same:
+            problems.append(f"{name}: {same} 番が、どのリストでも通常の T字・十字と同じ")
+    return problems
 
 
 def list_pak(path):
