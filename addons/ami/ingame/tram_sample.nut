@@ -16,6 +16,8 @@
 //   区画 I の固定の絵（SWITCH_IMAGES が真なら、選択 1・2 と通常の十字が全部違えば ok。偽なら全部同じで ok）、道路の上の区画で道路が残っているか（road=）、区画 P。
 //   区画 H は、通常の T字と同じ絵なら (plain) を付ける（分岐の絵があれば、どれにも付かない）
 local TRAM = "ami_tram";
+// ラウンドの版（#56）: sample_parallel.sh の SUFFIX でこの行を置き換え、路面軌道の名前にだけ付ける（下敷きの道路・橋脚は本番のまま）
+local SUFFIX = "";
 local SWITCH_IMAGES = true;  // dat に分岐の絵（switch 画像 1・2）があるか（ami_dat.py の TRAM_SWITCH_IMAGES と同じにする）
 local UNDER = [null, "ami_road_local", "ami_road_general", "ami_road_expressway", "Road_050"];
 local PIER = "ami_pier_rail";
@@ -39,7 +41,7 @@ local AUTO = [["nse2", "ns", 1, 0, 0, -1], ["nse1", "ns", 1, 0, 0, 1], ["nsw2", 
               ["new2", "ew", 0, -1, 1, 0], ["new1", "ew", 0, -1, -1, 0], ["sew2", "ew", 0, 1, -1, 0], ["sew1", "ew", 0, 1, 1, 0]];
 
 function lay(under, ox, oy) {
-  local w = way_desc_x(TRAM);
+  local w = way_desc_x(TRAM + SUFFIX);
   if (w == null) return TRAM + " desc=[missing]\n";
   local u = null;
   if (under != null) {
