@@ -63,7 +63,7 @@ description: Simutrans の way 系アドオン（AMI・blender-poc の線路・�
 - 部品を足すときは、乗る基準面を選ぶ。部品ごとに位置を足し引きしない
 - 寸法・色は名前の付いた定数にする（ADR 0005）
 - 共通部分を直したら、既存のアドオンのシートが変わらないことを確かめる
-- 描き直しは `python -X utf8 ../../tools/blender/render_parallel.py [--jobs 16] <対象>...`。ログは `work/render_<対象>.log`
+- 描き直しは `python -X utf8 ../../tools/blender/render_parallel.py [--jobs 16] <対象>...`。ログは `work/render_<対象>.log`。ほかの作業者と同時に描いても、Blender の数は共有の描画の枠（`SHEET_SLOTS`）を超えない（`tools/README.md` の「描画が遅いとき」）
 - Boolean は `sheetlib` の `boolean()` を使う（`tools/README.md` の「描画が遅いとき」）
 
 ## 4. 確かめ方

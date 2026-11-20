@@ -85,4 +85,4 @@ description: できあがった way アドオン（線路・道路と、その�
 ## 系統を並べて回すとき
 
 - 系統ごとに別のセッション（別の worktree）で回してよい。各セッションが書くのは、自分の系統のラウンドの設定・見本・記録・画像だけにする。本番の `render.py`・共有の `sheetlib`・README・リファレンスは、本番に入れる段で 1 つずつ直す
-- 同時に動かすときは、描く数と台数とポートを分ける: `SHEET_JOBS`（描く Blender の数）、`sample_parallel.sh` の `JOBS`（ゲームの台数）と `BASE_PORT`（`JOBS` 以上離す）、`calib_capture.sh` の `PORT`。合計が CPU のスレッド数を大きく超えないようにする
+- 同時に動かすときは、描く数と台数とポートを分ける: `SHEET_JOBS`（1 回で描く Blender の数。マシン全体の上限は `render_parallel.py` が共有の描画の枠で守る。`tools/README.md` の「描画が遅いとき」）、`sample_parallel.sh` の `JOBS`（ゲームの台数）と `BASE_PORT`（`JOBS` 以上離す）、`calib_capture.sh` の `PORT`。合計が CPU のスレッド数を大きく超えないようにする

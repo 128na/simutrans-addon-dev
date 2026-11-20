@@ -34,7 +34,7 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 | `ingame/switch_all.nut` | 分岐の絵（OTRP の switch 画像）を線路の 11 アドオンで全部見る見本。空の平らなマップ（`flat2.sve`）に way ごとに 1 行、標準・選択 1・選択 2 に固定した T字と十字、自動選択の 8 通りを名札つきで敷く |
 | `ingame/switch_ex_shapes.nut` | ex 画像（Y字分岐・三方・渡り線）を本体が自動で選ぶ線路の形を、`flat2.sve` の y=130 から下に敷く。既定は `bpoc_track`（絵は通常のまま）。先頭の `WAY` を `bpoc_track_ex_proto`、`OX` を 100 にすると、試作の way で敷いて分岐の絵を固定する |
 | `ingame/close_diag.nut` | 近い斜め（1 タイルずらして並べた斜め 2 本）の見本。`flat2.sve` の x=105 から右に、線路の全版（壁なし 3 種・側壁・高架の 2 本と 3 本）と道路・高速道路の南東・北東の組を名札つきで敷く |
-| `tools/blender/render_parallel.py` | シートを Blender の別々のプロセスで同時に描く（`--jobs` 既定は `sheet_settings.JOBS` = 16）。ふつうの Python で動かす |
+| `tools/blender/render_parallel.py` | シートを Blender の別々のプロセスで同時に描く（`--jobs` 既定は `sheet_settings.JOBS` = 16。マシン全体では、作業者どうしで共有する描画の枠 `SHEET_SLOTS` も上限になる）。ふつうの Python で動かす |
 | `ingame/switch_auto.nut` | 自動選択の 8 通りだけを `bpoc_track` で敷く（`flat.sve` の y=120） |
 | `ingame/switch_check.sh` | 分岐の絵を手で確かめる準備。pak を入れ、固定の道具がある OTRP のビルドを MCP つきで `flat2` で起動し、`switch_all.nut` を敷く（`GAME_DIR=… EXE=… bash ingame/switch_check.sh`） |
 | `ingame/wall.nut`・`elev.nut`・`bridge.nut`・`tunnel.nut`・`trial.nut` | 側壁・高架・橋・トンネル・試作の見本（複線の並び、行き止まり、橋の端、坑口） |
