@@ -228,7 +228,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 雪: 在来線と同じく、積もったばかりの雪（道床・まくらぎ・汚れは雪、レールだけが出る）。雪の絵は在来線と画素まで同じで、雪では見分けない（#70、2026-11-21、ユーザーの決定）
 - 値: 240 km/h。高架・橋・トンネルの費用の倍率は在来線と同じ。アイコン・カーソルは仮（数字の 240）
 
-確認画像は `docs/rail_concrete_cmp_<気候>_<区画>.png`。同じ区画を左から在来線・弾性まくらぎ直結軌道・高速線の順に等倍で並べ、黄色の枠の中を下に 4 倍で拡大した（区画は輪と十字 `B`・行き止まりと 1 タイル `AFC`・坂 `DE`・分岐 `H0`・基盤 back `B_B`・高架 single `VS_B`・壁の複線 `W1`・橋 `BT_B1`・トンネル `BT_T2`。降雪側は `B`・`AFC`・`DE`・`VS_B`・`BT_B1`。`seam_dg`・`seam_steep` は `ingame/seam_slope_check.sh` の斜めのつなぎ目と急坂の十字）。上の画面は同じ見本を種類ごとに別に敷いて撮ったもの。経緯とくどさ・つなぎ目・坂の値は記録 [2026-11-21_ami-rail-concrete](../../docs/records/2026-11-21_ami-rail-concrete.md)。在来線の色を変えた（#70）後の見分けは `docs/ballast_color_<気候>_<区画>.png`（左から在来線の変える前・変えた後・弾性まくらぎ直結軌道。記録 [2026-11-21_ami-ballast-color](../../docs/records/2026-11-21_ami-ballast-color.md)）
+確認画像は `docs/rail_concrete_cmp_<気候>_<区画>.png`。同じ区画を左から在来線・弾性まくらぎ直結軌道・高速線の順に等倍で並べ、黄色の枠の中を下に 4 倍で拡大した（区画は輪と十字 `B`・行き止まりと 1 タイル `AFC`・坂 `DE`・分岐 `H0`・基盤 back `B_B`・高架 single `VS_B`・壁の複線 `W1`・橋 `BT_B1`・トンネル `BT_T2`。降雪側は `B`・`AFC`・`DE`・`VS_B`・`BT_B1`。`seam_dg`・`seam_steep` は `ingame/seam_slope_check.sh` の斜めのつなぎ目と急坂の十字）。上の画面は同じ見本を種類ごとに別に敷いて撮ったもの。経緯とくどさ・つなぎ目・坂の値は記録 [2026-11-21_ami-rail-concrete](../../docs/records/2026-11-21_ami-rail-concrete.md)。在来線の色を変えた（#70）後の見分けは `docs/ballast_color_<気候>_<区画>.png`（左から在来線の変える前・変えた後・弾性まくらぎ直結軌道・高速線（スラブ）。記録 [2026-11-21_ami-ballast-color](../../docs/records/2026-11-21_ami-ballast-color.md)）
 
 手本の扱い: 名前と速度は iss の `iss_wtg_0240_*`（`../refs/iss/src/way/rail/track_concrete.dat`）に当たる。iss はまくらぎの材料（木・コンクリート）で種類を分け、道床は砕石のまま。AMI の在来線はすでに PC まくらぎなので、iss の分け方は取り入れず、道床の形式で分けた。iss の砕石の点描は、くどさの物差しで「くどい」に出る（[way-addon.md](../../docs/reference/way-addon.md) の 11 章）ので、まねていない。
 
