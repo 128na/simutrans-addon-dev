@@ -933,6 +933,14 @@ def track_sheet(profile="new"):
                        + build([p for p in parts if p.datum == "rail"], rails[0]))
             else:
                 obs = build(parts, paths)
+            if slope and prof.get("ramp_body_under_base"):
+                # 端の坂の躯体（rampbody）の上面を、基盤の上面（坂の面）より少し下へ下げる（道路の road_sheet と同じ）。assemble は上面を
+                # 地面より 0.02 上に止めるので、坂の低い端で、手前へ動かした基盤（上面は坂の面の高さ）より上に出た。道床・壁の外の
+                # 角に躯体の上面がのぞき、雪の絵では雪にならない灰色の小片に見えた（AMI #44。夏は基盤と同じ灰色で見えない）
+                for ob in [ob for ob in obs if ob.get("pname") == "rampbody"]:
+                    for v in ob.data.vertices:
+                        h = slope(v.co.x, v.co.y)
+                        v.co.z = min(v.co.z, h - 0.06) if v.co.z > 0.01 else min(0.0, h - 0.08)
             side = prof.get("walls", "both")
             # 行き止まりの終点をタイルの中心から動かした版（end_from_edge）は、経路の中心が開いた側へ寄り、側壁の手前/奥の判定が
             # ずれる（タイルの端まで延ばした手前の側壁が奥の絵になる）。手前/奥をタイルの中心から測る
