@@ -25,7 +25,7 @@ Simutrans アドオンのモノレポ。新しいアドオンは `addons/<addon-
 - コミットメッセージは英語の命令形で、先頭に対象を付ける（例: `blender-poc: close the seam between tunnel portals and the adjoining track`、文書だけなら `docs: …`）。
 - PR には、利用者から見た変更、対象のアドオン、関連する issue、実行したビルド・検証とその結果を書く。見た目が変わる変更にはスクリーンショットを付ける。
 - 直したらローカルでコミットして止まる。push・PR 作成・マージはユーザーの指示を待つ。
-  - 例外: 複数セッションでの開発で、進捗管理から issue を割り当てられた作業者（issue に `status:in-progress`）は、push と PR の作成まで進めてよい。マージは issue に `merge:ok` があるときだけ。手順はこのリポジトリの外（作業の置き場の親フォルダ）にある。
+  - 例外: 複数セッションでの開発で、進捗管理から issue を割り当てられた作業者（issue に `status:in-progress`）は、push と PR の作成まで進めてよい。マージは、issue に `check:user` が無ければ CI とレビューの後に作業者が行い、`check:user` があれば進捗管理を通したユーザーの承認の後に行う（`merge:ok` のラベルは使わない）。手順はこのリポジトリの外（作業の置き場の親フォルダ）にある。
 
 ## TODO・未解決の課題
 
