@@ -13,7 +13,17 @@ dat は src/ のものを写し、ami_ で始まる名前を全部 _round<n> 付
 ラウンド 8（2026-11-20）で、ラウンド 7 の描き分けを render.py（と共有の sheetlib）に入れた。ROUND_SETTINGS の 1〜7 は、入れる前の
 render.py に重ねる値として残してある（記録のため）。今の render.py に重ねると二重にかかるので、そのまま描き直さない。
 次のラウンドは、今の render.py を土台にした設定を新しく足す。
+
+系統（family）: 在来線一式のほかの系統は、環境変数 AMI_FAMILY で選ぶ（FAMILIES。既定は rail_ballast）。
+系統ごとの描き分けは blender/round_<系統>.py の ROUND_SETTINGS と apply(cfg, n, R, render)（render.py の設定の上に重ねる）。
+描いた絵は work/rounds/<系統>/round<n>/src/、pak は rounds/ami_<系統>_round<n>.pak（rail_ballast だけは前からの名前のまま）。
+
+    AMI_FAMILY=road AMI_ROUND=1 python -X utf8 ../../tools/blender/render_parallel.py --entry blender/round.py <対象 ...>
+    AMI_FAMILY=road python -X utf8 blender/round.py 1
+    AMI_FAMILY=road python -X utf8 blender/round.py --targets   # その系統の描く対象を出す
 """
+import fnmatch
+import importlib
 import glob
 import os
 import re
@@ -33,6 +43,23 @@ ROUND_TARGETS = (["ami_rail_ballast"] + [f"ami_rail_ballast_base_{v}" for v in (
                  + [f"ami_wall_rail_twin_catenary_{v}" for v in ("back", "front")]
                  + [f"ami_rail_ballast_elev_{v}" for v in ("single", "back", "center", "front")]
                  + ["ami_pier_rail", "ami_pier_rail_gate", "ami_rail_ballast_bridge", "ami_rail_ballast_tunnel"])
+
+# 系統 → pak に入れる dat（src/ の名前。glob）と描く対象（render.py の SHEETS の名前。glob）。
+# pak には、見本が _round<n> の名前で引く物を全部入れる（描かなかったシートは src/ のものを写す）。
+# 在来線の壁・架線・橋脚は rail_ballast のラウンドで描いた物で、rail_slab の pak には src/ のまま入れる（スラブ軌道の見本 sample.nut が引くため）。
+FAMILIES = {
+    "rail_ballast": {"dats": ROUND_DATS, "targets": ROUND_TARGETS, "module": None},
+    "rail_slab": {"dats": ("ami_rail_slab", "ami_rail_slab_base_*", "ami_rail_slab_elev_*", "ami_rail_slab_bridge",
+                           "ami_rail_slab_tunnel", "ami_wall_rail_*", "ami_pier_rail", "ami_pier_rail_gate"),
+                  "targets": ("ami_rail_slab", "ami_rail_slab_*"), "module": "round_rail_slab"},
+    "tram": {"dats": ("ami_tram",), "targets": ("ami_tram",), "module": "round_tram"},
+    "road": {"dats": ("ami_road_*", "ami_wall_road_*", "ami_pier_road", "ami_sidewalk"),
+             "targets": ("ami_road_*", "ami_wall_road_*", "ami_pier_road", "ami_sidewalk"), "module": "round_road"},
+}
+FAMILY = os.environ.get("AMI_FAMILY", "rail_ballast")
+if FAMILY not in FAMILIES:
+    sys.exit(f"[round] AMI_FAMILY は {' '.join(FAMILIES)} のどれか: {FAMILY}")
+
 
 # ラウンド → 描き分け。ballast: 砕石のまだら（明暗差の倍率, 細かさ）。wear: 汚れの色を道床の色から離す倍率。
 # sleeper_pitch: まくらぎの間隔。値の決め方は記録 docs/records/ の各ラウンドの記録
@@ -122,7 +149,41 @@ ROUND_SETTINGS.update({
 
 
 def round_dir(n):
-    return os.path.join(ROOT, "work", "rounds", f"round{n}")
+    if FAMILY == "rail_ballast":
+        return os.path.join(ROOT, "work", "rounds", f"round{n}")
+    return os.path.join(ROOT, "work", "rounds", FAMILY, f"round{n}")
+
+
+def pak_path(n):
+    name = f"ami_round{n}.pak" if FAMILY == "rail_ballast" else f"ami_{FAMILY}_round{n}.pak"
+    return os.path.join(ROOT, "rounds", name)
+
+
+def family_targets(names):
+    """系統の描く対象（FAMILIES の targets の glob を、render.py の SHEETS の名前 names に当てる。並びは names の順）。"""
+    pats = FAMILIES[FAMILY]["targets"]
+    return [t for t in names if any(fnmatch.fnmatchcase(t, p) for p in pats)]
+
+
+def _render_family(n):
+    """rail_ballast 以外の系統: blender/round_<系統>.py の apply で render.py の設定に重ねてから描く。"""
+    import render  # noqa: E402
+    import sheetlib as R  # noqa: E402
+    mod = importlib.import_module(FAMILIES[FAMILY]["module"])
+    mod.apply(mod.ROUND_SETTINGS[n], n, R, render)
+    _run(n, R, render, family_targets(list(render.SHEETS)))
+
+
+def _run(n, R, render, targets):
+    import sheetlib.sheetlib as S  # noqa: E402
+    import sheetlib.cells as C  # noqa: E402
+    import sheetlib.core as K  # noqa: E402
+    S.SRC = os.path.join(round_dir(n), "src")
+    # 一時ファイルもラウンドごとに分ける（同じ対象を別のラウンドで同時に描くと、work/ の同じ名前の一時ファイルを取り合う）
+    for m in (K, C, S):
+        m.WORK = os.path.join(round_dir(n), "tmp")
+    os.makedirs(K.WORK, exist_ok=True)
+    R.run_targets({k: v for k, v in render.SHEETS.items() if k in targets}, list(targets))
 
 
 def _render(n):
@@ -206,14 +267,7 @@ def _render(n):
         if str(prof.get("sheet", "")).startswith(BALLAST) and extra:
             prof["parts"] = tuple(prof.get("parts", ())) + tuple(p for p in extra if p.name not in ("railL", "railR"))
             prof["replace"] = dict(prof["replace"], **{p.name: p for p in extra if p.name in ("railL", "railR")})
-    S.SRC = os.path.join(round_dir(n), "src")
-    # 一時ファイルもラウンドごとに分ける（同じ対象を別のラウンドで同時に描くと、work/ の同じ名前の一時ファイルを取り合う）
-    import sheetlib.cells as C  # noqa: E402
-    import sheetlib.core as K  # noqa: E402
-    for m in (K, C, S):
-        m.WORK = os.path.join(round_dir(n), "tmp")
-    os.makedirs(K.WORK, exist_ok=True)
-    R.run_targets({k: v for k, v in render.SHEETS.items() if k in ROUND_TARGETS}, ROUND_TARGETS)
+    _run(n, R, render, ROUND_TARGETS)
 
 
 EMBED_TOP = 0.15 + 0.08 / 2 - 0.012  # まくらぎの上面（track_parts の SLEEPER_Z + SLEEPER_H / 2）の少し下
@@ -312,7 +366,7 @@ def _pack(n):
     shutil.rmtree(out_src, ignore_errors=True)
     os.makedirs(out_src)
     rename = lambda text: re.sub(r"\b(ami_[a-z0-9_]+?)(?=\.\d|\b)", lambda m: m[1] + suffix, text)
-    dats = sorted({p for g in ROUND_DATS for p in glob.glob(os.path.join(ROOT, "src", g + ".dat"))})
+    dats = sorted({p for g in FAMILIES[FAMILY]["dats"] for p in glob.glob(os.path.join(ROOT, "src", g + ".dat"))})
     sheets = set()
     names = []
     for d in dats:
@@ -329,7 +383,7 @@ def _pack(n):
             src = os.path.join(ROOT, "src", s + ".png")
         shutil.copy(src, os.path.join(out_src, s + suffix + ".png"))
     os.makedirs(os.path.join(ROOT, "rounds"), exist_ok=True)
-    out = os.path.join(ROOT, "rounds", f"ami_round{n}.pak")
+    out = pak_path(n)
     r = subprocess.run(["makeobj", "pak256", out, *names], cwd=out_src, capture_output=True, text=True,
                        encoding="utf8", errors="replace")
     text = r.stdout + r.stderr
@@ -343,8 +397,13 @@ if __name__ == "__main__":
     try:
         import bpy  # noqa: F401
     except ImportError:
-        _pack(sys.argv[1])
+        if sys.argv[1] == "--targets":
+            sys.path.insert(0, _HERE)
+            names = [os.path.basename(p)[:-4] for p in sorted(glob.glob(os.path.join(ROOT, "src", "*.png")))]
+            print(" ".join(ROUND_TARGETS if FAMILY == "rail_ballast" else family_targets(names)))
+        else:
+            _pack(sys.argv[1])
     else:
         sys.path.insert(0, _HERE)
         sys.path.insert(0, os.path.join(_HERE, "..", "..", "..", "tools", "blender"))
-        _render(os.environ["AMI_ROUND"])
+        (_render if FAMILY == "rail_ballast" else _render_family)(os.environ["AMI_ROUND"])

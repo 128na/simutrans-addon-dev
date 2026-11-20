@@ -36,17 +36,17 @@ description: できあがった way アドオン（線路・道路と、その�
 
 ### 3. 葉ごとに試す
 
-1. ラウンドの版の設定に、葉ごとの試しの鍵（例: `7snow3`・`7endtrim3`）を足す。AMI は `addons/ami/blender/round.py` の `ROUND_SETTINGS`。**土台は今の本番の `render.py`。** 本番に入れ済みのラウンドの設定を重ねると二重にかかる（`round.py` の冒頭に書いてある）
-2. 鍵を指定して、その葉に関係するシートだけ描く（AMI は `AMI_ROUND=<鍵> python -X utf8 ../../tools/blender/render_parallel.py --entry blender/round.py <対象>`）
+1. ラウンドの版の設定に、葉ごとの試しの鍵（例: `7snow3`・`7endtrim3`）を足す。AMI は系統（`AMI_FAMILY`。`rail_ballast`・`rail_slab`・`tram`・`road`）ごとに分かれ、在来線は `addons/ami/blender/round.py` の `ROUND_SETTINGS`、ほかは `blender/round_<系統>.py` の `ROUND_SETTINGS` と `apply`。**土台は今の本番の `render.py`。** 本番に入れ済みのラウンドの設定を重ねると二重にかかる（`round.py` の冒頭に書いてある）。共有の `sheetlib` の値をモジュールごと書き換えない
+2. 鍵を指定して、その葉に関係するシートだけ描く（AMI は `AMI_FAMILY=<系統> AMI_ROUND=<鍵> python -X utf8 ../../tools/blender/render_parallel.py --entry blender/round.py <対象>`。系統の対象は `AMI_FAMILY=<系統> python -X utf8 blender/round.py --targets`）
 3. 前の版と同じセルを並べ、最近傍で 4〜10 倍に拡大して比べる（`zoom.py`、`hcat.py`）。地面の色の背景（雪なら地面の雪の色）に置いて見る
 4. 葉ごとに「採る／採らない」と理由を一言で決める。採らない試しも記録に残す（寸法で直らないと分かったことも知見）
 
 ### 4. ラウンドの版を作って撮る
 
-1. 採った葉を合わせたラウンドの設定（`ROUND_SETTINGS["<n>"]`）で対象一式を描き、pak にする（AMI は `python -X utf8 blender/round.py <n>` で `rounds/ami_round<n>.pak`）
-2. 見本をゲームで撮る（AMI は `SUFFIX=_round<n> EXTRA_PAKS=rounds/ami_round<n>.pak bash ingame/sample_parallel.sh`。208 画面）。種類違い（AMI はスラブ軌道の `TRACK=`）にも効く変更なら、その見本も撮る
+1. 採った葉を合わせたラウンドの設定（`ROUND_SETTINGS["<n>"]`）で対象一式を描き、pak にする（AMI は `AMI_FAMILY=<系統> python -X utf8 blender/round.py <n>` で `rounds/ami_<系統>_round<n>.pak`。在来線だけ `rounds/ami_round<n>.pak`）。ラウンド 0 は描かずに pak だけ作る（今の `src/` の絵）
+2. 見本をゲームで撮る（AMI は `SUFFIX=_round<n> EXTRA_PAKS=<ラウンドの pak> bash ingame/sample_parallel.sh`、見本は `NUT=` で系統のものを選ぶ。見本が `SUFFIX` を引けないときは、`sample.nut` の `wdx` と同じ作りを足す）。種類違い（AMI はスラブ軌道の `TRACK=`）にも効く変更なら、その見本も撮る
 3. 前のラウンドの画面と画素で比べ、違いが出た区画だけを拡大して見る。変えていない区画に差が出たら、共通部品の巻き添えを疑う
-4. くどさを撮って測る: 前のラウンドと今のラウンドを並べて `ingame/calib_capture.sh`（`WAYS_NUT`・`PAKS`・`PORT`）、`busy_measure.py` で測る。判定と雪の扱いはリファレンス 11 章
+4. くどさを撮って測る: 前のラウンドと今のラウンドを並べて `ingame/calib_capture.sh`（`WAYS_NUT`・`PAKS`・`PORT`、見本は `NUT=`）、`busy_measure.py` で測る。判定と雪の扱いはリファレンス 11 章。物差しの境は在来線の温暖の絵で合わせたもので、ほかの way には前のラウンドからの動きと手本の幅で判定し、「物差しが無い」ことを判断できない点として報告する
 
 ### 5. 評価する
 
@@ -78,5 +78,11 @@ description: できあがった way アドオン（線路・道路と、その�
 
 ## ゲームを動かすときの決まり
 
-- 起動・操作はスクリプトと MCP だけで行う。撮影用のゲームは別のポート（例: 47125）で起動し、閉じる前にプロセスの実行ファイルの場所が検証用のフォルダの中であることを確かめる。ユーザーが遊んでいるゲーム（別のポート）は止めない
-- 検証用のフォルダの `addons/` に入れたラウンドの pak は、撮り終えたら消す。置いたもの・消したものはユーザーに報告する
+- 起動・操作はスクリプトと MCP だけで行う。ユーザーが遊んでいるゲーム（別のポート）は止めない
+- AMI の `sample_parallel.sh`・`calib_capture.sh` は、検証用のフォルダの写し（`work/parallel/`・`work/calib_game/`）でゲームを起動し、撮り終えたら閉じて写しを消す。検証用のフォルダには書き込まない。手でゲームを閉じるときは、プロセスの実行ファイルの場所が写しの中であることを確かめてから閉じる
+- 検証用のフォルダに何かを置いたときは、置いたもの・消したものをユーザーに報告する
+
+## 系統を並べて回すとき
+
+- 系統ごとに別のセッション（別の worktree）で回してよい。各セッションが書くのは、自分の系統のラウンドの設定・見本・記録・画像だけにする。本番の `render.py`・共有の `sheetlib`・README・リファレンスは、本番に入れる段で 1 つずつ直す
+- 同時に動かすときは、描く数と台数とポートを分ける: `SHEET_JOBS`（描く Blender の数）、`sample_parallel.sh` の `JOBS`（ゲームの台数）と `BASE_PORT`（`JOBS` 以上離す）、`calib_capture.sh` の `PORT`。合計が CPU のスレッド数を大きく超えないようにする
