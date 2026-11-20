@@ -52,6 +52,19 @@ ROUND_SETTINGS.update({
     # ラウンド 2: T字の穴を埋め（2gore）、縁の帯を暗く（2edged）。目地は 1px に満たず見えないので採らない
     "2": dict(_R1, gore=True, edge_rgb=(0.66, 0.65, 0.61)),
 })
+_R2 = ROUND_SETTINGS["2"]
+ROUND_SETTINGS.update({
+    # ラウンド 3: 汚れの帯（さび 2 本 rust0・rust1、油 oil）。今はレールの周りの床が、帯の重なりでレールの間ほど暗い
+    #   nowear: 帯を全部描かない（汚れの帯の効きを見る）。oiloff: 油を描かない。rust0off: 外の広いさびを描かない。
+    #   tight: さびを溝の内（車輪のフランジの当たる所）と頭の外のすぐ脇の細い帯 1 本に寄せる（rust1 を細く濃く、rust0 なし）
+    "3nowear": dict(_R2, drop=("rust0", "rust1", "oil")),
+    "3oiloff": dict(_R2, drop=("oil",)),
+    "3rust0off": dict(_R2, drop=("rust0",)),
+    "3tight": dict(_R2, drop=("rust0",), wear={"rust1": ((0.40 - 0.14 - 0.06, 0.54 + 0.08), 0.85)}),
+    # ラウンド 3: 油の帯を描かない（= 3oiloff）。電車は油を落とさず、レールの間だけが暗い理由が無い。くどさは線を除いて細かさ 0.0484 → 0.0520・
+    # 孤立点 9.09 → 11.65。帯を全部消す 3nowear は、床のまだらがむき出しになり孤立点が 33.6 に上がった（汚れの帯がまだらをならしている）
+    "3": dict(_R2, drop=("oil",)),
+})
 
 
 def apply(cfg, n, R, render):
@@ -85,12 +98,61 @@ def apply(cfg, n, R, render):
     if "rail_mat" in cfg:  # (色, 粗さ, 金属)。本番は金属 0.8 で、環境を映して暗く写る
         rail_mat = ("tram_rail" + tag,) + tuple(cfg["rail_mat"])
 
+    hf = cfg.get("hdiag", 1.0)
+    gf = cfg.get("hdiag_groove", hf)  # 溝の倍率（無ければ頭と同じ）
+
+    def widen(t, f=None):
+        """経路の向き t での、頭と溝の幅の倍率。画面で横向きの斜め（北西–南東の向き）で hf、軸の向きと縦向きの斜めで 1。
+        横向きの斜めでは、経路に直角な向きが画面の縦になり、1 単位が約 4.5px（直線・縦向きの斜めは約 9px）で、頭と溝が 1px に満たず
+        消える（diag_nw・diag_se・close1 と、曲線の中ほど）。曲線は点ごとの向きで倍率を変える"""
+        f = hf if f is None else f
+        if f == 1.0:
+            return 1.0
+        h = max(0.0, 2 * t.x * t.y / max(t.length_squared, 1e-12))
+        return 1.0 + (f - 1.0) * h
+
+    def var_sweep(path, section):
+        """core.sweep と同じ押し出しで、断面を点ごとの向き t から section(t) で決める"""
+        rings = []
+        for i, p in enumerate(path):
+            a_ = path[max(i - 1, 0)]
+            b_ = path[min(i + 1, len(path) - 1)]
+            t = (b_ - a_).normalized()
+            nv = Vector((t.y, -t.x, 0))
+            rings.append([Vector((p.x, p.y, 0)) + nv * u + Vector((0, 0, v)) for u, v in section(t)])
+        k_ = len(rings[0])
+        verts = [v for ring in rings for v in ring]
+        faces = []
+        for i in range(len(rings) - 1):
+            for j in range(k_):
+                j2 = (j + 1) % k_
+                faces.append((i * k_ + j, i * k_ + j2, (i + 1) * k_ + j2, (i + 1) * k_ + j))
+        faces.append(tuple(reversed(range(k_))))
+        last = (len(rings) - 1) * k_
+        faces.append(tuple(last + j for j in range(k_)))
+        return verts, faces
+
+    def head_span(t):
+        """レールの頭の (u0, u1)。頭の中心のまま、幅を widen(t) 倍にする"""
+        c, h = (rail_in + rail_out) / 2, (rail_out - rail_in) / 2 * widen(t)
+        return c - h, c + h
+
     def rail_shape(side):
         def shape(path, k):
-            a, b = rail_in * k, rail_out * k
-            sec = TM._section(-b, -a, TM.TRAM_RAIL_Z0, TM.TRAM_RAIL_Z1) if side < 0 else TM._section(a, b, TM.TRAM_RAIL_Z0, TM.TRAM_RAIL_Z1)
-            return TM.sweep(path, sec)
+            def section(t):
+                a, b = (u * k for u in head_span(t))
+                return TM._section(-b, -a, TM.TRAM_RAIL_Z0, TM.TRAM_RAIL_Z1) if side < 0 else TM._section(a, b, TM.TRAM_RAIL_Z0, TM.TRAM_RAIL_Z1)
+            return var_sweep(path, section)
         return shape
+
+    def groove_shape(path, k):
+        def side_section(sg):
+            def section(t):
+                a, _ = head_span(t)
+                w = groove_w * widen(t, gf)
+                return [(sg * u, z) for u, z in TM._section((a - w) * k, a * k, TM.TRAM_GROOVE_Z, TM.TRAM_GROOVE_Z + TM.TRAM_TH)][::sg]
+            return section
+        return R.merge([var_sweep(path, side_section(sg)) for sg in (1, -1)])
 
     gz = TM.TRAM_GROOVE_Z
     parts = [
@@ -165,8 +227,7 @@ def apply(cfg, n, R, render):
         gmat = ("tram_gore_dbg", (1.0, 0.0, 0.0), 0.9) if cfg.get("gore_debug") else m_bed
         parts.append(R.Part("tram_gore", "tram_bed", "bed", gmat, gore, centre=False))
     if groove_w > 0:
-        parts.append(replace(base["tram_groove"], material=m_groove,
-                             shape=TM._pair_shape(rail_in - groove_w, rail_in, gz, gz + TM.TRAM_TH)))
+        parts.append(replace(base["tram_groove"], material=m_groove, shape=groove_shape))
     if seam_w > 0:
         parts.append(replace(base["tram_seam"], material=m_groove,
                              shape=TM._pair_shape(rail_out, rail_out + seam_w, gz, gz + TM.TRAM_TH)))
