@@ -16,6 +16,9 @@ apply(cfg, n, R, render): 描く前に、render.py の設定（R.TRACK_PROFILES 
     snow_parts  True: 雪の絵で、締結装置と突起も雪にする（レールだけが出る）
     bed_rgb     コンクリート道床の色（暗い側, 明るい側。sheetlib の SLAB_BED_LO・HI は 0.30〜0.38）
     bed_u       コンクリート道床の (下面, 上面) の半幅（sheetlib は 1.72・1.68。在来線の道床の下面は 1.9）
+    joint       (線路に沿う幅, 色): スラブの継ぎ目に、スラブの幅いっぱいの暗い帯を載せる（継ぎ目を見せる）
+    wear_centre (半幅, 寄せ具合の倍率): さびの帯 2 本ずつを描かず、レールの間の油の帯をこの半幅に広げる
+    slab_rgb    軌道スラブの色（暗い側, 明るい側。sheetlib の SLAB_LO・HI は 0.60〜0.68）
 """
 import dataclasses
 
@@ -38,6 +41,8 @@ ROUND_SETTINGS = {
 # ラウンド 1 の組み合わせの候補: 1rail + 1wear + 1bed + 1snow2（締結装置の誇張は採らない）。1b は汚れの帯なし
 _R1 = {"rail": True, "bed_rgb": ((0.20, 0.20, 0.20), (0.27, 0.27, 0.26)), "bed_u": (1.9, 1.85),
        "snow_clean": True, "snow_rgb": (0.945, 0.945, 1.0), "snow_parts": True}
+# ラウンド 2（土台は 1）: スラブ軌道らしさの葉。2joint: 継ぎ目を暗い帯で見せる（すき間 0.2 は約 1.4px で読めない）。
+#   2jointl: 継ぎ目を道床の色で細く。2wearc: さびの帯をやめ、レールの間をくすませる（ブレーキの粉）。2slab: スラブを明るい新しいコンクリートの色に
 # 1rail は孤立点を 30 → 37 に上げた（明るいスラブの上の 1px の明るい頭が、画面の 2:1 の斜めで点線になる）。1railnh: 頭の帯なし
 ROUND_SETTINGS.update({
     "1railnh": {"rail": True, "rail_head": False},
@@ -107,6 +112,22 @@ def apply(cfg, n, R, render):
                 snow.update({k: s for k in ("oil", "rust0", "rust1", "sleeper_rust")})
         elif cfg.get("snow_clean"):
             snow.update({k: R.SNOW_SKIN["ballast"] for k in ("oil", "rust0", "rust1", "sleeper_rust")})
+        if "joint" in cfg:
+            w, rgb = cfg["joint"]
+            parts.append(R.Part("slab_joint", "rail", "gauge", ("slab_joint", rgb), _joint_shape(SP, R, w), centre=False))
+            snow.setdefault("slab_joint", snow.get("slab", R.SNOW_SKIN["ballast"]))
+        if "wear_centre" in cfg:
+            u, f = cfg["wear_centre"]
+            for name in ("rust0", "rust1"):
+                rep[name] = dataclasses.replace(rep[name], shape=lambda path, k: None)
+            name, _, (lo, hi), t, _ = next(w for w in R.TRACK_WEAR if w[0] == "oil")
+            t = t * SP.SLAB_WEAR_K * f
+            i = [w[0] for w in R.TRACK_WEAR].index("oil")
+            rep["oil"] = dataclasses.replace(
+                rep["oil"], material=R.track_noise(f"slab_oil_c_r{n}", R._mix(SP.SLAB_RGB, lo, t), R._mix(SP.SLAB_RGB, hi, t), 3.0),
+                shape=SP._wear_centre_shape(u, SP._wear_z(i)))
+        if "slab_rgb" in cfg:
+            skin["slab"] = R.track_noise(f"slab_r{n}", *cfg["slab_rgb"], SP.SLAB_GRAIN)
         if cfg.get("snow_parts"):
             s_ = snow.get("slab", R.SNOW_SKIN["ballast"])
             snow.update(slab_stud=s_, slab_fastener=s_)
@@ -124,3 +145,28 @@ def _bed_shape(SP, R, bu, tu, beyond):
             pts = SP._slice(path, *SP._extent(path, SP.SLAB_BED_PAD))
         return R.sweep(pts, [(-bu * k, 0.0), (bu * k, 0.0), (tu * k, SP.SLAB_BED_H), (-tu * k, SP.SLAB_BED_H)])
     return shape
+
+
+def _joint_shape(SP, R, w):
+    """スラブの継ぎ目（sheetlib の _layout の継ぎ目の位置）に、スラブの幅いっぱい・線路に沿う幅 w の薄い板。汚れの帯の上に載せる。"""
+    import math
+    z = SP._wear_z(len(R.TRACK_WEAR) + 1)
+
+    def shape(path, k):
+        out = []
+        for s in SP._layout(path)[0]:
+            p, d = SP._point(path, s)
+            out.append(R.box(p.x, p.y, z, w, 2 * SP.SLAB_U * k, SP.WEAR_TH, rot=math.atan2(d.y, d.x)))
+        return R.merge(out) if out else None
+    return shape
+
+_R2 = ROUND_SETTINGS["1"]
+ROUND_SETTINGS.update({
+    "2joint": dict(_R2, joint=(0.30, (0.12, 0.12, 0.12))),
+    "2jointl": dict(_R2, joint=(0.20, (0.24, 0.24, 0.23))),
+    "2wearc": dict(_R2, wear_centre=(0.36, 0.8)),
+    "2slab": dict(_R2, slab_rgb=((0.68, 0.68, 0.65), (0.76, 0.76, 0.73))),
+})
+ROUND_SETTINGS["2c"] = dict(_R2, joint=(0.30, (0.12, 0.12, 0.12)), wear_centre=(0.36, 0.8))
+# ラウンド 2 = 2joint（記録 docs/records/2026-11-20_ami-slab-refine-round2.md）。2wearc・2c は孤立点が上がり、採らない
+ROUND_SETTINGS["2"] = ROUND_SETTINGS["2joint"]
