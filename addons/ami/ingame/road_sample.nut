@@ -27,6 +27,9 @@
 //   偽（今）: 分岐の絵が無いので、自動選択（H）・固定（I）・隣り合う十字（L）がどれも通常の T字・十字と同じ絵なら ok
 //   真: H の自動選択の絵が I の選択 2 と同じで通常の T字と違えば ok、I の選択 1 と 2 が同じなら same12、L の十字が T字の「2」なら t2
 local ROADS = ["ami_road_local", "ami_road_general", "ami_road_expressway"];
+// ラウンドの版（#56）: AMI の名前（ami_ で始まるもの）の末尾に付ける。例: "_round1"。空なら今の名前（sample_parallel.sh の SUFFIX が置き換える）
+local SUFFIX = "";
+function wdx(n) { return way_desc_x(n.find("ami_") == 0 ? n + SUFFIX : n); }
 local SWITCH_IMAGES = false;  // dat に分岐の絵（switch 画像 1・2）があるか（ami_dat.py の ROAD_SWITCH_IMAGES と同じにする）
 local STANDARD = "Road_050";   // 区画 K でつなぐ pak128 標準の道路
 local ORIGINS = [[20, 20], [276, 20]];
@@ -58,7 +61,7 @@ try { pin = command_x(tool_set_switch_image); } catch (e) { pin = null; }
 local PINS = [["nse", "ns", 1, 0], ["new", "ew", 0, -1], ["nsw", "ns", -1, 0], ["sew", "ew", 0, 1], ["nsew", "ns", 0, 0]];
 
 function lay(name, ox, oy) {
-  local w = way_desc_x(name);
+  local w = wdx(name);
   if (w == null) return name + " desc=[missing]\n";
   local c = function(x, y, z = 0) { return coord3d(ox + x, oy + y, z); };
   local line = function(x0, y0, x1, y1) { return command_x.build_way(pl, c(x0, y0), c(x1, y1), w, true); };

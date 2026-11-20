@@ -69,9 +69,20 @@ def _bed_shape(path, k):
     return sweep(path, [(u * k, v) for u, v in BALLAST])
 
 
-def _sleeper_shape(path, k):
-    boxes = [box(p.x, p.y, SLEEPER_Z, SLEEPER_W, SLEEPER_LEN * k, SLEEPER_H, rot=ang) for p, ang in along(path, SLEEPER_PITCH, SLEEPER_FIRST)]
-    return merge(boxes) if boxes else None
+def _sleeper_at(pitch, first):
+    """まくらぎの間隔と最初の位置（無ければ、描くときの SLEEPER_PITCH・SLEEPER_FIRST）。"""
+    return (SLEEPER_PITCH if pitch is None else pitch), (SLEEPER_FIRST if first is None else first)
+
+
+def sleeper_shape(pitch=None, first=None):
+    """まくらぎの形。pitch・first はまくらぎの間隔と、経路の始点から最初のまくらぎまで（アドオンが replace で変える。無ければ既定）。"""
+    def shape(path, k):
+        boxes = [box(p.x, p.y, SLEEPER_Z, SLEEPER_W, SLEEPER_LEN * k, SLEEPER_H, rot=ang) for p, ang in along(path, *_sleeper_at(pitch, first))]
+        return merge(boxes) if boxes else None
+    return shape
+
+
+_sleeper_shape = sleeper_shape()
 
 
 def _rail_shape(side):
@@ -164,13 +175,13 @@ def _wear_strip_shape(u0, u1, z, th):
     return lambda path, k: strip(_trim_inner_ends(path), k)
 
 
-def _sleeper_patch_shape(u0, u1):
-    """まくらぎの上面の薄い板（経路の中心から u0〜u1、左右に 1 枚ずつ）。まくらぎと同じ間隔に並べる（間では浮かない）。"""
+def _sleeper_patch_shape(u0, u1, pitch=None, first=None):
+    """まくらぎの上面の薄い板（経路の中心から u0〜u1、左右に 1 枚ずつ）。まくらぎと同じ間隔に並べる（間では浮かない。pitch・first は sleeper_shape と同じ）。"""
     z = SLEEPER_Z + SLEEPER_H / 2 + 0.002
 
     def shape(path, k):
         out = []
-        for p, ang in along(path, SLEEPER_PITCH, SLEEPER_FIRST):
+        for p, ang in along(path, *_sleeper_at(pitch, first)):
             n = Vector((-math.sin(ang), math.cos(ang)))
             for sg in (1, -1):
                 c = p + n * (sg * (u0 + u1) / 2 * k)
@@ -229,14 +240,21 @@ def _inner(p):
     return max(abs(p.x), abs(p.y)) < TILE / 2 - 0.01
 
 
-def bed_to_edge_shape(path, k):
-    """道床の形（_bed_shape と同じ断面）。行き止まりの経路（始点だけがタイルの中）では、始点を経路の逆向きにタイルの端まで延ばす
-    （道床がレールの末端より奥まで続く）。1 タイルだけの軌道（両端がタイルの中）と、通り抜ける経路はそのまま。"""
-    if len(path) >= 2 and _inner(path[0]) and not _inner(path[-1]):
-        d = (path[1] - path[0]).normalized()
-        reach = (TILE / 2 + Vector((path[0].x, path[0].y)).dot(d.to_2d())) / max(abs(d.x), abs(d.y))  # 始点から逆向きのタイルの端まで
-        path = [path[0] - d * (reach + 0.5)] + list(path)
-    return _bed_shape(path, k)
+def bed_to_edge(section=None, beyond=0.5):
+    """道床の形（断面 section。無ければ BALLAST）。行き止まりの経路（始点だけがタイルの中）では、始点を経路の逆向きにタイルの端から
+    beyond 先まで延ばす（道床がレールの末端より奥まで続く）。1 タイルだけの軌道（両端がタイルの中）と、通り抜ける経路はそのまま。
+    beyond は数か、経路の向き d（行き止まりの端からタイルの中へ）を受けて数を返す関数。行き止まりの端に壁を立てる版は、端の壁の
+    内側の面で止める（タイルの外まで延ばすと、基準面の分だけ手前へ動いた道床が、端の壁の外の面の下にのぞいた。AMI #44 の 7 番、2026-11-20）"""
+    def shape(path, k):
+        if len(path) >= 2 and _inner(path[0]) and not _inner(path[-1]):
+            d = (path[1] - path[0]).normalized()
+            reach = (TILE / 2 + Vector((path[0].x, path[0].y)).dot(d.to_2d())) / max(abs(d.x), abs(d.y))  # 始点から逆向きのタイルの端まで
+            path = [path[0] - d * (reach + (beyond(d) if callable(beyond) else beyond))] + list(path)
+        return sweep(path, [(u * k, v) for u, v in (BALLAST if section is None else section)])
+    return shape
+
+
+bed_to_edge_shape = bed_to_edge()
 
 
 def _edge_reach(path):

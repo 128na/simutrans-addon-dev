@@ -3,6 +3,7 @@
 # 使い方（アドオンのディレクトリで。python -X utf8 build.py で dist/ami.pak を作っておく）:
 #   GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> TRACK=ami_rail_slab bash ingame/sample_parallel.sh
 # 台数は JOBS（既定 8）、出力先は OUT（既定 work/sample）。PAK・NUT・TRACK・SAVE・SPOTS・ZOOM は sample_check.sh・sample_capture.sh と同じ。
+# ラウンドの版（#56）を撮るときは、EXTRA_PAKS（空白区切り）でその pak を足し、SUFFIX（例: _round1）で sample.nut の SUFFIX を替える。
 # SEASONS（既定は温暖側と降雪側の「名前:原点 x:原点 y」2 つ）を渡すと、その原点だけ撮る（温暖側だけの見本は SEASONS=temperate:20:20）。
 # ゲームは work/parallel/<BASE_PORT>/ の写しで起動し、撮り終えたら閉じて写しも消す。GAME_DIR には書き込まない。
 # 同じフォルダで同時に起動すると settings.xml が消えることがある（docs/reference/way-addon.md の 8.2）ので、GAME_DIR では起動しない。
@@ -51,6 +52,7 @@ for d in config font themes text script music pak128 addons; do
 done
 cp "$GAME_DIR/save/$SAVE.sve" "$BASE/save/" || exit 1
 cp "$PAK" "$BASE/addons/pak128/ami.pak" || exit 1
+for p in ${EXTRA_PAKS:-}; do cp "$p" "$BASE/addons/pak128/$(basename "$p")" || exit 1; done
 for ((i = 0; i < JOBS; i++)); do
   D="$WORK/$i"; mkdir "$D"
   for e in "$BASE"/*; do [ "$(basename "$e")" = config ] || cp -al "$e" "$D/" || exit 1; done
@@ -61,7 +63,12 @@ for ((i = 0; i < JOBS; i++)); do
 done
 
 TRACK_SED=${TRACK:+s/^local TRACK = .*/local TRACK = \"$TRACK\";/}
-SCRIPT=$(sed -e 's/\r$//' -e 's/^[[:space:]]*//' -e '/^\/\//d' -e '/^$/d' -e "${TRACK_SED:-b}" "$NUT")
+SUFFIX_SED=${SUFFIX:+s/^local SUFFIX = .*/local SUFFIX = \"$SUFFIX\";/}
+# 置き換えは渡されたものだけを足す（無いときに b を渡すと、sed は残りの置き換えを飛ばす）
+SED_ARGS=()
+[ -n "$TRACK_SED" ] && SED_ARGS+=(-e "$TRACK_SED")
+[ -n "$SUFFIX_SED" ] && SED_ARGS+=(-e "$SUFFIX_SED")
+SCRIPT=$(sed -e 's/\r$//' -e 's/^[[:space:]]*//' -e '/^\/\//d' -e '/^$/d' "${SED_ARGS[@]}" "$NUT")
 OUT_ABS=$(cd "$OUT" && pwd -W)
 ALL=()
 for season in ${SEASONS:-temperate:20:20 snow:276:20}; do for spot in $SPOTS; do ALL+=("$season/$spot"); done; done

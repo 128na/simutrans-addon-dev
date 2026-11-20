@@ -181,15 +181,21 @@ def _cylinder(c, r, z0, z1):
     return verts, faces
 
 
-def _bed_shape(path, k):
-    """コンクリート道床。行き止まりはタイルの端まで、1 タイルだけの軌道は突起の外まで敷く。"""
-    edge = _edge_reach(path)
-    if edge is not None:
-        reach, d = edge
-        pts = [path[0] - d * (reach + 0.5)] + list(path)
-    else:
-        pts = _slice(path, *_extent(path, SLAB_BED_PAD))
-    return sweep(pts, [(-SLAB_BED_U * k, 0.0), (SLAB_BED_U * k, 0.0), (SLAB_BED_TOP_U * k, SLAB_BED_H), (-SLAB_BED_TOP_U * k, SLAB_BED_H)])
+def slab_bed_shape(beyond=0.5):
+    """コンクリート道床。行き止まりはタイルの端から beyond 先まで（数か、経路の向き d を受ける関数。track_parts の bed_to_edge と同じ）、
+    1 タイルだけの軌道は突起の外まで敷く。"""
+    def shape(path, k):
+        edge = _edge_reach(path)
+        if edge is not None:
+            reach, d = edge
+            pts = [path[0] - d * (reach + (beyond(d) if callable(beyond) else beyond))] + list(path)
+        else:
+            pts = _slice(path, *_extent(path, SLAB_BED_PAD))
+        return sweep(pts, [(-SLAB_BED_U * k, 0.0), (SLAB_BED_U * k, 0.0), (SLAB_BED_TOP_U * k, SLAB_BED_H), (-SLAB_BED_TOP_U * k, SLAB_BED_H)])
+    return shape
+
+
+_bed_shape = slab_bed_shape()
 
 
 def _fill_shape(path, k):

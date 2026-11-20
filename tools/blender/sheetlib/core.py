@@ -1,4 +1,5 @@
 """設定値・シーン・材質・形の部品（箱・掃引・経路）・基準面と部品の型・形を切る/傾ける操作（共通の描画の道具 sheetlib の一部。tools/README.md）。"""
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Callable
 import math
@@ -130,8 +131,10 @@ def set_anchor(tile_center_y):
     bpy.context.scene.camera.data.shift_y = (tile_center_y - CELL / 2) / CELL
 
 
-def noisy_material(name, rgb_a, rgb_b, scale=40.0, rough=0.8, emit=0.0, spec=None):
-    """2色をノイズで混ぜた材質（石畳・アスファルトのまだら模様）。emit は明るさの底上げ。"""
+def noisy_material(name, rgb_a, rgb_b, scale=40.0, rough=0.8, emit=0.0, spec=None, ramp=(0.35, 0.65)):
+    """2色をノイズで混ぜた材質（石畳・アスファルトのまだら模様）。emit は明るさの底上げ。
+    ramp は色の段の位置（ノイズの値がここより下で rgb_a、上で rgb_b）。ノイズの値はほとんど 0.4〜0.6 に入るので、
+    狭めるほど 2 色に分かれて粒がはっきりする（AMI の道路の路面は 0.47〜0.53。docs/records/2026-11-20_ami-road-refine-round1.md）"""
     if name in bpy.data.materials:
         return bpy.data.materials[name]
     m = bpy.data.materials.new(name)
@@ -141,10 +144,11 @@ def noisy_material(name, rgb_a, rgb_b, scale=40.0, rough=0.8, emit=0.0, spec=Non
     noise = nt.nodes.new("ShaderNodeTexNoise")
     noise.inputs["Scale"].default_value = scale
     noise.inputs["Detail"].default_value = 2.0
+    ramp_lo, ramp_hi = ramp
     ramp = nt.nodes.new("ShaderNodeValToRGB")
-    ramp.color_ramp.elements[0].position = 0.35
+    ramp.color_ramp.elements[0].position = ramp_lo
     ramp.color_ramp.elements[0].color = (*rgb_a, 1)
-    ramp.color_ramp.elements[1].position = 0.65
+    ramp.color_ramp.elements[1].position = ramp_hi
     ramp.color_ramp.elements[1].color = (*rgb_b, 1)
     nt.links.new(noise.outputs["Fac"], ramp.inputs["Fac"])
     nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
@@ -157,6 +161,46 @@ def noisy_material(name, rgb_a, rgb_b, scale=40.0, rough=0.8, emit=0.0, spec=Non
     return m
 
 
+def brick_material(name, rgb, mortar, scale):
+    """敷石の材質: Blender の Brick テクスチャ（物の座標。タイルをまたいでも目地がそろう）。rgb は敷石の色（もう一方の敷石は 0.85 倍）、
+    mortar は目地の色、scale は Brick の Scale（AMI の歩道は 0.6 で、敷石が約 6 x 3px）"""
+    if name in bpy.data.materials:
+        return bpy.data.materials[name]
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    tc = nt.nodes.new("ShaderNodeTexCoord")
+    br = nt.nodes.new("ShaderNodeTexBrick")
+    br.inputs["Scale"].default_value = scale
+    br.inputs["Color1"].default_value = (*rgb, 1)
+    br.inputs["Color2"].default_value = (*(x * 0.85 for x in rgb), 1)
+    br.inputs["Mortar"].default_value = (*mortar, 1)
+    br.inputs["Mortar Size"].default_value = 0.03
+    nt.links.new(tc.outputs["Object"], br.inputs["Vector"])
+    nt.links.new(br.outputs["Color"], bsdf.inputs["Base Color"])
+    bsdf.inputs["Roughness"].default_value = 0.9
+    return m
+
+
+# 材質の名前による差し替え（material() に渡す名前 → 材質を返す関数）。シートを描く関数（road_sheet・tunnel_sheet・pier_sheet）が、
+# 描き分けの辞書の "mat_skin" を named_materials で描くあいだだけ入れる。壁・基盤・躯体・橋脚は形を作る関数の中で material(*組) を
+# 呼ぶので、部品の名前の skin では届かない（AMI の道路一式のコンクリートの質感。docs/records/2026-11-20_ami-road-refine-production.md）。
+# 差し替えた材質には元と別の名前を付ける（同じプロセスで後に描くシートが、名前で同じ材質を拾わないように）
+_MAT_SKIN = {}
+
+
+@contextmanager
+def named_materials(table):
+    """with の中だけ、material() の名前による差し替え（table。None・空なら何もしない）を入れる。"""
+    global _MAT_SKIN
+    prev, _MAT_SKIN = _MAT_SKIN, dict(table or {})
+    try:
+        yield
+    finally:
+        _MAT_SKIN = prev
+
+
 # 実行のモード（sheet_settings.py。環境変数で決まる）
 LAYOUT = sheet_settings.LAYOUT
 ONLY = sheet_settings.ONLY
@@ -167,6 +211,8 @@ def material(name, rgb, rough=0.8, metal=0.0, emit=0.0, special=None):
     プレーヤーカラーは光の当たり方で8段階のどれかを選ぶので、rgb は灰色にしておくと明暗がそのまま段階になる。"""
     if LAYOUT:
         return layout_material(name)
+    if name in _MAT_SKIN:
+        return _MAT_SKIN[name]()
     if name in bpy.data.materials:
         return bpy.data.materials[name]
     m = bpy.data.materials.new(name)
@@ -357,7 +403,8 @@ def make_material(spec, part=None):
 # 雪の絵（dat の image[..][1]）で差し替える材質。道床とまくらぎに雪が積もり、レールは見える
 _SNOW = ("snow", (0.90, 0.93, 0.97), 0.9)
 
-SNOW_SKIN = {"ballast": _SNOW, "sleeper": ("snow_sleeper", (0.80, 0.84, 0.90), 0.9), "base": _SNOW}
+# ballast_fill はまくらぎの間を埋めた砕石（AMI の在来線。#56）。道床と同じ雪にする
+SNOW_SKIN = {"ballast": _SNOW, "ballast_fill": _SNOW, "sleeper": ("snow_sleeper", (0.80, 0.84, 0.90), 0.9), "base": _SNOW}
 
 FLAT = {"bed": Datum(), "rail": Datum(), "slab_bed": Datum(), "tram_bed": Datum()}
 

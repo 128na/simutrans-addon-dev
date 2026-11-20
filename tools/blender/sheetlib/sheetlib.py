@@ -38,6 +38,7 @@ from .core import (  # noqa: F401
     material,
     merge,
     mesh_object,
+    named_materials,
     near_camera,
     recalc_normals,
     set_anchor,
@@ -167,7 +168,16 @@ ROAD_BASE_DROP = 0.05
 
 
 def road_sheet(style="street"):
+    """道路のシート（中身は _road_sheet）。描くあいだだけ、描き分けの "mat_skin"（無くてよい）で材質を名前で差し替える（core の named_materials）"""
+    with named_materials(ROAD_PROFILES[style].get("mat_skin")):
+        _road_sheet(style)
+
+
+def _road_sheet(style="street"):
     """道路のシート。style は ROAD_PROFILES の名前。プロファイルのキーのうち、無くてよいもの:
+    snow_skin: 雪の絵の材質の差し替え（部品の名前 → 材質）。ROAD_SNOW_SKIN（歩道・縁石と路肩の雪 snowbank）に重ねる。坑口（tunnel_sheet）も使う
+    mat_skin: 材質の名前（material() に渡す名前）→ 材質を返す関数。壁・基盤・躯体・橋脚など、部品の名前の skin で届かない材質を替える
+        （road_sheet が core の named_materials で入れる。坑口も使う）
     center: 中央線の種類。"solid"（実線。既定）・"dash"（破線。区切りはタイルの辺。tile_dashes）・None（中央線なし）
     switches: 真なら分岐の絵（OTRP の switch 画像。dat の image[nse1]〜image[nsew2]）を行 2・3 の列 10〜14 に描く（シートは 15 列）。
         expressway（歩道なし）の道路だけ。絵の中身は下の switch_lines
@@ -451,7 +461,7 @@ def road_sheet(style="street"):
     cells = {}
     # 行の並びは線路と同じ: 奥の絵 4 行 →（手前の絵 4 行。側壁の版）→ 雪の奥の絵 4 行 →（雪の手前の絵 4 行）。白線は雪に隠れるので描かない
     block = 8 if "front_row" in prof else 4
-    variants = [(0, "", {}, groups), (block, "_snow", ROAD_SNOW_SKIN, groups + ROAD_SNOW_GROUPS)]
+    variants = [(0, "", {}, groups), (block, "_snow", dict(ROAD_SNOW_SKIN, **prof.get("snow_skin", {})), groups + ROAD_SNOW_GROUPS)]
     wcells = {}
     if wall_only:
         variants = variants[:1]  # way-object には雪の絵が無い
@@ -899,6 +909,14 @@ def track_sheet(profile="new"):
                 opts = {i: (DIAG_WIDTHS, 2 if diag_of[id(p)] in ("diag_nw", "diag_se") else 1)
                         for i, p in enumerate(pths) if id(p) in diag_of}
                 out = assemble(ps, pths, prof["datums"], slope, **dict(kw, path_opts=opts or None))
+                # prof["cell_fills"]（無くてよい）: セルの経路全部から作る部品。(部品, make) の組で、make(経路の一覧) が形（path, k → 形）か
+                # None を返す。部品の基準面の部品が ps にあるときだけ作る（分岐の絵の走行面の組には入れない）。路面軌道の T字のすき間埋め
+                for fpart, make in prof.get("cell_fills", ()):
+                    if not any(p.datum == fpart.datum for p in ps):
+                        continue
+                    fshape = make(pths)
+                    if fshape is not None:
+                        out += assemble([replace(fpart, shape=fshape)], pths[:1], prof["datums"], slope, **dict(kw, path_opts=None))
                 for pname, spec in bed_fills.items() if opts else ():
                     layer = next((p for p in ps if p.name == pname), None)
                     if layer is None:
@@ -1023,7 +1041,8 @@ def track_sheet(profile="new"):
                                     badge=prof.get("badge", ICON_BADGE.get(prof.get("walls"))), band=prof.get("band"))
         cells[(0, 1)] = cells[(0, 2)]
     else:
-        cells[(0, 0)] = render_icon("track_icon", 0.5, shift=(-0.14, 0.2), label=prof.get("label", "100"))
+        # 一時ファイルの名前はシートごとに分ける（render_parallel で同時に描くと、同じ名前の一時ファイルを取り合って別のシートのアイコンが入った。2026-11-21）
+        cells[(0, 0)] = render_icon(prof.get("sheet", "track") + "_icon", 0.5, shift=(-0.14, 0.2), label=prof.get("label", "100"))
         cells[(0, 1)] = cells[(0, 2)]  # カーソルは ns と同じ絵
 
     rows = block * (2 if prof.get("snow") else 1)
@@ -1105,7 +1124,14 @@ def _pier_cell(cname, slope, cy=GROUND_CY):
 
 
 def pier_sheet(sheet, datums, label="P", across=PIER_SIZE * PIER_ACROSS_K, anchor=128 + BALLAST_DY, cy=GROUND_CY, top_drop=0.0,
-               diag_k=1.0, style="track"):
+               diag_k=1.0, style="track", mat_skin=None):
+    """橋脚の way のシート（中身は _pier_sheet）。mat_skin（無くてよい）は描くあいだだけの材質の名前による差し替え（road_sheet と同じ）"""
+    with named_materials(mat_skin):
+        _pier_sheet(sheet, datums, label, across, anchor, cy, top_drop, diag_k, style)
+
+
+def _pier_sheet(sheet, datums, label="P", across=PIER_SIZE * PIER_ACROSS_K, anchor=128 + BALLAST_DY, cy=GROUND_CY, top_drop=0.0,
+                diag_k=1.0, style="track"):
     """高架の真下の地面のタイルに敷く、橋脚の way のシート（AMI。ADR 0003）。セルの位置は線路の way と同じ（行 0〜3）。
     柱は経路の中ほど（直線・行き止まり・T字・十字はタイルの中心、斜めは斜めの部分の中ほど）の下に、線路を横切る向きに長く立つ。
     T字・十字は通り抜ける線（T字）・南北の線（十字）の向き。近い斜めの分け合うタイル（close1・close2）は 2 本の柱。
@@ -1385,6 +1411,13 @@ TUNNEL_RISE = 36      # 躯体の高さ（画面の px。持ち分を上へ広�
 
 
 def tunnel_sheet(kind="track", profile="new", sheet=None, label="100", road_profile="expressway"):
+    """坑口のシート（中身は _tunnel_sheet）。道路の坑口は、描くあいだだけ道路の描き分けの "mat_skin"（無くてよい）で材質を名前で差し替える"""
+    rp = (ROAD_PROFILES[road_profile] if isinstance(road_profile, str) else road_profile) if kind == "expressway" else {}
+    with named_materials(rp.get("mat_skin")):
+        _tunnel_sheet(kind, profile, sheet, label, road_profile)
+
+
+def _tunnel_sheet(kind="track", profile="new", sheet=None, label="100", road_profile="expressway"):
     """坑口 4 方向（kind: track・expressway）。profile は kind="track" のときの線路の描き分け（TRACK_PROFILES の名前。部品の差し替え replace と夏の材質 skin も使う）、
     road_profile は kind="expressway" のときの道路の描き分け（ROAD_PROFILES の名前か、その値の辞書。groups・skin・label・style を使う）、
     sheet はシート名（無ければ track_tunnel・expressway_tunnel）、label はアイコンの最高速度。pak128 では坑口は 2 段の坂にしか置けない（本体の tunnelbauer）。BackImage[N] は北が高い坂（南から入る）。シートは 行 0: 奥の絵、行 1: 手前の絵、行 2・3: 雪。"""
@@ -1415,7 +1448,8 @@ def tunnel_sheet(kind="track", profile="new", sheet=None, label="100", road_prof
     set_anchor(ROAD_CY if expwy else 128 + BALLAST_DY)
     cells = {}
     a0, a1 = -half + TUNNEL_FACE, half  # 坑口の面と、躯体の奥の端（経路に沿った位置）
-    for row0, skin in ((0, None), (2, ROAD_SNOW_SKIN if expwy else SNOW_SKIN)):
+    snow = dict(ROAD_SNOW_SKIN, **road_prof.get("snow_skin", {})) if expwy else SNOW_SKIN  # 雪の絵の材質は road_sheet と同じ
+    for row0, skin in ((0, None), (2, snow)):
         for name, (col, path, d, slope) in dirs.items():
             rot = math.atan2(d.y, d.x)
             c = d * ((a0 + a1) / 2)

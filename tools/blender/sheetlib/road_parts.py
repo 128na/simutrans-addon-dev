@@ -58,7 +58,8 @@ DIAG_EDGE = 1 / math.sqrt(2)
 
 
 # 道路の材質（まだらの材質は関数で渡す。make_material）
-_M_ROAD_ASPHALT = lambda: noisy_material("road_asphalt", (0.013, 0.0135, 0.015), (0.028, 0.029, 0.031), scale=60, rough=0.9)
+STREET_ASPHALT = ((0.013, 0.0135, 0.015), (0.028, 0.029, 0.031))  # 街路のアスファルトの 2 色（暗い色・明るい色）
+_M_ROAD_ASPHALT = lambda: noisy_material("road_asphalt", *STREET_ASPHALT, scale=60, rough=0.9)
 
 # 高速道路は SIS に合わせて暗く青みのあるアスファルト（平均 20,20,27）。照り返しを切らないと空の色が映って明るくなる
 EXPWY_ASPHALT = ((0.0027, 0.0027, 0.004), (0.016, 0.016, 0.023))  # 高速道路のアスファルトの 2 色（暗い色・明るい色）
@@ -209,12 +210,13 @@ ROAD_PARTS += (Part("rampbody", "bed", "lane", _M_BASE,
 # 橋の桁: iss の都市高速の橋（bridge/road の 0120_bridge1）と同じく、床の縁を青い鋼の帯に見せる（基盤の側面）
 _M_GIRDER = ("girder", (0.22, 0.40, 0.62))
 
-def asphalt_skin(tag, lo, hi, spec=None):
+def asphalt_skin(tag, lo, hi, spec=None, ramp=(0.35, 0.65), wear_t=1.0):
     """路面の色を替えるときの材質の差し替え（部品の名前 → 材質）。アスファルト・走行跡（wear*）・路肩のまだらの雪（slush*）を、
     同じ 2 色（lo・hi）から作る（走行跡と雪のぼかしは路面の色から混ぜるので、路面だけ替えると暗い路面に明るい帯が乗る）。
-    blender-poc の高速道路（tag="expwy"、暗く青みのある色）と AMI の高速道路が使う"""
-    return dict({"asphalt": lambda: noisy_material(f"{tag}_asphalt", lo, hi, scale=60, rough=0.9, spec=spec)},
-                **{f"wear{i}": _wear_material(tag, lo, hi, t, spec) for i, (_, t, _) in enumerate(WEAR_LAYERS)},
+    blender-poc の高速道路（tag="expwy"、暗く青みのある色）と AMI の道路 3 種が使う。
+    ramp は路面のまだらの色の段の位置（noisy_material の ramp）、wear_t は走行跡の寄せ具合（WEAR_LAYERS の t）にかける倍率"""
+    return dict({"asphalt": lambda: noisy_material(f"{tag}_asphalt", lo, hi, scale=60, rough=0.9, spec=spec, ramp=ramp)},
+                **{f"wear{i}": _wear_material(tag, lo, hi, t * wear_t, spec) for i, (_, t, _) in enumerate(WEAR_LAYERS)},
                 **{n: _slush_material(tag, lo, hi, t, spec) for n, _, t, _, _ in SNOW_LAYERS if t is not None})
 
 
