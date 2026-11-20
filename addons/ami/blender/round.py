@@ -39,6 +39,7 @@ ROUND_SETTINGS = {
 # ラウンド 2 は構造の試し（#56）: 意味の木の葉を 1 つずつ入り切りする。base は 1 のまくらぎの間隔の継ぎ目の欠陥（タイルの端で間があく）を直したもの。
 # 葉: head（レールの頭頂面の磨かれた帯）、head_x（それに加えてレールを太く高く誇張）、fasten（締結装置）、joint（継目）
 _R2 = dict(ROUND_SETTINGS["1"], sleeper_pitch=10 / 18, sleeper_align=True)
+_R3 = dict(_R2, rail_head=(0.92, 0.91, 0.88), rail_size=(0.41, 0.55, 0.30), rail_rgb=(0.30, 0.19, 0.15), embed=True)
 ROUND_SETTINGS.update({
     "2base": _R2,
     "2head": dict(_R2, rail_head=True),
@@ -62,6 +63,19 @@ ROUND_SETTINGS.update({
     "3e": dict(_R2, rail_head=(0.92, 0.91, 0.88), rail_size=(0.41, 0.55, 0.30), embed=True),
     "3f": dict(_R2, rail_head=(0.92, 0.91, 0.88), rail_size=(0.41, 0.55, 0.30), rail_rgb=(0.30, 0.19, 0.15), embed=True),
     "3": dict(_R2, rail_head=(0.92, 0.91, 0.88), rail_size=(0.41, 0.55, 0.30), rail_rgb=(0.30, 0.19, 0.15), embed=True),  # = 3f
+    # ラウンド 4: まくらぎと道床。3 ではレールの間のまくらぎの間が 50〜70 とほぼ黒く、まくらぎ（約 160）と梯子の模様になった。
+    # 原因は油の帯（oil。ほぼ黒に寄せ、さらにラウンド 1 の wear 1.8 で離した）。油の濃さ・色・有無を試す
+    #   4oil35: 寄せ具合 0.70 → 0.35、離す倍率 1.0。4oiloff: 油の帯なし。4dust: 油の代わりに制輪子の粉（さびの色）を 0.5。4wear1: 4oil35 + さびの帯も離す倍率 1.0
+    "4oil35": dict(_R3, wear_t={"oil": 0.35}, wear_k={"oil": 1.0}),
+    "4oiloff": dict(_R3, drop=("oil",)),
+    "4dust": dict(_R3, wear_rgb={"oil": ((0.26, 0.21, 0.16), (0.36, 0.30, 0.23))}, wear_t={"oil": 0.5}, wear_k={"oil": 1.0}),
+    # 油を薄くするとまくらぎが砂利に溶ける（まくらぎ 165・砂利 135）。まくらぎを明るい PC（コンクリート）の色にして見せる
+    #   4mid: 油を 0.5（中くらいの暗さ）。4light: 4oil35 + まくらぎを明るく。4lightmid: 4mid + まくらぎを明るく
+    "4mid": dict(_R3, wear_t={"oil": 0.5}, wear_k={"oil": 1.0}),
+    "4light": dict(_R3, wear_t={"oil": 0.35}, wear_k={"oil": 1.0}, sleeper_rgb=((0.66, 0.65, 0.62), (0.78, 0.77, 0.74))),
+    "4lightmid": dict(_R3, wear_t={"oil": 0.5}, wear_k={"oil": 1.0}, sleeper_rgb=((0.66, 0.65, 0.62), (0.78, 0.77, 0.74))),
+    "4": dict(_R3, wear_t={"oil": 0.5}, wear_k={"oil": 1.0}, sleeper_rgb=((0.66, 0.65, 0.62), (0.78, 0.77, 0.74))),  # = 4lightmid
+    "4wear1": dict(_R3, wear_t={"oil": 0.35}, wear_k={"oil": 1.0, "rust0": 1.0, "rust1": 1.0}),
     "2combo": dict(_R2, rail_head=(0.92, 0.91, 0.88), rail_size=(0.39, 0.57, 0.40), rail_rgb=(0.30, 0.19, 0.15), embed=True),
 })
 
@@ -84,8 +98,11 @@ def _render(n):
                           away(render.BALLAST_STONE_HI, contrast), grain)
     wear = {}
     for name, _, (lo, hi), t, _ in R.TRACK_WEAR:
-        wear[name] = R.track_noise(f"track_{name}_r{n}", away(R._mix(mean, lo, t), cfg["wear"]),
-                                   away(R._mix(mean, hi, t), cfg["wear"]), 3.0)
+        # 汚れの帯ごとの上書き（ラウンド 4〜）: wear_rgb は色（lo, hi）、wear_t は道床の色からの寄せ具合、wear_k は離す倍率
+        lo, hi = cfg.get("wear_rgb", {}).get(name, (lo, hi))
+        t = cfg.get("wear_t", {}).get(name, t)
+        wk = cfg.get("wear_k", {}).get(name, cfg["wear"])
+        wear[name] = R.track_noise(f"track_{name}_r{n}", away(R._mix(mean, lo, t), wk), away(R._mix(mean, hi, t), wk), 3.0)
     # 在来線の道床を使う描き分け（通常・基盤・高架・橋・トンネル・壁と架線の元の基盤）だけを替える。高速線・路面軌道は替えない
     for prof in R.TRACK_PROFILES.values():
         if not str(prof.get("sheet", "")).startswith(BALLAST):
@@ -97,10 +114,14 @@ def _render(n):
             shape = old.shape
             if cfg.get("embed"):
                 shape = _lifted(shape, EMBED_TOP - R.BALLAST_H)  # 埋めた砕石の上に出す（まくらぎの上面よりは下）
+            if name in cfg.get("drop", ()):
+                shape = lambda path, k: None  # noqa: E731  この汚れの帯を描かない
             rep[name] = R.Part(name, old.datum, old.width, mat, shape, old.group, centre=False)
         prof["replace"] = rep
         if cfg.get("embed"):
             prof["skin"]["ballast_fill"] = stone
+        if "sleeper_rgb" in cfg:  # 夏の絵のまくらぎの色（くすみのまだら。TRACK_WEAR_SKIN の sleeper の差し替え）
+            prof["skin"]["sleeper"] = R.track_noise(f"track_sleeper_r{n}", *cfg["sleeper_rgb"], 5.0)
     if cfg.get("embed"):
         R.SNOW_SKIN["ballast_fill"] = R.SNOW_SKIN["ballast"]
     TP.SLEEPER_PITCH = cfg["sleeper_pitch"]  # まくらぎの形は描くときにこの値を読む（render_parallel は対象ごとに別のプロセス）
