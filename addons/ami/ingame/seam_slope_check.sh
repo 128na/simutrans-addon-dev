@@ -15,9 +15,8 @@ PAK=${PAK:-dist/ami.pak}
 NUT=${NUT:-ingame/seam_slope.nut}
 OUT=${OUT:-work/seam_slope}
 B=${BLENDER:-D:/bin/blender/blender.exe}
-HERE=$(cd "$(dirname "$0")" && pwd)
-CLIENT=${MCP_CLIENT:-$HERE/../../../../simutrans/.agents/skills/simutrans-mcp-gui-debug/scripts/mcp_client.py}
-[ -f "$CLIENT" ] || { echo "[seam] MCP のクライアントが無い: $CLIENT（MCP_CLIENT で渡す）"; exit 1; }
+source "$(dirname "$0")/mcp_client.sh"   # MCP_CLIENT の既定（リポジトリの隣の simutrans/）
+CLIENT=$MCP_CLIENT
 M="python -X utf8 $CLIENT --port $PORT"
 WORK="work/seam_game/$PORT"
 [ -f "$PAK" ] || { echo "[seam] $PAK が無い"; exit 1; }
