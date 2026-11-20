@@ -3,7 +3,7 @@
 線路・道路・側壁・高架・橋・トンネルなどの way 系アドオンを作って分かった「決まり」をまとめる。
 本体（Simutrans）と手本（pak128 標準・SIS・iss）の作りを、ソース・画像・ゲームで確かめたもので、このリポジトリのコードを読んでも分からない。
 
-- 作業の手順は書かない。手順はスキル（[way-addon-build](../../.claude/skills/way-addon-build/SKILL.md)・[way-calibration](../../.claude/skills/way-calibration/SKILL.md)）にある
+- 作業の手順は書かない。手順はスキル（[way-addon-build](../../.claude/skills/way-addon-build/SKILL.md)・[way-calibration](../../.claude/skills/way-calibration/SKILL.md)・[way-refine-rounds](../../.claude/skills/way-refine-rounds/SKILL.md)）にある
 - 調べた経緯は書かない。経緯は `docs/records/` と各アドオンの README にある
 - 各項目に「どこで確かめたか」と、数値には測った日付を書く。新しい手本・新しい本体では測り直す
 
