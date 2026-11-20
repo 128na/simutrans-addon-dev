@@ -992,7 +992,8 @@ def track_sheet(profile="new"):
                 body, wback, wfront = render_layers(cname, obs, True, exits_of(name), mask_slope, cy, prof["spill"], prof.get("rise", WALL_RISE),
                                                     prof.get("solid", False), lower, separate=True,
                                                     tall_layers=row0 == 0 and write_walls,
-                                                    frame=near_frame(name, paths, origin))
+                                                    frame=near_frame(name, paths, origin),
+                                                    cull_diag_wall_ends=prof.get("cull_diag_wall_ends", False))
                 cells[(pos[0] + row0, pos[1])] = body
                 if wback:
                     wcells[pos] = wback
