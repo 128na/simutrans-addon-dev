@@ -300,7 +300,9 @@ for _t in catalog.TRACKS:
     R.TRACK_PROFILES[_p(_t.bridge)] = dict(
         _bridge_base, sheet=_t.bridge, write_walls=False,
         groups=_bridge_base["groups"] + ("ramp",), only=BRIDGE_CELLS, starts=True, piers=True, solid=True,
-        pier_box=BRIDGE_PIER, band="bridge", badge=None)
+        pier_box=BRIDGE_PIER, band="bridge", badge=None,
+        # 端の坂の躯体の上面を基盤の下へ（低い端の角に躯体がのぞき、雪の絵で灰色の小片になった。#44）
+        ramp_body_under_base=True)
 
 # トンネル（ami_rail_ballast_tunnel、obj=tunnel）: blender-poc の坑口（sheetlib の tunnel_sheet。躯体はタイル全体の箱、口は低い側の辺）に、
 # 在来線の通常の版の道床（砕石のまだら）・まくらぎ・レール・汚れを入れたもの。壁・架線は坑口のタイルにも way-object を重ねる
