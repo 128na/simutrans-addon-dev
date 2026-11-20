@@ -27,6 +27,7 @@ road_sheet に部品の差し替えの口（線路の track_sheet の replace・
     line: 白線の材質 (色, 発光)。road_parts の _M_LINE（色 0.95・発光 0.6）の代わりに、道路 3 種の skin の "line" に入れる
     snow: 歩道・縁石と路肩の雪 (明暗の幅, Scale[, 発光[, 色]])。core の _SNOW（一色。色を渡せばその色）を、その色を中心に ±幅 のまだらにする。road_parts の
         ROAD_SNOW_SKIN（道路の雪の絵の skin）をこのプロセスの中でだけ書き換え、sidewalk の _SNOW と ROAD_PARTS の snowbank も差し替える
+    oil_lift: True なら、油の帯（road_parts の _M_OIL）の 2 色も路面と同じ倍率（street_lift・expwy_lift）で明るくする（skin の "oil"）
     pave: 歩道の敷石。("noise", 暗い色, 明るい色, Scale) か ("brick", 敷石の色, 目地の色, Scale)。sidewalk.py の _M_PAVING を差し替える
 """
 import dataclasses
@@ -114,7 +115,25 @@ ROUND_SETTINGS.update({
     # 歩道のセルで明るさ 225 → 236、細かさ 0.0043 → 0.0160、色 219,223,229 → 234,233,244）
     "3": dict(_R2, snow=(0.10, 60.0, 0.15, (0.88, 0.86, 0.97))),
 })
+_R3 = ROUND_SETTINGS["3"]
+ROUND_SETTINGS.update({
+    # ラウンド 4: 生活道路・一般道路の路面の明るさ。ゲームの画面で一般道路 51 で、一般道路の手本（SIS 一般道 67・iss 74・pak128 104）の
+    # どれより暗い。README の決まり（pak128 標準の道路とつなぐので街路の灰色）からも離れる。高速道路（29。SIS 高速道路 30・iss 35）は変えない
+    #   4lift: 路面の 2 色を 3.2 倍（ラウンド 1 は 2.4 倍）。4lift2: 4.0 倍
+    "4lift": dict(_R3, street_lift=3.2),
+    "4lift2": dict(_R3, street_lift=4.0),
+    # 4lift・4lift2 でもセルの明るさは 69 → 76・81（ゲームではセルより 18 ほど暗く出る。目安はセルで 85〜92）。もっと上げる
+    #   4lift3: 5.5 倍。4lift4: 7.0 倍
+    "4lift3": dict(_R3, street_lift=5.5),
+    "4lift4": dict(_R3, street_lift=7.0),
+    # 路面を明るくすると、車線の中ほどの油の帯（road_parts の _M_OIL。色は固定）が黒い筋として浮く（ラウンド 1 から路面だけ 2.4 倍で、
+    # 油の帯は元のまま）。4oil: 4lift3 + 油の帯も路面と同じ倍率で明るくする（生活道路・一般道路は street_lift、高速道路は expwy_lift）
+    "4oil": dict(_R3, street_lift=5.5, oil_lift=True),
+    # ラウンド 4: 4oil（生活道路・一般道路の路面を 5.5 倍、油の帯も路面と同じ倍率。一般道路の直線のセルで明るさ 69 → 90）
+    "4": dict(_R3, street_lift=5.5, oil_lift=True),
+})
 
+OIL = ((0.004, 0.004, 0.005), (0.012, 0.012, 0.013))  # 油の帯の 2 色（road_parts の _M_OIL）
 STREET = ((0.013, 0.0135, 0.015), (0.028, 0.029, 0.031))  # 生活道路・一般道路の路面の 2 色（road_parts の _M_ROAD_ASPHALT）
 
 
@@ -245,6 +264,10 @@ def apply(cfg, n, R, render):
         if not sheet.startswith(("ami_road_", "ami_wall_road_")):
             continue
         base = expwy if "expressway" in sheet else street
+        if cfg.get("oil_lift"):
+            f = xlift if "expressway" in sheet else lift
+            base = dict(base, oil=(lambda f=f, tag="expwy" if "expressway" in sheet else "street": R.noisy_material(
+                f"r{n}{tag}_oil", tuple(x * f for x in OIL[0]), tuple(x * f for x in OIL[1]), scale=90, rough=0.7)))
         if "line" in cfg:
             base = dict(base, line=(f"r{n}_line", cfg["line"][0], 0.6, 0.0, cfg["line"][1]))
         prof["skin"] = dict(prof.get("skin", {}), **base)
