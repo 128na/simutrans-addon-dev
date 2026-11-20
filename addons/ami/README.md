@@ -219,16 +219,16 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 ### 弾性まくらぎ直結軌道の作り（#62）
 
-在来線と同じ版（通常・基盤 4 版・高架 4 版・橋・トンネル）を、在来線の部品の使い回しで作った。違うのは道床だけで、在来線の砕石を、平らなコンクリートの道床に替えた。まくらぎはゴムの靴（防振材）をはいて、コンクリートに埋まる。在来線とは道床で見分ける（2026-11-21、ユーザーの決定。[ADR 0006](../../docs/adr/0006-ami-track-variants-by-track-form.md)）。壁・架線・橋脚は在来線と同じ way-object・way を重ねる。敷き方も在来線と同じ。
+在来線と同じ版（通常・基盤 4 版・高架 4 版・橋・トンネル）を、在来線の部品の使い回しで作った。違うのは道床だけで、在来線の砕石を、平らなコンクリートの道床に替えた。本物はまくらぎがゴムの靴（防振材）をはいてコンクリートに埋まる。在来線とは道床で見分ける（2026-11-21、ユーザーの決定。[ADR 0006](../../docs/adr/0006-ami-track-variants-by-track-form.md)）。壁・架線・橋脚は在来線と同じ way-object・way を重ねる。敷き方も在来線と同じ。
 
-- 設定: `blender/render.py` の「弾性まくらぎ直結軌道」（`CONC_*`・`BOOT_*`）。種類は `blender/catalog.py` の `RAIL_CONCRETE`
+- 設定: `blender/render.py` の「弾性まくらぎ直結軌道」（`CONC_*`）。種類は `blender/catalog.py` の `RAIL_CONCRETE`
 - 在来線と同じもの: まくらぎ（寸法・間隔・色）・レール・汚れの帯・車止め・基準面（`bed`・`rail`）・道床の底の幅（±1.9）と上面の高さ。カーブ・T字・十字・分岐の絵・行き止まりの作りも同じ
 - 道床: 上面の半幅 `CONC_BED_HALF`（1.75）まで平らで、縁はほぼ垂直（在来線は ±1.45 の肩から斜面）。色はまくらぎより暗い灰色の細かいまだら（壁・基盤のコンクリートと同じ細かさ）。赤みは足さない（`slope_measure.py` がレールを「赤 − 青」で探す）
-- 靴: まくらぎより `BOOT_RIM`（0.06）大きい暗い板を、道床のすぐ上に置く。まくらぎの周りに暗い縁が少し見える
-- 雪: 在来線と同じく、積もったばかりの雪（道床・まくらぎ・靴・汚れは雪、レールだけが出る）
+- 描かないもの: まくらぎの靴の縁と、中央の排水溝。靴の縁は画面で 1px 未満（[way-addon.md](../../docs/reference/way-addon.md) の 12 章）で、縁を 0.12 単位（約 0.9px）まで広げても、まくらぎの間が暗くなるだけで靴には見えなかった。排水溝は、くどさ（同じリファレンスの 11 章）を増やすので省いた
+- 雪: 在来線と同じく、積もったばかりの雪（道床・まくらぎ・汚れは雪、レールだけが出る）
 - 値: 240 km/h。高架・橋・トンネルの費用の倍率は在来線と同じ。アイコン・カーソルは仮（数字の 240）
 
-確認画像は `docs/rail_concrete_*.png`（輪と十字・行き止まり・坂・壁の複線・高架・橋・トンネル・降雪側。`vs_ballast_zoom`・`snow_vs_ballast_zoom` は上が在来線、下が弾性まくらぎ直結軌道の十字と T字の 3 倍）。経緯とくどさの値は記録 [2026-11-21_ami-rail-concrete](../../docs/records/2026-11-21_ami-rail-concrete.md)。
+確認画像は `docs/rail_concrete_cmp_<気候>_<区画>.png`。同じ区画を左から在来線・弾性まくらぎ直結軌道・高速線の順に等倍で並べ、黄色の枠の中を下に 4 倍で拡大した（区画は輪と十字 `B`・行き止まりと 1 タイル `AFC`・坂 `DE`・分岐 `H0`・基盤 back `B_B`・高架 single `VS_B`・壁の複線 `W1`・橋 `BT_B1`・トンネル `BT_T2`。降雪側は `B`・`AFC`・`VS_B`・`BT_B1`）。経緯とくどさ・つなぎ目・坂の値は記録 [2026-11-21_ami-rail-concrete](../../docs/records/2026-11-21_ami-rail-concrete.md)。
 
 手本の扱い: 名前と速度は iss の `iss_wtg_0240_*`（`../refs/iss/src/way/rail/track_concrete.dat`）に当たる。iss はまくらぎの材料（木・コンクリート）で種類を分け、道床は砕石のまま。AMI の在来線はすでに PC まくらぎなので、iss の分け方は取り入れず、道床の形式で分けた。iss の砕石の点描は、くどさの物差しで「くどい」に出る（[way-addon.md](../../docs/reference/way-addon.md) の 11 章）ので、まねていない。
 
@@ -417,6 +417,7 @@ GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe bash ingame/sample_check.sh
 - 高架は地上の区画の東 80 に敷く（`sample.nut` の `ELEVATED`）。区画の並びは基盤の版と同じで、高架の 4 版に壁の 4 版を重ね、真下に橋脚の way を敷く。その南に区画 WV（区画 W の並びを高架で）・WVE（区画 WE の並びを高架で）・高架に架線つきの壁の single・区画 J（高架と地上のつなぎ目）。`[check]` の行の高架の名前の後ろの ` / ami_pier_rail` は、真下の地面の橋脚の way（`(2)` は 2 本）
 - 撮るのは `bash ingame/sample_capture.sh`（`work/sample/` に温暖側・降雪側の区画ごと）。レイアウト検証用モードの pak は `PAK=work/layout/dist/ami.pak` で入れ、`OUT=work/sample_layout` で撮る。終わったら `dist/ami.pak` を入れ直す
 - 全区画をまとめて撮るときは `GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> TRACK=ami_rail_slab bash ingame/sample_parallel.sh`。8 台のゲームを `work/parallel/` の写しで起動し、見本を敷いて撮り、閉じる。208 画面が準備込みで約 40 秒。`sample_check.sh` は要らず、`GAME_DIR` には書き込まない。台数は `JOBS`
+- pak128 標準の線路（`Rail_160_Tracks`）とのつなぎ目と、坂・急坂でのレールの寄りは `GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> bash ingame/seam_slope_check.sh` で測る（#62 で足した）。見本は `ingame/seam_slope.nut`（線路の種類ごとに、東西・南北・斜め・坂のつなぎ目と、急坂・1 段の坂の十字）。ゲームは `work/seam_game/<PORT>/` の写しで起動し、`GAME_DIR` には書き込まない。worktree から動かすときは `MCP_CLIENT` に `mcp_client.py` の絶対パスを渡す。読み方は `tools/blender/seam_judge.py`・`slope_measure.py` の冒頭。在来線にも、つなぎ目の斜めの 1 か所（草 1px）と、十字の坂のタイル（急坂 3・1 段の坂 2）で寄りの NG が出る（2026-11-21 の値は記録 [2026-11-21_ami-rail-concrete](../../docs/records/2026-11-21_ami-rail-concrete.md)）
 - 同じポートでゲームが動いていると、`sample_check.sh` は止まる（他のゲームに見本を流さない）。閉じるのは自分で起動したゲームだけ
 - 確認画像は `docs/`。在来線の通常の版は `rail_ballast_*.png`（温暖側・降雪側の見本、レイアウト検証用モードの見本、行き止まりの拡大、T字・十字・分岐のセル、道床の色の前後。2026-11-17）。基盤の版と壁は `rail_base_*.png`（区画 W1〜W3 と、back・front の輪と十字。`layout` はレイアウト検証用モード。`fix_*` は継ぎ目を直した前後の拡大（`_before` が前）。2026-11-17）
 - 架線つきの壁は `rail_catenary_*.png`（区画 SE（single）・BE（back）の輪と十字、SE の坂と急坂（`SE_DE`）、区画 WE1（複線の輪）・WE2a（近い斜めの複線）・WE3（行き止まりの並び）、降雪側の WE1（`snow_WE1`）、一部だけ電化した線の境（`upgrade`）、pak128 の `classic_catenary`（上）と並べた直線（`vs_pak128`。画面を 2 倍に拡大）、斜めの線を隣のタイルに並べた 3 本並び（上）と複線（下）の梁のつながり（`diag_beams`。ユーザーの確認用の保存データの (40,346) の辺り。2 倍）、近い斜めの複線で、`twin_catenary` を置く前の分け合うタイルの梁のはみ出しと線の間の柱（`close_pair`。同じ保存データ。2 倍。置いた後は `WE2a`）。`layout` はレイアウト検証用モードで、線を上下 2 本・1px にしてハンガーを足す前の絵（柱・梁の配置とつながりは今と同じ）。2026-11-18）
