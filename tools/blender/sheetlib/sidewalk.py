@@ -4,6 +4,7 @@
 つながらない辺では敷石を縁石の上面の幅だけ内へ下げ、縁石の上面の帯と立ち上がりを見せる（隣が道路なら、道路との境の縁石になる）。
 立ち上がりが見えるのは手前の辺（南・東）だけで、奥の辺（北・西）は上面の帯で縁石に見せる。
 部品の寸法・材質は道路の歩道（road_parts の curb・paving。SIDEWALK_H・CURB_W）と同じ。雪の絵は道路の歩道と同じく雪の材質（ROAD_SNOW_SKIN）。
+敷石と雪の材質は sidewalk_sheet の引数で替えられる（AMI の歩道は灰色の敷石と、まだらの雪）。
 斜めの絵（diagonal）は持たない（本体は斜めの絵の無い way に、カーブの絵を使う。boden/wege/weg.cc の calc_image）。
 """
 import os
@@ -12,7 +13,7 @@ import numpy as np
 
 from . import sheetlib as _s
 from .cells import ROAD_CY, _ground_mask, exits_of, make_sheet, render_cell, save_rgba
-from .core import H, ONLY, TILE, WORK, _SNOW, apply_slope, box, clear_models, make_material, mesh_object, set_anchor
+from .core import H, ONLY, TILE, _SNOW, apply_slope, box, clear_models, make_material, mesh_object, set_anchor
 from .road_parts import CURB_W, SIDEWALK_H, _M_CURB, _M_PAVING
 
 SIDEWALK_PAD = 1.0       # つながる辺で、板と敷石をタイルの外へ延ばす量（持ち分で切る。隣の歩道との継ぎ目に地面を出さない）
@@ -60,10 +61,10 @@ def _slab(exits, inset, z0, z1, mat, name, slope):
     return ob
 
 
-def _cell(cname, exits, slope, snow):
+def _cell(cname, exits, slope, snow, paving_mat, snow_mat):
     clear_models()
-    curb = make_material(_SNOW if snow else _M_CURB, "curb")
-    paving = make_material(_SNOW if snow else _M_PAVING, "paving")
+    curb = make_material(snow_mat if snow else _M_CURB, "curb")
+    paving = make_material(snow_mat if snow else paving_mat, "paving")
     _slab(exits, 0.0, -SIDEWALK_FOOT, SIDEWALK_H, curb, "curb", slope)
     _slab(exits, CURB_W, SIDEWALK_H, SIDEWALK_H + PAVING_TH, paving, "paving", slope)
     path = render_cell(cname)
@@ -73,25 +74,29 @@ def _cell(cname, exits, slope, snow):
     for k in range(1, SIDEWALK_RISE + 1):
         m[:-k] |= base[k:]
     own = m.astype(np.uint8) * 255
-    save_rgba(os.path.join(WORK, cname + "_own.png"), np.dstack([own, own, own, np.full_like(own, 255)]))
+    # 一時フォルダは描くときの sheetlib の WORK を引く（名前で取り込むと、入口が描く前に WORK を切り替えたときに付いていかない。
+    # cells は切り替えた先から持ち分を読むので、絵がずれた。AMI の round.py の _run。docs/records/2026-11-20_ami-road-refine-round1.md）
+    save_rgba(os.path.join(_s.WORK, cname + "_own.png"), np.dstack([own, own, own, np.full_like(own, 255)]))
     return path
 
 
-def sidewalk_sheet(sheet, label="S", style="road"):
-    """歩道の way のシート。夏の絵は行 0〜3、雪の絵は行 SIDEWALK_SNOW_ROWS 下。アイコン（0,0）・カーソル（0,1。南北の直線）は仮の絵"""
+def sidewalk_sheet(sheet, label="S", style="road", paving=None, snow=None):
+    """歩道の way のシート。夏の絵は行 0〜3、雪の絵は行 SIDEWALK_SNOW_ROWS 下。アイコン（0,0）・カーソル（0,1。南北の直線）は仮の絵。
+    paving は敷石の材質（無ければ道路の歩道と同じ _M_PAVING）、snow は雪の絵の縁石・敷石の材質（無ければ _SNOW）。make_material に渡せるもの"""
+    paving, snow = paving or _M_PAVING, snow or _SNOW
     set_anchor(ROAD_CY)  # 道路と同じ（dat のオフセット -64,-32）
     jobs = {pos: (name, exits_of(name), None) for pos, name in _CELLS.items()}
     jobs.update({pos: (name, exits_of(name), slope) for pos, (name, slope) in _slopes().items()})
     if ONLY:
         jobs = {k: v for k, v in jobs.items() if v[0] in ONLY + ("ns",)}
     cells = {}
-    for snow, dr in ((False, 0), (True, SIDEWALK_SNOW_ROWS)):
+    for is_snow, dr in ((False, 0), (True, SIDEWALK_SNOW_ROWS)):
         for (r, c), (name, exits, slope) in jobs.items():
-            cname = f"{sheet}_{'snow_' if snow else ''}{name}"
-            cells[(r + dr, c)] = _cell(cname, exits, slope, snow)
+            cname = f"{sheet}_{'snow_' if is_snow else ''}{name}"
+            cells[(r + dr, c)] = _cell(cname, exits, slope, is_snow, paving, snow)
     clear_models()
     _slab("ns", 0.0, -SIDEWALK_FOOT, SIDEWALK_H, make_material(_M_CURB, "curb"), "curb", None)
-    _slab("ns", CURB_W, SIDEWALK_H, SIDEWALK_H + PAVING_TH, make_material(_M_PAVING, "paving"), "paving", None)
+    _slab("ns", CURB_W, SIDEWALK_H, SIDEWALK_H + PAVING_TH, make_material(paving, "paving"), "paving", None)
     cells[(0, 0)] = _s.render_icon(sheet + "_icon", 0.5, shift=(-0.14, 0.2), label=label, style=style)
     cells[(0, 1)] = cells[(0, 2)]
     make_sheet(cells, 2 * SIDEWALK_SNOW_ROWS, 10, os.path.join(_s.SRC, sheet + ".png"))

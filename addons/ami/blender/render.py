@@ -306,11 +306,50 @@ for _t in catalog.TRACKS:
 #     （停止線が進入する車線の反対の半分へ移る。今は作らない）（drive_left）
 DRIVE_LEFT = True
 
+# 道路一式の質感（精細化のラウンド 1〜3 を本番に入れたもの。#56。値の決め方は docs/records/2026-11-20_ami-road-refine-round1.md〜round3.md、
+# 入れ方は 2026-11-20_ami-road-refine-production.md）。どれも AMI の道路一式（道路 3 種とその版・道路の壁・道路用の橋脚・歩道）にだけ渡し、
+# sheetlib の既定（blender-poc・在来線・スラブ軌道も使う）は変えない
+#   路面: 照り返しを切り（生活道路・一般道路。高速道路はもともと切ってある）、2 色を明るくして（生活道路・一般道路 2.4 倍、高速道路 1.6 倍）
+#     平均から 1.4 倍離し、色の段を 0.47〜0.53 に狭めて 1 画素の粒にする。走行跡の寄せ具合は半分（高速道路は 4 分の 1。暗い路面では明るく出る）
+ROAD_ASPHALT_LIFT = {"street": 2.4, "expwy": 1.6}
+ROAD_ASPHALT_AWAY = 1.4
+ROAD_ASPHALT_RAMP = (0.47, 0.53)
+ROAD_WEAR_T = {"street": 0.5, "expwy": 0.25}
+
+
+def _road_asphalt_skin(tag, rgb, spec):
+    lifted = tuple(tuple(x * ROAD_ASPHALT_LIFT[tag] for x in c) for c in rgb)
+    mean = [(a + b) / 2 for a, b in zip(*lifted)]
+    away = lambda c: tuple(max(0.0, m + ROAD_ASPHALT_AWAY * (x - m)) for x, m in zip(c, mean))
+    return R.asphalt_skin(f"ami_{tag}", away(lifted[0]), away(lifted[1]), spec=spec, ramp=ROAD_ASPHALT_RAMP,
+                          wear_t=ROAD_WEAR_T[tag])
+
+
+#   コンクリート（壁・基盤・高架の躯体・橋脚。坑口の躯体も壁と同じ材質）: 元の色を中心に ±12% のまだら（Scale 25）にして、打ち放しの肌を出す。
+#     どれも形を作る関数の中で material(*組) を呼ぶので、材質の名前で差し替える（sheetlib の road_sheet・tunnel_sheet・pier_sheet の mat_skin）
+ROAD_CONCRETE = (0.12, 25.0)
+ROAD_MAT_SKIN = {
+    spec[0]: (lambda nm=spec[0], rgb=spec[1]: R.noisy_material(
+        f"ami_road_concrete_{nm}", tuple(x * (1 - ROAD_CONCRETE[0]) for x in rgb), tuple(x * (1 + ROAD_CONCRETE[0]) for x in rgb),
+        scale=ROAD_CONCRETE[1], rough=0.9))
+    for spec in (R._M_WALL, R._M_BASE, R._M_ELEV_BODY, R._M_PIER, R._M_PIER_POST, R._M_PIER_BEAM)}
+#   雪の歩道・縁石と路肩の雪: 一色の雪（sheetlib の _SNOW）を、地面の雪に合わせて青みの色を中心に ±10% のまだら（Scale 60）と発光 0.15 にする。
+#     赤を緑より上にする（青みの明るい粒が透明色 231,255,255 に近づくと sheet_audit の候補になった。docs/reference/way-addon.md の特殊色）
+ROAD_SNOW_RGB, ROAD_SNOW_AMP = (0.88, 0.86, 0.97), 0.10
+ROAD_SNOW = lambda: R.noisy_material("ami_road_snow", tuple(x * (1 - ROAD_SNOW_AMP) for x in ROAD_SNOW_RGB),
+                                     tuple(min(1.0, x * (1 + ROAD_SNOW_AMP)) for x in ROAD_SNOW_RGB), scale=60.0, rough=0.9, emit=0.15)
+AMI_ROAD_SNOW_SKIN = {"curb": ROAD_SNOW, "paving": ROAD_SNOW, "snowbank": ROAD_SNOW}
+#   歩道の敷石: 灰色の敷石と暗い目地（Brick テクスチャ。敷石が約 6 x 3px）
+SIDEWALK_PAVING = lambda: R.brick_material("ami_sidewalk_paving", (0.30, 0.295, 0.28), (0.12, 0.12, 0.115), 0.6)
+
+_ROAD_LOOK = {"mat_skin": ROAD_MAT_SKIN, "snow_skin": AMI_ROAD_SNOW_SKIN}
 ROAD_SETTINGS = {
-    catalog.ROAD_LOCAL.key: {"label": "40", "style": "road", "center": None, "skin": {}},
-    catalog.ROAD_GENERAL.key: {"label": "120", "style": "road", "center": "solid", "skin": {}},
-    catalog.ROAD_EXPRESSWAY.key: {"label": "360", "style": "expressway", "center": "dash",
-                                  "skin": R.asphalt_skin("expwy", *R.EXPWY_ASPHALT, spec=0.0)},
+    catalog.ROAD_LOCAL.key: dict(_ROAD_LOOK, label="40", style="road", center=None,
+                                 skin=_road_asphalt_skin("street", R.STREET_ASPHALT, 0.0)),
+    catalog.ROAD_GENERAL.key: dict(_ROAD_LOOK, label="120", style="road", center="solid",
+                                   skin=_road_asphalt_skin("street", R.STREET_ASPHALT, 0.0)),
+    catalog.ROAD_EXPRESSWAY.key: dict(_ROAD_LOOK, label="360", style="expressway", center="dash",
+                                      skin=_road_asphalt_skin("expwy", R.EXPWY_ASPHALT, 0.0)),
 }
 for _r in catalog.ROADS:
     R.ROAD_PROFILES[_r.key] = dict({"sheet": _r.way, "prefix": _r.way + "_", "groups": ("body", "marking", "weathering"),
@@ -415,11 +454,11 @@ for _r in catalog.ROADS:
 # 上端は道路の高架の躯体の下面に合わせる。絵の位置・持ち分は道路と同じ（ROAD_CY）
 SHEETS[catalog.PIER_ROAD] = lambda: R.pier_sheet(catalog.PIER_ROAD, R.FLAT, label=PIER_LABEL, across=ROAD_PIER_ACROSS,
                                                  anchor=R.ROAD_CY, cy=R.ROAD_CY, top_drop=R.ROAD_BASE_DROP, diag_k=R.DIAG_EDGE,
-                                                 style="road")
+                                                 style="road", mat_skin=ROAD_MAT_SKIN)
 # 歩道の way（ami_sidewalk）: 道路の隣のタイルに敷く。絵は自分のつながりだけで決まる（sheetlib の sidewalk_sheet）。
 # 絵の位置・持ち分は道路と同じ（ROAD_CY）
 SIDEWALK_LABEL = "S"  # アイコンの文字（仮。アイコンはステップ 13 でまとめて作る）
-SHEETS[catalog.SIDEWALK] = lambda: R.sidewalk_sheet(catalog.SIDEWALK, label=SIDEWALK_LABEL)
+SHEETS[catalog.SIDEWALK] = lambda: R.sidewalk_sheet(catalog.SIDEWALK, label=SIDEWALK_LABEL, paving=SIDEWALK_PAVING, snow=ROAD_SNOW)
 
 if __name__ == "__main__":
     R.run_targets(SHEETS, list(SHEETS))

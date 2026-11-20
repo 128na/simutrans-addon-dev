@@ -29,6 +29,12 @@ road_sheet に部品の差し替えの口（線路の track_sheet の replace・
         ROAD_SNOW_SKIN（道路の雪の絵の skin）をこのプロセスの中でだけ書き換え、sidewalk の _SNOW と ROAD_PARTS の snowbank も差し替える
     oil_lift: True なら、油の帯（road_parts の _M_OIL）の 2 色も路面と同じ倍率（street_lift・expwy_lift）で明るくする（skin の "oil"）
     pave: 歩道の敷石。("noise", 暗い色, 明るい色, Scale) か ("brick", 敷石の色, 目地の色, Scale)。sidewalk.py の _M_PAVING を差し替える
+
+ラウンド 3（2026-11-20）を本番（render.py の「道路一式の質感」と、sheetlib の asphalt_skin の ramp・wear_t、road_sheet・tunnel_sheet・
+pier_sheet の mat_skin、road_sheet の snow_skin、sidewalk_sheet の paving・snow）に入れた。ROUND_SETTINGS の 1〜4 と apply は、
+入れる前の本番に重ねる作りとして残してある（記録のため）。今の本番に重ねると、本番とラウンドの設定が混ざる: 路面・走行跡（skin を
+上書きする）とコンクリート（material を包む）はラウンドの値が勝ち、雪と敷石（本番は描き分けの口で渡す）は本番の値が勝つ。
+どちらにしても今の本番を土台にした比べにならないので、次のラウンドは今の本番を土台にした設定と apply を作り直す。
 """
 import dataclasses
 
