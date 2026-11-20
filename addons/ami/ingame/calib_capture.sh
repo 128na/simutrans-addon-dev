@@ -2,16 +2,16 @@
 # くどさの物差しを合わせる見本（ingame/calib.nut）を撮る（#56 の C）。
 # 敷く前の地面と敷いた後を、同じ場所・同じ拡大率で撮る（差から way の画素だけを選ぶため。tools/blender/busy_measure.py）。
 # 使い方（アドオンのディレクトリで。python -X utf8 blender/calib.py で work/calib/ami_calib.pak を作っておく）:
-#   GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe PORT=47125 bash ingame/calib_capture.sh
+#   GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=47125 bash ingame/calib_capture.sh
 # ami_calib.pak を GAME_DIR/addons/pak128/ に入れて起動し、撮った後にゲームを閉じて ami_calib.pak を消す。
 # 画像は OUT（既定 work/calib/shots）に <気候>_<段の名前>_z<拡大率>_<bare|way>.png で置く
-GAME_DIR=${GAME_DIR:?GAME_DIR を指定する（例: F:/Simutrans/addon_check）}
+GAME_DIR=${GAME_DIR:?GAME_DIR に検証用のフォルダを指定する}
 EXE=${EXE:?EXE を指定する（例: OTRPv64_3.exe）}
 SAVE=${SAVE:-flat_512}
 PORT=${PORT:-47125}
 OUT=${OUT:-work/calib/shots}
 ZOOMS=${ZOOMS:-"3 4 6"}   # 3 が等倍、4 が 3/4、6 が 1/2（本体 display/simgraph16.cc の zoom_num・zoom_den）
-M="python ${MCP_CLIENT:-E:/addon_dev/simutrans/.agents/skills/simutrans-mcp-gui-debug/scripts/mcp_client.py} --port $PORT"
+M="python ${MCP_CLIENT:-../../../simutrans/.agents/skills/simutrans-mcp-gui-debug/scripts/mcp_client.py} --port $PORT"
 # 並べる way（calib.nut の WAYS）と、画像の名前に使う短い名前。WAYS_NUT を渡すと、その way を並べる（ラウンドの比べ: #56）
 WAYS_NUT=${WAYS_NUT:-"ami_rail_ballast_calib0 ami_rail_ballast_calib1 ami_rail_ballast_calib2 ami_rail_ballast_calib3 ami_rail_ballast_calib4 Rail_160_Tracks iss_wtg_0240_single"}
 WAYS=""

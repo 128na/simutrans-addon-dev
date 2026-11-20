@@ -49,6 +49,9 @@ ROUND_SETTINGS.update({
     "2headx2": dict(_R2, rail_head=(0.92, 0.91, 0.88), rail_size=(0.39, 0.57, 0.40), rail_rgb=(0.30, 0.19, 0.15)),
     "2embed": dict(_R2, embed=True),
     "2": dict(_R2, rail_head=(0.92, 0.91, 0.88), rail_size=(0.39, 0.57, 0.40), rail_rgb=(0.30, 0.19, 0.15), embed=True),
+    # jointx: 2 の上に、継目を誇張して置く（明るい頭を約 1px の暗い遊間で切り、継目板を長くする）
+    "2jointx": dict(_R2, rail_head=(0.92, 0.91, 0.88), rail_size=(0.39, 0.57, 0.40), rail_rgb=(0.30, 0.19, 0.15), embed=True,
+                    joint=(0.9, 0.16)),
     "2combo": dict(_R2, rail_head=(0.92, 0.91, 0.88), rail_size=(0.39, 0.57, 0.40), rail_rgb=(0.30, 0.19, 0.15), embed=True),
 })
 
@@ -180,13 +183,14 @@ def _trial_parts(cfg, R, TP):
                 return None
             q, ang = best
             n = Vector((-math.sin(ang), math.cos(ang)))
+            plate, gap = cfg["joint"] if isinstance(cfg["joint"], tuple) else (0.6, 0.06)  # 継目板の長さ、遊間（頭の切れ目）の長さ
             boxes = []
             for sg in (1, -1):
                 for u in (rin - 0.03, rout + 0.03):
                     c = q + n * (sg * u * k)
-                    boxes.append(R.box(c.x, c.y, (TP.RAIL_Z0 + rz1) / 2 - 0.02, 0.6, 0.05 * k, rz1 - TP.RAIL_Z0 - 0.03, rot=ang))
+                    boxes.append(R.box(c.x, c.y, (TP.RAIL_Z0 + rz1) / 2 - 0.02, plate, 0.05 * k, rz1 - TP.RAIL_Z0 - 0.03, rot=ang))
                 c = q + n * (sg * (rin + rout) / 2 * k)
-                boxes.append(R.box(c.x, c.y, rz1 + 0.004, 0.06, (rout - rin + 0.02) * k, 0.006, rot=ang))
+                boxes.append(R.box(c.x, c.y, rz1 + 0.008, gap, (rout - rin + 0.02) * k, 0.006, rot=ang))
             return R.merge(boxes)
         out.append(R.Part("joint", "rail", "gauge", ("joint", (0.12, 0.11, 0.10), 0.6, 0.0), joint))
     return out
