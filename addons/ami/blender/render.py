@@ -46,9 +46,9 @@ _p = catalog.profile  # way・シートの名前 → TRACK_PROFILES の名前
 # datums: 基準面ごとの下げ幅。決め方は blender-poc の README の「描画位置の描き分け」。label はアイコンの最高速度の数字
 _DATUMS = {"bed": R.Datum(2, 1), "rail": R.Datum(4, 1)}
 
-# 在来線のバラスト（砕石）: 道床を 2 色のまだらにして、石の粒に見せる（夏の絵だけ。雪の絵は雪の材質のまま）。
-# 平均の色は blender-poc の道床の一色 (0.42, 0.40, 0.37) に合わせる。汚れの帯の色はその色から混ぜてあり、
-# 坂の測り方（slope_measure.py）はレールを「赤 − 青」の大きい行で探すので、赤みを足さない
+# 在来線のバラスト（砕石）: 道床を 2 色のまだらにして、石の粒に見せる（夏の絵だけ）。
+# 元の 2 色の平均は blender-poc の道床の一色 (0.42, 0.40, 0.37)。そこから明暗差を BALLAST_CONTRAST 倍に広げ、BALLAST_DARK 倍に暗くした（#56）。
+# 汚れの帯の色は blender-poc の道床の色から混ぜてある。坂の測り方（slope_measure.py）はレールを「赤 − 青」の大きい行で探すので、赤みを足さない
 BALLAST_STONE_LO = (0.32, 0.305, 0.28)
 BALLAST_STONE_HI = (0.52, 0.495, 0.46)
 BALLAST_GRAIN = 12.0  # まだらの細かさ（ノイズの Scale。部品の座標 1 単位 ≈ 9px なので、粒は約 1px）
@@ -197,8 +197,25 @@ _EDGE_WALLS = {n: dataclasses.replace(p, shape=R.to_edge_shape(p.shape))
                for p in R.TRACK_EXTRAS for n in ("wallL", "wallR") if p.name == n}
 _EDGE_WALLS["endw"] = dataclasses.replace(next(p for p in R.TRACK_EXTRAS if p.name == "endw"), name="endw_edge",
                                           shape=R.end_wall_edge_shape())
-# 在来線の道床は、端の壁の内側の面で止める（タイルの外まで延ばすと、端の壁の外の面の下にのぞいた。#44 の 7 番）
-_EDGE_BALLAST = {"ballast": dataclasses.replace(_old["ballast"], shape=R.bed_to_edge(_BALLAST_SECTION, beyond=-R.WALL_W))}
+
+
+def _stop_at_end_wall(datum):
+    """行き止まりの道床を、端の壁の内側の面で止める beyond（sheetlib の bed_to_edge・slab_bed_shape に渡す。d は経路の向き）。
+    タイルの外まで延ばすと、基準面の分だけ手前へ動いた道床が、端の壁の外の面の下にのぞいた（#44 の 7 番。2026-11-20）。
+    壁（bed）と道床（datum）の動きが違うと（高速線のコンクリート道床は壁の 2 倍下げる）、動いた後の道床の端が、動いた後の壁の内側の面に
+    来るよう、動きの差の分だけずらす（カメラの側を向く端では内へ、奥を向く端では外へ）"""
+    def beyond(d):
+        out = lambda m: m.to_2d().dot(-d.to_2d()) if m is not None else 0.0  # 動きのうち、タイルの外向きの分
+        return -R.WALL_W + out(R.datum_move(_DATUMS["bed"])) - out(R.datum_move(datum))
+    return beyond
+
+
+# 壁のある版（基盤・高架・橋）の行き止まりの道床
+_EDGE_BED = {
+    catalog.RAIL_BALLAST.key: {"ballast": dataclasses.replace(_old["ballast"], shape=R.bed_to_edge(_BALLAST_SECTION, _stop_at_end_wall(_DATUMS["bed"])))},
+    catalog.RAIL_SLAB.key: {"slab_bed": dataclasses.replace(next(p for p in R.SLAB_TRACK_PARTS if p.name == "slab_bed"),
+                                                        shape=R.slab_bed_shape(_stop_at_end_wall(_SLAB_DATUMS["slab_bed"])))},
+}
 
 for _t in catalog.TRACKS:
     # 壁の way-object は軌道の種類に属さない共有の物なので、シートは catalog.WALL_TRACK の基盤の版だけが書く
@@ -208,7 +225,7 @@ for _t in catalog.TRACKS:
             R.TRACK_PROFILES[_t.key], sheet=_t.base(_v), walls=_walls,
             groups=("body", "base", "weathering", "buffer", "wall"),
             replace=dict(R.TRACK_PROFILES[_t.key].get("replace", {}), **_EDGE_WALLS,
-                         **(_EDGE_BALLAST if _t == catalog.RAIL_BALLAST else {})), wall_sheet=f"ami_wall_rail_{_v}",
+                         **_EDGE_BED.get(_t.key, {})), wall_sheet=f"ami_wall_rail_{_v}",
             # カーブのセルを斜めの形で描き、基盤の壁の無い側を削らない（複線の直角の曲がりで、内側の線の外側半分を埋める）
             curve_cells=True, **_shared)
 

@@ -243,13 +243,13 @@ def _inner(p):
 def bed_to_edge(section=None, beyond=0.5):
     """道床の形（断面 section。無ければ BALLAST）。行き止まりの経路（始点だけがタイルの中）では、始点を経路の逆向きにタイルの端から
     beyond 先まで延ばす（道床がレールの末端より奥まで続く）。1 タイルだけの軌道（両端がタイルの中）と、通り抜ける経路はそのまま。
-    行き止まりの端に壁を立てる版は、beyond を -WALL_W にして端の壁の内側の面で止める（タイルの外まで延ばすと、基準面の分だけ手前へ
-    動いた道床が、端の壁の外の面の下にのぞいた。AMI #44 の 7 番、2026-11-20）"""
+    beyond は数か、経路の向き d（行き止まりの端からタイルの中へ）を受けて数を返す関数。行き止まりの端に壁を立てる版は、端の壁の
+    内側の面で止める（タイルの外まで延ばすと、基準面の分だけ手前へ動いた道床が、端の壁の外の面の下にのぞいた。AMI #44 の 7 番、2026-11-20）"""
     def shape(path, k):
         if len(path) >= 2 and _inner(path[0]) and not _inner(path[-1]):
             d = (path[1] - path[0]).normalized()
             reach = (TILE / 2 + Vector((path[0].x, path[0].y)).dot(d.to_2d())) / max(abs(d.x), abs(d.y))  # 始点から逆向きのタイルの端まで
-            path = [path[0] - d * (reach + beyond)] + list(path)
+            path = [path[0] - d * (reach + (beyond(d) if callable(beyond) else beyond))] + list(path)
         return sweep(path, [(u * k, v) for u, v in (BALLAST if section is None else section)])
     return shape
 
