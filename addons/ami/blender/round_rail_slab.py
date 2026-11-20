@@ -188,3 +188,12 @@ ROUND_SETTINGS.update({
 })
 # ラウンド 3 = 3nofast（記録 docs/records/2026-11-20_ami-slab-refine-round3.md）。3nostud・3head は孤立点が上がり、採らない
 ROUND_SETTINGS["3"] = ROUND_SETTINGS["3nofast"]
+
+# ラウンド 4（土台は 3）: 締結装置を省いた後の汚れの帯。4wearc: さびの帯をやめ、レールの間をくすませる（2wearc と同じ）。
+#   4rust: さびの帯を 1.5 倍に濃く（細かさを孤立点を増やさずに上げられるか）。4joint: 継ぎ目の帯を少し明るく（0.20）
+_R4 = ROUND_SETTINGS["3"]
+ROUND_SETTINGS.update({
+    "4wearc": dict(_R4, wear_centre=(0.36, 0.8)),
+    "4rust": dict(_R4, wear_t={"rust0": 1.5, "rust1": 1.5}),
+    "4joint": dict(_R4, joint=(0.30, (0.20, 0.20, 0.20))),
+})
