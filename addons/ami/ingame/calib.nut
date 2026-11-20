@@ -7,7 +7,7 @@
 // 撮る場所は区画の (5,5)（ingame/calib_capture.sh）。並べる way は calib_capture.sh の WAYS_NUT で替える。
 // 返り値の先頭が ok なら全部敷けた
 // WAYS は 1 行に書く（calib_capture.sh が WAYS_NUT で行ごと置き換える）
-local WAYS = ["ami_rail_ballast_calib0", "ami_rail_ballast_calib1", "ami_rail_ballast_calib2", "ami_rail_ballast_calib3", "ami_rail_ballast_calib4", "Rail_160_Tracks", "iss_wtg_0240_single"];
+local WAYS = ["ami_rail_ballast_calib0", "ami_rail_ballast_calib1", "ami_rail_ballast_calib2", "ami_rail_ballast_calib3", "ami_rail_ballast_calib4", "Rail_160_Tracks", "SIS_ST_TGbl_E01-999B"];
 local ORIGINS = [[20, 20], [276, 20]];
 local SNOW = 1;
 local DX = 16;

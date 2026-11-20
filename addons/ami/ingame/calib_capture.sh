@@ -13,13 +13,14 @@ SAVE=${SAVE:-flat_512}
 PORT=${PORT:-47125}
 OUT=${OUT:-work/calib/shots}
 ZOOMS=${ZOOMS:-"3 4 6"}   # 3 が等倍、4 が 3/4、6 が 1/2（本体 display/simgraph16.cc の zoom_num・zoom_den）
-M="python ${MCP_CLIENT:-../../../simutrans/.agents/skills/simutrans-mcp-gui-debug/scripts/mcp_client.py} --port $PORT"
-# 並べる way（calib.nut の WAYS）と、画像の名前に使う短い名前。WAYS_NUT を渡すと、その way を並べる（ラウンドの比べ: #56）
-WAYS_NUT=${WAYS_NUT:-"ami_rail_ballast_calib0 ami_rail_ballast_calib1 ami_rail_ballast_calib2 ami_rail_ballast_calib3 ami_rail_ballast_calib4 Rail_160_Tracks iss_wtg_0240_single"}
+source "$(dirname "$0")/mcp_client.sh"   # MCP_CLIENT の既定（リポジトリの隣の simutrans/）
+M="python $MCP_CLIENT --port $PORT"
+# 並べる way（calib.nut の WAYS）と、画像の名前に使う短い名前。手本の way は GAME_DIR に入っているもの（既定は pak128 本体と SIS の在来線）。WAYS_NUT を渡すと、その way を並べる（ラウンドの比べ: #56）
+WAYS_NUT=${WAYS_NUT:-"ami_rail_ballast_calib0 ami_rail_ballast_calib1 ami_rail_ballast_calib2 ami_rail_ballast_calib3 ami_rail_ballast_calib4 Rail_160_Tracks SIS_ST_TGbl_E01-999B"}
 WAYS=""
 for w in $WAYS_NUT; do
   case $w in
-    Rail_160_Tracks) WAYS="$WAYS pak128" ;; iss_wtg_0240_single) WAYS="$WAYS iss" ;;
+    Rail_160_Tracks) WAYS="$WAYS pak128" ;; iss_wtg_0240_single) WAYS="$WAYS iss" ;; SIS_ST_TGbl_E01-999B) WAYS="$WAYS sis" ;;
     ami_rail_ballast_*) WAYS="$WAYS ${w#ami_rail_ballast_}" ;; *) WAYS="$WAYS ${w#ami_}" ;;
   esac
 done

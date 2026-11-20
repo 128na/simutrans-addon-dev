@@ -8,7 +8,8 @@ GAME_DIR=${GAME_DIR:?GAME_DIR を指定する（例: F:/Simutrans/addon_check）
 EXE=${EXE:?EXE を指定する（例: OTRPv64_3.exe）}
 SAVE=${SAVE:-flat_512}
 PORT=${PORT:-47123}
-M="python ${MCP_CLIENT:-E:/addon_dev/simutrans/.agents/skills/simutrans-mcp-gui-debug/scripts/mcp_client.py} --port $PORT"
+source "$(dirname "$0")/mcp_client.sh"   # MCP_CLIENT の既定（リポジトリの隣の simutrans/）
+M="python $MCP_CLIENT --port $PORT"
 # PAK で入れる pak を替えられる（レイアウト検証用モードは PAK=work/layout/dist/ami.pak。終わったら dist/ami.pak を入れ直す）
 PAK=${PAK:-dist/ami.pak}
 
