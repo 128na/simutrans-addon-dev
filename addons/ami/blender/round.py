@@ -84,6 +84,13 @@ ROUND_SETTINGS.update({
     "5deck": dict(_R4, deck_rgb=(0.40, 0.40, 0.38)),
     "5shdark": dict(_R4, shoulder=1.45, ballast_dark=0.82),
     "5": dict(_R4, shoulder=1.45, ballast_dark=0.82),  # = 5shdark
+    # ラウンド 6: 雪の絵。今は、道床の雪の上に汚れた雪の帯（灰色）と、まくらぎのかすかな梯子が出て、線路の帯が灰色の板に見える。
+    #   6clean: 積もったばかりの雪（汚れの帯もまくらぎも雪の色。レールだけが出る）。6rut: レールの脇だけが汚れる（車輪の通る所）。
+    #   6plow: 除雪の後（まくらぎの上面が出て、まくらぎの間は汚れた雪）
+    "6clean": dict(_R5 := dict(_R4, shoulder=1.45, ballast_dark=0.82), snow_mode="clean"),
+    "6rut": dict(_R5, snow_mode="rut"),
+    "6plow": dict(_R5, snow_mode="plow"),
+    "6": dict(_R5, snow_mode="clean"),  # = 6clean
     "4wear1": dict(_R3, wear_t={"oil": 0.35}, wear_k={"oil": 1.0, "rust0": 1.0, "rust1": 1.0}),
     "2combo": dict(_R2, rail_head=(0.92, 0.91, 0.88), rail_size=(0.39, 0.57, 0.40), rail_rgb=(0.30, 0.19, 0.15), embed=True),
 })
@@ -132,6 +139,18 @@ def _render(n):
             prof["skin"]["ballast_fill"] = stone
         if "sleeper_rgb" in cfg:  # 夏の絵のまくらぎの色（くすみのまだら。TRACK_WEAR_SKIN の sleeper の差し替え）
             prof["skin"]["sleeper"] = R.track_noise(f"track_sleeper_r{n}", *cfg["sleeper_rgb"], 5.0)
+        mode = cfg.get("snow_mode")
+        if mode:  # 雪の絵の材質（ラウンド 6〜。prof["snow_skin"] は雪の絵だけに効く）
+            snow = R.SNOW_SKIN["ballast"]
+            ss = dict(prof.get("snow_skin", {}))
+            if mode in ("clean", "rut"):
+                ss.update({k: snow for k in ("oil", "rust0", "sleeper_rust", "sleeper")})
+                ss["rust1"] = snow if mode == "clean" else R.TRACK_SNOW_WEAR_SKIN["rust1"]
+            elif mode == "plow":
+                ss.update({k: snow for k in ("rust0",)})
+                ss["sleeper"] = R.track_noise(f"track_snow_sleeper_r{n}", *cfg["sleeper_rgb"], 5.0)
+                ss["ballast_fill"] = R.TRACK_SNOW_WEAR_SKIN["oil"]
+            prof["snow_skin"] = ss
         if "deck_rgb" in cfg:  # 床（基盤）のコンクリートの色
             prof["skin"]["base"] = ("base", cfg["deck_rgb"])
         if "shoulder" in cfg:
