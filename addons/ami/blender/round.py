@@ -52,6 +52,16 @@ ROUND_SETTINGS.update({
     # jointx: 2 の上に、継目を誇張して置く（明るい頭を約 1px の暗い遊間で切り、継目板を長くする）
     "2jointx": dict(_R2, rail_head=(0.92, 0.91, 0.88), rail_size=(0.39, 0.57, 0.40), rail_rgb=(0.30, 0.19, 0.15), embed=True,
                     joint=(0.9, 0.16)),
+    # ラウンド 3: 2 のレールの暗い側面が 2〜3px で重い（pak128 は 1px）。高さの誇張を減らし、側面を 1px にする。頭は 1px のまま
+    #   3a: 高さを元（0.11）に戻す。3b: 少しだけ高く（0.14）。3c: 3a の頭を少し暗く（0.80）。3d: 3a の側面を明るく（元のさび色）
+    "3a": dict(_R2, rail_head=(0.92, 0.91, 0.88), rail_size=(0.39, 0.57, 0.30), rail_rgb=(0.30, 0.19, 0.15), embed=True),
+    "3b": dict(_R2, rail_head=(0.92, 0.91, 0.88), rail_size=(0.39, 0.57, 0.33), rail_rgb=(0.30, 0.19, 0.15), embed=True),
+    "3c": dict(_R2, rail_head=(0.80, 0.79, 0.76), rail_size=(0.39, 0.57, 0.30), rail_rgb=(0.30, 0.19, 0.15), embed=True),
+    "3d": dict(_R2, rail_head=(0.92, 0.91, 0.88), rail_size=(0.39, 0.57, 0.30), embed=True),
+    # 3e・3f: 3a・3d は幅 0.18 で頭が 2px に広がる所があるので、幅を 0.14 に戻す（3e は側面が元のさび色、3f は暗いさび色）
+    "3e": dict(_R2, rail_head=(0.92, 0.91, 0.88), rail_size=(0.41, 0.55, 0.30), embed=True),
+    "3f": dict(_R2, rail_head=(0.92, 0.91, 0.88), rail_size=(0.41, 0.55, 0.30), rail_rgb=(0.30, 0.19, 0.15), embed=True),
+    "3": dict(_R2, rail_head=(0.92, 0.91, 0.88), rail_size=(0.41, 0.55, 0.30), rail_rgb=(0.30, 0.19, 0.15), embed=True),  # = 3f
     "2combo": dict(_R2, rail_head=(0.92, 0.91, 0.88), rail_size=(0.39, 0.57, 0.40), rail_rgb=(0.30, 0.19, 0.15), embed=True),
 })
 
