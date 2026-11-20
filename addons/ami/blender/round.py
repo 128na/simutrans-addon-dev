@@ -75,6 +75,15 @@ ROUND_SETTINGS.update({
     "4light": dict(_R3, wear_t={"oil": 0.35}, wear_k={"oil": 1.0}, sleeper_rgb=((0.66, 0.65, 0.62), (0.78, 0.77, 0.74))),
     "4lightmid": dict(_R3, wear_t={"oil": 0.5}, wear_k={"oil": 1.0}, sleeper_rgb=((0.66, 0.65, 0.62), (0.78, 0.77, 0.74))),
     "4": dict(_R3, wear_t={"oil": 0.5}, wear_k={"oil": 1.0}, sleeper_rgb=((0.66, 0.65, 0.62), (0.78, 0.77, 0.74))),  # = 4lightmid
+    # ラウンド 5: 道床と床（高架・基盤の版）。4 でまくらぎが明るくなり、線路の帯が床（明るい灰色）と同じ明るさに溶けた。
+    #   5shoulder: 道床の形を実物の「肩とのり面」にする（まくらぎの上面の高さの平らな肩を外へ延ばし、そこから床まで斜面）。
+    #   5dark: 砕石を暗く（使い込んだ砕石は濃い灰色）。5deck: 床（基盤）のコンクリートを雨だれでくすんだ色に。
+    "5shoulder": dict(_R4 := dict(_R3, wear_t={"oil": 0.5}, wear_k={"oil": 1.0},
+                                  sleeper_rgb=((0.66, 0.65, 0.62), (0.78, 0.77, 0.74))), shoulder=1.45),
+    "5dark": dict(_R4, ballast_dark=0.82),
+    "5deck": dict(_R4, deck_rgb=(0.40, 0.40, 0.38)),
+    "5shdark": dict(_R4, shoulder=1.45, ballast_dark=0.82),
+    "5": dict(_R4, shoulder=1.45, ballast_dark=0.82),  # = 5shdark
     "4wear1": dict(_R3, wear_t={"oil": 0.35}, wear_k={"oil": 1.0, "rust0": 1.0, "rust1": 1.0}),
     "2combo": dict(_R2, rail_head=(0.92, 0.91, 0.88), rail_size=(0.39, 0.57, 0.40), rail_rgb=(0.30, 0.19, 0.15), embed=True),
 })
@@ -94,8 +103,9 @@ def _render(n):
     mean = R._BALLAST_RGB
     away = lambda c, w: tuple(min(1.0, max(0.0, m + w * (x - m))) for x, m in zip(c, mean))
     contrast, grain = cfg["ballast"]
-    stone = R.track_noise(f"ami_ballast_stone_r{n}", away(render.BALLAST_STONE_LO, contrast),
-                          away(render.BALLAST_STONE_HI, contrast), grain)
+    dk = cfg.get("ballast_dark", 1.0)  # 砕石の色の倍率（ラウンド 5〜）
+    stone = R.track_noise(f"ami_ballast_stone_r{n}", tuple(x * dk for x in away(render.BALLAST_STONE_LO, contrast)),
+                          tuple(x * dk for x in away(render.BALLAST_STONE_HI, contrast)), grain)
     wear = {}
     for name, _, (lo, hi), t, _ in R.TRACK_WEAR:
         # 汚れの帯ごとの上書き（ラウンド 4〜）: wear_rgb は色（lo, hi）、wear_t は道床の色からの寄せ具合、wear_k は離す倍率
@@ -122,6 +132,15 @@ def _render(n):
             prof["skin"]["ballast_fill"] = stone
         if "sleeper_rgb" in cfg:  # 夏の絵のまくらぎの色（くすみのまだら。TRACK_WEAR_SKIN の sleeper の差し替え）
             prof["skin"]["sleeper"] = R.track_noise(f"track_sleeper_r{n}", *cfg["sleeper_rgb"], 5.0)
+        if "deck_rgb" in cfg:  # 床（基盤）のコンクリートの色
+            prof["skin"]["base"] = ("base", cfg["deck_rgb"])
+        if "shoulder" in cfg:
+            # 道床の肩とのり面: まくらぎの上面の高さ（EMBED_TOP）の平らな肩を ±shoulder まで延ばし、そこから床（±1.9）まで斜面
+            old = next(p for p in R.TRACK_PARTS if p.name == "ballast")
+            sh, top = cfg["shoulder"], EMBED_TOP - 0.001
+            prof["replace"]["ballast"] = R.Part("ballast", old.datum, old.width, old.material,
+                                                lambda path, k, sh=sh, top=top: R.sweep(
+                                                    path, [(-1.9 * k, 0.0), (1.9 * k, 0.0), (sh * k, top), (-sh * k, top)]))
     if cfg.get("embed"):
         R.SNOW_SKIN["ballast_fill"] = R.SNOW_SKIN["ballast"]
     TP.SLEEPER_PITCH = cfg["sleeper_pitch"]  # まくらぎの形は描くときにこの値を読む（render_parallel は対象ごとに別のプロセス）
