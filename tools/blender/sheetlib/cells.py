@@ -203,8 +203,46 @@ def render_cell(name, exits=None, slope=None, side=None, cy=GROUND_CY, spill=0, 
     return path
 
 
+DIAG_WALL_K = 0.99  # 横幅の倍率（assemble の印 "k"）がこれより小さい側壁を、斜めのタイルの側壁とみる
+
+
+def _screen_vertical(ob):
+    """部品が画面で縦向きの斜め（北東⇔南西に延びる。Blender の xy で x が増えると y が減る向き）か。頂点の xy の共分散の符号で見る。
+    カメラは Z 45° に回してあり、この向きはカメラの水平の向きと平行（長い面が真横から見える）"""
+    vs = [v.co for v in ob.data.vertices]
+    if len(vs) < 2:
+        return False
+    mx, my = sum(v.x for v in vs) / len(vs), sum(v.y for v in vs) / len(vs)
+    return sum((v.x - mx) * (v.y - my) for v in vs) / len(vs) < -1e-3
+
+
+def _cull_diag_wall_ends(tall):
+    """画面で縦向きの斜めのタイルの側壁（wallL・wallR。横幅の倍率が 1 より小さい）だけ、裏面を描かない材質の写しに差し替える。
+    返すのは元に戻すための [(材質の枠, 元の材質)] と、作った写しの一覧。
+    材質は名前で共有され（端の壁などと同じ）、裏面を描かない設定は材質にしか持てないので、写しを作って当てる。
+    ほかの部品は変えない。切り口から見える壁の中（暗い）が、取った切り口の面の代わりになっている所がある（2026-11-21）:
+    - 行き止まりの端の壁: 基準面の分だけタイルの外へ動いて外の面ごと切り口として取られる。裏面を消すと外の面が消えた
+    - 画面で横向きの斜めの側壁: 切り口が長い面の端より画面で右へ約 2px 出る。裏面を消すと、隣の行き止まりの壁との間に草が出た
+      （近い斜めの複線の区画 W2b）
+    画面で縦向きの斜めの側壁は長い面が真横を向くので、切り口から見えるのは縦 1 列の暗い線だけで、面の代わりにはなっていない"""
+    saved, copies = [], {}
+    for ob in tall:
+        if ob.get("pname") not in ("wallL", "wallR") or ob.get("k", 1.0) >= DIAG_WALL_K or not _screen_vertical(ob):
+            continue
+        for slot in ob.material_slots:
+            if slot.material is None:
+                continue
+            if slot.material not in copies:
+                c = slot.material.copy()
+                c.use_backface_culling = True
+                copies[slot.material] = c
+            saved.append((slot, slot.material))
+            slot.material = copies[slot.material]
+    return saved, list(copies.values())
+
+
 def render_layers(name, obs, split, exits, slope, cy, spill, rise, solid=False, lower=0, side=None, separate=False, tall_layers=True,
-                  frame=None):
+                  frame=None, cull_diag_wall_ends=False):
     """高さのある部品（tall）を別の層として描いて重ねる。返すのは（奥の絵のパス, 手前の絵のパス または None）。
     - 本体: 持ち分（地面の範囲）で切る
     - 高さのある部品: 持ち分を上へ rise 行広げた範囲で切る（奥のタイルの絵の上に出る。建物と同じ）
@@ -213,7 +251,11 @@ def render_layers(name, obs, split, exits, slope, cy, spill, rise, solid=False, 
     separate なら重ねずに（本体の絵のパス, 高さのある部品の奥の絵のパス または None, 手前の絵のパス または None）を返す
     （壁を way-object に分ける版。本体は way の絵、壁は way-object の絵になる。本体の絵は持ち分と特殊色を make_sheet が当てる）。
     tall_layers が偽なら、高さのある部品は描かない（separate の雪の絵。way-object には雪の絵が無い）。
-    frame は手前/奥を測る向きと点（near_frame。split なら要る）"""
+    frame は手前/奥を測る向きと点（near_frame。split なら要る）。
+    cull_diag_wall_ends なら、画面で縦向きの斜めのタイルの側壁を裏面を描かずに描く（_cull_diag_wall_ends）。タイルの境で切り口の面を取った壁
+    （open_ends）は、取った口から壁の中が暗く見える。隣のタイルの壁が後から描かれれば隠れるが、斜めのタイルの手前の絵
+    （frontdiagonal）は、隣の行き止まりの奥の壁の絵より後に描かれ、角に暗い縦線（約 1×3px）が出た（AMI #63、2026-11-21）。
+    裏面を描かなければ口は透明になり、隣の絵が見える"""
     tall = [ob for ob in obs if ob.get("tall")]
     body = [ob for ob in obs if not ob.get("tall")]
     for ob in tall:
@@ -249,6 +291,16 @@ def render_layers(name, obs, split, exits, slope, cy, spill, rise, solid=False, 
     def layer(objs, suffix):
         for ob in tall:
             ob.hide_render = ob not in objs
+        saved, copies = _cull_diag_wall_ends(tall) if cull_diag_wall_ends else ([], [])
+        try:
+            return _layer(objs, suffix)
+        finally:
+            for slot, mat in saved:
+                slot.material = mat
+            for c in copies:
+                bpy.data.materials.remove(c)
+
+    def _layer(objs, suffix):
         im = load_rgba8(render_cell(name + suffix)).copy()
         # 輪郭の半透明の画素は捨てる（色が暗く出て、壁の上の縁とタイルの境に黒い点線が見えた）
         im[..., 3] = np.where(m & (im[..., 3] >= 250), 255, 0)

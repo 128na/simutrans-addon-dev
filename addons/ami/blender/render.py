@@ -253,7 +253,10 @@ for _t in catalog.TRACKS:
             replace=dict(R.TRACK_PROFILES[_t.key].get("replace", {}), **_EDGE_WALLS,
                          **_EDGE_BED.get(_t.key, {})), wall_sheet=f"ami_wall_rail_{_v}",
             # カーブのセルを斜めの形で描き、基盤の壁の無い側を削らない（複線の直角の曲がりで、内側の線の外側半分を埋める）
-            curve_cells=True, **_shared)
+            curve_cells=True,
+            # 斜めのタイルの側壁は裏面を描かない。タイルの境で取った壁の切り口から壁の中（暗い）が見え、斜めの階段の下の端の角
+            # （斜めの手前の壁と行き止まりの奥の壁の角）に暗い縦線が出た（#63）
+            cull_diag_wall_ends=True, **_shared)
 
 # ---------------------------------------------------------------- 架線つきの壁の way-object（ADR 0003。#17）
 # 壁の way-object に架線（柱・梁・吊り金具・トロリ線。tools/blender/sheetlib/catenary_parts.py）を足した版（ami_wall_rail_<版>_catenary）。
