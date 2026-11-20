@@ -26,34 +26,65 @@ import dataclasses
 
 # ラウンド 1（土台は今の render.py。在来線のラウンド 1〜8 の決めごとのうち、スラブ軌道にも当てはまるものから試す）
 #   1rail: レールを在来線にそろえる（④ そろい）。1wear: 汚れの帯（明暗の縞）を弱める。1wearoff: 汚れの帯なし。
-#   1fast: 締結装置を誇張して、まくらぎの代わりの拍子にする。1snow: 雪の絵を在来線と同じ積もったばかりの雪にする
+#   1fast: 締結装置を誇張して、まくらぎの代わりの拍子にする。1fastlt: 1fast（暗い市松に見えた）の色を明るく、少しだけ大きく。
+#   1bed: 基盤の版でスラブが床に溶ける（在来線のラウンド 5 と同じ）。道床を暗く、在来線の道床の幅に広げて帯の縁を出す（1bedc は色だけ）。
+#   1snow: 雪の絵を在来線と同じ積もったばかりの雪にする。1snow2: 締結装置と突起も雪に。
+#   1railnh: 1rail から明るい頭の帯を除く（1rail は孤立点を 30 → 37 に上げた。明るいスラブの上の 1px の頭が、画面の 2:1 の斜めで点線になる）
+_BED_RGB = ((0.20, 0.20, 0.20), (0.27, 0.27, 0.26))
+_SNOW_RGB = (0.945, 0.945, 1.0)
 ROUND_SETTINGS = {
     "1rail": {"rail": True},
+    "1railnh": {"rail": True, "rail_head": False},
     "1wear": {"wear_t": {"rust0": 0.5, "rust1": 0.5, "oil": 0.5}},
     "1wearoff": {"wear_t": {"rust0": 0.0, "rust1": 0.0, "oil": 0.0}},
     "1fast": {"fastener": (0.28, 0.56)},
-    "1snow": {"snow_clean": True, "snow_rgb": (0.945, 0.945, 1.0)},
-    # 1fast は暗い市松に見えた（在来線のラウンド 4 の黒い梯子と同じ）。1fastlt: 色を明るく、少しだけ大きく
     "1fastlt": {"fastener": (0.26, 0.46), "fastener_rgb": (0.22, 0.22, 0.23)},
-    # 1bed: 基盤の版でスラブが床（明るい灰色）に溶ける（在来線のラウンド 5 と同じ）。道床を暗く、在来線の道床の幅に広げて、帯の縁を出す
-    "1bed": {"bed_rgb": ((0.20, 0.20, 0.20), (0.27, 0.27, 0.26)), "bed_u": (1.9, 1.85)},
-    "1bedc": {"bed_rgb": ((0.20, 0.20, 0.20), (0.27, 0.27, 0.26))},
-    "1snow2": {"snow_clean": True, "snow_rgb": (0.945, 0.945, 1.0), "snow_parts": True},
+    "1bed": {"bed_rgb": _BED_RGB, "bed_u": (1.9, 1.85)},
+    "1bedc": {"bed_rgb": _BED_RGB},
+    "1snow": {"snow_clean": True, "snow_rgb": _SNOW_RGB},
+    "1snow2": {"snow_clean": True, "snow_rgb": _SNOW_RGB, "snow_parts": True},
 }
-# ラウンド 1 の組み合わせの候補: 1rail + 1wear + 1bed + 1snow2（締結装置の誇張は採らない）。1b は汚れの帯なし
-_R1 = {"rail": True, "bed_rgb": ((0.20, 0.20, 0.20), (0.27, 0.27, 0.26)), "bed_u": (1.9, 1.85),
-       "snow_clean": True, "snow_rgb": (0.945, 0.945, 1.0), "snow_parts": True}
-# ラウンド 2（土台は 1）: スラブ軌道らしさの葉。2joint: 継ぎ目を暗い帯で見せる（すき間 0.2 は約 1.4px で読めない）。
-#   2jointl: 継ぎ目を道床の色で細く。2wearc: さびの帯をやめ、レールの間をくすませる（ブレーキの粉）。2slab: スラブを明るい新しいコンクリートの色に
-# 1rail は孤立点を 30 → 37 に上げた（明るいスラブの上の 1px の明るい頭が、画面の 2:1 の斜めで点線になる）。1railnh: 頭の帯なし
+# 組み合わせの候補: 1rail + 1bed + 1snow2 に、頭の帯の有無と汚れの帯（1a: 頭あり・半分、1b: 頭あり・なし、1c: 頭なし・半分、1d: 頭なし・そのまま）
+_R1 = {"rail": True, "bed_rgb": _BED_RGB, "bed_u": (1.9, 1.85), "snow_clean": True, "snow_rgb": _SNOW_RGB, "snow_parts": True}
 ROUND_SETTINGS.update({
-    "1railnh": {"rail": True, "rail_head": False},
-    "1c": dict(_R1, rail_head=False, wear_t={"rust0": 0.5, "rust1": 0.5, "oil": 0.5}),
-    "1d": dict(_R1, rail_head=False),
-    # ラウンド 1 = 1d（記録 docs/records/2026-11-20_ami-slab-refine-round1.md）
-    "1": dict(_R1, rail_head=False),
     "1a": dict(_R1, wear_t={"rust0": 0.5, "rust1": 0.5, "oil": 0.5}),
     "1b": dict(_R1, wear_t={"rust0": 0.0, "rust1": 0.0, "oil": 0.0}),
+    "1c": dict(_R1, rail_head=False, wear_t={"rust0": 0.5, "rust1": 0.5, "oil": 0.5}),
+    "1d": dict(_R1, rail_head=False),
+})
+# ラウンド 1 = 1d（記録 docs/records/2026-11-20_ami-slab-refine-round1.md）
+ROUND_SETTINGS["1"] = ROUND_SETTINGS["1d"]
+
+# ラウンド 2（土台は 1）: スラブ軌道らしさの葉。2joint: 継ぎ目を暗い帯で見せる（すき間 0.2 は約 1.4px で読めない）。
+#   2jointl: 継ぎ目を道床の色で細く。2wearc: さびの帯をやめ、レールの間をくすませる（ブレーキの粉）。2slab: スラブを明るい新しいコンクリートの色に
+_R2 = ROUND_SETTINGS["1"]
+ROUND_SETTINGS.update({
+    "2joint": dict(_R2, joint=(0.30, (0.12, 0.12, 0.12))),
+    "2jointl": dict(_R2, joint=(0.20, (0.24, 0.24, 0.23))),
+    "2wearc": dict(_R2, wear_centre=(0.36, 0.8)),
+    "2slab": dict(_R2, slab_rgb=((0.68, 0.68, 0.65), (0.76, 0.76, 0.73))),
+    "2c": dict(_R2, joint=(0.30, (0.12, 0.12, 0.12)), wear_centre=(0.36, 0.8)),
+})
+# ラウンド 2 = 2joint（記録 docs/records/2026-11-20_ami-slab-refine-round2.md）。2wearc・2c は孤立点が上がり、採らない
+ROUND_SETTINGS["2"] = ROUND_SETTINGS["2joint"]
+
+# ラウンド 3（土台は 2）: 継ぎ目の中の突起（暗い帯の中の明るい点）と、手本が描かない締結装置を省く。控えめな色のレールの頭
+_R3 = ROUND_SETTINGS["2"]
+ROUND_SETTINGS.update({
+    "3nostud": dict(_R3, drop=("slab_stud", "slab_notch")),
+    "3nofast": dict(_R3, drop=("slab_fastener", "sleeper_rust")),
+    "3head": dict(_R3, rail_head=True, head_rgb=(0.80, 0.79, 0.76)),
+})
+# ラウンド 3 = 3nofast（記録 docs/records/2026-11-20_ami-slab-refine-round3.md）。3nostud・3head は孤立点が上がり、採らない
+ROUND_SETTINGS["3"] = ROUND_SETTINGS["3nofast"]
+
+# ラウンド 4（土台は 3。試しだけで、ラウンドの版は作らずに止めた。記録 docs/records/2026-11-20_ami-slab-refine-round4.md）:
+#   4wearc: さびの帯をやめ、レールの間をくすませる（2wearc と同じ）。4rust: さびの帯を 1.5 倍に濃く。4joint: 継ぎ目の帯を少し明るく（0.20）
+_R4 = ROUND_SETTINGS["3"]
+ROUND_SETTINGS.update({
+    "4wearc": dict(_R4, wear_centre=(0.36, 0.8)),
+    "4rust": dict(_R4, wear_t={"rust0": 1.5, "rust1": 1.5}),
+    "4joint": dict(_R4, joint=(0.30, (0.20, 0.20, 0.20))),
 })
 
 SLAB = "ami_rail_slab"
@@ -167,33 +198,3 @@ def _joint_shape(SP, R, w):
             out.append(R.box(p.x, p.y, z, w, 2 * SP.SLAB_U * k, SP.WEAR_TH, rot=math.atan2(d.y, d.x)))
         return R.merge(out) if out else None
     return shape
-
-_R2 = ROUND_SETTINGS["1"]
-ROUND_SETTINGS.update({
-    "2joint": dict(_R2, joint=(0.30, (0.12, 0.12, 0.12))),
-    "2jointl": dict(_R2, joint=(0.20, (0.24, 0.24, 0.23))),
-    "2wearc": dict(_R2, wear_centre=(0.36, 0.8)),
-    "2slab": dict(_R2, slab_rgb=((0.68, 0.68, 0.65), (0.76, 0.76, 0.73))),
-})
-ROUND_SETTINGS["2c"] = dict(_R2, joint=(0.30, (0.12, 0.12, 0.12)), wear_centre=(0.36, 0.8))
-# ラウンド 2 = 2joint（記録 docs/records/2026-11-20_ami-slab-refine-round2.md）。2wearc・2c は孤立点が上がり、採らない
-ROUND_SETTINGS["2"] = ROUND_SETTINGS["2joint"]
-
-# ラウンド 3（土台は 2）: 継ぎ目の中の突起（暗い帯の中の明るい点）と、手本が描かない締結装置を省く。控えめな色のレールの頭
-_R3 = ROUND_SETTINGS["2"]
-ROUND_SETTINGS.update({
-    "3nostud": dict(_R3, drop=("slab_stud", "slab_notch")),
-    "3nofast": dict(_R3, drop=("slab_fastener", "sleeper_rust")),
-    "3head": dict(_R3, rail_head=True, head_rgb=(0.80, 0.79, 0.76)),
-})
-# ラウンド 3 = 3nofast（記録 docs/records/2026-11-20_ami-slab-refine-round3.md）。3nostud・3head は孤立点が上がり、採らない
-ROUND_SETTINGS["3"] = ROUND_SETTINGS["3nofast"]
-
-# ラウンド 4（土台は 3）: 締結装置を省いた後の汚れの帯。4wearc: さびの帯をやめ、レールの間をくすませる（2wearc と同じ）。
-#   4rust: さびの帯を 1.5 倍に濃く（細かさを孤立点を増やさずに上げられるか）。4joint: 継ぎ目の帯を少し明るく（0.20）
-_R4 = ROUND_SETTINGS["3"]
-ROUND_SETTINGS.update({
-    "4wearc": dict(_R4, wear_centre=(0.36, 0.8)),
-    "4rust": dict(_R4, wear_t={"rust0": 1.5, "rust1": 1.5}),
-    "4joint": dict(_R4, joint=(0.30, (0.20, 0.20, 0.20))),
-})
