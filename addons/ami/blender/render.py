@@ -47,14 +47,18 @@ _p = catalog.profile  # way・シートの名前 → TRACK_PROFILES の名前
 _DATUMS = {"bed": R.Datum(2, 1), "rail": R.Datum(4, 1)}
 
 # 在来線のバラスト（砕石）: 道床を 2 色のまだらにして、石の粒に見せる（夏の絵だけ）。
-# 元の 2 色の平均は blender-poc の道床の一色 (0.42, 0.40, 0.37)。そこから明暗差を BALLAST_CONTRAST 倍に広げ、BALLAST_DARK 倍に暗くした（#56）。
+# 元の 2 色の平均は blender-poc の道床の一色 (0.42, 0.40, 0.37)。そこから明暗差を BALLAST_CONTRAST 倍に広げ（#56）、BALLAST_DARK・BALLAST_TINT で暗く青みの灰にした（#70）。
 # 汚れの帯の色は blender-poc の道床の色から混ぜてある。坂の測り方（slope_measure.py）はレールを「赤 − 青」の大きい行で探すので、赤みを足さない
 BALLAST_STONE_LO = (0.32, 0.305, 0.28)
 BALLAST_STONE_HI = (0.52, 0.495, 0.46)
 BALLAST_GRAIN = 12.0  # まだらの細かさ（ノイズの Scale。部品の座標 1 単位 ≈ 9px なので、粒は約 1px）
 # 精細化（#56）で決めた描き分け。値の決め方は docs/records/2026-11-20_ami-refine-round1.md〜round7.md（ラウンド 8 で本番に入れた）
 BALLAST_CONTRAST = 2.4  # まだらの明暗差を、平均の色（sheetlib の _BALLAST_RGB）から何倍離すか（ラウンド 1）
-BALLAST_DARK = 0.82     # 砕石の色の倍率。使い込んだ砕石は床のコンクリートより暗い（ラウンド 5）
+# 砕石の暗さと色合い: 弾性まくらぎ直結軌道（明るい中立の灰の道床）と見分けるため、暗く青みの灰にした（#70。2026-11-21、ユーザーの決定。
+# 試した 4 案と値は記録 docs/records/2026-11-21_ami-ballast-color.md）。#56 のラウンド 5 は DARK 0.82・色合いなし。
+# 色合いは R・G・B ごとの倍率。赤み（R − B を上げる）と緑み（地面と見なされる）は足せない（slope_measure.py）。汚れの帯の色は変えない
+BALLAST_DARK = 0.66     # 砕石の色の倍率。使い込んだ砕石は床のコンクリートより暗い
+BALLAST_TINT = (0.88, 0.97, 1.14)
 
 
 def _away(c, w, mean=R._BALLAST_RGB):
@@ -62,8 +66,11 @@ def _away(c, w, mean=R._BALLAST_RGB):
     return tuple(min(1.0, max(0.0, m + w * (x - m))) for x, m in zip(c, mean))
 
 
-_BALLAST_STONE = R.track_noise("ami_ballast_stone", tuple(x * BALLAST_DARK for x in _away(BALLAST_STONE_LO, BALLAST_CONTRAST)),
-                               tuple(x * BALLAST_DARK for x in _away(BALLAST_STONE_HI, BALLAST_CONTRAST)), BALLAST_GRAIN)
+def _stone(c):
+    return tuple(min(1.0, x * BALLAST_DARK * t) for x, t in zip(_away(c, BALLAST_CONTRAST), BALLAST_TINT))
+
+
+_BALLAST_STONE = R.track_noise("ami_ballast_stone", _stone(BALLAST_STONE_LO), _stone(BALLAST_STONE_HI), BALLAST_GRAIN)
 
 # 形の差し替え（blender-poc の線路から変えたもの。ユーザーの指摘、2026-11-17）:
 #   ballast: 行き止まりで、道床をレールの末端より奥（タイルの端）まで敷く
