@@ -91,6 +91,28 @@ ROUND_SETTINGS.update({
     "6rut": dict(_R5, snow_mode="rut"),
     "6plow": dict(_R5, snow_mode="plow"),
     "6": dict(_R5, snow_mode="clean"),  # = 6clean
+    # ラウンド 7: 残りの葉をまとめて試す。
+    #   雪の縁: 道床の雪（明るさ約 211）が地面の雪（約 229）より暗く、線路の帯の縁が残る。7snow: 道床の雪を地面の雪の色（0.89, 0.89, 0.94）を
+    #     元に明るくする（同じ雪）。7snow2: さらに明るく
+    #   斜めのレールの白い線: 7dh: 斜めのセルだけ、頭の明るい帯の幅を半分にする（直線では 1px に満たない帯が、斜めでは 1 列を埋める）
+    #   レールの点線（雪の孤立点）: 手前のレールの暗い側面が 1 行に 1px で、点線になる。7rail: レールを内へ 0.01 太くする
+    #   高架の端の段（#44 の 7 番）の切り分け: 7nobody: 躯体を描かない
+    "7snow": dict(_R6 := dict(_R5, snow_mode="clean"), snow_rgb=(0.97, 0.97, 1.0)),
+    "7snow2": dict(_R6, snow_rgb=(1.0, 1.0, 1.0)),
+    "7snow3": dict(_R6, snow_rgb=(0.945, 0.945, 1.0)),  # 地面の雪と同じ青み（青 / 赤 = 1.057）
+    "7dh": dict(_R6, diag_head=0.5),
+    "7rail": dict(_R6, rail_size=(0.40, 0.55, 0.30)),
+    "7railb": dict(_R6, rail_size=(0.41, 0.56, 0.30)),
+    "7railc": dict(_R6, rail_size=(0.42, 0.55, 0.30)),
+    "7raild": dict(_R6, rail_size=(0.41, 0.54, 0.30)),
+    "7raile": dict(_R6, rail_size=(0.42, 0.56, 0.30)),
+    "7nobody": dict(_R6, no_body=True),
+    # 7endtrim: 7nobody でも段が残った（躯体ではなく基盤）。基盤を削る位置を内へ下げると段が消える（0.6 では壁の下に 1px のへこみ、0.3 でそろう）
+    "7endtrim": dict(_R6, end_trim=0.6),
+    "7endtrim3": dict(_R6, end_trim=0.3),
+    # 7rail〜7raile: レールの幅を 0.01 ずつ動かすと、点線が南北と東西の直線の間で移るだけで、合計は 6 より減らない → 採らない
+    # ラウンド 7: 6 + 道床の雪を地面の雪の青みで明るく（7snow3。7snow2 の白は地面の雪の横で黄ばんで見えた）+ 行き止まりの端の基盤を 0.3 内で止める（7endtrim3）。斜めの頭（7dh）とレールの幅は採らない
+    "7": dict(_R6, snow_rgb=(0.945, 0.945, 1.0), end_trim=0.3),
     "4wear1": dict(_R3, wear_t={"oil": 0.35}, wear_k={"oil": 1.0, "rust0": 1.0, "rust1": 1.0}),
     "2combo": dict(_R2, rail_head=(0.92, 0.91, 0.88), rail_size=(0.39, 0.57, 0.40), rail_rgb=(0.30, 0.19, 0.15), embed=True),
 })
@@ -142,7 +164,11 @@ def _render(n):
         mode = cfg.get("snow_mode")
         if mode:  # 雪の絵の材質（ラウンド 6〜。prof["snow_skin"] は雪の絵だけに効く）
             snow = R.SNOW_SKIN["ballast"]
+            if "snow_rgb" in cfg:  # 道床の雪の色（ラウンド 7〜）
+                snow = (snow[0] + f"_r{n}", cfg["snow_rgb"]) + tuple(snow[2:])
             ss = dict(prof.get("snow_skin", {}))
+            if "snow_rgb" in cfg:
+                ss.update(ballast=snow, ballast_fill=snow, base=snow)
             if mode in ("clean", "rut"):
                 ss.update({k: snow for k in ("oil", "rust0", "sleeper_rust", "sleeper")})
                 ss["rust1"] = snow if mode == "clean" else R.TRACK_SNOW_WEAR_SKIN["rust1"]
@@ -151,6 +177,8 @@ def _render(n):
                 ss["sleeper"] = R.track_noise(f"track_snow_sleeper_r{n}", *cfg["sleeper_rgb"], 5.0)
                 ss["ballast_fill"] = R.TRACK_SNOW_WEAR_SKIN["oil"]
             prof["snow_skin"] = ss
+        if cfg.get("no_body") and prof.get("elev_body"):  # 切り分け用: 高架の躯体を描かない
+            prof["elev_body"] = False
         if "deck_rgb" in cfg:  # 床（基盤）のコンクリートの色
             prof["skin"]["base"] = ("base", cfg["deck_rgb"])
         if "shoulder" in cfg:
@@ -166,6 +194,10 @@ def _render(n):
     if cfg.get("sleeper_align"):
         # 直線の経路はタイルの辺の外へ PATH_EXT 延びる。まくらぎを辺から半ピッチの位置にそろえ、タイルの継ぎ目でも同じ間隔にする
         TP.SLEEPER_FIRST = (S.PATH_EXT + TP.SLEEPER_PITCH / 2) % TP.SLEEPER_PITCH
+    if "end_trim" in cfg:  # 切り分け用: 行き止まりの端の壁で基盤を削る位置を、タイルの端から内へ end_trim 下げる
+        A = sys.modules["sheetlib.assemble"]
+        _reach = A._reach_edge
+        A._reach_edge = lambda path: _reach(path) - cfg["end_trim"]
     extra = _trial_parts(cfg, R, TP)
     for prof in R.TRACK_PROFILES.values():
         if str(prof.get("sheet", "")).startswith(BALLAST) and extra:
@@ -215,8 +247,13 @@ def _trial_parts(cfg, R, TP):
     if cfg.get("rail_head"):
         # 車輪で磨かれた頭頂面（明るい鋼の色）。側面は今のさび色のまま
         rgb = cfg["rail_head"] if isinstance(cfg["rail_head"], tuple) else (0.80, 0.79, 0.76)
-        out.append(R.Part("rail_head", "rail", "gauge", ("rail_head", rgb, 0.4, 0.0),
-                          TP._strip_shape(rin + 0.01, rout - 0.01, rz1 + 0.001, 0.004)))
+        head = TP._strip_shape(rin + 0.01, rout - 0.01, rz1 + 0.001, 0.004)
+        if "diag_head" in cfg:
+            # 斜め（横幅の倍率 k < 1）だけ、帯の幅を diag_head 倍にする（帯の中心はそのまま）
+            mid, half = (rin + rout) / 2, (rout - rin - 0.02) / 2 * cfg["diag_head"]
+            narrow = TP._strip_shape(mid - half, mid + half, rz1 + 0.001, 0.004)
+            head = (lambda path, k, h=head, nw=narrow: nw(path, k) if k < 0.99 else h(path, k))
+        out.append(R.Part("rail_head", "rail", "gauge", ("rail_head", rgb, 0.4, 0.0), head))
     if cfg.get("embed"):
         # まくらぎの間の砕石: まくらぎの長さの幅で、上面の少し下まで（上面だけが見える）。材質は道床（ballast）と同じ名前で、まだらも同じになる
         top = EMBED_TOP
