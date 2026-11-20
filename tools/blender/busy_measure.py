@@ -16,6 +16,8 @@ way の画素: bare と way の色の差が MASK_DIFF 以上の画素から、�
              レールの明暗のような構造の線を数えると、構造を描き足すほど「くどい」に寄った（2026-11-20。記録 2026-11-20_ami-busyness-recalibration.md）
     車両比   等倍の細かさ ÷ 車両の画像（pak128 の機関車など。背景色 #E7FFFF を除く）の細かさの中央値。1 に近いほど、
              way が車両と同じくらい目立つ
+環境変数 BUSY_REF に通常の版の名前（画像の名前の <名前>）を渡すと、各版の way の画素のうち、通常の版の way の画素と重なる所
+だけで測った値の表を足す（ref_row）。基盤・高架の版の基盤や躯体の面を除いて、軌道の部分を通常の版と比べる（#72）
 """
 import os
 import re
@@ -129,6 +131,19 @@ def vehicle_fineness(paths):
     return float(np.median(vals)) if vals else float("nan")
 
 
+def ref_row(folder, season, name, ref):
+    """BUSY_REF の表の 1 行: name の way の画素のうち、ref（通常の版）の way の画素と重なる所だけで測る。ref の範囲は、縦にずらして
+    明るさが一致する画素が最も多い位置に置く（高架の版は高架の高さのぶん上にずれる）。線の画素は name の way の画素全体で選ぶ"""
+    Lr, mr = way_pixels(folder, season, ref, 3)
+    L, m = way_pixels(folder, season, name, 3)
+    match = lambda dy: int((shift(mr, -dy, 0, False) & m & (np.abs(shift(Lr, -dy, 0, 9.0) - L) < ISO_DIFF / 3)).sum())
+    dy = max(range(-48, 9), key=match)
+    reg = shift(mr, -dy, 0, False) & m
+    x = line_mask(L, m)
+    return (f"| {season} | {name} | {dy} | {int(reg.sum())} | {100.0 * reg.sum() / max(1, m.sum()):.1f} | "
+            f"{fineness(L, reg & ~x):.4f} | {isolated_excl(L, reg, x):.2f} |")
+
+
 def main():
     a = sys.argv[sys.argv.index("--") + 1:]
     folder, out, vehicles = a[0], a[1], a[2:]
@@ -153,6 +168,14 @@ def main():
         lines.append(f"| {season} | {name} | {int(m3.sum())} | {f.get(3, float('nan')):.4f} | {f.get(4, float('nan')):.4f} | "
                      f"{f.get(6, float('nan')):.4f} | {crush:.3f} | {isolated(L3, m3):.2f} | {f.get(3, float('nan')) / vf:.3f} | "
                      f"{100.0 * x3.sum() / max(1, m3.sum()):.1f} | {fineness(L3, m3 & ~x3):.4f} | {isolated_excl(L3, m3, x3):.2f} |")
+    ref = os.environ.get("BUSY_REF")
+    if ref:
+        lines += ["", f"通常の版（{ref}）の範囲に限った値（等倍、線を除く）:", "",
+                  "| 気候 | 名前 | ずらし dy | 範囲の画素 | way の画素に占める % | 細かさ（線を除く） | 孤立点/千（線を除く） |",
+                  "|" + "---|" * 7]
+        for season, name in sorted(keys, key=order):
+            if (season, ref) in keys:
+                lines.append(ref_row(folder, season, name, ref))
     text = "\n".join(lines) + "\n"
     with open(out, "w", encoding="utf8", newline="\n") as fo:
         fo.write(text)
