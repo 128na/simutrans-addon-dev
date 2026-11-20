@@ -150,7 +150,7 @@ def apply(cfg, n, R, render):
             snow.update({k: R.SNOW_SKIN["ballast"] for k in ("oil", "rust0", "rust1", "sleeper_rust")})
         if "joint" in cfg:
             w, rgb = cfg["joint"]
-            parts.append(R.Part("slab_joint", "rail", "gauge", ("slab_joint", rgb), _joint_shape(SP, R, w), centre=False))
+            parts.append(R.Part("slab_joint", "rail", "gauge", ("slab_joint", rgb), _joint_shape(SP, R, w)))
             snow.setdefault("slab_joint", snow.get("slab", R.SNOW_SKIN["ballast"]))
         if "wear_centre" in cfg:
             u, f = cfg["wear_centre"]

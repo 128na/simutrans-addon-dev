@@ -221,10 +221,12 @@ def _place(ob, part, i, paths, widths, moves, widths_of=None):
     ob["mv"] = tuple(move) if move is not None else (0.0, 0.0, 0.0)  # 基盤の削りを、この物の動きに合わせるため（build_base）
     ob["tall"] = part.tall
     ob["ground"] = part.ground
-    ob["centre"] = part.centre
     ob["front"] = part.front
     ob["thin"] = part.thin
     ob["widen"] = part.widen
+    if part.where == "end":
+        out = paths[i][0] - paths[i][1]  # 行き止まりの端の壁: 線路の外へ向く向き（near_camera）
+        ob["outward"] = (out.x, out.y, 0.0)
     return [ob]
 
 

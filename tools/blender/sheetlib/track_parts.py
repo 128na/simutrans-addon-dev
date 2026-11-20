@@ -217,12 +217,12 @@ TRACK_WEAR = (  # (部品の名前, 経路の中心からの帯 (u0, u1), 汚れ
 )
 
 TRACK_EXTRAS += tuple(Part(n, "rail", "gauge", track_noise(f"track_{n}", _mix(_BALLAST_RGB, lo, t), _mix(_BALLAST_RGB, hi, t), 3.0),
-                           _wear_strip_shape(u0, u1, BALLAST_H + 0.0015 * (i + 1), 0.001), "weathering", centre=False)
+                           _wear_strip_shape(u0, u1, BALLAST_H + 0.0015 * (i + 1), 0.001), "weathering")
                       for i, (n, (u0, u1), (lo, hi), t, _) in enumerate(TRACK_WEAR))
 
 TRACK_EXTRAS += (Part("sleeper_rust", "rail", "gauge",
                       track_noise("track_sleeper_rust", _mix(_SLEEPER_RGB, _RUST_LO, 0.45), _mix(_SLEEPER_RGB, _RUST_HI, 0.30), 4.0),
-                      _sleeper_patch_shape(RAIL_IN - 0.16, RAIL_OUT + 0.16), "weathering", centre=False),)
+                      _sleeper_patch_shape(RAIL_IN - 0.16, RAIL_OUT + 0.16), "weathering"),)
 
 # 夏の絵のまくらぎのくすみ（weathering を使う版だけ）
 TRACK_WEAR_SKIN = {"sleeper": track_noise("track_sleeper_dull", (0.51, 0.50, 0.47), (0.62, 0.61, 0.58), 5.0)}

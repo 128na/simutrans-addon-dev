@@ -12,7 +12,8 @@ dat は src/ のものを写し、ami_ で始まる名前を全部 _round<n> 付
 ラウンドごとの描き分けは ROUND_SETTINGS（render.py の設定の上に重ねる）。
 ラウンド 8（2026-11-20）で、ラウンド 7 の描き分けを render.py（と共有の sheetlib）に入れた。ROUND_SETTINGS の 1〜7 は、入れる前の
 render.py に重ねる値として残してある（記録のため）。今の render.py に重ねると二重にかかるので、そのまま描き直さない。
-次のラウンドは、今の render.py を土台にした設定を新しく足す。
+次のラウンドを回すときは、今の render.py を土台にした設定を新しく足す。今の render.py はまくらぎの形を間隔ごと束ねて作るので、
+cfg の sleeper_pitch（TP.SLEEPER_PITCH の書き換え）は効かない。間隔を変えるときは sleeper の部品を作り直す。
 
 系統（family）: 在来線一式のほかの系統は、環境変数 AMI_FAMILY で選ぶ（FAMILIES。既定は rail_ballast）。
 系統ごとの描き分けは blender/round_<系統>.py の ROUND_SETTINGS と apply(cfg, n, R, render)（render.py の設定の上に重ねる）。
@@ -219,7 +220,7 @@ def _render(n):
                 shape = _lifted(shape, EMBED_TOP - R.BALLAST_H)  # 埋めた砕石の上に出す（まくらぎの上面よりは下）
             if name in cfg.get("drop", ()):
                 shape = lambda path, k: None  # noqa: E731  この汚れの帯を描かない
-            rep[name] = R.Part(name, old.datum, old.width, mat, shape, old.group, centre=False)
+            rep[name] = R.Part(name, old.datum, old.width, mat, shape, old.group)
         prof["replace"] = rep
         if cfg.get("embed"):
             prof["skin"]["ballast_fill"] = stone

@@ -34,7 +34,7 @@ road_sheet に部品の差し替えの口（線路の track_sheet の replace・
 pier_sheet の mat_skin、road_sheet の snow_skin、sidewalk_sheet の paving・snow）に入れた。ROUND_SETTINGS の 1〜4 と apply は、
 入れる前の本番に重ねる作りとして残してある（記録のため）。今の本番に重ねると、本番とラウンドの設定が混ざる: 路面・走行跡（skin を
 上書きする）とコンクリート（material を包む）はラウンドの値が勝ち、雪と敷石（本番は描き分けの口で渡す）は本番の値が勝つ。
-どちらにしても今の本番を土台にした比べにならないので、次のラウンドは今の本番を土台にした設定と apply を作り直す。
+どちらにしても今の本番を土台にした比べにならないので、次のラウンドを回すときは今の本番を土台にした設定と apply を作り直す。
 """
 import dataclasses
 
@@ -209,15 +209,9 @@ def _brick(name, rgb, mortar, scale):
 
 
 def apply(cfg, n, R, render):
-    import os
     import sheetlib.road_parts as RP  # noqa: E402
     import sheetlib.sheetlib as S  # noqa: E402
     import sheetlib.sidewalk as SW  # noqa: E402
-
-    # 歩道（sidewalk.py）は一時フォルダ WORK を名前で取り込んでいて、round.py の _run が切り替える core・cells・sheetlib の WORK に
-    # 付いていかない。持ち分の画像（_own.png）を work/ に書き、cells はラウンドの一時フォルダから読むので、絵がずれた（2026-11-20）。
-    # round.py の _run と同じフォルダにそろえる（round.py を直すまでの間）
-    SW.WORK = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "work", "rounds", "road", f"round{n}", "tmp")
 
     layers = tuple(cfg.get("wear_layers", RP.WEAR_LAYERS))
     if "wear_t" in cfg:

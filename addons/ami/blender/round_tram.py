@@ -18,7 +18,7 @@ cfg の鍵（無ければ今の本番の値）:
 
 ラウンド 4（2026-11-20）を本番（sheetlib の tram_parts と track_sheet の cell_fills）に入れた。ROUND_SETTINGS の 1〜4 と apply は、
 入れる前の本番に重ねる作りとして残してある（記録のため）。apply は本番で無くした定数（TRAM_SEAM_W・TRAM_OIL_U）を読むので、今の本番では動かない。
-次のラウンドは、今の本番（tram_parts の部品）を土台にした設定と apply を作り直す。
+次のラウンドを回すときは、今の本番（tram_parts の部品）を土台にした設定と apply を作り直す（今の apply は呼ぶとすぐ止まる）。
 """
 
 ROUND_SETTINGS = {
@@ -87,6 +87,7 @@ ROUND_SETTINGS.update({
 
 
 def apply(cfg, n, R, render):
+    raise RuntimeError("round_tram.apply は、ラウンド 4 を入れる前の本番に重ねる作り。今の本番では動かない（冒頭の注記）")
     import math
     import sys
     from dataclasses import replace
@@ -245,7 +246,7 @@ def apply(cfg, n, R, render):
                     faces += [(o + i, o + (i + 1) % 4, o + 4 + (i + 1) % 4, o + 4 + i) for i in range(4)]
             return (verts, faces) if faces else None
         gmat = ("tram_gore_dbg", (1.0, 0.0, 0.0), 0.9) if cfg.get("gore_debug") else m_bed
-        parts.append(R.Part("tram_gore", "tram_bed", "bed", gmat, gore, centre=False))
+        parts.append(R.Part("tram_gore", "tram_bed", "bed", gmat, gore))
     if groove_w > 0:
         parts.append(replace(base["tram_groove"], material=m_groove, shape=groove_shape))
     if seam_w > 0:
@@ -285,7 +286,7 @@ def apply(cfg, n, R, render):
                     c = a + dvec * (t - t0)
                     boxes.append(R.box(c.x, c.y, jz, jw, 2 * half, 0.0005, rot=ang))
             return R.merge(boxes) if boxes else None
-        parts.append(R.Part("tram_joint", "tram_bed", "bed", ("tram_joint" + tag, jrgb, 0.9), joint, centre=False))
+        parts.append(R.Part("tram_joint", "tram_bed", "bed", ("tram_joint" + tag, jrgb, 0.9), joint))
     parts += [replace(base["railL"], material=rail_mat, shape=rail_shape(-1)),
               replace(base["railR"], material=rail_mat, shape=rail_shape(1))]
     prof["track_parts"] = tuple(parts)

@@ -12,7 +12,7 @@
     0  省きすぎ: 汚れ・まくらぎのくすみ・砕石のまだらを除き、道床を一色にする
     2〜4  描き込みすぎ: 砕石のまだらの明暗差と細かさ、汚れの濃さを強め、まくらぎを詰める（段が上がるほど強い）
 段は、精細化（#56）を入れる前の render.py の在来線に重ねて作った（2026-11-20）。ラウンド 8 で render.py の在来線の描き分けが変わったので、
-今描き直すと物差しを合わせたときの段とは違う絵になる（段 1 も今の src/ になる）。物差しの値は、そのとき撮った work/calib/shots から測る
+今描き直すと物差しを合わせたときの段とは違う絵になる（段 1 も今の src/ になる。まくらぎの形は今の render.py が間隔を束ねて作るので、段 2〜4 のまくらぎの間隔も効かない）。物差しの値は、そのとき撮った work/calib/shots から測る
 （docs/reference/way-addon.md の 11 章）
 """
 import os
@@ -60,7 +60,7 @@ def _render():
         for i, (n, (u0, u1), (lo, hi), t, _) in enumerate(R.TRACK_WEAR):
             old = replace.get(n) or next(p for p in R.TRACK_EXTRAS if p.name == n)
             mat = R.track_noise(f"track_{n}_{tag}", away(R._mix(mean, lo, t), wear), away(R._mix(mean, hi, t), wear), 3.0)
-            replace[n] = R.Part(n, old.datum, old.width, mat, old.shape, old.group, centre=False)
+            replace[n] = R.Part(n, old.datum, old.width, mat, old.shape, old.group)
         prof = dict(base, sheet=f"{BASE}_{tag}", skin={"ballast": stone}, replace=replace)
         R.TRACK_PROFILES[tag] = prof
 

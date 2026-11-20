@@ -151,7 +151,7 @@ TRAM_END_BAND = TRAM_BED_U - TRAM_EDGE_U0
 TRAM_TRACK_PARTS = (
     Part("tram_edge", "tram_bed", "bed", _M_TRAM_EDGE, _to_edge(_slab_shape(TRAM_BED_U, TRAM_BED_Z0, TRAM_EDGE_Z1))),
     Part("tram_bed", "tram_bed", "bed", _M_TRAM_BED, _to_edge(_slab_shape(TRAM_EDGE_U0, TRAM_BED_Z0, TRAM_BED_Z1), TRAM_END_BAND)),
-    Part("tram_groove", "rail", "gauge", _M_TRAM_GROOVE, _groove_shape, centre=False),
+    Part("tram_groove", "rail", "gauge", _M_TRAM_GROOVE, _groove_shape),
     Part("railL", "rail", "gauge", _M_TRAM_RAIL, _rail_shape(-1)),
     Part("railR", "rail", "gauge", _M_TRAM_RAIL, _rail_shape(1)),
 )
@@ -250,4 +250,4 @@ def _gore_shape(paths):
     return shape
 
 
-TRAM_CELL_FILLS = ((Part("tram_gore", "tram_bed", "bed", _M_TRAM_BED, None, centre=False), _gore_shape),)
+TRAM_CELL_FILLS = ((Part("tram_gore", "tram_bed", "bed", _M_TRAM_BED, None), _gore_shape),)

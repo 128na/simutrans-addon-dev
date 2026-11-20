@@ -136,7 +136,7 @@ _BALLAST_REPLACE = dict(
     railL=R.Part("railL", "rail", "gauge", _rail_mat, _rail_shape(-1)),
     railR=R.Part("railR", "rail", "gauge", _rail_mat, _rail_shape(1)),
     **{_n: R.Part(_n, _old[_n].datum, _old[_n].width, _m, _lifted(_REPLACE.get(_n, _old[_n]).shape, EMBED_TOP - R.BALLAST_H),
-                  _old[_n].group, centre=False) for _n, _m in _wear.items()})
+                  _old[_n].group) for _n, _m in _wear.items()})
 _BALLAST_PARTS = (
     R.Part("rail_head", "rail", "gauge", ("rail_head", RAIL_HEAD_RGB, 0.4, 0.0),
            R._strip_shape(RAIL_IN + 0.01, RAIL_OUT - 0.01, RAIL_Z1 + 0.001, 0.004)),
