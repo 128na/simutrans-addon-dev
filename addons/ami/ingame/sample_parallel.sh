@@ -20,7 +20,8 @@ WAIT=${WAIT:-0.3}     # 移動してから撮るまでの秒数
 SETTLE=${SETTLE:-5}   # 敷いた後、建設費の表示が消えるまで待つ秒数
 WORK="work/parallel/$BASE_PORT"
 LOG="work/parallel/$BASE_PORT.log"
-CLIENT=${MCP_CLIENT:-../../../simutrans/.agents/skills/simutrans-mcp-gui-debug/scripts/mcp_client.py}
+source "$(dirname "$0")/mcp_client.sh"   # MCP_CLIENT の既定（リポジトリの隣の simutrans/）
+CLIENT=$MCP_CLIENT
 source "$(dirname "$0")/sample_spots.sh"
 
 mcp() { local port=$1; shift; python -X utf8 "$CLIENT" --port "$port" "$@"; }
