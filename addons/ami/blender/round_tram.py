@@ -37,10 +37,26 @@ ROUND_SETTINGS = {
     # ラウンド 1: 金属でない明るい頭を 0.14 に、溝を 0.14 に、目地なし（= 1brighthg）。シートの縦の切り口で、頭 195・溝 92〜110・床 135〜145
     "1": {"rail_mat": ((0.92, 0.91, 0.88), 0.4, 0.0), "rail": (0.40, 0.54), "groove": 0.14, "seam": 0},
 }
+_R1 = ROUND_SETTINGS["1"]
+ROUND_SETTINGS.update({
+    # ラウンド 2: 欠陥（T字の穴）と床。gore: T字・十字の曲線と直線のあいだを床で埋める
+    "2gore": dict(_R1, gore=True),
+    "2gored": dict(_R1, gore=True, gore_debug=True),  # 埋めた所を赤で見る（確かめ用）
+    # 床（コンクリートの継ぎ目）と縁の帯。ラウンド 1 で頭が明るくなり、縁の帯（約 195）と頭（約 195）の明るい線が 4 本並ぶ
+    #   joint: 床の横向きの目地（間隔 2.5、幅 0.08。タイルに 4 本）。joint5: 間隔 5（タイルに 2 本）
+    #   edged: 縁の帯を暗く（0.66, 0.65, 0.61）。edgen: 縁の帯を細く（内側 0.87 → 0.92）
+    "2joint": dict(_R1, gore=True, joint=(2.5, 0.08)),
+    "2joint5": dict(_R1, gore=True, joint=(5.0, 0.08)),
+    "2edged": dict(_R1, gore=True, edge_rgb=(0.66, 0.65, 0.61)),
+    "2edgen": dict(_R1, gore=True, edge_u0=0.92),
+    # ラウンド 2: T字の穴を埋め（2gore）、縁の帯を暗く（2edged）。目地は 1px に満たず見えないので採らない
+    "2": dict(_R1, gore=True, edge_rgb=(0.66, 0.65, 0.61)),
+})
 
 
 def apply(cfg, n, R, render):
     import math
+    import sys
     from dataclasses import replace
 
     import sheetlib.tram_parts as TM
@@ -82,6 +98,72 @@ def apply(cfg, n, R, render):
         replace(base["tram_bed"], material=m_bed,
                 shape=TM._to_edge(TM._slab_shape(edge_u0, TM.TRAM_BED_Z0, TM.TRAM_BED_Z1), bed_u - edge_u0)),
     ]
+    if cfg.get("gore"):
+        # T字・十字の、曲線と 2 本の直線のあいだ（三角の所）を床で埋める。本番では床が届かず、透明な穴（2〜5px）が残る
+        # （sheet_audit の holes。T字・分岐の絵の 24 セル）。部品の形は経路 1 本しか受けないので、組み立て（sheetlib.sheetlib の
+        # assemble）を包んでセルの経路を覚え、最初の経路のときだけ、曲線ごとに「曲線の点列 + タイルの中心」の多角形を作る。
+        # 中心を通る直線があり、曲線の片端がその直線に来ているときだけ埋める（ふつうの曲線のセルは変えない）。T字は直線 + 枝の向きへの
+        # 曲線 2 本で、2 つの多角形を合わせると、直線と 2 本の曲線に囲まれた所になる。
+        # 高さは縁の帯より上・床より下（床と同じ材質。縁の帯は覆うが、汚れ・溝・レールは上に出る）。この系統の描画のプロセスにしか効かない
+        S = sys.modules["sheetlib.sheetlib"]
+        cell = {"paths": []}
+        if not getattr(S.assemble, "_tram_gore", False):
+            orig = S.assemble
+
+            def wrapped(parts_, paths_, *a, **kw):
+                cell["paths"] = list(paths_)
+                return orig(parts_, paths_, *a, **kw)
+            wrapped._tram_gore = True
+            S.assemble = wrapped
+        z0, z1 = TM.TRAM_BED_Z0, TM.TRAM_BED_Z1 - 0.0005
+
+        def is_curve(p):
+            return len(p) > 2
+
+        def near_line(q, p):
+            a, b = p[0], p[-1]
+            d = b - a
+            t = max(0.0, min(1.0, (q - a).dot(d) / d.length_squared))
+            return (a + d * t - q).length < 0.3
+
+        def gore(path, k):
+            paths = cell["paths"]
+            if not paths or path is not paths[0]:
+                return None
+            straights = [p for p in paths if not is_curve(p)]
+            verts, faces = [], []
+            for c in (p for p in paths if is_curve(p)):
+                pts = [Vector((q.x, q.y)) for q in c if max(abs(q.x), abs(q.y)) <= 5.0 + 1e-6]
+                if len(pts) < 2:
+                    continue
+                ends = (Vector((c[0].x, c[0].y)), Vector((c[-1].x, c[-1].y)))
+                if not any(any(near_line(e, s) for s in straights) for e in ends):
+                    continue
+                if not any(near_line(Vector((0, 0)), s) for s in straights):
+                    continue
+                # 曲線がタイルの辺に出る所（辺の中点）を両端に足す（隣の曲線の多角形と、中心から辺の中点への線でぴったり接する）
+                mids = [Vector(m) for m in ((0, 5), (0, -5), (5, 0), (-5, 0))]
+                m0, m1 = (min(mids, key=lambda m: (m - e).length) for e in ends)
+                poly = [Vector((0.0, 0.0)), m0] + pts + [m1]
+                o = len(verts)
+                m = len(poly)
+                verts += [Vector((v.x, v.y, z0)) for v in poly] + [Vector((v.x, v.y, z1)) for v in poly]
+                faces += [(o, o + i + 1, o + i) for i in range(1, m - 1)]
+                faces += [(o + m, o + m + i, o + m + i + 1) for i in range(1, m - 1)]
+                faces += [(o + i, o + (i + 1) % m, o + m + (i + 1) % m, o + m + i) for i in range(m)]
+                # 隣の曲線の多角形と接する線（中心から辺の中点）に細い帯を重ねる。接する線の上の画素が、どちらの多角形にも
+                # 半分ずつしか掛からず、透明のまま残った（南向きの T字の 1px）
+                for mid in (m0, m1):
+                    d = mid.normalized()
+                    nrm = Vector((-d.y, d.x)) * 0.15
+                    quad = [-nrm, nrm, mid + nrm, mid - nrm]
+                    o = len(verts)
+                    verts += [Vector((v.x, v.y, z0)) for v in quad] + [Vector((v.x, v.y, z1)) for v in quad]
+                    faces += [(o, o + 1, o + 2, o + 3), (o + 7, o + 6, o + 5, o + 4)]
+                    faces += [(o + i, o + (i + 1) % 4, o + 4 + (i + 1) % 4, o + 4 + i) for i in range(4)]
+            return (verts, faces) if faces else None
+        gmat = ("tram_gore_dbg", (1.0, 0.0, 0.0), 0.9) if cfg.get("gore_debug") else m_bed
+        parts.append(R.Part("tram_gore", "tram_bed", "bed", gmat, gore, centre=False))
     if groove_w > 0:
         parts.append(replace(base["tram_groove"], material=m_groove,
                              shape=TM._pair_shape(rail_in - groove_w, rail_in, gz, gz + TM.TRAM_TH)))
