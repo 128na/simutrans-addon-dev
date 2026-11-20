@@ -294,8 +294,9 @@ for _t in catalog.TRACKS:
 # 断面は blender-poc の高速道路（ROAD_PROFILES["expressway"]）と同じ: 片側 1 車線、タイル全面が路面、歩道なし、路側の白線は実線
 # （分岐の口は点線）。描くのは sheetlib の road_sheet（expressway=True が歩道なしの作り）。種類ごとに変えるのは中央線・路面の色・アイコン:
 #   center: 中央線。生活道路は無し、一般道路は白の実線、高速道路は白の破線（区切りはタイルの辺。sheetlib の tile_dashes）
-#   skin: 路面の色。生活道路・一般道路は blender-poc の街路と同じ灰色（pak128 標準の道路とつなぐ色）、高速道路は blender-poc の
-#         高速道路と同じ暗く青みのある色（走行跡と路肩の雪のぼかしも同じ色から作る。sheetlib の asphalt_skin）
+#   skin: 路面の色。生活道路・一般道路は blender-poc の街路の灰色（pak128 標準の道路とつなぐ色）、高速道路は blender-poc の
+#         高速道路の暗く青みのある色を元にする（走行跡と路肩の雪のぼかしも同じ色から作る。sheetlib の asphalt_skin）。
+#         明るさと粒は下の「道路一式の質感」で変えてある
 # カーブは 3 種とも斜めの絵（dat の image[sw] などが diagonal と同じセル）。道路の壁（#22）は 3 種で共通の way-object にするので、
 # カーブの形を種類でそろえる（README の「道路の作り」）。分岐の絵（switch 画像 1・2）の中身は sheetlib の road_sheet の switch_lines。
 # T字の 1・2 は、どちらも枝の無い側を実線でふさいだ T字の形で、違いは轍（走行跡）のカーブの向きだけ（switch_ruts。向きは
