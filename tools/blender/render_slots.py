@@ -10,8 +10,13 @@ render_parallel.py が使う。標準ライブラリだけで動く（Blender �
 - 親が強制終了されたときに Blender だけが動き続けると、枠は空いたのに Blender が残って合計を超える。
   Windows では親を Job Object（閉じたら中のプロセスを止める）に入れ、子の Blender も同じ Job に入れて道連れにする。
 """
+import errno
 import os
 import sys
+
+# ほかのプロセスが持っているときにロックが返すエラー。これ以外（権限・場所が無いなど）は「使用中」と見なさず、そのまま出す
+# （見なすと、原因が見えないまま枠待ちが続く）
+_BUSY = {errno.EACCES, errno.EAGAIN, errno.EWOULDBLOCK, getattr(errno, "EDEADLOCK", errno.EDEADLK), errno.EDEADLK}
 
 
 class Slot:
@@ -39,8 +44,10 @@ if os.name == "nt":
         try:
             msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
             return True
-        except OSError:
-            return False
+        except OSError as e:
+            if e.errno in _BUSY:
+                return False
+            raise
 
     def _unlock(fd):
         os.lseek(fd, 0, os.SEEK_SET)
@@ -55,8 +62,10 @@ else:
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
             return True
-        except OSError:
-            return False
+        except OSError as e:
+            if e.errno in _BUSY:
+                return False
+            raise
 
     def _unlock(fd):
         try:
@@ -79,7 +88,12 @@ class SlotPool:
         for i in range(self.total):
             path = os.path.join(self.directory, f"slot_{i}.lock")
             fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o666)
-            if _try_lock(fd):
+            try:
+                locked = _try_lock(fd)
+            except BaseException:
+                os.close(fd)
+                raise
+            if locked:
                 return Slot(i, fd)
             os.close(fd)
         return None

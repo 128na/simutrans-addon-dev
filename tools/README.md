@@ -88,6 +88,7 @@ blender-poc の `src/` のシート 28 枚（描画対象 29 個からアイコ�
 - 複数の作業者（別の worktree・セッション）が同時に描いても、マシン全体で動く Blender の数は描画の枠の合計（`SHEET_SLOTS`。既定は論理コア数 − 4、このマシンで 20）を超えない（#74）。`render_parallel.py` は Blender を 1 本起こす前に共有の場所（既定は `%LOCALAPPDATA%\simutrans-addon-dev\render-slots`、`SHEET_SLOT_DIR`）の枠を 1 つ取り、終わったら返す。空きが無ければ待ち、待っている本数を `[render] 枠待ち` で出す。`--jobs` はその回だけの上限として今までどおり効く
   - 止めたり落ちたりした回の枠は OS が返す（ロックファイルのロックで数えるので、プロセスが消えれば外れる）。Windows では、強制終了した回の Blender も道連れに止まる（Job Object）
   - `SHEET_SLOTS` を変えるときは、同時に描く全員で同じ値にする（値が違うと、大きいほうが実効の上限になる）。今どれだけ使われているかは `python -X utf8 tools/blender/render_slots.py`
+  - 論理コアが 20 より少ない PC では、既定の枠が `SHEET_JOBS` の 16 を下回り、1 本だけでも枠で抑えられる。PC を替えたら `SHEET_JOBS` と合わせて決め直す
   - 枠を取るのはこの仕組みが入った後の `render_parallel.py` だけ。古いブランチの worktree で描くと枠を数えない
 - `render_parallel.py` は Blender を優先度「低」で起動する（`--priority`、環境変数 `SHEET_PRIORITY`。`low`・`below_normal`・`normal`）。描画が CPU を使い切っても、ほかの作業が重くならないようにするため（ほかの作業が CPU を使う間は、描画のほうが遅くなる）。Blender を直接 `blender -b` で動かすときは、優先度は下がらない（PowerShell なら `Start-Process -Priority` は無いので、起動後に `(Get-Process blender).PriorityClass = 'Idle'`）
 - 絵を変えない改善は、描き直したシートが前と全画素同じ（`git status` の `src/` の差分なし）であることで確かめる。形（透明の範囲）が同じで色の差が数程度のノイズなら、差分図（`sheet_diff.py`）で見て許す
