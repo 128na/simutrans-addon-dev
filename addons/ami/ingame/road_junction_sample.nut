@@ -15,6 +15,9 @@
 // [check] の行: 組み合わせごとに、十字のタイルの絵を北の行から順に、西から東へ並べる（nsew は通常の十字、nse2 などは T字の「2」、
 // ? はどれでもない）。「1」と「2」が同じ絵なら「2」の名前で出す
 local ROADS = ["ami_road_local", "ami_road_general", "ami_road_expressway"];
+// ラウンドの版（#56）: AMI の名前（ami_ で始まるもの）の末尾に付ける。例: "_round1"。空なら今の名前（sample_parallel.sh の SUFFIX が置き換える）
+local SUFFIX = "";
+function wdx(n) { return way_desc_x(n.find("ami_") == 0 ? n + SUFFIX : n); }
 local ORIGINS = [[20, 20]];
 local SPACING = 22;
 local COMBOS = [[2, 1], [1, 2], [3, 1], [1, 3], [2, 2], [2, 3], [3, 2], [3, 3]];
@@ -33,7 +36,7 @@ try { pin = command_x(tool_set_switch_image); } catch (e) { pin = null; }
 local PINS = [["nse", "ns", 1, 0], ["new", "ew", 0, -1], ["nsw", "ns", -1, 0], ["sew", "ew", 0, 1], ["nsew", "ns", 0, 0]];
 
 function lay(name, ox, oy) {
-  local w = way_desc_x(name);
+  local w = wdx(name);
   if (w == null) return name + " desc=[missing]\n";
   local c = function(x, y, z = 0) { return coord3d(ox + x, oy + y, z); };
   local line = function(x0, y0, x1, y1) { return command_x.build_way(pl, c(x0, y0), c(x1, y1), w, true); };
