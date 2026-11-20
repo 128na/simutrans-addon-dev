@@ -14,6 +14,9 @@
 //   区画 X の横切ったタイルの way（道路は歩道と 2 本の way になり踏切の物が立つか。運河は歩道を置き換えるか）。
 local SIDE = "ami_sidewalk";
 local UNDER = ["ami_road_local", "ami_road_general", "ami_road_expressway", "Road_050"];
+// ラウンドの版（#56）: AMI の名前（ami_ で始まるもの）の末尾に付ける。例: "_round1"。空なら今の名前（sample_parallel.sh の SUFFIX が置き換える）
+local SUFFIX = "";
+function wdx(n) { return way_desc_x(n.find("ami_") == 0 ? n + SUFFIX : n); }
 local ORIGINS = [[20, 24], [276, 24]];
 local SNOW = 1;
 local SPACING = 14;
@@ -27,9 +30,9 @@ function way_at(x, y, wt) { return square_x(x, y).get_ground_tile().get_way(wt);
 function road_state(x, y) { local w = way_at(x, y, wt_road); return w == null ? "-" : w.get_dirs() + "#" + w.get_image_id(); }
 
 function lay(under, ox, oy) {
-  local sd = way_desc_x(SIDE);
+  local sd = wdx(SIDE);
   if (sd == null) return SIDE + " desc=[missing]\n";
-  local rd = way_desc_x(under);
+  local rd = wdx(under);
   if (rd == null) return under + " desc=[missing]\n";
   local swt = sd.get_waytype();
   local c = function(x, y, z = 0) { return coord3d(ox + x, oy + y, z); };

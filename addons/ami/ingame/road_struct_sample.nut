@@ -27,6 +27,11 @@ local ROADS = ["ami_road_local", "ami_road_general", "ami_road_expressway"];
 local STANDARD = "Road_050";
 local RAIL = "ami_rail_ballast";
 local PIER = "ami_pier_road";
+// ラウンドの版（#56）: AMI の名前（ami_ で始まるもの）の末尾に付ける。例: "_round1"。空なら今の名前（sample_parallel.sh の SUFFIX が置き換える）
+local SUFFIX = "";
+function wdx(n) { return way_desc_x(n.find("ami_") == 0 ? n + SUFFIX : n); }
+function wodx(n) { return wayobj_desc_x(n.find("ami_") == 0 ? n + SUFFIX : n); }
+function bdx(n) { return bridge_desc_x(n.find("ami_") == 0 ? n + SUFFIX : n); }
 local ELEV_UP = 2;
 local ORIGINS = [[20, 20], [276, 20]];
 local SNOW = 1;
@@ -144,19 +149,19 @@ function pins(tag, w, wo, ox, oy, iy, z, pier, name) {
 }
 
 function lay(name, ox, oy) {
-  local w = way_desc_x(name), std = way_desc_x(STANDARD), rail = way_desc_x(RAIL), pier = way_desc_x(PIER);
+  local w = wdx(name), std = way_desc_x(STANDARD), rail = way_desc_x(RAIL), pier = wdx(PIER);  // RAIL は道路のラウンドの pak に無いので今の名前
   local od = {}, ev = {}, bd = {};
   foreach (v in ["single", "back", "center", "front", "twin"]) {
-    od[v] <- wayobj_desc_x("ami_wall_road_" + v);
+    od[v] <- wodx("ami_wall_road_" + v);
     if (od[v] == null) return "ami_wall_road_" + v + " desc=[missing]\n";
   }
   foreach (v in ["single", "back", "center", "front"]) {
-    ev[v] <- way_desc_x(name + "_elev_" + v);
+    ev[v] <- wdx(name + "_elev_" + v);
     if (ev[v] == null) return name + "_elev_" + v + " desc=[missing]\n";
-    bd[v] <- way_desc_x(name + "_base_" + v);
+    bd[v] <- wdx(name + "_base_" + v);
     if (bd[v] == null) return name + "_base_" + v + " desc=[missing]\n";
   }
-  local br = bridge_desc_x(name + "_bridge");
+  local br = bdx(name + "_bridge");
   if (w == null || br == null || pier == null) return name + " desc=[missing]\n";
   local c = function(x, y, z = 0) { return coord3d(ox + x, oy + y, z); };
   local s = r(name + " label", marker.work(pl, c(0, -3), name));
@@ -281,7 +286,7 @@ function lay(name, ox, oy) {
   s += r("B4 pierW", command_x.build_way(pl, b(0, 24), b(4, 24), pier, true));
   s += r("B4 pierE", command_x.build_way(pl, b(12, 24), b(15, 24), pier, true));
   s += r("B4 wall", command_x.build_wayobj(pl, b(0, 24, ELEV_UP), b(15, 24, ELEV_UP), od["single"]));
-  local tn = name + "_tunnel";
+  local tn = name + "_tunnel" + SUFFIX;
   local tunnel = function(tag, ew, x0, at, wo) {
     local t = "";
     if (ew) {
