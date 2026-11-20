@@ -24,6 +24,9 @@ road_sheet に部品の差し替えの口（線路の track_sheet の replace・
     conc: コンクリートの質感 (明暗の幅, Scale)。壁・基盤・躯体・橋脚の材質（名前 wall・base・elev_body・pier・pier_post・pier_beam）を、
         元の色の (1 - 幅)〜(1 + 幅) 倍のまだらにする。基盤・躯体・橋脚は材質を色の組（material(*mat)）でしか受けないので、このプロセスの
         中でだけ core・assemble・sheetlib の material を包んで、名前で差し替える（本番では描き分けに材質の口を足す）
+    line: 白線の材質 (色, 発光)。road_parts の _M_LINE（色 0.95・発光 0.6）の代わりに、道路 3 種の skin の "line" に入れる
+    snow: 歩道・縁石と路肩の雪 (明暗の幅, Scale[, 発光[, 色]])。core の _SNOW（一色。色を渡せばその色）を、その色を中心に ±幅 のまだらにする。road_parts の
+        ROAD_SNOW_SKIN（道路の雪の絵の skin）をこのプロセスの中でだけ書き換え、sidewalk の _SNOW と ROAD_PARTS の snowbank も差し替える
     pave: 歩道の敷石。("noise", 暗い色, 明るい色, Scale) か ("brick", 敷石の色, 目地の色, Scale)。sidewalk.py の _M_PAVING を差し替える
 """
 import dataclasses
@@ -85,6 +88,31 @@ ROUND_SETTINGS.update({
     #   2p: 歩道だけ 2pave にした比べ（くどさで敷石が悪くなったときの代わり）
     "2": dict(_R1, conc=(0.12, 25.0), pave=("brick", (0.30, 0.295, 0.28), (0.12, 0.12, 0.115), 0.6)),
     "2p": dict(_R1, conc=(0.12, 25.0), pave=("noise", (0.20, 0.20, 0.19), (0.34, 0.335, 0.32), 35.0)),
+})
+_R2 = ROUND_SETTINGS["2"]
+ROUND_SETTINGS.update({
+    # ラウンド 3: 白線をくすませる試し（色 0.95・発光 0.6 で真っ白に出る）。3line: 色 0.85・発光 0.3。3line2: 色 0.75・発光 0.15
+    # 描く前に手本の白線を測ると（ゲームの画面の way の画素で明るさ 150 以上の平均）、AMI 225 に対し iss 222〜223・SIS 202〜244 で
+    # 同じ帯だった（低いのは明るい路面の pak128 Road_050 の 175 だけ）。くすませると手本から離れるので採らない
+    "3line": dict(_R2, line=((0.85, 0.85, 0.83), 0.3)),
+    "3line2": dict(_R2, line=((0.75, 0.75, 0.73), 0.15)),
+    # ラウンド 3: 雪の歩道・縁石。一色の雪（core の _SNOW）で、ゲームでは地面の雪（明るさ 229、細かさ 3.9）より平らで暗い
+    # （歩道の見本で 207、細かさ 1.4）。地面の雪の上に灰色の板が置いてあるように見える
+    #   3snow: 雪を ±6% のまだら（Scale 60）。3snow2: ±10%
+    "3snow": dict(_R2, snow=(0.06, 60.0)),
+    "3snow2": dict(_R2, snow=(0.10, 60.0)),
+    # 3snow2 で細かさは地面の雪と同じくらい（セルで 0.0148、地面 0.0151）。明るさは 210〜225 で地面 229 より暗いまま。
+    #   3snow3: 3snow2 に発光 0.15 を足して明るさを地面に寄せる
+    "3snow3": dict(_R2, snow=(0.10, 60.0, 0.15)),
+    # 3snow3 をゲームで撮ると、明るさ（222、地面 229）と細かさ（3.5、地面 3.9）は地面の雪に近いが、色が少し緑がかる
+    # （地面 227,227,240、歩道 221,225,229。青みが足りない）。3snow4: 雪の色を青みに寄せる
+    "3snow4": dict(_R2, snow=(0.10, 60.0, 0.15, (0.86, 0.86, 0.97))),
+    # 3snow4 で sheet_audit に新しい候補（歩道の雪のセル 5.5 に、透明色 231,255,255 に近い画素が 3 つ）が出た。青みの明るい粒が
+    # 透明色に寄る。3snow5: 赤を少し足して（緑より赤を上に）透明色から離す
+    "3snow5": dict(_R2, snow=(0.10, 60.0, 0.15, (0.88, 0.86, 0.97))),
+    # ラウンド 3: 3snow5（雪の歩道・縁石・路肩の雪を、青みの色 0.88,0.86,0.97 を中心に ±10% のまだらと発光 0.15。
+    # 歩道のセルで明るさ 225 → 236、細かさ 0.0043 → 0.0160、色 219,223,229 → 234,233,244）
+    "3": dict(_R2, snow=(0.10, 60.0, 0.15, (0.88, 0.86, 0.97))),
 })
 
 STREET = ((0.013, 0.0135, 0.015), (0.028, 0.029, 0.031))  # 生活道路・一般道路の路面の 2 色（road_parts の _M_ROAD_ASPHALT）
@@ -186,10 +214,19 @@ def apply(cfg, n, R, render):
         c, sc = cfg["conc"]
         base = {"wall": WP._M_WALL, "base": WP._M_BASE, "elev_body": WP._M_ELEV_BODY, "pier": WP._M_PIER,
                 "pier_post": WP._M_PIER_POST, "pier_beam": WP._M_PIER_BEAM}
-        table = {nm: (lambda nm=nm, rgb=spec[1]: R.noisy_material(f"r{n}_{nm}", tuple(x * (1 - c) for x in rgb),
-                                                                  tuple(x * (1 + c) for x in rgb), scale=sc, rough=0.9))
+        # c・sc は既定の引数で縛る（材質は描くときに呼ばれるので、後の設定が同じ名前を使うと値が変わる。ラウンド 3 の初めの版で起きた）
+        table = {nm: (lambda nm=nm, rgb=spec[1], c=c, sc=sc: R.noisy_material(f"r{n}_{nm}", tuple(x * (1 - c) for x in rgb),
+                                                                              tuple(x * (1 + c) for x in rgb), scale=sc, rough=0.9))
                  for nm, spec in base.items()}
         _wrap_material((K, A, S), table)
+    if "snow" in cfg:
+        from sheetlib.core import _SNOW
+        sw, ssc, sem, srgb = (tuple(cfg["snow"]) + (0.0, _SNOW[1])[len(cfg["snow"]) - 2:])[:4]
+        snow = lambda: R.noisy_material(f"r{n}_snow", tuple(x * (1 - sw) for x in srgb),
+                                        tuple(min(1.0, x * (1 + sw)) for x in srgb), scale=ssc, rough=0.9, emit=sem)
+        RP.ROAD_SNOW_SKIN.update(curb=snow, paving=snow)  # sheetlib が名前で取り込んだのと同じ辞書
+        SW._SNOW = snow
+        S.ROAD_PARTS = tuple(dataclasses.replace(p, material=snow) if p.name == "snowbank" else p for p in S.ROAD_PARTS)
     if "pave" in cfg:
         kind, *v = cfg["pave"]
         SW._M_PAVING = (_brick(f"r{n}_paving", *v) if kind == "brick" else
@@ -208,4 +245,6 @@ def apply(cfg, n, R, render):
         if not sheet.startswith(("ami_road_", "ami_wall_road_")):
             continue
         base = expwy if "expressway" in sheet else street
+        if "line" in cfg:
+            base = dict(base, line=(f"r{n}_line", cfg["line"][0], 0.6, 0.0, cfg["line"][1]))
         prof["skin"] = dict(prof.get("skin", {}), **base)
