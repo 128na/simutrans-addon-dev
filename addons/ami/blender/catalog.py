@@ -68,7 +68,8 @@ class Road:
 RAIL_BALLAST = Track("rail_ballast")  # 在来線（バラスト軌道）
 RAIL_SLAB = Track("rail_slab")  # 高速線（スラブ軌道）
 RAIL_CONCRETE = Track("rail_concrete")  # 弾性まくらぎ直結軌道（240 km/h。#62）
-TRACKS = (RAIL_BALLAST, RAIL_CONCRETE, RAIL_SLAB)
+RAIL_LADDER = Track("rail_ladder")  # フローティング・ラダー軌道（360 km/h。#67）
+TRACKS = (RAIL_BALLAST, RAIL_CONCRETE, RAIL_LADDER, RAIL_SLAB)
 WALL_TRACK = RAIL_BALLAST  # 共有の壁・架線のシートを描く元の軌道（ほかの種類の基盤の版は、壁のシートを書かない）
 
 # 路面軌道（60 km/h、tram で道路に重ねる。ADR 0002）。通常の版だけ（壁・基盤・高架・橋・トンネルを作らない）ので、TRACKS に入れない

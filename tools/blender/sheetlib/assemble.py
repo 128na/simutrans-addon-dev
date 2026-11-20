@@ -117,8 +117,8 @@ def assemble(parts, paths, datums=FLAT, slope=None, clip=True, widths=None, div=
     道路: tile（RoadTile）を渡すと、where="tile" の板と "line" の白線を先に作る（板・白線・経路の部品の順）。
     half は斜めのタイルで残す半分を決める経路（切り抜いた後に、角の側の帯だけを残す。half_over は中心線を越えて残す幅）。
     tall_pad は高さのある部品をタイルの辺の外へ残す幅。
-    path_opts（無くてよい）は経路の添字 → (widths, div)。その経路だけ横幅の倍率と下げ幅を変える（カーブを斜めの絵で表す T字・十字の
-    斜めの部分。diag_curves）。1 回の組み立てで全部の経路を作るので、部品の添字（pi）と分岐の通り道の削り（corridor）は全部の経路で合う"""
+    path_opts（無くてよい）は経路の添字 → (widths, div) か (widths, div, 差し替え)。その経路だけ横幅の倍率と下げ幅を変える（カーブを斜めの絵で表す T字・十字の
+    斜めの部分。diag_curves）。差し替え（部品の名前 → 部品）があれば、その経路だけ部品を差し替える（ラダー軌道の分岐の側のまくらぎ。AMI #67）。1 回の組み立てで全部の経路を作るので、部品の添字（pi）と分岐の通り道の削り（corridor）は全部の経路で合う"""
     skin = skin or {}
     widths = widths or {}
     path_opts = path_opts or {}
@@ -132,8 +132,10 @@ def assemble(parts, paths, datums=FLAT, slope=None, clip=True, widths=None, div=
         if tile is not None and part.where in ("tile", "line") and part.group in groups:
             for i, ob in _part_objects(part, paths, widths, skin, tile):
                 obs += _place(ob, part, i, paths, widths, moves)
+    swaps_of = [path_opts[i][2] if i in path_opts and len(path_opts[i]) > 2 else {} for i in range(len(paths))]
     for i, path in enumerate(paths):
         for part in parts:
+            part = swaps_of[i].get(part.name, part)
             if part.where in ("tile", "line") or part.group not in groups or (part.where == "end" and not ends)                     or (part.ground and not slope):
                 continue
             geo = part.shape(path, widths_of[i].get(part.width, 1.0))

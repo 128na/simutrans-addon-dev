@@ -3,7 +3,7 @@
 //   y = 100 + 30 * i（i は TRACKS の順）: x=130〜 東西の直線・x=146 南北の直線・x=130〜 斜め・x=152 坂（坂だけ AMI）
 // 坂の十字（blender-poc の steep.nut と同じ形）: y=40 に、種類ごとに x を 20 ずつずらして急坂（2 段）、y=60 に 1 段の坂。
 // 1 行の文字列だけを使う（seam_slope_check.sh は行頭の空白と // の行を消して渡す）
-local TRACKS = ["ami_rail_ballast", "ami_rail_concrete", "ami_rail_slab"];
+local TRACKS = ["ami_rail_ballast", "ami_rail_concrete", "ami_rail_ladder", "ami_rail_slab"];
 local REF = "Rail_160_Tracks";
 local pl = player_x(0);
 local out = "";

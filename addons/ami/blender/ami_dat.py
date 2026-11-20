@@ -68,6 +68,7 @@ VALUES = {
     "ami_tram": dict(waytype="tram_track", speed=60, cost=10000, maintenance=200, intro_year=1900),
     "ami_rail_ballast": dict(waytype="track", speed=160, cost=15000, maintenance=300, intro_year=1900),
     "ami_rail_concrete": dict(waytype="track", speed=240, cost=30000, maintenance=600, intro_year=1960),
+    "ami_rail_ladder": dict(waytype="track", speed=360, cost=35000, maintenance=700, intro_year=1990),
     "ami_rail_slab": dict(waytype="track", speed=480, cost=40000, maintenance=800, intro_year=2000),
     "ami_road_local": dict(waytype="road", speed=40, cost=5000, maintenance=100, intro_year=1900),
     "ami_road_general": dict(waytype="road", speed=120, cost=8000, maintenance=200, intro_year=1930),

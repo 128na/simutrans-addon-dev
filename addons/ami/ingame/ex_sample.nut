@@ -13,7 +13,7 @@
 // 違えば got/want を、通常の絵と同じなら plain を出す。way-object の絵は番号を読めないので、画面で見る（ex_capture.sh）。
 // 名札は ASCII（MCP 経由の日本語は崩れる）。行頭の空白と // で始まる行は ex_check.sh が消して渡すので、複数行の文字列は書かない
 // 高架の版は敷かない（way-object を高架の高さで敷く手間を省いた。高架の way は地上の版と同じ dat の作りで、継ぎ足しも同じ）
-local WAYS = [["ami_rail_ballast", null], ["ami_rail_concrete", null], ["ami_rail_slab", null], ["ami_tram", null], ["ami_rail_ballast_base_single", "ami_wall_rail_single_catenary"], ["ami_rail_ballast_base_back", "ami_wall_rail_back_catenary"], ["ami_rail_ballast_base_center", "ami_wall_rail_center_catenary"], ["ami_rail_ballast_base_front", "ami_wall_rail_front_catenary"]];
+local WAYS = [["ami_rail_ballast", null], ["ami_rail_concrete", null], ["ami_rail_ladder", null], ["ami_rail_slab", null], ["ami_tram", null], ["ami_rail_ballast_base_single", "ami_wall_rail_single_catenary"], ["ami_rail_ballast_base_back", "ami_wall_rail_back_catenary"], ["ami_rail_ballast_base_center", "ami_wall_rail_center_catenary"], ["ami_rail_ballast_base_front", "ami_wall_rail_front_catenary"]];
 local OX = 150;
 local OY = 20;
 local SPACING = 40;
