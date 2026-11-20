@@ -75,7 +75,8 @@ _REPLACE = {
     "oil": dataclasses.replace(next(p for p in R.TRACK_EXTRAS if p.name == "oil"), shape=R.centre_strip_shape(OIL_U, OIL_Z, OIL_TH)),
 }
 
-# ---- 在来線の精細化（#56）。どれも在来線（TRACK_SETTINGS の RAIL_BALLAST）だけに効く
+# ---- 在来線の精細化（#56）。在来線（TRACK_SETTINGS の RAIL_BALLAST）と、その部品を使い回す弾性まくらぎ直結軌道（RAIL_CONCRETE。下）に効く。
+# ここを変えると両方の絵が変わるので、両方のシートの差分を見る（ADR 0006）
 # まくらぎ: 間隔 SLEEPER_PITCH（タイル 1 辺 10 に 18 本）。直線の経路はタイルの辺の外へ PATH_EXT 延びるので、まくらぎを辺から半ピッチの
 # 位置にそろえ、タイルの継ぎ目でも同じ間隔にする（ラウンド 2）。色は明るい PC（コンクリート）のくすみのまだら（ラウンド 4）
 SLEEPER_PITCH = 10 / 18
@@ -148,6 +149,21 @@ _BALLAST_SKIN = {"ballast": _BALLAST_STONE, "ballast_fill": _BALLAST_STONE,
                  "sleeper": R.track_noise("ami_track_sleeper", *SLEEPER_RGB, 5.0)}
 _BALLAST_SNOW_SKIN = dict({_n: _snow_bed for _n in ("ballast", "ballast_fill", "base", "oil", "rust0", "rust1", "sleeper_rust", "sleeper")})
 
+# ---- 弾性まくらぎ直結軌道（ami_rail_concrete。#62）。在来線の部品（まくらぎ・レール・汚れ・車止め）と寸法をそのまま使い、
+# 道床だけを砕石からコンクリートの平らな面にする（在来線とは道床で見分ける。2026-11-21、ユーザーの決定）。道床の高さ・底の幅は
+# 在来線の道床と同じ（壁・架線・基盤と噛み合う）。まくらぎのゴムの靴（防振材）の縁は、画面で 1px 未満（docs/reference/way-addon.md の 12 章）で、
+# 0.12 まで広げてもまくらぎの間が暗くなるだけで靴に見えなかったので描かない。中央の排水溝も描かない（くどさ。11 章）
+# 道床の上面の半幅。在来線の肩（BALLAST_SHOULDER）と同じで、そこから底（±1.9）まで同じ斜面。外形は在来線と同じになる。
+# 1.75（ほぼ垂直の縁）では奥の縁が在来線より 1px 外まで塗られ、坂の寄り・継ぎ目のずれが在来線より 0.5px 大きかった。
+# 1.55〜1.65 でもシートの塗りが在来線より外へ出たので、在来線と同じ所で止めた（2026-11-21、ユーザーの決定）
+CONC_BED_HALF = BALLAST_SHOULDER
+CONC_BED_RGB = ((0.47, 0.47, 0.46), (0.56, 0.56, 0.55))  # 道床のコンクリート（まくらぎより暗い。赤みを足さない: slope_measure.py がレールを「赤 − 青」で探す）
+CONC_BED_GRAIN = 25.0  # まだらの細かさ（打ち放しの肌。壁・基盤のコンクリートと同じ Scale）
+_CONC_SECTION = [(-1.9, 0.0), (1.9, 0.0), (CONC_BED_HALF, EMBED_TOP - 0.001), (-CONC_BED_HALF, EMBED_TOP - 0.001)]
+_CONC_BED = R.track_noise("ami_conc_bed", *CONC_BED_RGB, CONC_BED_GRAIN)
+_CONC_REPLACE = dict(_BALLAST_REPLACE, ballast=dataclasses.replace(_old["ballast"], shape=R.bed_to_edge(_CONC_SECTION)))
+_CONC_SKIN = dict(_BALLAST_SKIN, ballast=_CONC_BED, ballast_fill=_CONC_BED)
+
 # 行き止まりのレールの終点（車止めの位置）: 閉じた側のタイルの端から、タイル 1 辺のこの割合の所（ユーザーの指摘、2026-11-17。
 # blender-poc はタイルの中心 = 0.5）。道床はタイルの端まで
 END_FROM_EDGE = 0.25
@@ -159,6 +175,8 @@ _SLAB_DATUMS = dict(_DATUMS, slab_bed=_DATUMS["rail"])
 TRACK_SETTINGS = {
     catalog.RAIL_BALLAST.key: {"label": "160", "skin": _BALLAST_SKIN, "snow_skin": _BALLAST_SNOW_SKIN, "replace": _BALLAST_REPLACE,
                                "parts": _BALLAST_PARTS},
+    catalog.RAIL_CONCRETE.key: {"label": "240", "skin": _CONC_SKIN, "snow_skin": _BALLAST_SNOW_SKIN, "replace": _CONC_REPLACE,
+                                "parts": _BALLAST_PARTS},
     # 高速線（スラブ軌道）: 部品は sheetlib の slab_parts。レール・基準面・カーブや行き止まりの作りは在来線と同じ
     catalog.RAIL_SLAB.key: {"label": "480", "datums": _SLAB_DATUMS, "track_parts": R.SLAB_TRACK_PARTS, "bed_fills": R.SLAB_BED_FILLS,
                             "replace": R.SLAB_WEAR_REPLACE, "snow_skin": R.SLAB_SNOW_SKIN},
@@ -213,6 +231,7 @@ def _stop_at_end_wall(datum):
 # 壁のある版（基盤・高架・橋）の行き止まりの道床
 _EDGE_BED = {
     catalog.RAIL_BALLAST.key: {"ballast": dataclasses.replace(_old["ballast"], shape=R.bed_to_edge(_BALLAST_SECTION, _stop_at_end_wall(_DATUMS["bed"])))},
+    catalog.RAIL_CONCRETE.key: {"ballast": dataclasses.replace(_old["ballast"], shape=R.bed_to_edge(_CONC_SECTION, _stop_at_end_wall(_DATUMS["bed"])))},
     catalog.RAIL_SLAB.key: {"slab_bed": dataclasses.replace(next(p for p in R.SLAB_TRACK_PARTS if p.name == "slab_bed"),
                                                         shape=R.slab_bed_shape(_stop_at_end_wall(_SLAB_DATUMS["slab_bed"])))},
 }
