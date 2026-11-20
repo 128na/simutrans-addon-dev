@@ -19,6 +19,8 @@ apply(cfg, n, R, render): 描く前に、render.py の設定（R.TRACK_PROFILES 
     joint       (線路に沿う幅, 色): スラブの継ぎ目に、スラブの幅いっぱいの暗い帯を載せる（継ぎ目を見せる）
     wear_centre (半幅, 寄せ具合の倍率): さびの帯 2 本ずつを描かず、レールの間の油の帯をこの半幅に広げる
     slab_rgb    軌道スラブの色（暗い側, 明るい側。sheetlib の SLAB_LO・HI は 0.60〜0.68）
+    drop        描かない部品の名前（例: 突起 slab_stud・欠き込み slab_notch・締結装置 slab_fastener・そのさび sleeper_rust）
+    head_rgb    rail で載せる明るい頭の帯の色（在来線は 0.92・0.91・0.88）
 """
 import dataclasses
 
@@ -70,7 +72,10 @@ def apply(cfg, n, R, render):
             rep["railL"] = render._BALLAST_REPLACE["railL"]
             rep["railR"] = render._BALLAST_REPLACE["railR"]
             if cfg.get("rail_head", True):
-                parts.append(next(p for p in render._BALLAST_PARTS if p.name == "rail_head"))
+                head = next(p for p in render._BALLAST_PARTS if p.name == "rail_head")
+                if "head_rgb" in cfg:
+                    head = dataclasses.replace(head, material=("rail_head_r", cfg["head_rgb"]) + tuple(head.material[2:]))
+                parts.append(head)
         if "wear_t" in cfg:
             for i, (name, _, (lo, hi), t, _) in enumerate(R.TRACK_WEAR):
                 f = cfg["wear_t"].get(name)
@@ -131,6 +136,9 @@ def apply(cfg, n, R, render):
         if cfg.get("snow_parts"):
             s_ = snow.get("slab", R.SNOW_SKIN["ballast"])
             snow.update(slab_stud=s_, slab_fastener=s_)
+        for name in cfg.get("drop", ()):
+            old = rep.get(name) or next(p for p in SP.SLAB_TRACK_PARTS if p.name == name)
+            rep[name] = dataclasses.replace(old, shape=lambda path, k: None)
         prof["replace"], prof["parts"], prof["skin"], prof["snow_skin"] = rep, tuple(parts), skin, snow
 
 
@@ -170,3 +178,13 @@ ROUND_SETTINGS.update({
 ROUND_SETTINGS["2c"] = dict(_R2, joint=(0.30, (0.12, 0.12, 0.12)), wear_centre=(0.36, 0.8))
 # ラウンド 2 = 2joint（記録 docs/records/2026-11-20_ami-slab-refine-round2.md）。2wearc・2c は孤立点が上がり、採らない
 ROUND_SETTINGS["2"] = ROUND_SETTINGS["2joint"]
+
+# ラウンド 3（土台は 2）: 継ぎ目の中の突起（暗い帯の中の明るい点）と、手本が描かない締結装置を省く。控えめな色のレールの頭
+_R3 = ROUND_SETTINGS["2"]
+ROUND_SETTINGS.update({
+    "3nostud": dict(_R3, drop=("slab_stud", "slab_notch")),
+    "3nofast": dict(_R3, drop=("slab_fastener", "sleeper_rust")),
+    "3head": dict(_R3, rail_head=True, head_rgb=(0.80, 0.79, 0.76)),
+})
+# ラウンド 3 = 3nofast（記録 docs/records/2026-11-20_ami-slab-refine-round3.md）。3nostud・3head は孤立点が上がり、採らない
+ROUND_SETTINGS["3"] = ROUND_SETTINGS["3nofast"]
