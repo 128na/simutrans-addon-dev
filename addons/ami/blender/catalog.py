@@ -80,6 +80,20 @@ WALL_TRACK = RAIL_BALLAST  # 共有の壁・架線のシートを描く元の軌
 # （TRACKS の種類は基盤・高架・橋・トンネルの名前を導き、カーブを斜めの絵にする。路面軌道のカーブは曲線のまま。README の「残っていること」）
 TRAM = "ami_tram"
 
+# 跨座式モノレール（150 km/h、monorail_track。#113。名前は ADR 0008）。物の並びは iss の跨座式（地上・高架の front・center・back・トンネル）に合わせる
+# （2026-11-21、ユーザーの決定）。線路と違い基盤・橋を作らないので、TRACKS に入れない（TRACKS の種類は基盤・高架・橋の名前を導く）
+MONORAIL = "ami_monorail_straddle"
+MONORAIL_ELEV_VARIANTS = ("front", "center", "back")  # 高架の版（iss と同じ 3 版。柱を立てる側。single は作らない）
+
+
+def monorail_elev(variant):
+    """跨座式モノレールの高架の版の名前（ami_monorail_elev_<版>）"""
+    return f"{MONORAIL}_elev_{variant}"
+
+
+MONORAIL_ELEVS = tuple(monorail_elev(_v) for _v in MONORAIL_ELEV_VARIANTS)
+MONORAIL_TUNNEL = f"{MONORAIL}_tunnel"
+
 ROAD_LOCAL = Road("road_local")  # 生活道路（40 km/h、中央線なし）
 ROAD_GENERAL = Road("road_general")  # 一般道路（120 km/h、中央線は白の実線）
 ROAD_EXPRESSWAY = Road("road_expressway")  # 高速道路（360 km/h、中央線は白の破線）
@@ -153,7 +167,7 @@ class Depot:
         self.name = f"{PREFIX}{kind}_depot"
 
 
-DEPOTS = (Depot("rail", "track"), Depot("tram", "tram_track"), Depot("road", "road"))
+DEPOTS = (Depot("rail", "track"), Depot("tram", "tram_track"), Depot("road", "road"), Depot("monorail", "monorail_track"))
 
 # 道路標識（roadsign。#122）。名前は ami_sign_<名前>（ADR 0008）で、build.py の振り分けで ami_scenery.pak に入る。
 # 値は 6 種（2026-11-21、ユーザーの決定。#122 の案 A）。キーは sheetlib の roadsign.ROADSIGN_PLATES のキー（板の絵）

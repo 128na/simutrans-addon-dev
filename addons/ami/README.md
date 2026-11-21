@@ -29,8 +29,10 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 | 橋脚・歩道 | `ami_pier_rail`（門型は `ami_pier_rail_gate`）・`ami_pier_road`・`ami_sidewalk`。歩道の種類は `ami_sidewalk_<舗装>`（`asphalt`・`brick`・`tile`）、高架の歩道は `ami_sidewalk_elev`（#119） |
 | 歩道の柵 | `ami_wall_sidewalk_<版>`（`single`・`back`・`front`。#119。名前は作業者が決めた。ユーザーが PR で確かめる） |
 | 景観 | 盛土 `ami_embankment_front`・`ami_embankment_back`（ADR 0008 の `ami_embankment_<版>`）、道路標識 `ami_sign_<名前>`（6 種。#122） |
+| モノレール | 跨座式 `ami_monorail_straddle`、高架 `ami_monorail_straddle_elev_<版>`（`front`・`center`・`back`）、トンネル `ami_monorail_straddle_tunnel`（ADR 0008。#113） |
+| 車庫 | `ami_rail_depot`・`ami_tram_depot`・`ami_road_depot`・`ami_monorail_depot`（ADR 0008） |
 
-dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`・`ami_rail_concrete`・`ami_rail_concrete_base_<版>`（4 版）・`ami_rail_concrete_elev_<版>`（4 版）・`ami_rail_concrete_bridge`・`ami_rail_concrete_tunnel`・`ami_rail_ladder`・`ami_rail_ladder_base_<版>`（4 版）・`ami_rail_ladder_elev_<版>`（4 版）・`ami_rail_ladder_bridge`・`ami_rail_ladder_tunnel`・`ami_road_local`・`ami_road_general`・`ami_road_expressway`・道路 3 種それぞれの `_base_<版>`（4 版）・`_elev_<版>`（4 版）・`_bridge`・`_tunnel`・`ami_wall_road_<版>`（4 版）・`ami_wall_road_twin`・`ami_wall_road_front_divider`・`ami_wall_road_center_divider`・`ami_wall_road_twin_divider`・`ami_pier_road`・`ami_tram`・`ami_embankment_front`・`ami_embankment_back`・`ami_sidewalk`・`ami_sidewalk_<舗装>`（3 種）・`ami_sidewalk_elev`・`ami_wall_sidewalk_<版>`（3 版）。
+dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`・`ami_rail_concrete`・`ami_rail_concrete_base_<版>`（4 版）・`ami_rail_concrete_elev_<版>`（4 版）・`ami_rail_concrete_bridge`・`ami_rail_concrete_tunnel`・`ami_rail_ladder`・`ami_rail_ladder_base_<版>`（4 版）・`ami_rail_ladder_elev_<版>`（4 版）・`ami_rail_ladder_bridge`・`ami_rail_ladder_tunnel`・`ami_road_local`・`ami_road_general`・`ami_road_expressway`・道路 3 種それぞれの `_base_<版>`（4 版）・`_elev_<版>`（4 版）・`_bridge`・`_tunnel`・`ami_wall_road_<版>`（4 版）・`ami_wall_road_twin`・`ami_wall_road_front_divider`・`ami_wall_road_center_divider`・`ami_wall_road_twin_divider`・`ami_pier_road`・`ami_tram`・`ami_embankment_front`・`ami_embankment_back`・`ami_sidewalk`・`ami_sidewalk_<舗装>`（3 種）・`ami_sidewalk_elev`・`ami_wall_sidewalk_<版>`（3 版）・`ami_monorail_straddle`・`ami_monorail_straddle_elev_<版>`（3 版）・`ami_monorail_straddle_tunnel`・車庫 4 つ。
 
 ### 線路（新描画位置）
 
@@ -545,17 +547,31 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 値（仮。#110 で決める）: 速さは両方の way の最高速度（踏切で速度を落とさない）、登場年は 2 つの way の遅い方、音なし（`sound=-1`。iss と同じ）。`blender/ami_dat.py` の `crossing_dat_text`
 - 見本は `ingame/crossing_sample.sh`（`ingame/crossing_sample.nut`・`crossing_train.nut`）。12 組を、道路が南北の向き（H 線）と東西の向き（V 線）で温暖・降雪に敷き、開いた絵と、列車を走らせて閉じた絵を撮る。撮った画面に AMI の踏切の絵が出ているかは `JUDGE=1` で判定する（`ingame/crossing_judge.py`。AMI の遮断機・警報機の黄色と、pak128 の踏切の標識の赤の画素を数え、どちらも無ければ踏切が写っていないとする。script からは踏切の名前が読めず、ほかの pak の踏切が選ばれても way の速さは変わらないため。#128）。撮った画面は `docs/crossing_<気候>_<線>_<開閉>.png`（左上から、行が道路 local・general・expressway、列が線路 ballast・concrete・ladder・slab）
 
+### 跨座式モノレールの作り（#113）
+
+- 物: 地上の `ami_monorail_straddle`、高架の 3 版 `ami_monorail_straddle_elev_front`・`_center`・`_back`（`system_type=1`）、トンネル `ami_monorail_straddle_tunnel`（中の way は地上の版）、車庫 `ami_monorail_depot`（下の「車庫の作り」）。waytype は `monorail_track`。並びは iss の跨座式（`../refs/iss/src/way/monorail/straddle.dat`・`../refs/iss/src/tunnel/monorail/tunnel.dat`）に合わせた（2026-11-21、ユーザーの決定「軌道配置は ISS と合わせる」）。橋・基盤の版・壁は作らない（iss にも無い）
+- 桁: 打ち放しのコンクリートの箱。幅 0.85、上面は way の高さから 0.7（iss の地上の桁を画面で測った値。記録）。地上の版は桁の下面が地面、高架の版は桁を下へ深くして高さ 1.6。跨座式の車両（pak128.japan の車両）は車体の下端が地面の高さに描かれ、裾が桁の上の部分を隠す
+- 高架の柱: 桁がタイルを出入りする辺ごとに、その辺の角に柱を立て、柱の頭から辺の中点の桁の下へ腕を渡す（iss と同じ並び）。版は柱を立てる側で、`front` は手前（南北の線は東、東西の線は南）、`back` は奥、`center` は両側。行き止まりは桁の端にも同じ柱と腕。iss は柱をタイルの角ちょうどに立てるが、AMI はタイルの内側に面を合わせて立て、隣のタイルの柱と背中合わせにする（門型の橋脚と同じ。角に立てると、絵がタイルの持ち分で切られて柱が半分になる）。複線は、西（北）の線を `back`・東（南）の線を `front` にすると、柱が外側に並ぶ（`docs/monorail_elev_pair.png`）
+- 絵の並び: 線路の通常の版と同じシート（`sheetlib` の `track_sheet`。部品は `tools/blender/sheetlib/monorail_parts.py`）。カーブは斜めの絵（iss と同じく、dat の `image[sw]` などが斜めのセルを指す）。近い斜めの絵は無い（iss の dat にキーが無い）。分岐の絵（`image[nse1]` などの 1・2）は iss と同じく入れたが、本体は `monorail_track` では自動で選ばない（[way-addon.md](../../docs/reference/way-addon.md) の 9.2）。分岐の追加画像（ex 画像）は無い
+- 雪の絵: 桁の上面だけを白くする（iss の跨座式は雪の絵を持たない。AMI のほかの way にそろえて足した）。柱は夏と同じ
+- アイコン: 背景は紫（モノレール。`blender/icons.py` の `WAY_BG`）。高架の版は右下に版の札（前・中・後）と下の帯
+- 値: 150 km/h、地上 30000・600、高架 60000・1200（地上の 2 倍）、トンネル 120000・2400（4 倍）、登場 1900（#110 の一覧。`blender/ami_dat.py` の `VALUES`）
+- pak は `ami_monorail.pak`（`build.py` の `KINDS`。車庫も入る）
+- 見本は `ingame/monorail.sh`（`ingame/monorail.nut`）。ゲームの写し（`work/monorail_game/<PORT>/`）を起動し、地上（車庫と輪・十字・斜め・行き止まり）、高架の 3 版（直線・L 字・T字・斜め・行き止まり）、複線、トンネルを敷き、電化の要らない車両の編成を輪で走らせる。`EXTRA_PAKS` で、借りた車両の pak を写しの中にだけ入れられる。`SNOW=1` で降雪側、`CAPTURE=1` で撮る。使い方はスクリプトの冒頭
+  - 確認画像（2026-11-22、`OTRPv64_3.exe`、`flat_512.sve`）: `docs/monorail_ground_temperate.png`（地上の輪・十字・車庫の口の T字）、`monorail_elev_front.png`・`monorail_elev_center.png`・`monorail_elev_back.png`・`monorail_elev_pair.png`、`monorail_tunnel_diag.png`（左がトンネル、右が地上の斜め）、`monorail_snow.png`（降雪側の地上と高架 `front`）、`monorail_vehicle.png`・`monorail_vehicle_zoom.png`（地上を走る編成）、`monorail_depot_vehicle.png`（車庫から出る編成）
+  - 車両は、ユーザーが動作の確かめに渡した pak128.japan の跨座式の車両（玉野の 4 両編成。battery）を、写しの中にだけ入れて走らせた。リポジトリには入れていない。高架の上を走る編成は見ていない（地上から高架へ上がる坂を敷いていない）
+
 ### 車庫の作り（#112）
 
-- 線路・路面軌道・道路の 3 つ（`ami_rail_depot`・`ami_tram_depot`・`ami_road_depot`。`blender/catalog.py` の `DEPOTS`）。[ADR 0008](../../docs/adr/0008-ami-scope-second-phase.md) の第 2 弾の物で、手本は blender-poc の料金所の作り（1 タイルの building に奥と手前の絵）
+- 線路・路面軌道・道路の 3 つ（`ami_rail_depot`・`ami_tram_depot`・`ami_road_depot`。`blender/catalog.py` の `DEPOTS`）と、モノレールの `ami_monorail_depot`（#113。入口の幅は線路と同じ 3.4、高さも同じ 26px。玉野の 4 両編成が入口で切れずに出た。`docs/monorail_depot_vehicle.png`）。[ADR 0008](../../docs/adr/0008-ami-scope-second-phase.md) の第 2 弾の物で、手本は blender-poc の料金所の作り（1 タイルの building に奥と手前の絵）
 - 大きさは、箱積み駅舎の箱 1 段（1 タイル × 高さ 2 段 = 32px。[#140](https://github.com/128na/simutrans-addon-dev/issues/140)）に収める（2026-11-21、ユーザーの決定）。屋根は平らで、笠木の上面がちょうど 2 段。軒・屋根・柱形・腰壁を含めて、奥の絵も手前の絵も、128px のセルの六角形 (64,32)(128,64)(128,96)(64,128)(0,96)(0,64) の中に描く。奥の絵の上端は y32 で、本体が絵から出す建物の高さは 2 段になり、高架（2 段）を上に引ける（下の「高架」）
 - 形: 壁の面はタイルの端から 0.1 内、壁の上に笠木、壁の中ほどに会社の色の帯（`player1` の色）、角と入口の脇に柱形、側壁と奥の壁に窓、足元に腰壁（タイルの端まで出し、地面より約 1px 下から立ち上げる）。入口の高さは 26px（pak128 の車両の車体はいちばん高いもので 25px。測り方は記録）。入口の幅は線路 3.4・路面軌道 3.2・道路 4.6（タイル 10）。寸法は `tools/blender/sheetlib/depot.py` の定数と `DEPOT_SHAPES`
 - 絵: 道の出る向き（layout 0〜3 が南・東・北・西。本体の決まりは [way-addon.md](../../docs/reference/way-addon.md) の 5 章）ごとに、奥の絵（北・西の壁と奥の壁の内側）と手前の絵（南・東の壁と屋根）。手前の絵は車両の後に描かれ、車庫に出入りする車両を隠す。雪の絵は屋根と笠木を白くした版（シートの 3・4 行目）。アイコンとカーソルはシートの 5 行目（`blender/icons.py` が layout 0 の絵から作る。札の字は「庫」）
 - 下の way の絵: 道路の行き止まりの絵はタイル全体を塗り、地面より 1px 下に描かれる。腰壁を 1px 下へ延ばして隠したが、2px にすると六角形の外へ出るので、建物の手前の下の縁に道路の端が 1px の点線で残る（`docs/depot_road_temperate.png` の右）。見た目はユーザーが見る
 - 路面軌道の車庫は、路面軌道だけの行き止まりに建つ（道路の上の路面軌道の行き止まりは way が 2 本のタイルなので建たない。本体の決まり）
 - 高架: AMI の高架の線路（`ami_rail_ballast_elev_single`）を、AMI の車庫と pak128 の `TrainDepot` の上（2 段上のタイル）に敷けた（`docs/depot_elevated.png`）。pak128 には高架の運河が無いので、箱の 2 段目の代わりに高架の線路で見た
-- 値: 費用 線路・路面軌道 850000・道路 700000、維持費 1800、登場年 1900、引退 2999 年（`blender/ami_dat.py` の `DEPOT_VALUES`。値の決め方は「第 2 弾の物の値」）。`noinfo=1`・`needs_ground=1`
-- pak は種類ごとの pak（`ami_rail.pak`・`ami_tram.pak`・`ami_road.pak`）に入る（`build.py` の `KINDS` の名前の頭）
+- 値: 費用 線路・路面軌道・モノレール 850000・道路 700000、維持費 1800、登場年 1900、引退 2999 年（`blender/ami_dat.py` の `DEPOT_VALUES`。値の決め方は「第 2 弾の物の値」）。`noinfo=1`・`needs_ground=1`
+- pak は種類ごとの pak（`ami_rail.pak`・`ami_tram.pak`・`ami_road.pak`・`ami_monorail.pak`）に入る（`build.py` の `KINDS` の名前の頭）
 - 検査: `check.sh` が `check_depot.py` を回す。dat の building の絵の塗った画素が六角形の中か（画素の中心で判定）と、奥の絵の上端が y32 より下かを見る
 - 見本は `ingame/depot.sh`（`ingame/depot.nut`）。ゲームの写し（`work/depot_game/<PORT>/`）を起動し、AMI の車庫と pak128 の車庫（`TrainDepot`・`TramDepot`・`CarDepot`）を、AMI の way の上に 4 つの向きで並べ、壁の基盤の版と架線つきの壁の上にも建てる。`SNOW=1` で降雪側、`CAPTURE=1` で撮る、`CAPTURE=1 VEH=1` で車庫から編成を出して続けて撮る。使い方はスクリプトの冒頭
   - 確認画像（2026-11-21、`OTRPv64_3.exe`、`flat_512.sve`）: `docs/depot_<種類>_<気候>.png`（左が pak128 の車庫、右が AMI の車庫。向きは 4 つ）、`depot_rail_wall_catenary.png`（壁の基盤の版と架線つきの壁の上）、`depot_vehicle.png`（降雪側で車庫から出る機関車と牛車。入口の中の車両が壁と屋根に隠れる）、`depot_elevated.png`
@@ -645,7 +661,7 @@ python -X utf8 blender/ami_dat.py                                              #
 python -X utf8 build.py                                                        # makeobj で dist/ へ
 ```
 
-- `build.py` は、全部入りのまとめ `dist/ami.pak` と、種類別の `ami_rail.pak`（線路）・`ami_tram.pak`（路面軌道）・`ami_road.pak`（道路）・`ami_extra.pak`（付属）を作る。dat が無い種類は作らない。makeobj の出力に警告かエラーがあれば止まる
+- `build.py` は、全部入りのまとめ `dist/ami.pak` と、種類別の `ami_rail.pak`（線路）・`ami_tram.pak`（路面軌道）・`ami_road.pak`（道路）・`ami_monorail.pak`（モノレール）・`ami_extra.pak`（付属）・`ami_scenery.pak`（景観）を作る。dat が無い種類は作らない。makeobj の出力に警告かエラーがあれば止まる
 - `build.py` は続けて、`src/ex_donors.dat` から提供用の pak（`work/ex/donors.pak`）を作り、各 pak の線路・路面軌道・架線つきの壁へ ex 画像を継ぎ足す（上の「分岐の追加画像」）。継ぎ足した数を出し、pak ごとに名前で当たる提供用の物が全部写ったことと、継ぎ足した絵（26〜29・31〜34 番が空でなく、通常の T字・十字と違うこと、30・35 番が通常の十字と同じこと）を確かめ、違えば止まる。pak の中の ex 画像の数は `python -X utf8 ex_graft.py --list dist/ami.pak` で見られる
 - シートを複数描くときは `python -X utf8 ..\..\tools\blender\render_parallel.py <対象>...`。レイアウト検証用モードは `SHEET_LAYOUT=1`（`work/layout/` に書く）
 - レイアウト検証用モードの pak は `SHEET_LAYOUT=1` で描いた後、`SHEET_LAYOUT=1 python -X utf8 build.py`（`work/layout/dist/` に作る）
@@ -791,9 +807,8 @@ PORT=47300 bash ingame/game.sh STOP
 
 | 物 | 速さ | 費用 | 維持費 |
 |---|---|---|---|
-| モノレール 跨座・懸垂（`ami_monorail_*`） | 150 km/h | 30000 | 600 |
+| モノレール 懸垂（`ami_monorail_suspended*`） | 150 km/h | 30000 | 600 |
 | 運河（`ami_canal`） | 60 km/h | 25000 | 500 |
-| 車庫 モノレール（`ami_monorail_depot`） | – | 850000 | 1800 |
 | 車庫 船（`ami_canal_depot`） | – | 900000 | 1800 |
 | 操車場（`ami_rail_yard`） | – | 60000 | 1800 |
 | 水路の踏切 | 運河の側は 60 km/h。線路・道路の側は、線路×道路の踏切（[#111](https://github.com/128na/simutrans-addon-dev/issues/111)）の作りに合わせる | キー無し | キー無し |
@@ -818,6 +833,7 @@ PORT=47300 bash ingame/game.sh STOP
 - 車庫（#112）: 見た目（形・色・入口の大きさ）と、道路の車庫の手前の下の縁に残る道路の端（「車庫の作り」）はユーザーが見る。路面軌道の車庫から出る車両は見ていない。本家 125 での読み込みは見ていない
 - 盛土（#123）: 見た目（芝の色・法面の傾き・角の形・斜めに敷いたときの階段）はユーザーが見る。高架の上を走る編成との重なり、本家 125 での読み込みは見ていない
 - 歩道の種類・高架の歩道・歩道の柵（#119）: 見た目（舗装の色、柵の形・高さ・色）、舗装の 3 つの選び方、柵の名前、行き止まりに柵を立てない作りは、ユーザーが PR で確かめる。レイアウト検証用モードでは見ていない（形は `ami_sidewalk`・道路の高架と同じ部品で、通常の絵をゲームで見た）。箱積みのパーツとの並び、歩道の上を歩く歩行者との重なりは見ていない
+- 跨座式モノレール（#113）: 見た目（桁の幅・高さ、柱の位置と太さ、雪の絵）はユーザーが PR で確かめる。高架の上を走る編成と、本家 125 での読み込みは見ていない。分岐の絵は本体が `monorail_track` で自動では選ばない
 - 中央分離帯（#118）: 見た目（縁石の帯とガードレールの形・色・細さ）と、4 車線の輪の北東の角で分離帯が途切れることは、ユーザーが見る。道路を走る車両との重なり、本家 125 での読み込みは見ていない
 - 道路標識（#122）: 見た目（板の形・色・大きさ、柱の位置・高さ）、6 種の選び方と訳の名前はユーザーが PR で確かめる。最低速度で遅い車が止められることは車を走らせて見ていない（情報の窓の表示だけ）。訳のファイルは OTRP でだけ読めることを見た（本家 125 は見ていない）。左側通行の設定（日本の道路に合わせて選ぶ人が多い）での位置と奥・手前の重なりは見ていない（検証用のセーブは右側通行）。英語の表示では名前だけが出て「飾り」の注記が出ない（dat に説明のキーが無いので、注記は訳のファイルにだけ書いた）。一方通行の板は 4 向きとも画面に正対した上向きの矢印で、効く向きに対して自然に見えるかはユーザーが見る
 - 踏切（#111）: 見た目（踏板の色、遮断機・警報機の形と位置）はユーザーが見る。値は仮（#110）。列車・車と遮断機の重なりは、閉じた絵を撮ったときの列車でだけ見た（車は見ていない）。本家 125 での読み込みは見ていない
