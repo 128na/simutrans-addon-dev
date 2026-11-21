@@ -129,3 +129,85 @@ def monorail_pier_fills(side):
         geo = _pier_geometry(paths, side, z_beam)
         return None if geo is None else (lambda path, k: geo)
     return ((Part("mono_pier", "rail", "gauge", _M_MONO_PIER, None), make),)
+
+
+# ================================================================ 懸垂式モノレール（#116）
+# 手本は iss の懸垂式（refs の iss/src/way/monorail/suspended.dat と、配布物の suspended_g_<版>_rear/surface.png・suspended_e_<版>_*.png）:
+#     - 地上の版（system_type=0）・高架の版（system_type=1）とも、way の絵に柱を持つ（別の柱の物は無い）。版は柱の側で front・center・back
+#     - 桁は空中にあり、吊られた車両が桁の下を走る。iss の地上の桁は、下面が地面から約 25px、上面が約 35px、柱の頭（梁の上）が約 37〜40px
+#     - 柱は、桁がタイルを出入りする辺ごとに、その辺の角に立つ。柱の頭から桁の上へ梁を渡す（center は両側の柱で門型）
+#     - 高架の版は、同じ形の柱を下の地面まで延ばす
+# AMI では、跨座式の高架の柱（_supports・_pier_geometry）と同じ並びで、梁を桁の上に渡す。柱はタイルの内側に面を合わせて立てる（跨座式と同じ）。
+# 手前の側（南・東）の柱と梁は手前の絵（frontimage。車両の後に描く）、桁と奥の側の柱・梁は奥の絵に描く（iss の rear・surface と同じ分け方）。
+SUSP_BEAM_BOT = 3.2       # 桁の下面の高さ（way の高さから。iss の地上の桁の下面 約 25px）
+SUSP_BEAM_TOP = 4.5       # 桁の上面の高さ（iss の地上の桁の上面 約 35px）
+SUSP_BEAM_W = MONO_BEAM_W  # 桁の幅（跨座式と同じ）
+SUSP_ARM_D = 0.6          # 梁の深さ（桁の上に載る。柱の頭は桁の上面 + これ − 食い込み。約 39px）
+SUSP_RISE = 50            # 持ち分を上へ広げる行数（柱の頭 約 39px と余り）
+
+_M_SUSP_BEAM = track_noise("susp_beam", MONO_BEAM_LO, MONO_BEAM_HI, MONO_GRAIN)
+_M_SUSP_TOP = track_noise("susp_top", MONO_BEAM_LO, MONO_BEAM_HI, MONO_GRAIN)
+_M_SUSP_PIER = track_noise("susp_pier", MONO_PIER_LO, MONO_PIER_HI, MONO_GRAIN)
+
+
+def _susp_beam_shape(path, k):
+    u = SUSP_BEAM_W / 2 * k
+    return sweep(path, [(-u, SUSP_BEAM_BOT), (u, SUSP_BEAM_BOT), (u, SUSP_BEAM_TOP), (-u, SUSP_BEAM_TOP)])
+
+
+def _susp_top_shape(path, k):
+    u = SUSP_BEAM_W / 2 * k
+    return sweep(path, [(-u, SUSP_BEAM_TOP), (u, SUSP_BEAM_TOP), (u, SUSP_BEAM_TOP + MONO_TOP_T), (-u, SUSP_BEAM_TOP + MONO_TOP_T)])
+
+
+def suspended_parts():
+    """懸垂式の桁の部品（高さのある部品。奥の絵に描く）。走行面（rail）の基準面に乗せる（分岐の絵で、分岐の経路の桁が描かれる）"""
+    return (
+        Part("susp_beam", "rail", "gauge", _M_SUSP_BEAM, _susp_beam_shape, tall=True),
+        Part("susp_top", "rail", "gauge", _M_SUSP_TOP, _susp_top_shape, tall=True),
+    )
+
+
+# 雪の絵: 桁の上面の板だけを雪にする（柱・梁は夏と同じ）
+SUSP_SNOW_SKIN = {"susp_top": ("susp_snow", MONO_SNOW_RGB, 0.9)}
+
+
+def _susp_geometry(paths, side, post_bot, near):
+    """柱と梁の形のうち、手前の側（near が真）か奥の側（偽）の分。side は front・back・center（柱を立てる側）"""
+    half = TILE / 2
+    arm_bot = SUSP_BEAM_TOP - MONO_ARM_EMBED
+    arm_top = arm_bot + SUSP_ARM_D
+    p = MONO_POST
+    posts, arms = {}, []
+    for q, o in _supports(paths):
+        q, o = Vector((q.x, q.y)), Vector((o.x, o.y))
+        t = Vector((-o.y, o.x))
+        on_edge = abs(abs(q.dot(o)) - half) < 0.01
+        line = q - o * (p / 2) if on_edge else q
+        for s in (1, -1):
+            front = (t * s).dot(_FRONT) > 0
+            if side != "center" and front != (side == "front"):
+                continue
+            if front != near:
+                continue
+            c = line + t * (s * (half - p / 2) - line.dot(t))
+            posts[(round(c.x, 3), round(c.y, 3))] = c
+            mid = (c + line) / 2
+            length = (c - line).length + p / 2
+            arms.append(box(mid.x, mid.y, (arm_top + arm_bot) / 2, length, p, arm_top - arm_bot, rot=math.atan2(t.y, t.x)))
+    geo = [box(c.x, c.y, (arm_top + post_bot) / 2, p, p, arm_top - post_bot) for c in posts.values()]
+    return merge(geo + arms) if geo or arms else None
+
+
+def suspended_pier_fills(side, elevated=False):
+    """懸垂式の柱と梁（TRACK_PROFILES の "cell_fills"）。手前の側の分は Part.front（手前の絵）、奥の側の分は奥の絵。
+    elevated なら、柱を高架の下の地面まで延ばす"""
+    post_bot = (-ELEV_STEPS * H if elevated else 0.0) - PIER_FOOT
+
+    def maker(near):
+        def make(paths):
+            geo = _susp_geometry(paths, side, post_bot, near)
+            return None if geo is None else (lambda path, k: geo)
+        return make
+    return tuple((Part(f"susp_pier_{'front' if near else 'back'}", "rail", "gauge", _M_SUSP_PIER, None, tall=True, front=near), maker(near))
+                 for near in (False, True))

@@ -94,6 +94,20 @@ def monorail_elev(variant):
 MONORAIL_ELEVS = tuple(monorail_elev(_v) for _v in MONORAIL_ELEV_VARIANTS)
 MONORAIL_TUNNEL = f"{MONORAIL}_tunnel"
 
+# 懸垂式モノレール（150 km/h、monorail_track。#116。名前は ADR 0008）。物の並びは iss の懸垂式に合わせる（2026-11-22、進捗管理の決定。
+# 支柱は way の絵に持たせる案 A）: 地上・高架とも柱の側で front・center・back の 3 版。トンネルは作らない（README の「懸垂式モノレールの作り」）
+MONORAIL_SUSPENDED = "ami_monorail_suspended"
+MONORAIL_SUSPENDED_VARIANTS = MONORAIL_ELEV_VARIANTS
+
+
+def monorail_suspended(variant, elevated=False):
+    """懸垂式モノレールの名前（地上は ami_monorail_suspended_<版>、高架は ami_monorail_suspended_elev_<版>）"""
+    return f"{MONORAIL_SUSPENDED}_{'elev_' if elevated else ''}{variant}"
+
+
+MONORAIL_SUSPENDEDS = tuple(monorail_suspended(_v) for _v in MONORAIL_SUSPENDED_VARIANTS)
+MONORAIL_SUSPENDED_ELEVS = tuple(monorail_suspended(_v, True) for _v in MONORAIL_SUSPENDED_VARIANTS)
+
 ROAD_LOCAL = Road("road_local")  # 生活道路（40 km/h、中央線なし）
 ROAD_GENERAL = Road("road_general")  # 一般道路（120 km/h、中央線は白の実線）
 ROAD_EXPRESSWAY = Road("road_expressway")  # 高速道路（360 km/h、中央線は白の破線）

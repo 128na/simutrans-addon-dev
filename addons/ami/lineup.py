@@ -81,6 +81,8 @@ def kind_label(o):
     for prefix, label in SPECIAL.items():
         if name.startswith(prefix):
             return label + ("（高架）" if t == "way" and o.get("system_type") == "1" else "")
+    if t == "way" and name.startswith("ami_monorail_suspended"):  # 懸垂式モノレール（#116）。跨座式と見分ける
+        return "懸垂式モノレール" + ("（高架）" if o.get("system_type") == "1" else "")
     if t == "way":
         if o.get("system_type") == "1":
             return wt + "（高架）"

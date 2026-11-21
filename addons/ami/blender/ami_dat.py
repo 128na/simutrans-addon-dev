@@ -75,6 +75,8 @@ VALUES = {
     "ami_road_expressway": dict(waytype="road", speed=360, cost=20000, maintenance=500, intro_year=1990),
     # 跨座式モノレール（#113）。値は #110 の一覧（在来線の高架と同じ費用・維持費。速さは pak128 のモノレールの車両の最高 150）
     "ami_monorail_straddle": dict(waytype="monorail_track", speed=150, cost=30000, maintenance=600, intro_year=1900),
+    # 懸垂式モノレール（#116）。値は #110 の一覧（跨座式と同じ）。地上の 3 版の値（下で版ごとに写す）
+    "ami_monorail_suspended": dict(waytype="monorail_track", speed=150, cost=30000, maintenance=600, intro_year=1900),
 }
 
 # カーブを斜めの絵で表すシート（pak128 標準の線路と同じ。dat の image[sw]・[nw]・[ne]・[se] が diagonal と同じセルを指す。
@@ -82,9 +84,15 @@ VALUES = {
 DIAG_CURVES = {_t.way for _t in catalog.TRACKS} | {_r.way for _r in catalog.ROADS}  # 道路 3 種もカーブは斜めの絵（README の「道路の作り」）
 # 跨座式モノレール（#113）: 地上・高架の版とも、カーブは斜めの絵（手本の iss の跨座式の dat と同じ）
 DIAG_CURVES |= {catalog.MONORAIL, *catalog.MONORAIL_ELEVS}
+DIAG_CURVES |= {*catalog.MONORAIL_SUSPENDEDS, *catalog.MONORAIL_SUSPENDED_ELEVS}  # 懸垂式（#116）も跨座式と同じ
 DIAG_CURVES |= {_r.lane(_n) for _r in catalog.LANE_ROADS for _n in catalog.LANES}  # 路面表示の版（#121）も通常の版と同じ
 CURVE_TO_DIAG = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
 
+# 手前の絵（frontimage など）を持つ way: シートは 奥の絵 4 行 → 手前の絵 4 行 → 雪の奥の絵 4 行 → 雪の手前の絵 4 行
+# （sheetlib の track_sheet の front_row。懸垂式モノレールの柱・梁。#116）。名前の集まり
+FRONT_WAYS = set()
+FRONT_ROW = 4  # sheetlib の TRACK_PROFILES の front_row と同じ
+FRONT_SNOW_ROWS = 8  # 手前の絵を持つ way の雪の絵の行のずらし（奥と手前の 8 行の下）
 # 絵を作った way（名前 → シート名）。dat と pak を作る
 BUILT = {}
 BASE_VARIANTS = catalog.VARIANTS
@@ -156,6 +164,19 @@ for _n in catalog.MONORAIL_ELEVS:
                       maintenance=VALUES[catalog.MONORAIL]["maintenance"] * ELEV_COST_K)
     NO_CLOSE.add(_n)
     ELEVATED.add(_n)
+# 懸垂式モノレール（#116）: 地上・高架とも柱の側で front・center・back の 3 版（iss の懸垂式と同じ）。柱と梁は way の絵に持たせ、
+# 手前の側の柱・梁は手前の絵（FRONT_WAYS）。並びは跨座式と同じ（近い斜め無し・分岐の絵あり）。高架の値の倍率は跨座式と同じ
+for _v in catalog.MONORAIL_SUSPENDED_VARIANTS:
+    for _elev in (False, True):
+        _n = catalog.monorail_suspended(_v, _elev)
+        _k = ELEV_COST_K if _elev else 1
+        _base = VALUES[catalog.MONORAIL_SUSPENDED]
+        BUILT[_n] = _n
+        VALUES[_n] = dict(_base, cost=_base["cost"] * _k, maintenance=_base["maintenance"] * _k)
+        NO_CLOSE.add(_n)
+        FRONT_WAYS.add(_n)
+        if _elev:
+            ELEVATED.add(_n)
 
 # ---------------------------------------------------------------- 橋脚の way（#18）
 # 高架の真下の地面のタイルに敷く。waytype は tram_track（iss と同じ。ユーザーの決定、2026-11-18。README の「高架と橋脚の作り」）。
@@ -311,6 +332,8 @@ def dat_text(name, sheet, donor=False):
         f"icon=> {sheet}.0.0",
         f"cursor={sheet}.0.1,-64,-32",
     ]
+    front = name in FRONT_WAYS
+    snow_rows = FRONT_SNOW_ROWS if front else SNOW_ROWS
     for season in (0, 1):
         for key, idx, row, col in IMAGES:
             if name in NO_CLOSE and idx.startswith("[close"):
@@ -323,7 +346,9 @@ def dat_text(name, sheet, donor=False):
                 row, col = CURVE_TO_DIAG[idx]
             if donor and key == "image" and idx in EX_CELLS:
                 row, col = EX_CELLS[idx]
-            out.append(f"{key}{idx}[{season}]={sheet}.{row + season * SNOW_ROWS}.{col},-64,-32")
+            out.append(f"{key}{idx}[{season}]={sheet}.{row + season * snow_rows}.{col},-64,-32")
+            if front:
+                out.append(f"front{key}{idx}[{season}]={sheet}.{row + FRONT_ROW + season * snow_rows}.{col},-64,-32")
     return NL.join(out) + NL
 
 

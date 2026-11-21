@@ -108,6 +108,8 @@ def describe(d):
         info["kind"] = {"bridge": "bridge", "tunnel": "tunnel"}.get(obj, "way")
         info["speed"] = d["topspeed"]
         info["struct"] = {"bridge": "bridge", "tunnel": "tunnel"}.get(obj, "elev" if "_elev_" in name else None)
+        if name.startswith("ami_monorail_suspended"):
+            info["label"] = "懸"  # 懸垂式モノレール（#116）: 跨座式と見分けるため左上に「懸」、右下に版（柱の側）
     return info
 
 
