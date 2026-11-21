@@ -60,6 +60,9 @@ rm -rf "$snap"
 step "アイコン・カーソルの参照先（セルの重なり・絵の有無・背景色。check_icons.py）"
 "$PY" -X utf8 "$AMI/check_icons.py"
 
+step "踏切のシートが今の道路のシートから描かれているか（check_crossing.py）"
+"$PY" -X utf8 "$AMI/check_crossing.py"
+
 step "道具を用意する（makeobj: $MAKEOBJ、dat_linter: $DAT_LINTER）"
 bash "$ROOT/tools/ci/setup-dat-linter.sh" "$DAT_LINTER" "$TOOLS_DIR/dat_linter"
 export PATH="$TOOLS_DIR/dat_linter:$PATH"
