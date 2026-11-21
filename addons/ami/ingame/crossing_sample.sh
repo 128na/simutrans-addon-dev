@@ -6,17 +6,49 @@
 #   GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe PORT=47500 bash ingame/crossing_sample.sh > work/crossing/launch.log
 #                                                       … 起動して敷き、[check] の行を出す（出力は管に通さずファイルへ。
 #                                                         ゲームを起動した子のシェルが管を持ったままになり、ゲームを閉じるまで終わらない）
-#   PORT=47500 CAPTURE=open OUT=work/crossing/shots bash ingame/crossing_sample.sh    … 開いた踏切を撮る（<気候>_<線>_<k>_open.png）
+#   PORT=47500 CAPTURE=open OUT=work/crossing/shots bash ingame/crossing_sample.sh    … 開いた踏切を撮る（<気候>_<線>_<k>_open.png と、
+#                                                         温暖側の区画 M の pak128 の way との組 mixed_<j>_open.png）
 #   PORT=47500 TRAIN=1 bash ingame/crossing_sample.sh                                 … 列車を走らせる（crossing_train.nut）
 #   PORT=47500 CAPTURE=closed OUT=work/crossing/shots bash ingame/crossing_sample.sh  … 列車が踏切の 1〜3 タイル手前に来たら撮る（閉じた絵。
 #                                                         撮った物は飛ばすので流し直せる。WAIT 秒で打ち切る）
 #   COMPOSE=1 OUT=work/crossing/shots bash ingame/crossing_sample.sh                  … 撮った画面を切り出し、気候・線・開閉ごとの格子に並べる
+#   JUDGE=1 OUT=work/crossing/shots bash ingame/crossing_sample.sh                    … 撮った画面に AMI の踏切の絵が出ているかを判定する
+#                                                         （ingame/crossing_judge.py。AMI どうしの組は全部 AMI、区画 M は MIXED_EXPECT のとおりか。
+#                                                         違う物か撮っていない物があれば終了コード 1）
 #   PORT=47500 STOP=1 bash ingame/crossing_sample.sh                                  … 閉じて写しを消す
 # 並びの値は crossing_sample.nut と同じにする（ORIGINS・START・SP・VX・VY）
 ORIGINS="temperate:20:24 snow:276:24"
 START=10; SP=6; VX=4; VY=12
+# 区画 M（crossing_sample.nut の MIXED。温暖側だけ）: j 番目の踏切は (ox + MX + j * 8, oy + 2)。MX = LEN + 14
+MX=$((START + 12 * SP + 4 + 14)); NMIXED=5
+# 区画 M の組ごとに出る踏切（ami = AMI の踏切、other = ほかの pak の踏切）。README の「踏切の作り」に書いた結果（2026-11-21）
+MIXED_EXPECT=${MIXED_EXPECT:-"other other ami ami ami"}
 # 画面（704x536、gui.jump で踏切のタイルへ飛んだとき）のうち、格子に並べる範囲（x0,y0,x1,y1）。踏切のタイルが中ほどに来る
 CROP=${CROP:-196,250,456,470}
+
+if [ "$JUDGE" = 1 ]; then
+  OUT=${OUT:-work/crossing/shots}
+  BLENDER=${BLENDER:-blender}
+  files=(); want=()
+  for o in $ORIGINS; do for line in H V; do for k in $(seq 0 11); do for st in open closed; do
+    files+=("$OUT/${o%%:*}_${line}_${k}_${st}.png"); want+=(ami)
+  done; done; done; done
+  j=0
+  for e in $MIXED_EXPECT; do files+=("$OUT/mixed_${j}_open.png"); want+=("$e"); j=$((j + 1)); done
+  ng=0; have=()
+  for i in "${!files[@]}"; do
+    if [ -f "${files[$i]}" ]; then have+=("${files[$i]}"); else echo "[judge] 撮っていない: ${files[$i]}"; ng=$((ng + 1)); fi
+  done
+  declare -A got
+  while read -r _ f y v; do got[$f]="$v $y"; done < <("$BLENDER" -b --factory-startup --python ingame/crossing_judge.py -- "$CROP" "${JUDGE_MIN:-20}" "${have[@]}" 2> /dev/null | grep '^\[judge\]')
+  for i in "${!files[@]}"; do
+    f=${files[$i]}; [ -f "$f" ] || continue
+    read -r v y <<< "${got[$f]}"
+    if [ "$v" != "${want[$i]}" ]; then echo "[judge] NG $f: ${want[$i]} のはずが ${v:-判定なし}（$y）"; ng=$((ng + 1)); fi
+  done
+  echo "[judge] ${#files[@]} 枚のうち NG $ng"
+  [ $ng = 0 ]; exit
+fi
 
 if [ "$COMPOSE" = 1 ]; then
   OUT=${OUT:-work/crossing/shots}
@@ -84,6 +116,8 @@ if [ "$CAPTURE" = open ]; then
       done
     done
   done
+  IFS=: read -r _ ox oy <<< "${ORIGINS%% *}"
+  for j in $(seq 0 $((NMIXED - 1))); do shoot $((ox + MX + j * 8)) $((oy + 2)) "$OUT/mixed_${j}_open.png"; done
   exit 0
 fi
 
