@@ -96,8 +96,8 @@ def describe(d):
         info["kind"] = "catenary" if d.get("own_waytype") == "electrified_track" else "wall"
         if name.endswith("_divider"):
             info["label"] = "分"  # 中央分離帯つきの壁（#118）: 左上に「分」
-        elif name.endswith("_pole"):
-            info["label"] = "柱"  # 電柱と柵つきの電柱（#120）: 左上に「柱」。柵つきは右下に版
+        elif "_pole" in name:
+            info["label"] = "柱"  # 電柱（ami_sidewalk_pole_<版>）と柵つきの電柱（#120）: 左上に「柱」、右下に版
     elif name.startswith("ami_pier"):
         info.update(kind="pier", label="門" if name.endswith("_gate") else "脚", struct="elev")
     elif name.startswith("ami_sidewalk"):  # 歩道の種類と高架の歩道（#119）も同じ決まり。高架は下の帯

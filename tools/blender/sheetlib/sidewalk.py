@@ -278,9 +278,10 @@ _M_SW_POLE_WIRE = ("sidewalk_pole_wire", (0.10, 0.10, 0.11), 0.6, 0.0)  # 電線
 
 
 def pole_shift(variant):
-    """柱の位置（x, y）。None（電柱だけ）と single はタイルの中心、back は北西へ、front は南東へ寄せる（柵の側）"""
+    """柱の位置（x, y）。back は北西へ、front は南東へ寄せる（柵の側。柵の無い版も同じ位置）。
+    タイルの中心に立てる版は作らない（歩道の中央に電柱は立たない。#120、2026-11-22 のユーザーの指定）"""
     d = TILE / 2 - FENCE_IN - POLE_IN
-    return {None: (0.0, 0.0), "single": (0.0, 0.0), "back": (-d, d), "front": (d, -d)}[variant]
+    return {"back": (-d, d), "front": (d, -d)}[variant]
 
 
 def _pole_parts(exits, slope, variant):
@@ -321,9 +322,9 @@ def _pole_parts(exits, slope, variant):
     return obs
 
 
-def _pole_cell(cname, name, exits, slope, variant):
+def _pole_cell(cname, name, exits, slope, variant, fence):
     """電柱 1 タイルの奥の絵と手前の絵。奥は柵の奥の辺（柵つきの版だけ）、手前は柵の手前の辺と柱・電線"""
-    sides = fence_sides(name, variant) if variant else ""
+    sides = fence_sides(name, variant) if fence else ""
     fmat = make_material(_M_FENCE, "fence")
     out = []
     for part in ("nw", "se"):
@@ -354,14 +355,14 @@ def _pole_cell(cname, name, exits, slope, variant):
     return out
 
 
-def sidewalk_pole_sheet(sheet, variant=None, label="P", style="road"):
-    """電柱の way-object のシート（#120）。variant が None なら電柱だけ（ami_sidewalk_pole）、single・back・front なら
-    その版の柵つき（ami_wall_sidewalk_<版>_pole）。並びは柵のシート（sidewalk_fence_sheet）と同じ。
+def sidewalk_pole_sheet(sheet, variant, fence=True, label="P", style="road"):
+    """電柱の way-object のシート（#120）。variant（back・front）は柱を寄せる側。fence が真ならその版の柵つき
+    （ami_wall_sidewalk_<版>_pole）、偽なら電柱だけ（ami_sidewalk_pole_<版>）。並びは柵のシート（sidewalk_fence_sheet）と同じ。
     アイコン（0,0）・カーソル（0,1）は仮の絵（AMI は icons.py が描き直す）"""
     set_anchor(ROAD_CY)
     cells = {}
     for (r, c), (name, exits, slope) in _jobs().items():
-        back, front = _pole_cell(f"{sheet}_{name}", name, exits, slope, variant)
+        back, front = _pole_cell(f"{sheet}_{name}", name, exits, slope, variant, fence)
         if back:
             cells[(r, c)] = back
         if front:

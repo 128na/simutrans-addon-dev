@@ -78,8 +78,8 @@ def kind_label(o):
     name = o.get("name", "")
     if t == "way-object" and name.endswith("_divider"):
         return "中央分離帯"  # 道路の壁の版（ami_wall_road_<版>_divider。#118）
-    if t == "way-object" and name.endswith("_pole"):
-        # 歩道の電柱（ami_sidewalk_pole）と柵つきの電柱（ami_wall_sidewalk_<版>_pole。#120）。SPECIAL の歩道・歩道の柵より先に当てる
+    if t == "way-object" and "_pole" in name:
+        # 歩道の電柱（ami_sidewalk_pole_<版>）と柵つきの電柱（ami_wall_sidewalk_<版>_pole。#120）。SPECIAL の歩道・歩道の柵より先に当てる
         return "柵つきの電柱" if name.startswith("ami_wall_") else "電柱"
     for prefix, label in SPECIAL.items():
         if name.startswith(prefix):

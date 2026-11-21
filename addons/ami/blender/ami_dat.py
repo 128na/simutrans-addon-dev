@@ -463,7 +463,7 @@ SIDEWALK_ELEV_VALUES = dict(SIDEWALK_VALUES, cost=2000, maintenance=40)
 # 歩道の柵（ami_wall_sidewalk_<版>。#119）: water の way-object。値は #110 の一覧（壁と同じ。速さ 1000 は道路の壁と同じで、
 # 電柱だけの物（#120、同じ速さ）と重ねると先に置いた方が残る。柵つきの電柱（速さ 1010）を重ねると置き換わる）
 SIDEWALK_WALL_VALUES = dict(cost=3000, maintenance=60, intro_year=1900, topspeed=1000)
-# 電柱（ami_sidewalk_pole。#120）: 値は #110 の一覧。柵つきの電柱（ami_wall_sidewalk_<版>_pole）は柵と電柱の和で、速さを柵より大きくし、
+# 電柱（ami_sidewalk_pole_<版>。#120）: 値は #110 の一覧。柵つきの電柱（ami_wall_sidewalk_<版>_pole）は柵と電柱の和で、速さを柵より大きくし、
 # 柵の上に Ctrl を押さずに重ねると柵つきの電柱に置き換わる（way-addon.md の 10 章）。電柱だけの物は柵と同じ速さで、柵とは置き換わらない
 SIDEWALK_POLE_VALUES = dict(cost=1000, maintenance=20, intro_year=1900, topspeed=1000)
 SIDEWALK_WALL_POLE_VALUES = dict(cost=4000, maintenance=80, intro_year=1900, topspeed=1010)
@@ -662,10 +662,10 @@ def main():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(sidewalk_wall_dat_text(name, name))
         print(f"[dat] {name}.dat")
-    for name, variant in catalog.SIDEWALK_POLES.items():
+    for name, (variant, fence) in catalog.SIDEWALK_POLES.items():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(sidewalk_wall_dat_text(name, name, SIDEWALK_WALL_POLE_VALUES if variant else SIDEWALK_POLE_VALUES,
-                                           f"歩道の柵（{variant}）と電柱" if variant else "電柱"))
+            f.write(sidewalk_wall_dat_text(name, name, SIDEWALK_WALL_POLE_VALUES if fence else SIDEWALK_POLE_VALUES,
+                                           f"歩道の柵（{variant}）と電柱" if fence else f"電柱（{variant}。タイルのわきに立てる）"))
         print(f"[dat] {name}.dat")
     for name in catalog.EMBANKMENTS:
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
