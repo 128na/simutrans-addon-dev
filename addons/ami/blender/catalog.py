@@ -133,3 +133,8 @@ class Depot:
 
 
 DEPOTS = (Depot("rail", "track"), Depot("tram", "tram_track"), Depot("road", "road"))
+
+# 道路標識（roadsign。#122）。名前は ami_sign_<名前>（ADR 0008）で、build.py の振り分けで ami_scenery.pak に入る。
+# 値は 6 種（2026-11-21、ユーザーの決定。#122 の案 A）。キーは sheetlib の roadsign.ROADSIGN_PLATES のキー（板の絵）
+ROADSIGN_KEYS = ("one_way", "stop", "speed_40", "speed_60", "speed_80", "min_50")
+ROADSIGNS = {f"{PREFIX}sign_{_k}": _k for _k in ROADSIGN_KEYS}

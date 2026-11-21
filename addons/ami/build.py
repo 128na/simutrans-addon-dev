@@ -5,7 +5,7 @@ src/ の dat から、全部入りのまとめ（dist/ami.pak）と、種類別�
     dist/ami_tram.pak   路面軌道（ami_tram*）
     dist/ami_road.pak   道路（ami_road_*）
     dist/ami_extra.pak  付属（壁・橋脚・歩道・歩道の柵・踏切: ami_wall_*（歩道の柵 ami_wall_sidewalk_* を含む）・ami_pier_*・ami_sidewalk*・ami_crossing_*）
-    dist/ami_scenery.pak 景観（盛土: ami_embankment_*）
+    dist/ami_scenery.pak 景観（盛土・道路標識: ami_embankment_*・ami_sign_*）
 dat が 1 つも無い種類の pak は作らない。makeobj の出力に WARNING か ERROR があれば、出力を見せて 1 で終わる（ACCEPTANCE 1-5）。
 作った後、分岐の追加画像（Y字分岐・三方分岐。絵の番号 26〜35）を継ぎ足す: src/ex_donors.dat（blender/ami_dat.py が書く提供用の物）を
 work/ex/donors.pak に作り、ex_graft.py で dist/ の各 pak の対象の物（線路・路面軌道の way と架線つきの壁）へ写す。提供用の物は dist/ に入らない。
@@ -32,7 +32,7 @@ KINDS = {
     "ami_tram.pak": ("ami_tram",),
     "ami_road.pak": ("ami_road_",),
     "ami_extra.pak": ("ami_wall_", "ami_pier_", "ami_sidewalk", "ami_crossing_"),  # 踏切（#111）は線路・道路と組で使うので付属に入れる
-    "ami_scenery.pak": ("ami_embankment_",),  # 景観（ADR 0008。盛土 #123。標識 #122 もここに入る）
+    "ami_scenery.pak": ("ami_embankment_", "ami_sign_"),  # 景観（ADR 0008。盛土 #123・道路標識 #122）
 }
 
 
