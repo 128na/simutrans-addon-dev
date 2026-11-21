@@ -44,6 +44,8 @@ BG_BORROW = {
     "ami_sidewalk": "road",  # 歩道は water の way だが、道路の脇に敷く物なので道路の色（#25）
     **{_n: "road" for _n in ("ami_sidewalk_asphalt", "ami_sidewalk_brick", "ami_sidewalk_tile", "ami_sidewalk_elev",
                              "ami_wall_sidewalk_single", "ami_wall_sidewalk_back", "ami_wall_sidewalk_front")},  # 同上（歩道の種類・高架・柵。#119）
+    **{_n: "road" for _n in ("ami_sidewalk_pole", "ami_wall_sidewalk_single_pole", "ami_wall_sidewalk_back_pole",
+                             "ami_wall_sidewalk_front_pole")},  # 同上（電柱と柵つきの電柱。#120）
 }
 HUE_MIN_DIFF = 20  # waytype の違う物どうしの、背景の色相の差の下限（度）。今の値は線路 149〜150・路面軌道 44・道路 219・高速道路 230。
 # 組は dat の waytype なので、道路と高速道路（どちらも road）は比べない

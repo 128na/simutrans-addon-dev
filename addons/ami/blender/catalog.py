@@ -129,6 +129,9 @@ def sidewalk_wall(variant):
 # 歩道の way の全部（地上の種類と高架）。dat・シート・アイコンの決まりは同じ
 SIDEWALKS = (SIDEWALK,) + tuple(sidewalk(_p) for _p in SIDEWALK_PAVINGS) + (SIDEWALK_ELEV,)
 SIDEWALK_WALLS = tuple(sidewalk_wall(_v) for _v in SIDEWALK_WALL_VARIANTS)
+# 電柱（#120。ADR 0008 の ami_sidewalk_pole）: 歩道の way-object。柵と同じタイルに置く物は、柵の版に電柱を足した ami_wall_sidewalk_<版>_pole
+# （1 タイルに water の way-object は 1 つだけなので、まとめた物にする。2026-11-22、進捗管理が推奨案で決めた）。名前 → 柵の版（電柱だけは None）
+SIDEWALK_POLES = {f"{SIDEWALK}_pole": None, **{f"{sidewalk_wall(_v)}_pole": _v for _v in SIDEWALK_WALL_VARIANTS}}
 
 
 def crossing(track, road):

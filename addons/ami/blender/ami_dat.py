@@ -445,6 +445,10 @@ SIDEWALK_ELEV_VALUES = dict(SIDEWALK_VALUES, cost=2000, maintenance=40)
 # 歩道の柵（ami_wall_sidewalk_<版>。#119）: water の way-object。値は #110 の一覧（壁と同じ。速さ 1000 は道路の壁と同じで、
 # 電柱（#120、同じ速さ）と重ねると先に置いた方が残る）
 SIDEWALK_WALL_VALUES = dict(cost=3000, maintenance=60, intro_year=1900, topspeed=1000)
+# 電柱（ami_sidewalk_pole。#120）: 値は #110 の一覧。柵つきの電柱（ami_wall_sidewalk_<版>_pole）は柵と電柱の和で、速さを柵より大きくし、
+# 柵の上に Ctrl を押さずに重ねると柵つきの電柱に置き換わる（way-addon.md の 10 章）。電柱だけの物は柵と同じ速さで、柵とは置き換わらない
+SIDEWALK_POLE_VALUES = dict(cost=1000, maintenance=20, intro_year=1900, topspeed=1000)
+SIDEWALK_WALL_POLE_VALUES = dict(cost=4000, maintenance=80, intro_year=1900, topspeed=1010)
 # 歩道の柵のセル（sheetlib の sidewalk_fence_sheet）: 歩道の way と同じ位置。カーブはシートのカーブのセル（行 2 の列 5〜8）で、斜めのキーは持たない
 SIDEWALK_WALL_KEYS = ("image", "imageup", "imageup2")
 # 歩道のシートにあるセル（sheetlib の sidewalk_sheet）。斜めの絵・分岐の絵は持たない（本体はカーブの絵を使う）
@@ -481,12 +485,12 @@ def sidewalk_dat_text(name, sheet):
     return NL.join(out) + NL
 
 
-def sidewalk_wall_dat_text(name, sheet):
+def sidewalk_wall_dat_text(name, sheet, values=None, kind="歩道の柵"):
     """歩道の柵の way-object の dat（waytype=water・own_waytype=water）。奥の絵は行 0〜3、手前の絵は WALL_FRONT_ROW 下の行。
     カーブは歩道の way と同じくカーブのセル（斜めのキーは持たない。本体は斜めの絵の無い way-object にカーブの絵を使う）"""
-    v = SIDEWALK_WALL_VALUES
+    v = values or SIDEWALK_WALL_VALUES
     out = [
-        f"# AMI: {name}（CC BY 4.0）。歩道の柵（歩道の way に重ねる way-object）。シートは blender/render.py が描く",
+        f"# AMI: {name}（CC BY 4.0）。{kind}（歩道の way に重ねる way-object）。シートは blender/render.py が描く",
         "obj=way-object",
         f"name={name}",
         "copyright=AMI (CC BY 4.0)",
@@ -637,6 +641,11 @@ def main():
     for name in catalog.SIDEWALK_WALLS:
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(sidewalk_wall_dat_text(name, name))
+        print(f"[dat] {name}.dat")
+    for name, variant in catalog.SIDEWALK_POLES.items():
+        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
+            f.write(sidewalk_wall_dat_text(name, name, SIDEWALK_WALL_POLE_VALUES if variant else SIDEWALK_POLE_VALUES,
+                                           f"歩道の柵（{variant}）と電柱" if variant else "電柱"))
         print(f"[dat] {name}.dat")
     for name in catalog.EMBANKMENTS:
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:

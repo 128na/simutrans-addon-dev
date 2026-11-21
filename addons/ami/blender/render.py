@@ -622,6 +622,9 @@ SHEETS[catalog.SIDEWALK_ELEV] = lambda: R.sidewalk_sheet(catalog.SIDEWALK_ELEV, 
 # 歩道の柵（ami_wall_sidewalk_<版>。#119）: 歩道の板の縁（つながらない辺）に立てる白い鋼の柵の way-object（sheetlib の sidewalk_fence_sheet）
 for _v in catalog.SIDEWALK_WALL_VARIANTS:
     SHEETS[catalog.sidewalk_wall(_v)] = (lambda v: lambda: R.sidewalk_fence_sheet(catalog.sidewalk_wall(v), v))(_v)
+# 電柱（ami_sidewalk_pole と、柵つきの ami_wall_sidewalk_<版>_pole。#120）: 毎タイルの柱と、つながる向きの電線（sheetlib の sidewalk_pole_sheet）
+for _n, _v in catalog.SIDEWALK_POLES.items():
+    SHEETS[_n] = (lambda n, v: lambda: R.sidewalk_pole_sheet(n, v))(_n, _v)
 
 # 盛土の way（#123）: 高架の脇の地面に敷く法面の楔（sheetlib の embankment_sheet）。法面は芝の土（2026-11-21、ユーザーの決定。#123）。
 # 芝は 2 色のまだら（EMBANKMENT_GRASS の暗い色・明るい色・細かさ）、雪の絵は雪のまだら
