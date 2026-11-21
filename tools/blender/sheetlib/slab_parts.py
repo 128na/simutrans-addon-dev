@@ -51,6 +51,10 @@ NOTCH_TH = 0.002
 FASTENER_PITCH = 0.625   # 締結装置の間隔の目安（直線でタイルに 16 組）
 FASTENER_ALONG = 0.22    # 線路に沿う幅
 FASTENER_ACROSS = 0.34  # 線路を横切る幅
+# 直線（南北・東西）の通り抜ける経路だけ: 締結装置をタイルの辺の上から FASTENER_PITCH おきに置き（画面で 4px おき）、横幅を狭める。
+# 1/2 の画面（本体がタイルの原点にそろえた 2×2 で平均する）で、締結装置の並びが粒に見えないようにする（AMI #89、2026-11-21、ユーザーの決定）。
+# 斜め・カーブ・行き止まりは変えない（斜めのセルの粒はもともと出ず、変えると等倍の締結装置が見えにくくなった）
+FASTENER_ACROSS_STRAIGHT = 0.26
 FASTENER_Z0, FASTENER_Z1 = SLAB_Z1, 0.20   # 下面はスラブの上面、上面はレールの下面より少し上
 RAIL_CENTRE = (RAIL_IN + RAIL_OUT) / 2
 
@@ -137,9 +141,18 @@ def _layout(path):
         return sorted(joints), sorted(at((i + 0.5) * step) for i in range(int(L / step + 0.5))), total
     n = max(1, math.ceil(L / SLAB_PITCH - 1e-6))
     span = L / n
+    joints = [s0 + (j + 0.5) * span for j in range(n)]
+    if _straight(path):
+        # 直線は締結装置をタイルの辺の上から置く（両端の辺の上の装置は隣のタイルと半分ずつ描く。FASTENER_ACROSS_STRAIGHT の説明）
+        f = max(1, round(L / FASTENER_PITCH))
+        return joints, [s0 + i * L / f for i in range(f + 1)], total
     m = _even(span / FASTENER_PITCH)   # 偶数にすると、継ぎ目が締結装置の間に来る
-    return ([s0 + (j + 0.5) * span for j in range(n)],
-            [s0 + (i + 0.5) * span / m for i in range(n * m)], total)
+    return joints, [s0 + (i + 0.5) * span / m for i in range(n * m)], total
+
+
+def _straight(path):
+    """経路が南北・東西の直線か（点がすべて同じ x か同じ y にある）。"""
+    return len({round(v.x, 4) for v in path}) == 1 or len({round(v.y, 4) for v in path}) == 1
 
 
 def _extent(path, pad):
@@ -217,6 +230,8 @@ def _stud_shape(path, k):
 
 
 def _fastener_boxes(path, k, along, across, z, sz):
+    if _straight(path):
+        across -= FASTENER_ACROSS - FASTENER_ACROSS_STRAIGHT   # 締結装置とその周りのさびを同じだけ狭める
     out = []
     for s in _layout(path)[1]:
         p, d = _point(path, s)

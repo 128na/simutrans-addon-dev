@@ -227,4 +227,5 @@ def main():
     print(text)
 
 
-main()
+if __name__ == "__main__":  # half_measure.py が関数だけを import する
+    main()
