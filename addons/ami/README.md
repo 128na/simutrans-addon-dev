@@ -377,6 +377,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 架線つきの壁: 本体は、way-object の分岐の絵（16 番）が空でないときだけ、分岐のタイルで ex 画像を探す（reference の 10 章）。そのため 16〜25 番には通常の T字・十字の絵を入れた（見た目は今までと同じ）。壁だけの way-object（`ami_wall_rail_<版>`）は分岐で絵が変わらないので入れていない
 - 二重架線（`ami_wall_rail_twin_catenary`）と道路（#46）、高架の橋脚は対象外
 - 確認画像は `docs/rail_switch_ex_<気候>_<区画>_<形><根元の向き>.png`（左が前、右が後。2 倍）。壁だけの way-object を重ねたところは `docs/rail_switch_ex_wallonly.png`（壁は通常の T字・十字の絵のまま）。区画は `ingame/ex_sample.nut` の `WAYS` の順で、0 = 在来線、2 = 高速線、3 = 路面軌道、4 = 在来線の基盤 single と架線つきの壁 single。経緯は記録 [2026-11-21_ami-rail-switch-ex](../../docs/records/2026-11-21_ami-rail-switch-ex.md)
+- 高架の版（#82）: 在来線・ラダー軌道の高架の 4 版を `ex_sample.nut` で敷き、地上の版と同じく全部の形で ex の絵が選ばれた（`docs/ex_elev_temperate_E.png`。左上から在来線の地上の Y字 東、在来線の高架 single の Y字 東、ラダーの高架 single の Y字 東・三方分岐 東。記録 [2026-11-21_ami-ex-elevated](../../docs/records/2026-11-21_ami-ex-elevated.md)）。これからの種類は、高架の版の確認を省く（reference の 9.4）
 
 ### 付属（別の pak にして同梱）
 
