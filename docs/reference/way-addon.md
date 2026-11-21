@@ -75,6 +75,7 @@
 | 橋の端 | 坂のタイルから始まる橋は `Start`（平らな絵）、平地から立ち上がる橋は `Ramp`（坂の絵）。2 段は `Start2`・`Ramp2` | `descriptor/bridge_desc.cc` |
 | 橋の `Ramp[N]` | 北が高い坂の絵（本体の `slope_t::north` は南が高い坂で、そのとき `S` の絵を使う） | 同上 |
 | 橋の `Start[N]` | 南が高い坂のタイルで使われる | 同上 |
+| 平地から立ち上がる橋の高さ | 2 段の坂の地形（pak128）で、橋が `Ramp2` の絵を持つと、平地の端の坂は 2 段（32px）上がり、`Ramp2` が使われる。手前（東・南）へ下る坂の縁は画面でちょうど 45 度、奥（西・北）へ上がる坂の縁は水平になる。`Ramp2` が無い橋（pak128 の `Rail_160_Bridge`）は 1 段の `Ramp` で、坂の縁は横 64px・縦 48px（約 37 度） | `descriptor/bridge_desc.cc` の `get_ramp`。AMI の橋と `Rail_160_Bridge` を `flat_512.sve` で並べて縁を測った（#90、2026-11-21） |
 | トンネルの `image[N]` | 北が高い坂のタイル | `descriptor/tunnel_desc.cc` |
 | トンネルの坑口 | pak128 では 2 段の坂にしか置けない | `bauer/tunnelbauer.cc` |
 | 地形の坂の番号 | 角の桁は sw=1・se=3・ne=9・nw=27。1 段の北が高い坂は 36、南 4、東 12、西 28（2 段は 2 倍） | blender-poc の `ingame/*.nut` で確認 |

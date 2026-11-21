@@ -454,18 +454,26 @@ def build_base(walls, paths, k, datum, slope, div, mat, clip=True, extra_cut=Non
 
 def build_start_body(path, ground, datum, mat, u=None):
     """坂のタイルから始まる橋の端（Start）の躯体: 平らな基盤の下を、坂の地面まで埋める。
-    ground(x, y) は基盤の面から見た地面の高さ（0 以下）。"""
+    ground(x, y) は基盤の面から見た地面の高さ（0 以下）。経路（タイルの辺から辺へ、軸に平行）に沿って一次式であること
+    （地面が基盤の下面の高さを横切る点を 1 つだけ足すため）。"""
     d = (path[-1] - path[0]).normalized()
     half = TILE / 2
     # タイルの辺に頂点を置く（辺の外は地面の高さを辺のまま延ばす）
     pts = [path[0], path[0] + d * PATH_EXT, path[-1] - d * PATH_EXT, path[-1]]
+    cl = lambda v: max(-half, min(half, v))
+    floor_z = -BASE_H - 0.02  # 下の縁は基盤の下面より上へ出さない
+    # 地面が基盤の下面の高さを横切る点にも頂点を置く。辺の頂点だけだと、高い側の辺で下の縁が基盤の下面に止まり、
+    # 下の縁がその分（BASE_H、画面で約 3px）だけ坂より緩く傾いた（2 段の坂の 45 度の縁が 43.8 度。AMI #90）
+    tile_pts = pts[1:3]
+    ga, gb = (ground(cl(p.x), cl(p.y)) for p in tile_pts)
+    if (ga - floor_z) * (gb - floor_z) < 0:
+        pts.insert(2, tile_pts[0].lerp(tile_pts[1], (floor_z - ga) / (gb - ga)))
     u = u or WALL_U + WALL_W
     ob = mesh_object("startbody", *sweep(pts, [(-u, -60.0), (u, -60.0), (u, -BASE_H), (-u, -BASE_H)]), material(*mat))
     ob["tall"] = False
-    cl = lambda v: max(-half, min(half, v))
     for v in ob.data.vertices:
         if v.co.z < -10:
-            v.co.z = min(ground(cl(v.co.x), cl(v.co.y)), -BASE_H - 0.02)
+            v.co.z = min(ground(cl(v.co.x), cl(v.co.y)), floor_z)
     move = datum_move(datum)
     if move is not None:
         for v in ob.data.vertices:
