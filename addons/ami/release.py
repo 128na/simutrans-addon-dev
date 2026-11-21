@@ -7,6 +7,7 @@ zip（work/release/ami-<版>.zip）の中身:
     pak128/<pak>.pak   --paks で選んだ dist/ の pak（名前は拡張子なし）。ゲームの addons/ に展開すると addons/pak128/ に入る
     ami_readme.txt     release/readme.txt の {version} を版の名前に置き換えたもの（遊ぶ人向けの簡潔な説明・導入方法・注意点。#137）
     ami_license.txt    release/license.txt（CC BY 4.0 と帰属）
+    ami_lineup.txt     --paks で選んだ pak に入る物の一覧。src/ の dat から lineup.py が作る（#138）
     thumbnail.png      docs/thumbnail.png があれば入れる（#96）
 pak の名前が dist/ に無いとき、--paks に ami（全部入り）と種類別を混ぜたとき（同じ物を二重に読む）は止まる。
 展開した中身を ingame/beta_check.sh の PAKS に渡すと、配る形のままゲームで確かめられる（--extract で work/release/ami-<版>/ にも展開する）。
@@ -16,6 +17,8 @@ import os
 import shutil
 import sys
 import zipfile
+
+import lineup
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DIST = os.path.join(HERE, "dist")
@@ -46,6 +49,10 @@ def main():
     zpath = os.path.join(OUT, name + ".zip")
     with open(os.path.join(TEMPLATE, "readme.txt"), encoding="utf8") as f:
         readme = f.read().replace("{version}", a.version)
+    try:
+        listing = lineup.lineup(a.paks, a.version)
+    except ValueError as err:
+        sys.exit(f"[release] 一覧を作れない: {err}")
     with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
         for path in paks:
             z.write(path, "pak128/" + os.path.basename(path))
@@ -53,6 +60,7 @@ def main():
         z.writestr("ami_readme.txt", "﻿" + readme.replace("\r\n", "\n").replace("\n", "\r\n"))
         with open(os.path.join(TEMPLATE, "license.txt"), encoding="utf8") as f:
             z.writestr("ami_license.txt", "﻿" + f.read().replace("\r\n", "\n").replace("\n", "\r\n"))
+        z.writestr("ami_lineup.txt", "﻿" + listing.replace("\r\n", "\n").replace("\n", "\r\n"))
         if os.path.isfile(THUMBNAIL):
             z.write(THUMBNAIL, "thumbnail.png")
     with zipfile.ZipFile(zpath) as z:
