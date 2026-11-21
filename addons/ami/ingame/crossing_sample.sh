@@ -33,6 +33,8 @@ if [ "$JUDGE" = 1 ]; then
   for o in $ORIGINS; do for line in H V; do for k in $(seq 0 11); do for st in open closed; do
     files+=("$OUT/${o%%:*}_${line}_${k}_${st}.png"); want+=(ami)
   done; done; done; done
+  set -- $MIXED_EXPECT
+  [ $# = "$NMIXED" ] || { echo "[judge] MIXED_EXPECT の数（$#）が区画 M の組の数（$NMIXED）と違う"; exit 1; }
   j=0
   for e in $MIXED_EXPECT; do files+=("$OUT/mixed_${j}_open.png"); want+=("$e"); j=$((j + 1)); done
   ng=0; have=()
@@ -40,7 +42,9 @@ if [ "$JUDGE" = 1 ]; then
     if [ -f "${files[$i]}" ]; then have+=("${files[$i]}"); else echo "[judge] 撮っていない: ${files[$i]}"; ng=$((ng + 1)); fi
   done
   declare -A got
-  while read -r _ f y v; do got[$f]="$v $y"; done < <("$BLENDER" -b --factory-startup --python ingame/crossing_judge.py -- "$CROP" "${JUDGE_MIN:-20}" "${have[@]}" 2> /dev/null | grep '^\[judge\]')
+  while read -r _ f y v; do got[$f]="$v $y"; done < <("$BLENDER" -b --factory-startup --python ingame/crossing_judge.py -- \
+    "$CROP" "${JUDGE_MIN:-20}" "${JUDGE_RED:-40}" "${have[@]}" 2> "$OUT/judge.err" | tr -d '\r' | grep '^\[judge\]')
+  [ ${#got[@]} = ${#have[@]} ] || echo "[judge] 判定の出ない画面があった（Blender のエラーは $OUT/judge.err）"
   for i in "${!files[@]}"; do
     f=${files[$i]}; [ -f "$f" ] || continue
     read -r v y <<< "${got[$f]}"
