@@ -412,7 +412,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 作るもの・見た目・仮の値は、2026-11-21 に進捗管理が推奨案で決めた（[#111 のコメント](https://github.com/128na/simutrans-addon-dev/issues/111#issuecomment-7059345141)。見た目はユーザーが PR で確かめる）。
 
-- 線路 4 種 × 道路 3 種の 12 個（`ami_crossing_<線路>_<道路>`。例 `ami_crossing_rail_ballast_road_general`。`blender/catalog.py` の `CROSSINGS`）。本体は踏切を waytype の組と速さだけで選ぶ（way の名前は見ない。`docs/reference/way-addon.md` の 5 章）ので、組ごとに速さの合う踏切を置く。高速道路の踏切も作る（無いと pak128 の踏切が出る）。pak128 などほかの way との組でも、速さの近い AMI の踏切が選ばれることがある
+- 線路 4 種 × 道路 3 種の 12 個（`ami_crossing_<線路>_<道路>`。例 `ami_crossing_rail_ballast_road_general`。`blender/catalog.py` の `CROSSINGS`）。本体は踏切を waytype の組と速さだけで選ぶ（way の名前は見ない。`docs/reference/way-addon.md` の 5 章）ので、組ごとに速さの合う踏切を置く。高速道路の踏切も作る（無いと pak128 の踏切が出る）。pak128 などほかの way との組でも、速さの近い AMI の踏切が選ばれることがある。見本の区画 M で見た組（2026-11-21、`docs/crossing_mixed.png`。左から）: `Rail_100_Tracks`×`Road_050` と `ami_rail_ballast`×`Road_050` は pak128 の踏切、`Rail_100_Tracks`×`ami_road_general`・`Rail_160_Tracks`×`ami_road_local` は AMI の踏切、`ami_rail_slab`×`Road_050` は AMI の一般道路の踏切（pak128 の踏切は 480km/h の線路に足りない）で、pak128 の道路の上に AMI の路面が出る。どの組も way の速さは踏切で下がらなかった（`[check]` の行の `full`）
 - 絵は道路の種類ごとに 1 枚（`src/ami_crossing_road_<道路>.png`）で、線路の 4 種で同じ（踏切の中は道床が見えない）。描くのは `tools/blender/sheetlib/crossing.py` の `crossing_sheet`
   - 奥の絵（乗り物より前に描く）は、pak128 の踏切と同じくタイル全面を描き、下の way の絵を隠す（隠さないと AMI の道床が路面の上に出る。iss の踏切は遮断機だけを描く）。その道路の直線のセル（`src/ami_road_<道路>.png` の `0.2`・`0.3`、雪は 4 行下）を下地にそのまま写し、線路に沿うゴムの踏板（黒灰）・レールの頭・溝と、奥の側の遮断機・警報機を重ねる。レールと踏板は線路の way のレールと同じ基準面（`_DATUMS` の `rail`）と横の範囲で、隣の線路のタイルのレールとつなぐ
   - 手前の絵（乗り物の後に描く）は、手前の側の遮断機・警報機だけ。奥・手前は線路で分ける（東西の線路は南の側、南北の線路は東の側が手前）。車は踏切のタイルの外で止まるので、タイルの上を通る列車に合わせた
