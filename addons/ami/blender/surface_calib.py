@@ -2,7 +2,7 @@
 
 在来線の基盤の 4 版・高架の 4 版（ami_rail_ballast_base_<版>・_elev_<版>）だけを、段ごとに別の名前で描く。変えるのは、
 基盤の板（材質の名前 base）と高架の躯体（elev_body）の材質だけで、道床・まくらぎ・レール・壁・橋脚は今の絵のまま。
-材質は core の named_materials で名前ごと差し替える（src/・dist/・共有の sheetlib は変えない）。
+材質は描き分けの mat_skin（track_sheet が core の named_materials で入れる）で名前ごと差し替える。
 
 アドオンのディレクトリで:
 
@@ -12,6 +12,10 @@
 描いた絵は work/surface/<段>/src/。pak には段ごとに、8 版の way を <元の名前>_surf<段> の名前で入れる（壁・橋脚は入れない。
 見本は dist/ami.pak の壁・橋脚を重ねる）。段 0 は今の版で、描かずに src/ の絵を _surf0 の名前で入れる。
 
+段 2（継ぎ目なし）をユーザーが選び、render.py の TRACK_MAT_SKIN に入れた（2026-11-21）。この入口は、対象の描き分けの mat_skin を
+段の表に置き換えて描く（段 0 は差し替えなしの一色）。pak の段 0 は src/ の絵を写すので、段 2 を入れた後に pak を作り直すと段 0 が段 2 の絵になる。
+決める前の段 0 は、コミット済みの rounds/ami_surface_calib.pak にある。
+
 段（どれも灰色のまま。坂の測り方 slope_measure.py がレールを「赤 − 青」、地面を緑で見分けるため色みを足さない）:
     0  今の版: 一色（基盤 0.50、躯体 0.56）
     1  まだら: 色を中心に ±12% のまだら（粒は約 4px）。道路一式のコンクリート（render.py の ROAD_CONCRETE）と同じ振れ幅
@@ -19,9 +23,9 @@
     3  2 を強く: まだら ±20%、しみ 25%
     j  2 + 継ぎ目: タイルの 1/4 と 3/4 の所に、縦横の暗い線（幅約 1px）。床の板の継ぎ目と躯体の縦の目地
 模様は、タイルの辺で必ずつながるように、タイルの 1 辺を周期にした 4 次元のノイズ（x・y をそれぞれ円に巻く）で作る。
-画面で縦の面（基盤・躯体の側面）は、高さ方向に模様が変わらない（縦の筋になる）。
+見比べたとき（コミット済みの rounds/ami_surface_calib.pak）の模様は高さ方向に変わらなかった（縦の面が縦の筋になる）。本番に入れるとき、
+橋の端の坂の躯体（大きな縦の面）で縦の縞に見えたので、高さも模様に入れた（sheetlib の tiled_concrete_material）。今この入口で描くと、高さを入れた模様になる。
 """
-import math
 import os
 import re
 import shutil
@@ -53,92 +57,10 @@ def surf_name(name, step):
 
 
 def _concrete(R, name, rgb, step):
-    """段 step のコンクリートの材質を返す関数（named_materials の表に入れる）。"""
+    """段 step のコンクリートの材質を返す関数（named_materials の表に入れる）。作りは sheetlib の tiled_concrete_material"""
     amp, grain, stain, stain_scale, joint = STEPS[step]
-    tile = R.TILE
-
-    def make():
-        import bpy
-        mname = f"ami_surf{step}_{name}"
-        if mname in bpy.data.materials:
-            return bpy.data.materials[mname]
-        m = bpy.data.materials.new(mname)
-        m.use_nodes = True
-        nt = m.node_tree
-        N, L = nt.nodes, nt.links
-        bsdf = N["Principled BSDF"]
-        bsdf.inputs["Roughness"].default_value = 0.8  # 今の材質（core の material() の既定）と同じ。変えるのは色だけ
-        tc = N.new("ShaderNodeTexCoord")
-        sep = N.new("ShaderNodeSeparateXYZ")
-        L.new(tc.outputs["Object"], sep.inputs["Vector"])
-
-        def math_node(op, a, b=None):
-            n = N.new("ShaderNodeMath")
-            n.operation = op
-            for i, v in enumerate((a, b)):
-                if v is None:
-                    continue
-                if isinstance(v, (int, float)):
-                    n.inputs[i].default_value = v
-                else:
-                    L.new(v, n.inputs[i])
-            return n.outputs[0]
-
-        # x・y をタイルの 1 辺を周期に円へ巻く（半径 tile/2π で、ノイズの尺度は部品の座標と同じ）
-        rad = tile / (2 * math.pi)
-        ang = lambda s: math_node("MULTIPLY", s, 2 * math.pi / tile)
-        ax, ay = ang(sep.outputs["X"]), ang(sep.outputs["Y"])
-        cx, sx = math_node("MULTIPLY", math_node("COSINE", ax), rad), math_node("MULTIPLY", math_node("SINE", ax), rad)
-        cy, sy = math_node("MULTIPLY", math_node("COSINE", ay), rad), math_node("MULTIPLY", math_node("SINE", ay), rad)
-        comb = N.new("ShaderNodeCombineXYZ")
-        L.new(cx, comb.inputs["X"])
-        L.new(sx, comb.inputs["Y"])
-        L.new(cy, comb.inputs["Z"])
-
-        def noise(scale, detail):
-            n = N.new("ShaderNodeTexNoise")
-            n.noise_dimensions = "4D"
-            n.inputs["Scale"].default_value = scale
-            n.inputs["Detail"].default_value = detail
-            L.new(comb.outputs["Vector"], n.inputs["Vector"])
-            L.new(sy, n.inputs["W"])
-            return n.outputs["Fac"]
-
-        ramp = N.new("ShaderNodeValToRGB")
-        ramp.color_ramp.elements[0].position = 0.35
-        ramp.color_ramp.elements[0].color = (*(x * (1 - amp) for x in rgb), 1)
-        ramp.color_ramp.elements[1].position = 0.65
-        ramp.color_ramp.elements[1].color = (*(x * (1 + amp) for x in rgb), 1)
-        L.new(noise(grain, 2.0), ramp.inputs["Fac"])
-        col = ramp.outputs["Color"]
-        # 倍率（しみ・継ぎ目）を掛け合わせる
-        k = None
-        if stain:
-            # しみ: ノイズの値が 0.5 より上の所ほど暗く（0.5 で 1、0.65 で 1 − stain）
-            t = math_node("MULTIPLY", math_node("MAXIMUM", math_node("SUBTRACT", noise(stain_scale, 1.0), 0.5), 0.0), 1 / 0.15)
-            k = math_node("SUBTRACT", 1.0, math_node("MULTIPLY", math_node("MINIMUM", t, 1.0), stain))
-        if joint:
-            def line(s):  # s を JOINT_PERIOD で割った余りが ±JOINT_W/2 に入れば 1（±2.5 の所）
-                f = math_node("FRACT", math_node("DIVIDE", math_node("ADD", s, JOINT_PERIOD / 2), JOINT_PERIOD))
-                d = math_node("MINIMUM", f, math_node("SUBTRACT", 1.0, f))
-                return math_node("LESS_THAN", d, JOINT_W / 2 / JOINT_PERIOD)
-            on = math_node("MAXIMUM", line(sep.outputs["X"]), line(sep.outputs["Y"]))
-            jk = math_node("SUBTRACT", 1.0, math_node("MULTIPLY", on, 1 - JOINT_DARK))
-            k = jk if k is None else math_node("MULTIPLY", k, jk)
-        if k is not None:
-            mix = N.new("ShaderNodeMix")
-            mix.data_type = "RGBA"
-            mix.blend_type = "MULTIPLY"
-            mix.inputs["Factor"].default_value = 1.0
-            kc = N.new("ShaderNodeCombineColor")
-            for ch in ("Red", "Green", "Blue"):
-                L.new(k, kc.inputs[ch])
-            L.new(col, mix.inputs["A"])
-            L.new(kc.outputs["Color"], mix.inputs["B"])
-            col = mix.outputs["Result"]
-        L.new(col, bsdf.inputs["Base Color"])
-        return m
-    return make
+    return lambda: R.tiled_concrete_material(f"ami_surf{step}_{name}", rgb, amp, grain, stain, stain_scale,
+                                             (JOINT_PERIOD, JOINT_W, JOINT_DARK) if joint else None)
 
 
 def _render():
@@ -156,12 +78,9 @@ def _render():
         m.WORK = os.path.join(out, "tmp")
     os.makedirs(K.WORK, exist_ok=True)
 
-    def wrap(draw):
-        def run():
-            with R.named_materials(table):
-                draw()
-        return run
-    R.run_targets({t: wrap(render.SHEETS[t]) for t in TARGETS}, TARGETS)
+    for t in TARGETS:  # 描き分けの mat_skin（render.py の TRACK_MAT_SKIN）を段の表に置き換える（track_sheet が描くあいだだけ入れる）
+        R.TRACK_PROFILES[t.removeprefix("ami_")]["mat_skin"] = table or None
+    R.run_targets({t: render.SHEETS[t] for t in TARGETS}, TARGETS)
 
 
 def _pack():

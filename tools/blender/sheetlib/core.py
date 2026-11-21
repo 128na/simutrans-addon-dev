@@ -183,7 +183,91 @@ def brick_material(name, rgb, mortar, scale):
     return m
 
 
-# 材質の名前による差し替え（material() に渡す名前 → 材質を返す関数）。シートを描く関数（road_sheet・tunnel_sheet・pier_sheet）が、
+def tiled_concrete_material(name, rgb, amp, grain, stain=0.0, stain_scale=0.35, joint=None, rough=0.8):
+    """コンクリートの面の材質（AMI の線路の基盤・高架の躯体。#78）: rgb を中心に ±amp のまだら（grain は部品の座標 1 単位あたりの細かさ）に、
+    大きなしみ（stain_scale の細かさ、最大 stain だけ暗く）を掛ける。joint=(間隔, 幅, 色の倍率) を渡すと、x・y が間隔の半分ずれた所ごとに
+    縦横の暗い線を引く（タイルの辺には置かない）。
+    模様はタイルの 1 辺（TILE）を周期にし、タイルの辺で必ずつながる（x・y をそれぞれ円に巻いた 4 次元のノイズ。円の半径を TILE/2π にして、
+    ノイズの尺度を部品の座標と同じにする）。4 つ目の座標には高さも足し、縦の面も高さ方向に変わる。座標は Object（部品の原点はどれも 0）"""
+    if name in bpy.data.materials:
+        return bpy.data.materials[name]
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    N, L = nt.nodes, nt.links
+    bsdf = N["Principled BSDF"]
+    bsdf.inputs["Roughness"].default_value = rough
+    sep = N.new("ShaderNodeSeparateXYZ")
+    L.new(N.new("ShaderNodeTexCoord").outputs["Object"], sep.inputs["Vector"])
+
+    def op(kind, a, b=None):
+        n = N.new("ShaderNodeMath")
+        n.operation = kind
+        for i, v in enumerate((a, b)):
+            if v is None:
+                continue
+            if isinstance(v, (int, float)):
+                n.inputs[i].default_value = v
+            else:
+                L.new(v, n.inputs[i])
+        return n.outputs[0]
+
+    rad = TILE / (2 * math.pi)
+    ax, ay = (op("MULTIPLY", sep.outputs[c], 2 * math.pi / TILE) for c in ("X", "Y"))
+    comb = N.new("ShaderNodeCombineXYZ")
+    L.new(op("MULTIPLY", op("COSINE", ax), rad), comb.inputs["X"])
+    L.new(op("MULTIPLY", op("SINE", ax), rad), comb.inputs["Y"])
+    L.new(op("MULTIPLY", op("COSINE", ay), rad), comb.inputs["Z"])
+    # 4 つ目の座標に高さ（z）を足す: 縦の面（橋の端の坂の躯体など）が高さ方向にも変わる（足さないと縦の縞になった。#78）。
+    # x・y の周期は変わらない
+    w = op("ADD", op("MULTIPLY", op("SINE", ay), rad), sep.outputs["Z"])
+
+    def noise(scale, detail):
+        n = N.new("ShaderNodeTexNoise")
+        n.noise_dimensions = "4D"
+        n.inputs["Scale"].default_value = scale
+        n.inputs["Detail"].default_value = detail
+        L.new(comb.outputs["Vector"], n.inputs["Vector"])
+        L.new(w, n.inputs["W"])
+        return n.outputs["Fac"]
+
+    ramp = N.new("ShaderNodeValToRGB")
+    ramp.color_ramp.elements[0].position = 0.35
+    ramp.color_ramp.elements[0].color = (*(x * (1 - amp) for x in rgb), 1)
+    ramp.color_ramp.elements[1].position = 0.65
+    ramp.color_ramp.elements[1].color = (*(x * (1 + amp) for x in rgb), 1)
+    L.new(noise(grain, 2.0), ramp.inputs["Fac"])
+    col = ramp.outputs["Color"]
+    k = None  # 色に掛ける倍率（しみ・継ぎ目）
+    if stain:
+        # しみ: ノイズの値が 0.5 より上の所ほど暗く（0.5 で 1、0.65 で 1 − stain）
+        t = op("MULTIPLY", op("MAXIMUM", op("SUBTRACT", noise(stain_scale, 1.0), 0.5), 0.0), 1 / 0.15)
+        k = op("SUBTRACT", 1.0, op("MULTIPLY", op("MINIMUM", t, 1.0), stain))
+    if joint:
+        period, width, dark = joint
+
+        def line(s):  # s が period の半分の奇数倍から ±width/2 に入れば 1
+            f = op("FRACT", op("DIVIDE", op("ADD", s, period / 2), period))
+            return op("LESS_THAN", op("MINIMUM", f, op("SUBTRACT", 1.0, f)), width / 2 / period)
+        on = op("MAXIMUM", line(sep.outputs["X"]), line(sep.outputs["Y"]))
+        jk = op("SUBTRACT", 1.0, op("MULTIPLY", on, 1 - dark))
+        k = jk if k is None else op("MULTIPLY", k, jk)
+    if k is not None:
+        mix = N.new("ShaderNodeMix")
+        mix.data_type = "RGBA"
+        mix.blend_type = "MULTIPLY"
+        mix.inputs["Factor"].default_value = 1.0
+        kc = N.new("ShaderNodeCombineColor")
+        for ch in ("Red", "Green", "Blue"):
+            L.new(k, kc.inputs[ch])
+        L.new(col, mix.inputs["A"])
+        L.new(kc.outputs["Color"], mix.inputs["B"])
+        col = mix.outputs["Result"]
+    L.new(col, bsdf.inputs["Base Color"])
+    return m
+
+
+# 材質の名前による差し替え（material() に渡す名前 → 材質を返す関数）。シートを描く関数（track_sheet・road_sheet・tunnel_sheet・pier_sheet）が、
 # 描き分けの辞書の "mat_skin" を named_materials で描くあいだだけ入れる。壁・基盤・躯体・橋脚は形を作る関数の中で material(*組) を
 # 呼ぶので、部品の名前の skin では届かない（AMI の道路一式のコンクリートの質感。docs/records/2026-11-20_ami-road-refine-production.md）。
 # 差し替えた材質には元と別の名前を付ける（同じプロセスで後に描くシートが、名前で同じ材質を拾わないように）

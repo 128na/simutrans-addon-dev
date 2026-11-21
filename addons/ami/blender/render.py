@@ -366,6 +366,23 @@ for _t in catalog.TRACKS:
 # 在来線の通常の版の道床（砕石のまだら）・まくらぎ・レール・汚れを入れたもの。壁・架線は坑口のタイルにも way-object を重ねる
 # （坑口の躯体は way の手前の絵で、way-object の絵より後に描かれるので、躯体の中へ入る壁・架線は躯体に隠れる。README の「橋とトンネルの作り」）
 
+# ---------------------------------------------------------------- 線路の基盤・高架の面のコンクリート（#78）
+# 基盤の板（材質の名前 base）と高架の躯体（elev_body）を、一色から打ち放しのコンクリートにする: 元の色を中心に ±12% のまだら（粒は約 4px。
+# 道路一式のコンクリート ROAD_CONCRETE と同じ振れ幅）に、約 30px の大きなしみで最大 15% 暗くする。模様はタイルの 1 辺を周期にしてあり、
+# タイルの辺で切れない（sheetlib の tiled_concrete_material）。継ぎ目の線は描かない。段 0〜3 と継ぎ目の案を見比べ、ユーザーが段 2・継ぎ目なしに
+# 決めた（2026-11-21。橋もそろえることも同じ日にユーザーが決めた。比べた案は blender/surface_calib.py、記録 docs/records/2026-11-21_ami-surface-detail.md）。
+# 線路の基盤・高架の版と橋（床と桁。高架の single と同じ作りで、高架とつながる）に渡す。壁・橋脚・坑口は今のまま（橋の柱は材質 pier で、
+# 差し替えない）。雪の絵では基盤の上面は雪の材質のまま
+TRACK_SURFACE = dict(amp=0.12, grain=2.5, stain=0.15, stain_scale=0.35)
+TRACK_MAT_SKIN = {
+    spec[0]: (lambda nm=spec[0], rgb=spec[1]: R.tiled_concrete_material(f"ami_track_concrete_{nm}", rgb, **TRACK_SURFACE))
+    for spec in (R._M_BASE, R._M_ELEV_BODY)}
+for _t in catalog.TRACKS:
+    for _v in BASE_VARIANTS:
+        for _name in (_t.base(_v), _t.elev(_v)):
+            R.TRACK_PROFILES[_p(_name)]["mat_skin"] = TRACK_MAT_SKIN
+    R.TRACK_PROFILES[_p(_t.bridge)]["mat_skin"] = TRACK_MAT_SKIN
+
 # ---------------------------------------------------------------- 道路 3 種の通常の版（#21）
 # 断面は blender-poc の高速道路（ROAD_PROFILES["expressway"]）と同じ: 片側 1 車線、タイル全面が路面、歩道なし、路側の白線は実線
 # （分岐の口は点線）。描くのは sheetlib の road_sheet（expressway=True が歩道なしの作り）。種類ごとに変えるのは中央線・路面の色・アイコン:
