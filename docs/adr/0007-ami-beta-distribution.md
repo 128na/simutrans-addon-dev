@@ -1,6 +1,6 @@
 # ADR: AMI の第 1 弾は、種類別の pak 4 つを入れた zip を GitHub のプレリリースで配る
 
-> ステータス: Accepted (2026-11-21)
+> ステータス: Accepted (2026-11-21)。「影響・トレードオフ」の最後の項目（名前が変わるときの readme の注意）は [ADR 0009](0009-ami-beta-renames-without-readme-notice.md) で改めた
 > 由来: [#91](https://github.com/128na/simutrans-addon-dev/issues/91)（第 1 弾をベータ版として出す）・[#61](https://github.com/128na/simutrans-addon-dev/issues/61)・[ADR 0002](0002-ami-scope.md)
 
 ## 背景と問題
