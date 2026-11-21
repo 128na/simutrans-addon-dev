@@ -2,7 +2,7 @@
 
     python -X utf8 check_icons.py [src のディレクトリ]
 
-#25 で、次の 3 つの誤りを目で見て見つけた。同じ種類の誤りを機械的に見つける。
+#25 で、次の 1〜3 の誤りを目で見て見つけた。同じ種類の誤りを機械的に見つける（4 は #141 で足した）。
 
 1. セルの重なり: 各 dat の icon・cursor が指すセルを、ほかの dat のキーや、同じ dat のほかのキーが指していないか。
    blender/icons.py はセルを空けてから書くので、重なると相手の絵が消えるか、2 つの物が同じアイコンになる
@@ -11,10 +11,14 @@
 3. 背景色: waytype の違う物どうしで、アイコンの背景の色相が近すぎないか。同じメニューに並ぶ物を色で見分けるため
    （#25 の前、路面軌道のアイコンが線路と同じ緑だった）。icons.py の色の表（WAY_BG）は読まず、描かれた画素だけで比べる
    （表ごと元に戻したときにも落ちるように）
+4. 別のシートの絵: ほかのシートの絵から作ったアイコン・カーソル（トンネルのアイコンは中の way の絵）が、今の絵のシートから作られているか。
+   icons.py が絵のセルの sha256 を <シート>.icon_sources.txt に控え、ここで今のシートと比べる（#141。#89 で線路のシートを描き直した後、
+   在来線のトンネルのアイコンが古い線路の絵のままだった）。トンネルには控えが無ければならない
 
 意図して共有・借用するものは、下の SHARE_SUFFIX と BG_BORROW に書く。
 """
 import glob
+import hashlib
 import os
 import re
 import struct
@@ -173,6 +177,88 @@ def hue_diff(a, b):
 NO_TOOL_OBJS = {"crossing"}
 
 
+STAMP_SUFFIX = ".icon_sources.txt"  # blender/icons.py と同じ
+
+
+def source_digest(rows, row, col):
+    """read_rows の行（RGB）から、セル (row, col) の画素を上の行から並べた sha256（blender/icons.py の cell_digest と同じ並び）"""
+    h = hashlib.sha256()
+    for y in range(row * CELL, (row + 1) * CELL):
+        h.update(bytes(rows[y][col * CELL * 3:(col + 1) * CELL * 3]))
+    return h.hexdigest()
+
+
+def check_sources(src, objs):
+    """icons.py が <シート>.icon_sources.txt に控えた、ほかのシートの絵のセルの sha256 を、今のシートと比べる。
+    控えが要る物（expected_sources）に控えがあり、控えのセルが今の dat の指すセルか、も見る"""
+    errors, cache, stamped = [], {}, {}
+    names = {o["name"] for o in objs}
+    for path in sorted(glob.glob(os.path.join(src, "*" + STAMP_SUFFIX))):
+        stamp = os.path.basename(path)
+        for line in open(path, encoding="utf8"):
+            if line.startswith("#") or not line.strip():
+                continue
+            t = line.split()
+            if len(t) != 6 or t[1] not in ("icon", "cursor") or not t[3].isdigit() or not t[4].isdigit():
+                errors.append(f"{stamp}: 控えの行の形が違う（物 icon|cursor 絵のシート 行 列 sha256）: {line.strip()}")
+                continue
+            name, kind, sheet, row, col, digest = t[0], t[1], t[2], int(t[3]), int(t[4]), t[5]
+            if name not in names:
+                errors.append(f"{stamp}: dat に無い物 {name} の行がある。blender/icons.py を流し直す")
+                continue
+            stamped.setdefault((name, kind), set()).add((sheet, row, col))
+            need = (row + 1) * CELL
+            if sheet not in cache or len(cache[sheet][2]) < need:
+                png = os.path.join(src, sheet + ".png")
+                if not os.path.exists(png):
+                    errors.append(f"{stamp}: {name} の絵のシート {sheet}.png が無い")
+                    continue
+                cache[sheet] = read_rows(png, need)
+            w, h, rows = cache[sheet]
+            if h < need or w < (col + 1) * CELL:
+                errors.append(f"{stamp}: {name} の絵のセル {sheet}.{row}.{col} がシート（{w}x{h}）の外")
+            elif source_digest(rows, row, col) != digest:
+                errors.append(f"{name} の {kind} が、今の {sheet} のセル {row}.{col} から作られていない。"
+                              f"絵のシートを描き直したら blender/icons.py を流し直す")
+    for (name, kind), cells in expected_sources(objs).items():
+        got = stamped.get((name, kind))
+        if not got:
+            errors.append(f"{name}: {kind} を作ったほかのシートの絵の控え（<シート>{STAMP_SUFFIX}）が無い。blender/icons.py を流し直す")
+        elif got != cells:
+            errors.append(f"{name}: {kind} の控えのセル {sorted(got)} が、今の dat の指す絵のセル {sorted(cells)} と合わない。"
+                          f"blender/icons.py を流し直す")
+    return errors
+
+
+TUNNEL_PICTURE_KEYS = ("image[ns][0]", "frontimage[ns][0]")  # blender/icons.py の picture_keys(way) と同じ
+# blender/icons.py の picture_keys(壁・架線) と同じ候補の組（近い斜めの twin は直線を持たないので、斜めの組になる）
+WAYOBJ_PICTURE_GROUPS = [[f"back{k}", f"front{k}"] for k in ("image[ns]", "image[s]", "image[n]")] +     [["backdiagonal[nw]", "frontdiagonal[nw]", "backdiagonal[se]", "frontdiagonal[se]"]]
+
+
+def expected_sources(objs):
+    """ほかのシートの絵から作るので控えが要る (物, icon|cursor) → 絵のセルの集合（控えのセルと等しくなければならない）。
+    トンネルの icon は中の way の直線のセル。way-object（壁・架線）は、icons.py と同じ候補の組のうち dat にある最初の組で、
+    そのセルが icon・cursor と別のシートにあるもの（twin の壁は front の版の斜め）"""
+    by_name = {o["name"]: o for o in objs}
+    out = {}
+    for o in objs:
+        keys = o["keys"]
+        if o["obj"] in NO_TOOL_OBJS or "icon" not in keys or "cursor" not in keys:
+            continue
+        if o["obj"] == "tunnel":
+            way = by_name.get(keys.get("way"))
+            out[(o["name"], "icon")] = {cell_of(way["keys"][k]) for k in TUNNEL_PICTURE_KEYS if way and k in way["keys"]} - {None}
+        elif o["obj"] == "way-object":
+            group = next((g for g in WAYOBJ_PICTURE_GROUPS if any(k in keys for k in g)), [])
+            cells = {cell_of(keys[k]) for k in group if k in keys} - {None}
+            for kind in ("icon", "cursor"):
+                own = cell_of(keys[kind])
+                other = {c for c in cells if own and c[0] != own[0]}
+                if other:
+                    out[(o["name"], kind)] = other
+    return out
+
+
 def main(src):
     objs = read_dats(src)
     errors = []
@@ -256,6 +342,9 @@ def main(src):
         a, ha, b, hb = min(pairs, key=lambda p: (p[0] in BG_BORROW) + (p[2] in BG_BORROW))
         errors.append(f"waytype {wa} と {wb} のアイコンの背景の色相が近い（{len(pairs)} 組。例: {a} {ha:.0f} 度・{b} {hb:.0f} 度。"
                       f"差の下限 {HUE_MIN_DIFF} 度）。意図して借りる色なら check_icons.py の BG_BORROW に書く")
+
+    # 4. ほかのシートの絵から作ったアイコン・カーソルが、今の絵のシートから作られているか（#141）
+    errors += check_sources(src, objs)
 
     n = len(objs)
     if errors:
