@@ -17,12 +17,12 @@
 
 この ADR を決めるときに、次のことを確かめた（2026-11-21）。
 
-- 1 タイルに置ける way は 2 本まで（本体の `boden/grund.h` の `has_way2`）。違う waytype の way が交わるには crossing が要る。要らないのは、路面軌道を道路に重ねるときだけ
+- 1 タイルに置ける way は 2 本まで（本体の `boden/grund.h` の `has_way2`）。違う waytype の way が交わるには、路面軌道を道路に重ねるときなどを除いて crossing が要る（`bauer/wegbauer.cc` の `check_crossing`。決まりは [way-addon.md](../reference/way-addon.md) の 5 章）
 - way-object は、1 タイルに waytype ごとに 1 つ（[way-addon.md](../reference/way-addon.md) の 10 章）
-- AMI は、tram_track を橋脚（`ami_pier_*`）と `ami_tram` に、water を歩道（`ami_sidewalk`）に使っている。road の way-object は道路の壁（`ami_wall_road_*`）が使っている
-- iss の補助の物は、ほかの waytype の way や way-object を重ねて作り、速度の値を目印にしている。路面表示は tram_track の way、電柱は road の way-object、盛土と「橋に見せる way」は track の高架の way。この作りでは、AMI の路面軌道・橋脚・道路の壁と同じタイルに置けない。車両がその上を走れるものもある
-- pak128（`refs/pak128`）には、狭軌・リニアの車両が 1 つも無い（道具のメニューの枠はある）。モノレールの車両（懸垂式を含む）と船はある
-- `type=cur` の建物（iss の盛土の building の版）は郊外の名所になり、乗客の行き先として数えられる（`descriptor/writer/building_writer.cc`・`simhalt.cc`）
+- AMI は、tram_track を橋脚（`ami_pier_*`）と `ami_tram` に、water を歩道（`ami_sidewalk`）に使っている（`addons/ami/src/*.dat`）。road の way-object は道路の壁（`ami_wall_road_*`）が使っている
+- iss の補助の物は、ほかの waytype の way や way-object を重ねて作り、速度の値を目印にしている（`refs/iss/src/util/`）。路面表示は tram_track の way、電柱は road の way-object、盛土と「橋に見せる way」は track の高架の way。この作りでは、AMI の路面軌道・橋脚・道路の壁と同じタイルに置けない。車両がその上を速く走れるものもある
+- pak128（`refs/pak128`）には、`waytype` が狭軌・リニアの dat が 1 つも無い（道具のメニューの枠は `pak128.prototype/config/menuconf.tab` にある）。モノレールの車両（懸垂式の `infrastructure/schwebebahn_all` を含む）と船はある
+- `type=cur` の建物（iss の盛土の building の版）は、`build_time` が無いと郊外の名所になり（`descriptor/writer/building_writer.cc`）、乗客の行き先として数えられる（`simcity.cc` の `add_target_attraction`）
 - 新しく足す物は、どれも本家にもある仕組み（waytype・building・roadsign・crossing）で作れる。OTRP だけの機能は要らない
 
 ## 決定
@@ -34,8 +34,13 @@
 - アドオンの名前は AMI（`addons/ami/`）。物の名前の頭は `ami_`。iss・blender-poc の名前は引き継がない
 - ライセンスは CC BY 4.0
 - 対象は pak128 の本家 125.0.1 と OTRP。OTRP だけで使う絵（分岐の絵・近い斜め・分岐の追加画像）も入れ、本家では使われないだけにする
-- 第 1 弾までの収録（線路 4 種・道路 3 種・路面軌道と、壁・基盤・高架・橋脚・橋・トンネル・歩道）と、その作り（0002 の決定と [ADR 0003](0003-ami-walls-base-piers-as-separate-objects.md)・[ADR 0006](0006-ami-track-variants-by-track-form.md)）はそのまま
+- 第 1 弾までの収録は、線路 4 種・道路 3 種・路面軌道と、壁・基盤・高架・橋脚・橋・トンネル・歩道。速さと見た目は `addons/ami/README.md` の表のとおり。種類の足し方は [ADR 0006](0006-ami-track-variants-by-track-form.md)、壁・基盤・橋脚・歩道の分け方は [ADR 0003](0003-ami-walls-base-piers-as-separate-objects.md)
+- 道路 3 種は、どれも同じ断面（片側 1 車線、タイル全面が路面、歩道なし）で、違うのは中央線だけ
+- 壁・高架・橋・トンネルは、線路と道路に作る。路面軌道には作らない
+- 分岐の絵（switch 画像の 1・2）は、第 1 弾の全種類に入れる。近い斜めは、壁の無い way の全種類に入れる。第 2 弾の新しい waytype（モノレール・運河）に入れるかは、それぞれの issue で決める
+- 架線は、線路の壁の way-object に持たせる
 - 線路の描画位置は、新描画位置で作り終えてから、旧描画位置（#26）をまとめて作る
+- 配布の pak は、全部入りのまとめと、種類ごとの pak の両方を作る
 - 速度以外の値（費用・維持費・登場年）は、実装の前に一覧で決める
 - blender-poc の料金所は移さない
 
@@ -47,16 +52,16 @@
 - モノレール: 跨座式と懸垂式（`monorail_track`）
 - 運河（`water`）と船の車庫
 - 操車場: 線路だけ（building の `stop`）。作る前に、ゲームで何に使えるかを確かめる
-- 水路の踏切（crossing）。弾 1 の線路×道路の踏切で crossing の作りを決めてから作る
+- 水路の踏切（crossing）。第 1 弾の範囲に残っている線路×道路の踏切（#61 の表）で、crossing の作りを決めてから作る
 
 景観・補助:
 
-- 中央分離帯: 道路の壁と同じ枠なので、壁と分離帯を 1 つの way-object にまとめる（架線つきの壁と同じ考え方）
+- 中央分離帯: 道路の壁と同じ枠なので、壁と分離帯を 1 つの way-object にまとめる（架線つきの壁と同じ考え方）。分離帯だけの版は道路の `center` に置く。ADR 0003 の「道路の `center` は way-object を置かない」は、この分離帯の版に限って置き換える
 - 歩道: 舗装の種類・高架の歩道・歩道の壁
 - 電柱: 歩道の way-object にして、歩道のタイルに立てる（道路の壁と重ならないように）
-- 路面表示: 道路の way の版に描き込む。入れるのは多車線の車線と交差点だけ
+- 路面表示: 道路の way の版に描き込む。入れるのは多車線の車線と交差点だけ。道路の断面（片側 1 車線、タイル全面が路面）は変えず、並べて敷いた道路が 1 本の多車線の道路に見える線を描く。断面そのものを変えたくなったら、この ADR を書き直す
 - 道路標識: 数を絞る（速度制限・一方通行・止まれ程度）
-- 盛土: 橋脚と同じく、地面に敷く way（tram_track）にする。列車が乗らないようにするため
+- 盛土: 橋脚と同じく、地面に敷く速さ 1 の way（tram_track）にする。iss の作り（track の高架の way、速度 65480）では、高架の線路とつながって列車が速く走れるため。tram_track の way は地上の線路の網とつながりうる（[way-addon.md](../reference/way-addon.md) の 5 章）が、速さ 1 なので、橋脚と同じ割り切りにする
 - 道路の分岐の絵（#46）: 範囲に入れるが、本体の変更が入るまで着手しない
 
 ### 入れない物
@@ -79,7 +84,7 @@
 | 3 | 運河と船の車庫 | 電柱 |
 | 4 | 操車場（線路） | 路面表示（道路の版） |
 | 5 | モノレール（懸垂） | 道路標識 |
-| 6 | 水路の踏切（弾 1 の踏切の後） | 盛土 |
+| 6 | 水路の踏切（線路×道路の踏切の後） | 盛土 |
 
 車庫から始めるのは、building の生成を作り、操車場で使い回すため。中央分離帯から始めるのは、今の壁の部品を使い回せるため。
 
@@ -92,6 +97,7 @@
 - 景観は `ami_sign_<名前>`・`ami_embankment_<版>`
 - 種類別の pak に `ami_monorail.pak`・`ami_canal.pak`・`ami_scenery.pak`（標識・盛土）を足す。車庫と操車場は、その waytype の pak に入れる。補助は今の pak（道路の版は `ami_road`、壁と歩道は `ami_extra`）に入れる。全部入りの `ami.pak` は今どおり作る
 - 名前は、`addons/ami/build.py` が名前の頭で物を振り分ける pak に、そのまま入る形にした
+- 配る zip に新しい pak を入れるかは、第 2 弾を配るときに決める（[ADR 0007](0007-ami-beta-distribution.md) は第 1 弾のベータの決定）
 
 ## 検討した代替案と却下理由
 
