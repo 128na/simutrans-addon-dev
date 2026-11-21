@@ -459,6 +459,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 名前の訳: 道具の説明に出る名前を日本語にする訳のファイル `release/text/ja_ami.tab`（6 種だけ）。配る zip の `pak128/text/ja_ami.tab` に入り、ゲームの `addons/pak128/text/` から読まれる（本体はファイル名の先頭 2 文字で言語を決める。[way-addon.md](../../docs/reference/way-addon.md) の 5 章）
 - 値: 費用 500 cr、登場 1900（#110 の一覧。`blender/ami_dat.py` の `ROADSIGN_*`）。維持費のキーは無い。`ami_scenery.pak` に入る（ADR 0008）
 - 見本: `ingame/roadsign_sample.nut`。6 種を南北・東西の一般道路に置き、一方通行を 1 回・2 回置いて向きを変える。温暖側 (20,24) と降雪側 (276,24)。`[check]` の行で、置いた標識の名前、一方通行か、道の向き（`dirs`）と標識で絞った向き（`masked`）を期待と比べ（飾りの標識は絞らない、一方通行は南北で 4・2 回で 1、東西で 8・2 回で 2）、訳（`translate`）を出す。最低速度は script から読めないので、情報の窓の「最低速度: 50」で見た（`docs/roadsign122_info_min50.png`）
+- 左側通行: 左側通行の地図で見た（2026-11-22）。検証用の `flat_512.sve` は右側通行なので、起動した写しのゲームで、`gui.open_dialog_tool(27)`（高度な設定の窓）を開き、`gui.click` で `drive_left` の箱を押して窓を閉じ（`settings.get_drive_on_left()` が `true`）、見本を流した。標識は道路の反対の側の角へずれる（南北の道路では表の見える北行きの板が西の側、東西の道路では西行きの板が南の側）。撮った画面は `docs/roadsign122_left_temperate.png`（拡大率 4）、`roadsign122_left_ns.png`・`roadsign122_left_ew.png`（拡大率 1）、`roadsign122_left_oneway.png`（区画 O、拡大率 3）。車両を走らせての奥・手前の重なりは見ていない
 - 撮った画面: `docs/roadsign122_temperate.png`・`roadsign122_snow.png`（拡大率 4。上の 4 本が南北の道路の標識 0〜3、左下に東西の道路の標識の一部）、`roadsign122_temperate_oneway.png`・`roadsign122_snow_oneway.png`（区画 O）、`roadsign122_plates_x4.png`（6 種の表・裏・アイコンを 4 倍）
 
 ### 歩道の種類・高架の歩道・歩道の柵の作り（#119）
