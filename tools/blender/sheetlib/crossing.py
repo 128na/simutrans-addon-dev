@@ -200,6 +200,8 @@ def crossing_sheet(sheet, road_sheet, datums, rail=(RAIL_IN, RAIL_OUT, RAIL_Z1),
     datums は線路の way の基準面（レールと踏板を datums["rail"] で動かし、隣の線路のタイルのレールとつなぐ）。
     rail はレールの頭の横の範囲と上面の高さ (内側, 外側, 上面)。踏板の上面もこの高さにする。線路の way のレールの値を渡す
     （既定は sheetlib の track_parts の値。アドオンがレールの寸法を変えたら、その値を渡さないと踏板とレールがずれる）"""
+    if len(rail) != 3:
+        raise SystemExit(f"[crossing] rail は (内側, 外側, 上面) の 3 つ（#129）: {rail}")
     road_cells = road_cells or {"ns": (0, 2), "ew": (0, 3)}
     road_png = os.path.join(_core.SRC, road_sheet)  # 書き出し先（_s.SRC）は SHEET_ONLY・LAYOUT で替わるが、道路は src/ から読む
     if not os.path.exists(road_png):
