@@ -560,6 +560,21 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 見本は `ingame/canal.sh`（`ingame/canal.nut`）。ゲームの写し（`work/canal_game/<PORT>/`）を起動し、地上（車庫と輪・十字・斜め・行き止まり）、坂と急坂、近い斜めを敷き、pak128 の船を輪で走らせる。`SNOW=1` で降雪側、`CAPTURE=1` で撮る。運河と歩道のつながりは `NUT=ingame/canal_link.nut` で見る（使い方はスクリプトの冒頭）
   - 確認画像（2026-11-22、`OTRPv64_3.exe`、`flat_512.sve`）: `docs/canal_ground.png`（輪・十字・車庫の口の T字）、`canal_diag.png`（斜め）、`canal_slope.png`（坂・急坂）、`canal_close.png`（1 タイルずらした斜め 2 本）、`canal_depot.png`（車庫と、出てきた船）、`canal_snow_ground.png`（降雪側）、`canal_link_sidewalk.png`（運河・歩道・運河を一続きに敷き、歩道の上を通る船）
 
+### 懸垂式モノレールの作り（#116）
+
+- 物: 地上の 3 版 `ami_monorail_suspended_front`・`_center`・`_back` と、高架の 3 版 `ami_monorail_suspended_elev_front`・`_center`・`_back`（`system_type=1`）。waytype は `monorail_track`（跨座式と同じ。車庫は跨座式の `ami_monorail_depot` を使う。跨座式の way とつながるはずだが、ゲームでは見ていない）。並びは iss の懸垂式（`../refs/iss/src/way/monorail/`）に合わせ、支柱は way の絵に持たせた（iss と同じ。2026-11-22、進捗管理の決定。[#116](https://github.com/128na/simutrans-addon-dev/issues/116)）。版は柱を立てる側で、`front` は手前（南北の線は東、東西の線は南）、`back` は奥、`center` は両側（門型）。複線は、西（北）の線を `back`・東（南）の線を `front` にすると柱が外側に並ぶ（`docs/susp116_temperate_P.png`）
+- 形: 桁は打ち放しのコンクリートの箱（幅は跨座式と同じ）で、下面は way の高さから 2.8（画面で約 22px）、上面は 4.1（約 32px）。柱はタイルごとに 1 組で、桁の上に載る梁から下ろす。高架の版は柱を高架の段（2 段）の分だけ下へ延ばす
+  - 桁の高さは、最初は iss の地上の桁（下面 約 25px・上面 約 35px）に合わせた。ユーザーが渡した懸垂式の車両（pak128.japan の Higashiyama_1A）を走らせると、屋根の吊り具の先と桁の下面の間が約 3px 空いた（pak128 の懸垂式 `Schwebebahn_p_ground` は桁の下面が車両の屋根に接する）ので、桁を 0.4（約 3px）下げた（2026-11-22。`docs/susp116_vehicle_zoom.png`）
+- 絵の並び: 線路の通常の版と同じシート（`sheetlib` の `track_sheet`。部品は `tools/blender/sheetlib/monorail_parts.py` の `suspended_parts`・`suspended_pier_fills`）。桁と奥の柱は奥の絵（`image`）、手前の柱は手前の絵（`frontimage`）に描く。手前の柱が車両の前に、桁と奥の柱が車両の後ろに描かれる（シートは 8 行で、奥 0〜3・手前 4〜7。雪は 8〜15）。カーブは斜めの絵（跨座式と同じ）。近い斜めの絵・分岐の追加画像は無い
+- 雪の絵: 桁の上面だけを白くする（跨座式と同じ）
+- トンネルは作らない: トンネルの穴の高さ（2 段 − 0.6 ≒ 3.5）に、桁の上面（4.1）が入らない。iss の懸垂式もトンネルを持たない
+- アイコン: 背景は紫（モノレール）、左上に「懸」、右下に版の札（前・中・後）。高架の版は下の帯
+- 値: 150 km/h、地上 30000・600、高架 60000・1200（地上の 2 倍）、登場 1900（#110 の一覧。跨座式と同じ。`blender/ami_dat.py` の `VALUES`）
+- pak は `ami_monorail.pak`
+- 見本は `ingame/suspended_sample.nut`（`ingame/game.sh` で流す。降雪側は `OX=276`）。地上・高架の 3 版の直線・L 字・T字・斜め（G・E）、複線（P）、坂（S）、車庫と輪（V）を敷き、タイルの way の名前と向き（ribi）を `[check]` の行で期待と比べる。V では懸垂式の車両を輪で回す
+  - 確認画像（2026-11-22、`OTRPv64_3.exe`、`flat_512.sve`）: `docs/susp116_temperate_G.png`（地上の center）、`susp116_temperate_E.png`（高架）、`susp116_temperate_P.png`（複線）、`susp116_temperate_S.png`（坂）、`susp116_snow_G.png`・`susp116_snow_E.png`（降雪）、`susp116_vehicle.png`・`susp116_vehicle_snow.png`・`susp116_vehicle_zoom.png`（輪を回る車両）
+  - 車両は、ユーザーが渡した Higashiyama_1A を、ゲームの写しの中にだけ入れて走らせた（リポジトリには入れていない）。この車両は電車（`engine_type=electric`）で、電化した way しか走れない。pak128 にも AMI にもモノレールを電化する物が無いので、確かめるときは、配らない見えない試験用の電化の way-object を写しの中にだけ入れ、輪に張って走らせた。電化の物を AMI に足すかは未定（#116 の PR）。比べるために、pak128 の懸垂式の way（`Schwebebahn_p_ground`）の輪に、Higashiyama_1A と電化の要らない pak128 の懸垂式の車両（`yoshi_wup1950`）を走らせた（`yoshi_wup1950` を AMI の懸垂式で走らせては見ていない）。高架の上を走る編成は見ていない（地上から高架へ上がる坂を敷いていない）
+
 ### 車庫の作り（#112）
 
 - 線路・路面軌道・道路の 3 つ（`ami_rail_depot`・`ami_tram_depot`・`ami_road_depot`。`blender/catalog.py` の `DEPOTS`）と、モノレールの `ami_monorail_depot`（#113。入口の幅は線路と同じ 3.4、高さも同じ 26px。玉野の 4 両編成が入口で切れずに出た。`docs/monorail_depot_vehicle.png`）と、船の `ami_canal_depot`（#114。入口の幅 7.0。pak128 の船は幅がタイルの大半あるため。車庫は運河の行き止まりに建てる。pak128 の船が入口から出た。`docs/canal_depot.png`）。[ADR 0008](../../docs/adr/0008-ami-scope-second-phase.md) の第 2 弾の物で、手本は blender-poc の料金所の作り（1 タイルの building に奥と手前の絵）
@@ -849,6 +864,7 @@ PORT=47300 bash ingame/game.sh STOP
 - 運河（#114）: 見た目（水面の色、護岸と笠石の幅、雪の絵）はユーザーが PR で確かめる。本家 125 での読み込みは見ていない。運河と歩道は突き当てるとつながり、船が歩道を通る（上の「運河の作り」）
 - 跨座式モノレール（#113）: 見た目（桁の幅・高さ、柱の位置と太さ、雪の絵）はユーザーが PR で確かめる。高架の上を走る編成と、本家 125 での読み込みは見ていない。分岐の絵は本体が `monorail_track` で自動では選ばない
 - 操車場（#115）: 見た目（通路の形・色・柵の高さ・階段）はユーザーが PR で見る。高架の上に建てたときの浮いた通路（[#159](https://github.com/128na/simutrans-addon-dev/issues/159)）、建設費のずれ（[#160](https://github.com/128na/simutrans-addon-dev/issues/160)）、本家 125 での読み込みは見ていない
+- 懸垂式モノレール（#116）: 見た目（桁の高さ・幅、柱の位置と太さ、雪の絵）はユーザーが PR で確かめる。渡された車両は電車で、モノレールの電化の物が無いと走らない（足すかは未定）。高架の上を走る編成と、本家 125 での読み込みは見ていない
 - 中央分離帯（#118）: 見た目（縁石の帯とガードレールの形・色・細さ）と、4 車線の輪の北東の角で分離帯が途切れることは、ユーザーが見る。道路を走る車両との重なり、本家 125 での読み込みは見ていない
 - 踏切（#111）: 見た目（踏板の色、遮断機・警報機の形と位置）はユーザーが見る。値は仮（#110）。列車・車と遮断機の重なりは、閉じた絵を撮ったときの列車でだけ見た（車は見ていない）。本家 125 での読み込みは見ていない
 - ベータの既知の課題と、後に回した issue は [ACCEPTANCE.md の「ベータ版（第 1 弾）での扱い」](ACCEPTANCE.md#ベータ版第-1-弾での扱い)
