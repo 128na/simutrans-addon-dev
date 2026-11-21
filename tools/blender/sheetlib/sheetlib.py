@@ -678,6 +678,11 @@ def select_walls(obs, name, paths, side, wall_names=None, origin=None):
     return kept
 
 
+def _through_paths(paths):
+    """T字・十字の経路のうち、タイルの辺から反対の辺へ通り抜ける直線（南北・東西）。"""
+    return [p for p in paths if all(abs(v.x) < 1e-6 for v in p) or all(abs(v.y) < 1e-6 for v in p)]
+
+
 def trim_end_walls(kept, paths, k, move, wu=None, ww=None, zr=(-2, 2)):
     """行き止まりの端の壁から、残した側壁の外側を削る（側壁のある側は側壁で止まる）。move は路盤の基準面の動き。zr は _beyond_prisms と同じ"""
     end_walls = [ob for ob in kept if ob.name.startswith("endw")]
@@ -918,7 +923,8 @@ def _track_sheet(profile="new"):
             shape = name.replace("curve_", "diag_") if diag_of and name.startswith("curve_") else name
             div = 2 if shape in ("diag_nw", "diag_se", "close1") else 1
             widths = DIAG_WIDTHS if shape.startswith(("diag_", "close")) else None
-            # 架線の柱・梁（catenary_support）は経路が 1 本のセルだけに作る（分岐・十字に経路ごとの門を作らない。トロリ線は全部の経路）
+            # 架線の柱・梁（catenary_support）は経路ごとには作らない（分岐・十字に経路ごとの門を作らない。トロリ線は全部の経路）。
+            # 分岐・十字は下で、通り抜ける直線にだけ作る
             cell_grp = grp if len(paths) == 1 else tuple(g for g in grp if g != "catenary_support")
             kw = dict(widths=widths, div=div, groups=cell_grp, ends=name in ("s", "w", "n", "e"), skin=skin)
             if prof.get("wall_sheet") and slope:
@@ -953,13 +959,19 @@ def _track_sheet(profile="new"):
             if rails:
                 # 分岐の絵: 走行面（rail の基準面の部品）だけを分岐の経路で作る。分岐の追加画像（ex_switches のセル）は、架線の線
                 # （まとまり catenary: トロリ線・ちょう架線・ドロッパ）も走行面の経路に張る（Y字で、無い直線の上に線が残らないように）。
-                # 柱・梁（catenary_support）は経路が複数のセルでは作らない（cell_grp）。1・2 の分岐の絵の線は T字・十字のまま
+                # 柱・梁（catenary_support）は通り抜ける直線にだけ作る（cell_grp と下の _through_paths）。1・2 の分岐の絵の線は T字・十字のまま
                 ex_cell = name.startswith(("y_", "three"))
                 on_rails = lambda p: p.datum == "rail" or (ex_cell and p.group == "catenary")
                 obs = (build([p for p in parts if not on_rails(p)], paths)
                        + build([p for p in parts if on_rails(p)], rails[0]))
             else:
                 obs = build(parts, paths)
+            if "catenary_support" in grp and len(paths) > 1:
+                # T字・十字（分岐の絵・ex 画像のセルも）の柱・梁・吊り金具は、通り抜ける直線の経路にだけ、直線のセルと同じ形で作る。
+                # 柱は版の壁の側だけ（select_walls）に立ち、梁は壁の無い側へタイルの端まで延びて、渡り線の上を横切る。
+                # 無いと、渡り線の T字のタイルは線だけになり、画面で縦向きの斜めの線が線路の間に立つ細い柱に見えた（AMI #101）
+                obs += assemble([p for p in parts if p.group == "catenary_support"], _through_paths(paths),
+                                prof["datums"], slope, **dict(kw, groups=("catenary_support",)))
             if slope and prof.get("ramp_body_under_base"):
                 # 端の坂の躯体（rampbody）の上面を、基盤の上面（坂の面）より少し下へ下げる（道路の road_sheet と同じ）。assemble は上面を
                 # 地面より 0.02 上に止めるので、坂の低い端で、手前へ動かした基盤（上面は坂の面の高さ）より上に出た。道床・壁の外の
