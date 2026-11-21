@@ -1,0 +1,61 @@
+AMI（AI Marunage Infrastructure）{version}
+
+pak128 用のインフラ（線路・道路と、その壁・高架・橋脚・橋・トンネル）のアドオン集です。
+絵はすべて Blender のスクリプトで描いています。
+
+■ ベータ版です
+
+この版はベータ版です。ゲームの中で敷いて使えることは確かめましたが、見た目に直すところが残っています（下の「既知の課題」）。
+正式版までに、物の名前・値（費用・維持費・登場年）・見た目が変わることがあります。名前が変わると、この版で作ったセーブデータの物は読み込めなくなることがあります。
+
+■ 対象
+
+- Simutrans OTRP（pak128）
+- Simutrans 本家 125.0.1（pak128）。OTRP だけで使う絵（分岐の絵・近い斜めの絵）は、本家では使われないだけです
+
+■ 入れ方
+
+zip の中の pak128 フォルダを、Simutrans の addons フォルダ（無ければ作る）に入れ、アドオンを読む設定（-addons）で起動します。
+  例: <Simutrans のフォルダ>/addons/pak128/ami_rail.pak
+pak は種類ごとに分かれています。使わない種類は入れなくてもかまいませんが、ami_extra.pak は線路・道路の壁と橋脚が入っているので、ami_rail.pak か ami_road.pak を使うときは一緒に入れてください。
+
+  ami_rail.pak   線路 4 種（在来線 160km/h・弾性まくらぎ直結軌道 240km/h・フローティング・ラダー軌道 360km/h・高速線 480km/h）と、その基盤の版・高架・橋・トンネル
+  ami_road.pak   道路 3 種（生活道路 40km/h・一般道路 120km/h・高速道路 360km/h）と、その基盤の版・高架・橋・トンネル
+  ami_tram.pak   路面軌道 60km/h
+  ami_extra.pak  線路・道路の壁（架線つきの壁を含む）、橋脚、歩道
+
+■ 使い方
+
+- 線路・道路は「版」を選んで敷きます。single（単線・1 本）、back・center・front（複線・3 線の奥・中・手前）。アイコンの右下の漢字（単・後・中・前）が版です
+- 基盤の版の線路・道路に、同じ版の壁（way-object）を重ねると、壁つきの線路・道路になります。架線は「架線つきの壁」です（壁の無い center の版は架線だけ）
+- 高架の下の地面には、橋脚の way を敷きます。橋脚は路面軌道のメニューにあります（線路の高架の下を地上の線路が横切るタイルには敷けません）
+- 歩道は船のメニューにあります。道路の隣のタイルに敷きます
+
+■ 既知の課題
+
+- 橋の坂の部分の傾きが、画面の 45 度と少しずれて見える
+  https://github.com/128na/simutrans-addon-dev/issues/90
+- 複線のカーブで、角を曲がった後の back の線の基盤の形が合わない
+  https://github.com/128na/simutrans-addon-dev/issues/94
+- 1/2 に縮めた画面で、線路のレール・まくらぎの明暗が粒に見える
+  https://github.com/128na/simutrans-addon-dev/issues/89
+- 高架に架線つきの壁を重ねたときの、Y字分岐・三方分岐の見た目は確かめていない
+  https://github.com/128na/simutrans-addon-dev/issues/85
+- 道路の分岐の絵（優先道路の十字・T字など）は入っていない
+  https://github.com/128na/simutrans-addon-dev/issues/46
+- 旧描画位置（SIS の線路に合う位置）の線路は入っていない
+  https://github.com/128na/simutrans-addon-dev/issues/26
+- 車両と壁・架線・高架・橋の重なり、電化した車両の走行は、手で走らせて確かめていない
+- 道路 3 種の back・front の版の十字・T字で、壁の手前と奥の並びを確かめていない
+- 高架の行き止まりの端の絵、橋の高さ・橋脚の位置、壁・高架・橋・トンネル・橋脚の値は仮
+- 高架・橋・トンネルの継ぎ目などの細かい条件は、線路 4 種と道路 3 種でだけ確かめた（路面軌道には高架・橋・トンネルが無い）
+
+確かめた条件の一覧: https://github.com/128na/simutrans-addon-dev/blob/main/addons/ami/ACCEPTANCE.md
+
+■ ライセンス
+
+CC BY 4.0（ami_license.txt）。
+
+■ 問い合わせ・不具合の報告
+
+https://github.com/128na/simutrans-addon-dev/issues

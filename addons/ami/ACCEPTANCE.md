@@ -5,6 +5,26 @@ AMI の初版を「できた」と言うための条件。blender-poc の [ACCEP
 
 状態: ○ ゲームで確かめた / △ セルの絵で確かめた（ゲームは未確認）/ × 未対応 / ？ 未確認
 
+## ベータ版（第 1 弾）での扱い
+
+ロードマップ（[#61](https://github.com/128na/simutrans-addon-dev/issues/61)）の第 1 弾は、ベータ版として出す（[#91](https://github.com/128na/simutrans-addon-dev/issues/91)。基準は「多少課題があってもゲーム内で動作すれば OK」。2026-11-21、ユーザーの決定）。下の表の条件を、ベータで満たすものと後に回すものに分けた。
+
+- ベータで満たす: 状態が ○ の条件の全部と、6-3（配る zip で読み込み、全部の物を道具で敷ける）
+- 後に回す（ベータの既知の課題。遊ぶ人向けの書き方は `release/readme.txt` の「既知の課題」）:
+
+| # | 残っていること | 追う場所 |
+|---|---|---|
+| 1-8 | 在来線の高架の 5a-3 と、5a-4 の地上・橋との継ぎ目だけ確かめた。ほかの種類と、8-2・8-3・9-7・9-10 は未確認 | 正式版に向けて改めて決める（#61 の「ベータの後」） |
+| 2-3 | 壁の見た目はユーザーが承認した（2026-11-21、進捗管理を通して）。車両より手前に描かれることは、車両を走らせて確かめていない | 同上 |
+| 2-4 | 道路 3 種の back・front の十字・T字が未確認 | 同上 |
+| 2-6 | 電化した車両の走行が未確認（スクリプトからは編成を走らせられない） | 同上 |
+| 3-3 | 高架の行き止まりの端の作りは仮 | 同上 |
+| 4-2 | 橋の高さ・橋脚の位置は仮。橋の坂の傾き | [#90](https://github.com/128na/simutrans-addon-dev/issues/90) |
+| 4-3 | 線路 4 種と道路 3 種だけ（路面軌道には橋・トンネルが無い） | 正式版に向けて改めて決める |
+| 5-2 | `ami_extra.pak` にある。配る zip への入れ方は #91 の pak の範囲の決定による | [#91](https://github.com/128na/simutrans-addon-dev/issues/91) |
+
+表に無い、ベータの後に回した課題: [#85](https://github.com/128na/simutrans-addon-dev/issues/85)（高架に架線つきの壁を重ねたときの分岐の追加画像）、[#89](https://github.com/128na/simutrans-addon-dev/issues/89)（1/2 の画面で線路が粒に見える）、[#94](https://github.com/128na/simutrans-addon-dev/issues/94)（複線のカーブの back の基盤の形）、[#26](https://github.com/128na/simutrans-addon-dev/issues/26)（旧描画位置）、[#46](https://github.com/128na/simutrans-addon-dev/issues/46)（道路の分岐の絵）。開発の道具の課題: [#97](https://github.com/128na/simutrans-addon-dev/issues/97)（icon・cursor の参照先の検査）、[#98](https://github.com/128na/simutrans-addon-dev/issues/98)（スキルへのリンク）。ロードマップの表で弾 1 のまま起票していないもの（木まくらぎ・FFU・路面軌道 40/80・道路の種類・橋の種類・ゆるやかな分岐・踏切・転車台）は #61。
+
 ## 1. 全種類に共通
 
 対象は、線路 5 種（路面軌道・在来線・弾性まくらぎ直結軌道・フローティング・ラダー軌道・高速線）と道路 3 種（生活道路・一般道路・高速道路）の全部の way。
@@ -53,7 +73,7 @@ AMI の初版を「できた」と言うための条件。blender-poc の [ACCEP
 | # | 条件 | 状態 | 確かめ方 |
 |---|---|---|---|
 | 5-1 | 歩道の way を道路の隣のタイルに敷くと、縁石が道路とつながる | ○（`ami_sidewalk`。waytype は `water`（2026-11-20、ユーザーの決定）） | 道路 4 種（AMI の 3 種・`Road_050`）の隣に歩道を敷き、交差点の四隅・坂・急坂・斜めの道路で、道路との境に縁石の帯（手前の辺は立ち上がりも）が出て、草のすき間が無いことを 5 倍の拡大で見た。`[check]` の行で、敷いた後も道路の向きと絵が変わらないこと（`road=same`）を見た（2026-11-20、`OTRPv64_3.exe`、`flat_512.sve`、`NUT=ingame/sidewalk_sample.nut bash ingame/sample_parallel.sh`）（`docs/sidewalk_GE_R.png`・`sidewalk_GE_R_zoom.png`・`sidewalk_GE_ST.png`・`sidewalk_GE_D.png`）。斜めの道路では、道路のタイルの角の三角に草が見える（道路の持ち分。README の「歩道の作り」） |
-| 5-2 | 壁・橋脚・歩道が別の pak にあり、配布に同梱される | △（線路の壁と架線つきの壁、道路の壁、線路用と道路用の橋脚、歩道。`ami_extra.pak` にある。配布の同梱は未対応） | `python -X utf8 build.py` の出力（`ami_extra.pak` に `ami_wall_*` の dat 10（壁だけの 4 版と twin、架線つきの 4 版と twin_catenary）と `ami_pier_rail`・`ami_pier_rail_gate`（2026-11-18）） 道路の壁・道路用の橋脚を足した後: `ami_extra.pak` に dat 17（線路の壁 10、道路の壁 4（3 版と twin）、`ami_pier_rail`・`ami_pier_rail_gate`・`ami_pier_road`）（2026-11-19）。`ami_wall_road_center` を足した後は dat 18（道路の壁 5: `single`・`back`・`center`・`front`・`twin`）（2026-11-20） 歩道を足した後: `ami_extra.pak` に dat 19（`ami_sidewalk` を足した）（2026-11-20） |
+| 5-2 | 壁・橋脚・歩道が別の pak にあり、配布に同梱される | △（線路の壁と架線つきの壁、道路の壁、線路用と道路用の橋脚、歩道。`ami_extra.pak` にある。配る zip（`release.py`）への入れ方は、#91 の pak の範囲の決定を待つ） | `python -X utf8 build.py` の出力（`ami_extra.pak` に `ami_wall_*` の dat 10（壁だけの 4 版と twin、架線つきの 4 版と twin_catenary）と `ami_pier_rail`・`ami_pier_rail_gate`（2026-11-18）） 道路の壁・道路用の橋脚を足した後: `ami_extra.pak` に dat 17（線路の壁 10、道路の壁 4（3 版と twin）、`ami_pier_rail`・`ami_pier_rail_gate`・`ami_pier_road`）（2026-11-19）。`ami_wall_road_center` を足した後は dat 18（道路の壁 5: `single`・`back`・`center`・`front`・`twin`）（2026-11-20） 歩道を足した後: `ami_extra.pak` に dat 19（`ami_sidewalk` を足した）（2026-11-20） |
 
 ## 6. 配布
 
@@ -61,3 +81,5 @@ AMI の初版を「できた」と言うための条件。blender-poc の [ACCEP
 |---|---|---|---|
 | 6-1 | 全部入りのまとめの pak と、種類ごとの pak がある | ○（`ami.pak`・`ami_rail.pak`・`ami_tram.pak`・`ami_road.pak`・`ami_extra.pak`。dat が無い種類の pak は、dat を足すと作られる） | `dist/` の中身  |
 | 6-2 | 値（費用・維持費・登場年）が README の一覧どおり | ○（今ある `ami_rail_ballast`・`ami_rail_concrete`・`ami_rail_ladder`・`ami_rail_slab`・道路 3 種・`ami_tram`。高架の 4 版・壁・橋脚の値と、橋・トンネルの値（費用 60000・維持費 1200・速さ 160）は仮で、README の各節に書いた。道路の基盤の版・高架・橋・トンネル・道路の壁・道路用の橋脚の値も仮で、README の「道路の壁・高架・橋脚・橋・トンネルの作り」に書いた） | `blender/ami_dat.py` の `VALUES` と README の表を突き合わせる 高速線: dat の値は地上 40000・800、高架 80000・1600、橋・トンネル 160000・3200、速さはどれも 480（2026-11-19）。 道路 3 種: dat の値は生活道路 5000・100・1900・40 km/h、一般道路 8000・200・1930・120 km/h、高速道路 20000・500・1990・360 km/h で、README の表どおり（2026-11-19）。 道路の壁・高架・橋（#22）: dat の値は README の「道路の壁・高架・橋脚・橋・トンネルの作り」の表どおり（高架は地上の 2 倍、橋・トンネルは 4 倍、壁と橋脚は線路と同じ。2026-11-19） 路面軌道: dat の値は 60 km/h・10000・200・1900 で README の表と同じ（2026-11-20） フローティング・ラダー軌道: dat の値は 360 km/h・35000・700・1990 で README の表と同じ（2026-11-21） |
+| 6-3 | 配る zip ができ、OTRP の最新版で読み込み、全部の way・way-object・橋・トンネルを道具で敷ける | ○（`addon_check` の `OTRPv64_3.exe`、97 個。zip の中身の種類別の 4 つと、全部入りの `ami.pak` の両方。2026-11-21） | `python -X utf8 release.py --version <版> --paks <pak>... --extract` で zip を作って展開し、`PAKS` に展開した pak を渡して `GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe PORT=<ポート> bash ingame/beta_check.sh`。先頭が `ok 97 items` で、ログに AMI の物の警告が無いこと（同じ物を二重に読むと `overlaid` の警告が出るので、ログを読めていることも分かる） |
+| 6-4 | 本家 125.0.1 で配る pak を読み込み、敷ける | ？（ユーザーが確かめる。スクリプトが使えない） | 手順は #91 |
