@@ -36,12 +36,18 @@
   - `ami_rail_ballast`・`ami_rail_ladder`（地上。比べる元）
   - `ami_rail_ballast_elev_<single・back・center・front>`
   - `ami_rail_ladder_elev_<single・back・center・front>`
-- 結果: 10 組とも、温暖・降雪とも、Y字分岐・三方分岐の根元 4 向きの全部が `ok`。
+- 渡した `WAYS`（この並びで区画 0〜9。撮った区画 0・2・6 はこの番号）:
+
+  ```text
+  [["ami_rail_ballast", null], ["ami_rail_ladder", null], ["ami_rail_ballast_elev_single", null], ["ami_rail_ballast_elev_back", null], ["ami_rail_ballast_elev_center", null], ["ami_rail_ballast_elev_front", null], ["ami_rail_ladder_elev_single", null], ["ami_rail_ladder_elev_back", null], ["ami_rail_ladder_elev_center", null], ["ami_rail_ladder_elev_front", null]]
+  ```
+
+- 結果: 10 組とも、温暖・降雪とも、Y字分岐・三方分岐の根元 4 向きの全部が `ok`。出力の行の例: `[check] ami_rail_ladder_elev_front snow z=2 YE=ok 3WE=ok YW=ok 3WW=ok YN=ok 3WN=ok YS=ok 3WS=ok`（20 行とも同じ形）。
   - `ok` は、自動で選ばれた絵が固定の T字の枠の絵（Y字は 26〜29、三方分岐は 31〜34）と同じで、通常の絵と違うこと。
   - 高架の行には、`z=2` と出る。
 - 画面: `ex_capture.sh` で、区画 0・2・6（在来線の地上、在来線の高架 single、ラダーの高架 single）を撮った。
   - 確認画像は `addons/ami/docs/ex_elev_temperate_E.png`。左上から、在来線の地上の Y字 東、在来線の高架 single の Y字 東、ラダーの高架 single の Y字 東、同じく三方分岐 東。
-  - 高架の Y字・三方分岐の絵が、地上と同じ形で出た。
+  - 高架の Y字・三方分岐の絵が、地上と同じ形で出た。画面で見たのは温暖側の single だけで、back・center・front と降雪側は番号の一致だけを確かめた。
   - 橋脚は敷いていないので、床だけが浮いて見える。
 
 ## 推測・未確認事項
@@ -50,3 +56,4 @@
 - 架線つきの壁を高架に重ねた組は、敷いていない。
   - 見本は way-object を地面の座標で敷くが、高架では way-object を高架の高さの座標で敷く必要がある。
   - way-object の絵の番号は、どのみちスクリプトで読めない。
+  - reference の「省いてよい」は way の絵の選ばれ方に限り、高架に重ねた架線つきの壁の見た目は対象に入れていない。

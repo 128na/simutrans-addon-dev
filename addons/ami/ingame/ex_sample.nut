@@ -20,7 +20,8 @@ local OX = 150;
 local OY = 20;
 local SPACING = 40;
 local SNOW_DX = 256;
-local ELEV_UP = 2;  // 高架の床の高さ（段。sample.nut と同じ）
+// 高架の床の高さ（段。sample.nut と同じ）
+local ELEV_UP = 2;
 local pl = player_x(0);
 local marker = command_x(tool_set_marker);
 local report = "";
