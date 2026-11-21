@@ -188,7 +188,7 @@ def _over(dst, src):
 
 # 踏切のシートの横に書く、写した道路のセルの控え（#130）。行ごとに「道路のシート 行 列 sha256」。
 # sha256 は、セルの画素を上の行から RGB の 3 バイトずつ並べたもの。道路のシートを描き直して踏切を描き直し忘れると、
-# アドオンの検査（addons/ami の check_crossing.py）が今の道路のシートと合わないことで見つける
+# アドオンの検査（AMI では check_crossing.py）が、今の道路のシートと合わないことで見つける
 ROAD_STAMP_SUFFIX = ".road_cells.txt"
 
 

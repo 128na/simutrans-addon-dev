@@ -16,6 +16,9 @@ from check_icons import read_rows
 
 CELL = 256
 STAMP_SUFFIX = ".road_cells.txt"  # tools/blender/sheetlib/crossing.py の ROAD_STAMP_SUFFIX と同じ
+# 控えに無ければならないセル（道路の直線の ns・ew と、その雪の行。blender/render.py の crossing_sheet の既定）。
+# 一部の向きだけ描いた控え（SHEET_ONLY）を src に持ち込んだときにも気づけるように、全部そろっているかを見る
+EXPECTED_CELLS = {(0, 2), (0, 3), (4, 2), (4, 3)}
 
 
 def cell_digest(rows, row, col):
@@ -40,8 +43,16 @@ def main(src):
             continue
         with open(stamp, encoding="utf8") as f:
             lines = [line.split() for line in f.read().splitlines() if line.strip()]
-        if not lines:
-            errors.append(f"{name}: 控え（{os.path.basename(stamp)}）が空")
+        bad = [" ".join(t) for t in lines if len(t) != 4 or not t[1].isdigit() or not t[2].isdigit()]
+        if bad:
+            errors.append(f"{name}: 控えの行の形が違う（道路のシート 行 列 sha256）: {bad[0]}")
+            continue
+        road_of = name.replace("ami_crossing_", "ami_")  # ami_crossing_road_<道路>.png → ami_road_<道路>.png
+        cells = {(int(r), int(c)) for _, r, c, _ in lines}
+        if cells != EXPECTED_CELLS or len(lines) != len(EXPECTED_CELLS) or {t[0] for t in lines} != {road_of}:
+            errors.append(f"{name}: 控えのセルが {road_of} の {sorted(EXPECTED_CELLS)} でない"
+                          f"（{sorted(cells)}、{sorted({t[0] for t in lines})}）。踏切のシートを全部の向きで描き直す")
+            continue
         for road, row, col, digest in lines:
             row, col = int(row), int(col)
             road_png = os.path.join(src, road)
@@ -50,7 +61,11 @@ def main(src):
                 continue
             need = (row + 1) * CELL
             if road not in cache or len(cache[road]) < need:
-                cache[road] = read_rows(road_png, need)[2]
+                w, h, cache[road] = read_rows(road_png, need)
+                if h < need or w < (col + 1) * CELL:
+                    errors.append(f"{name}: {road} が {w}x{h} で、セル {row}.{col} が入らない")
+                    del cache[road]
+                    continue
             checked += 1
             if cell_digest(cache[road], row, col) != digest:
                 errors.append(f"{name}: {road} のセル {row}.{col} が、踏切を描いたときと違う")
