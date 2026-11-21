@@ -9,7 +9,7 @@
   （単・後・中・前・双。VERSION_MARK）、下の帯 = 構造（高架・橋・トンネル。橋脚は高架の帯）。
   絵は、その物の直線のセルを北と南の隣のタイルの位置にもつないで、半分の大きさにしたもの（歩道はタイル 1 枚を 1/4 に）。
   等倍で真ん中を切ると、壁の single は片側しか入らず、橋脚は灰色の塊になって見分けにくかった。
-  壁は版の札だけ（中央分離帯つきは左上に「分」）、架線は左上に稲妻、橋脚は左上に「脚」「門」、歩道は左上に「歩」、車庫は左上に「庫」（絵は道が南へ出る向きの建物を 1/4 に）、
+  壁は版の札だけ（中央分離帯つきは左上に「分」、電柱と柵つきの電柱は左上に「柱」）、架線は左上に稲妻、橋脚は左上に「脚」「門」、歩道は左上に「歩」、車庫は左上に「庫」（絵は道が南へ出る向きの建物を 1/4 に）、
   盛土は左上に「盛」と版の札（背景は路面軌道の色。tram_track の way）、道路標識は道路の色に標識の板を 2 倍にした絵だけ（#122）
 - カーソル（256px のセル）: その物の直線の絵（トンネルは坑口）に、アイコンと同じ背景色の札で「速度 + 版」（例 160後）
 - 絵と札の中身は dat から読む（名前・obj・waytype・topspeed と、image[ns] などのキーが指すセル）。dat の icon・cursor が指すセルに書く
@@ -82,7 +82,7 @@ def ref(v):
 def describe(d):
     """dat から、アイコンの決まりに使う中身を取る"""
     name, obj = d["name"], d["obj"]
-    m = re.search(r"_(single|back|center|front|twin|lane[1-7])(_catenary|_divider)?$", name)
+    m = re.search(r"_(single|back|center|front|twin|lane[1-7])(_catenary|_divider|_pole)?$", name)
     info = dict(name=name, version=m.group(1) if m else None, speed=None, struct=None, label=None)
     if name.startswith(("ami_tram", "ami_embankment")):  # 盛土は tram_track の way（路面軌道の道具の一覧に出る）
         info["way"] = "tram"
@@ -100,6 +100,8 @@ def describe(d):
         info["kind"] = "catenary" if d.get("own_waytype") == "electrified_track" else "wall"
         if name.endswith("_divider"):
             info["label"] = "分"  # 中央分離帯つきの壁（#118）: 左上に「分」
+        elif "_pole" in name:
+            info["label"] = "柱"  # 電柱（ami_sidewalk_pole_<版>）と柵つきの電柱（#120）: 左上に「柱」、右下に版
     elif name.startswith("ami_pier"):
         info.update(kind="pier", label="門" if name.endswith("_gate") else "脚", struct="elev")
     elif name.startswith("ami_sidewalk"):  # 歩道の種類と高架の歩道（#119）も同じ決まり。高架は下の帯
