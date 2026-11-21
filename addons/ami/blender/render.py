@@ -577,10 +577,10 @@ SHEETS[catalog.SIDEWALK] = lambda: R.sidewalk_sheet(catalog.SIDEWALK, label=SIDE
 
 # 踏切（#111）: 道路の種類ごとに 1 枚（線路の 4 種で共有）。奥の絵の下地に、その道路の直線のセルを写すので、道路のシートの後に描く
 # （SHEETS の登録順に描く。別の Blender で並べて描くときは、道路のシートを先に描き終えておく）。
-# レールと踏板は線路の way と同じ基準面（_DATUMS の rail。4 種で同じ）
+# レールと踏板は線路の way と同じ基準面（_DATUMS の rail。4 種で同じ）。レールの横の範囲と上面の高さ（踏板の上面）も線路と同じ値を渡す（#129）
 for _r in catalog.ROADS:
     SHEETS[catalog.crossing_sheet(_r)] = (lambda r: lambda: R.crossing_sheet(catalog.crossing_sheet(r), r.way + ".png", _DATUMS,
-                                                                                    rail=(RAIL_IN, RAIL_OUT)))(_r)
+                                                                                    rail=(RAIL_IN, RAIL_OUT, RAIL_Z1)))(_r)
 
 if __name__ == "__main__":
     R.run_targets(SHEETS, list(SHEETS))
