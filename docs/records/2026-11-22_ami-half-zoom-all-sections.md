@@ -12,12 +12,12 @@
 - `ingame/sample_parallel.sh` で、在来線（`ami_rail_ballast`）・直結軌道（`ami_rail_concrete`）・ラダー（`ami_rail_ladder`）・スラブ（`ami_rail_slab`）の見本の全区画（208 画面 = 温暖・降雪 × 104 区画）を、前後・1/2（`ZOOM=6`）・等倍（`ZOOM=3`）で撮った（4 種 × 前後 × 2 倍率 = 16 回、全部 208/208 画面）
   - 撮った条件: `F:\Simutrans\addon_check` の `OTRPv64_3.exe`、`flat_512`、`BASE_PORT=47310`、8 台
 - シートのセルを 2×2 で縮めて測った（`tools/blender/half_measure.py`、セル 256px、前後の `src/ami_rail_<線路>.png`）
-- 画像（`addons/ami/docs/half132_*.png`）は、左が前、右が後。1/2 の画面（`gui.set_zoom(6)`）を最近傍で拡大した切り抜き
-  - `half132_z6_<線路>_slope.png`: 坂の十字 D（区画 AFC の画面の下）、3 倍
-  - `half132_z6_<線路>_diag.png`: 行き止まりの 2 本（区画 AFC の画面の上）、3 倍
-  - `half132_z6_<線路>_one.png`: 1 タイルだけ（F）、6 倍
-  - `half132_z6_<線路>_bridge.png`: 橋 BT_B2、2 倍
-  - `half132_z6_ballast_tunnel_full.png`: トンネル BT_T1（等倍の切り抜きなし、1/2 の画面全体）
+- 画像（`addons/ami/docs/half132_*.png`）は、左が前、右が後。1/2 の画面（`gui.set_zoom(6)`）を最近傍で拡大した切り抜き。比べた代表だけを残した（同じ形の切り抜きは `work/` に作ったが載せていない）
+  - `half132_z6_ballast_slope.png`・`_concrete_slope`・`_ladder_slope`・`_slab_slope`: 坂の十字 D（区画 AFC の画面の下）、3 倍
+  - `half132_z6_ballast_diag.png`・`_concrete_diag`: 行き止まりの 2 本（区画 AFC の画面の上）、3 倍
+  - `half132_z6_ballast_one.png`: 1 タイルだけ（F）、6 倍
+  - `half132_z6_ballast_bridge.png`: 橋 BT_B2、2 倍
+  - `half132_z6_ballast_tunnel_full.png`: トンネル BT_T1（1/2 の画面全体）
   - `half132_z3_concrete_DE.png`・`half132_z3_ladder_AFC.png`: 等倍の画面（全体）
   - 撮った位置: 温暖側の原点 (20,20)、区画の名前は `ingame/sample_spots.sh`
 
@@ -68,6 +68,10 @@
 - 全 208 画面 × 16 回のうち、目で見たのは上に挙げた画面だけ。残りは、同じ区画の前後が一致する（崩れが出れば全体の見え方が変わる）と見て、画素の差は取っていない
 - ゲームの画面での孤立点の数値（`busy_measure.py`）は、地面だけの画面が要るので、この全区画の撮影では取っていない。数値は、シートの 2×2 縮小の値
 
-## 次にやること
+## 判断と結論
 
-- 坂・斜めのまくらぎの間隔を画面の 4px に合わせる案は、ユーザーが 1/2 の坂・斜めを見て「目立つ」と決めたときに試す（issue #132）
+- ユーザーが 1/2 の画像（`half132_z6_*`）を見て、坂・斜め・1 タイルだけの違いは分かった（「97 違いは分かった」）。そのうえで、進捗管理が次の 2 択を聞き直した
+  - A: 気になる。坂・斜めのまくらぎの間隔を画面の 4px に合わせる案を試す
+  - B: 違いはあるが、今のままでよい
+- 答えは B。ユーザーは違いを認めたうえで、今のままでよいと判断した（97）
+- まくらぎの間隔は直さない。差分は無く、この PR は記録と画像だけ
