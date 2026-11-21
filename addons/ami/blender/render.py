@@ -692,6 +692,14 @@ for _r in catalog.ROADS:
     SHEETS[catalog.crossing_sheet(_r)] = (lambda r: lambda: R.crossing_sheet(catalog.crossing_sheet(r), r.way + ".png", _DATUMS,
                                                                                     rail=(RAIL_IN, RAIL_OUT, RAIL_Z1)))(_r)
 
+# 水路の踏切（#117）: 跳ね橋。道路の種類ごとに 1 枚と、線路の 4 種で共通の 1 枚（sheetlib の canal_crossing.py）。奥の絵の下地に運河の直線のセル
+# （道路は道路の直線のセルも）を写すので、運河・道路のシートの後に描く。線路のレールは線路の way と同じ基準面・横の範囲・高さ（線路×道路の踏切と同じ）
+for _r in catalog.ROADS:
+    SHEETS[catalog.canal_crossing_sheet(_r)] = (lambda r: lambda: R.canal_crossing_sheet(
+        catalog.canal_crossing_sheet(r), catalog.CANAL + ".png", "road", road_sheet=r.way + ".png"))(_r)
+SHEETS[catalog.CANAL_CROSSING_RAIL_SHEET] = lambda: R.canal_crossing_sheet(
+    catalog.CANAL_CROSSING_RAIL_SHEET, catalog.CANAL + ".png", "rail", datums=_DATUMS, rail=(RAIL_IN, RAIL_OUT, RAIL_Z1))
+
 # 車庫（#112）: 種類ごとに 1 枚。形と寸法は sheetlib の depot.py（DEPOT_SHAPES）
 for _d in catalog.DEPOTS:
     SHEETS[_d.name] = (lambda d: lambda: R.depot_sheet(R.sheet_path(d.name + ".png"), d.kind, R.WORK))(_d)

@@ -645,6 +645,40 @@ def crossing_dat_text(name, track, road):
     return NL.join(out) + NL
 
 
+
+# ---------------------------------------------------------------- 水路の踏切（線路・道路 × 運河。#117）
+# 線路 4 種・道路 3 種 × 運河の 7 個（catalog.CANAL_CROSSINGS）。跳ね橋で、船（waytype[1] の water）が来ると閉じる（桁を起こす）。
+# 値は #110 の一覧: 運河の側は 60 km/h、線路・道路の側は線路×道路の踏切と同じく way の最高速度（踏切で速度を落とさない）。
+# 登場年は 2 つの way の遅い方、音なし。シートの並びは線路×道路の踏切と同じ（sheetlib の canal_crossing.py）
+
+
+def canal_crossing_dat_text(name, way):
+    w, c = VALUES[way.way], VALUES[catalog.CANAL]
+    sheet = catalog.canal_crossing_sheet(way)
+    out = [
+        f"# AMI: {name}（CC BY 4.0）。{way.way} × {catalog.CANAL} の踏切（跳ね橋）。シートは blender/render.py が描く",
+        "obj=crossing",
+        f"name={name}",
+        "copyright=AMI (CC BY 4.0)",
+        f"intro_year={max(w['intro_year'], c['intro_year'])}",
+        "intro_month=1",
+        "retire_year=2999",
+        "retire_month=1",
+        "sound=-1",
+        f"waytype[0]={w['waytype']}",
+        f"speed[0]={w['speed']}",
+        "waytype[1]=water",
+        f"speed[1]={c['speed']}",
+    ]
+    for season in (0, 1):
+        row = season * CROSSING_SNOW_ROW
+        for d in ("ns", "ew"):
+            for closed, key in ((False, "openimage"), (True, "closedimage")):
+                col = CROSSING_COLS[(d, closed)]
+                out.append(f"{key}[{d}][{season}]={sheet}.{row}.{col},-64,-32")
+                out.append(f"front_{key}[{d}][{season}]={sheet}.{row + 1}.{col},-64,-32")
+    return NL.join(out) + NL
+
 # 車庫（building の depot。#112）。シートの並びは sheetlib の depot.py（列 = layout 0〜3、行 0・1 が夏の奥・手前、行 2・3 が雪の奥・手前、
 # 列 4 の行 0・1 がアイコン・カーソル）。layout は道の出る向き（0 = 南・1 = 東・2 = 北・3 = 西。simtool.cc の tool_depot_aux）。
 # 費用・維持費は省かず pak128 の既定値を書く（README の「車庫の作り」。省いたり 0 にしたりしない）。dat の値は 1/100 cr
@@ -836,6 +870,10 @@ def main():
     for name, (track, road) in catalog.CROSSINGS.items():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(crossing_dat_text(name, track, road))
+        print(f"[dat] {name}.dat")
+    for name, way in catalog.CANAL_CROSSINGS.items():
+        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
+            f.write(canal_crossing_dat_text(name, way))
         print(f"[dat] {name}.dat")
     for depot in catalog.DEPOTS:
         with open(os.path.join(SRC, depot.name + ".dat"), "w", encoding="utf8", newline=NL) as f:

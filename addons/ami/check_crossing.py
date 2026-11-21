@@ -5,7 +5,8 @@
 踏切の奥の絵は、道路の way のシートの直線のセルを下地に写して描く（tools/blender/sheetlib/crossing.py の crossing_sheet）。
 道路のシートを描き直して踏切を描き直し忘れると、踏切のタイルだけ古い路面になる（check.sh は Blender で描かないので、
 絵を比べても気づけない）。crossing_sheet は、写したセルの sha256 を踏切のシートの横の控え（<踏切のシート>.road_cells.txt）に書く。
-ここでは、控えのセルを今の道路のシートから読み直して sha256 を比べ、違えば「道路のシートの後に踏切を描き直す」と言って 1 で終わる。
+水路の踏切（#117。tools/blender/sheetlib/canal_crossing.py）も同じ控えに、写した運河（と道路）のセルを書く。
+ここでは、控えのセルを今の道路・運河のシートから読み直して sha256 を比べ、違えば「道路のシートの後に踏切を描き直す」と言って 1 で終わる。
 """
 import glob
 import hashlib
@@ -16,9 +17,19 @@ from check_icons import read_rows
 
 CELL = 256
 STAMP_SUFFIX = ".road_cells.txt"  # tools/blender/sheetlib/crossing.py の ROAD_STAMP_SUFFIX と同じ
-# 控えに無ければならないセル（道路の直線の ns・ew と、その雪の行。blender/render.py の crossing_sheet の既定）。
+# 控えに無ければならないセル（道路・運河の直線の ns・ew と、その雪の行。blender/render.py の crossing_sheet の既定）。
 # 一部の向きだけ描いた控え（SHEET_ONLY）を src に持ち込んだときにも気づけるように、全部そろっているかを見る
 EXPECTED_CELLS = {(0, 2), (0, 3), (4, 2), (4, 3)}
+
+
+def expected_sources(name):
+    """踏切のシートの名前 → 写したシートの名前の集まり。
+    線路×道路: ami_crossing_road_<道路>.png → {ami_road_<道路>.png}
+    水路の踏切（#117）: ami_crossing_canal_road_<道路>.png → {ami_canal.png, ami_road_<道路>.png}、ami_crossing_canal_rail.png → {ami_canal.png}"""
+    if name.startswith("ami_crossing_canal_"):
+        rest = name[len("ami_crossing_canal_"):]
+        return {"ami_canal.png"} | ({"ami_" + rest} if rest.startswith("road_") else set())
+    return {name.replace("ami_crossing_", "ami_")}
 
 
 def cell_digest(rows, row, col):
@@ -47,11 +58,13 @@ def main(src):
         if bad:
             errors.append(f"{name}: 控えの行の形が違う（道路のシート 行 列 sha256）: {bad[0]}")
             continue
-        road_of = name.replace("ami_crossing_", "ami_")  # ami_crossing_road_<道路>.png → ami_road_<道路>.png
-        cells = {(int(r), int(c)) for _, r, c, _ in lines}
-        if cells != EXPECTED_CELLS or len(lines) != len(EXPECTED_CELLS) or {t[0] for t in lines} != {road_of}:
-            errors.append(f"{name}: 控えのセルが {road_of} の {sorted(EXPECTED_CELLS)} でない"
-                          f"（{sorted(cells)}、{sorted({t[0] for t in lines})}）。踏切のシートを全部の向きで描き直す")
+        sources = expected_sources(name)
+        got = {}
+        for src_sheet, r, c, _ in lines:
+            got.setdefault(src_sheet, set()).add((int(r), int(c)))
+        if got != {s: EXPECTED_CELLS for s in sources} or len(lines) != len(EXPECTED_CELLS) * len(sources):
+            errors.append(f"{name}: 控えのセルが {sorted(sources)} の {sorted(EXPECTED_CELLS)} でない"
+                          f"（{ {k: sorted(v) for k, v in sorted(got.items())} }）。踏切のシートを全部の向きで描き直す")
             continue
         for road, row, col, digest in lines:
             row, col = int(row), int(col)
@@ -72,7 +85,8 @@ def main(src):
     for e in errors:
         print(f"[crossing] {e}")
     if errors:
-        print("[crossing] 道路のシートを描き直したら、踏切のシートも描き直す（blender/render.py の ami_crossing_road_<道路>）")
+        print("[crossing] 道路・運河のシートを描き直したら、踏切のシートも描き直す（blender/render.py の ami_crossing_road_<道路>・"
+              "ami_crossing_canal_<road_<道路>|rail>）")
         return 1
     print(f"[crossing] 踏切のシート {len(sheets)} 枚、写した道路のセル {checked} 個が、今の道路のシートと同じ")
     return 0

@@ -18,6 +18,7 @@
     sheetlib     シートの組み立て（線路・道路・トンネル・アイコン）と run_targets
     sidewalk     歩道の way（地上・高架）と歩道の柵・電柱の way-object のシート（sheetlib の render_icon を使う）
     crossing     踏切（線路 × 道路）のシート（道路の way のシートのセルを下地に写す）
+    canal_crossing 水路の踏切（線路・道路 × 運河。跳ね橋）のシート（運河・道路の way のシートのセルを下地に写す。名前が canal_crossing で始まるものだけを出す）
     canal        運河の way のシート（水面・護岸・笠石。sheetlib の render_icon を使う。名前が canal・CANAL で始まるものだけを出す）
     depot        車庫（building の depot）など 1 タイルの建物のシート（4 方向 × 奥・手前 × 夏・雪）
     yard         操車場（building の stop。線路の脇の構内通路）のシート（8 layout × 夏・雪。depot の描き方を使う）
@@ -32,9 +33,12 @@ from . import crossing
 from . import depot
 from . import yard
 from . import canal
+from . import canal_crossing
 from . import roadsign
 
 for _m in (core, track_parts, slab_parts, tram_parts, monorail_parts, wall_parts, catenary_parts, road_parts, assemble, cells, _sheets, sidewalk, crossing, depot, yard, roadsign):
     globals().update({_k: _v for _k, _v in vars(_m).items() if not _k.startswith("__")})
 # 運河は、ほかのモジュールと同じ名前の _jobs・_own などを持つので、名前が canal・CANAL で始まるものだけを出す
 globals().update({_k: _v for _k, _v in vars(canal).items() if _k.lower().startswith("canal")})
+# 水路の踏切も、crossing と同じ名前の部品を持つので、名前が canal_crossing で始まるものだけを出す
+globals().update({_k: _v for _k, _v in vars(canal_crossing).items() if _k.lower().startswith("canal_crossing")})

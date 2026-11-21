@@ -188,6 +188,24 @@ def crossing_sheet(road):
 CROSSINGS = {crossing(_t, _r): (_t, _r) for _t in TRACKS for _r in ROADS}  # 踏切の名前 → (線路, 道路)。12 個
 
 
+# 水路の踏切（#117。ADR 0008 の軌道 6）: 線路 4 種・道路 3 種 × 運河の 7 個。跳ね橋（2026-11-22、ユーザーの決定。#117 のコメント）。
+# 名前は ami_crossing_<線路|道路>_canal（例 ami_crossing_rail_ballast_canal）。絵は道路の種類ごとに 1 枚と、線路の 4 種で共通の 1 枚
+CANAL_CROSSING_RAIL_SHEET = f"{PREFIX}crossing_canal_rail"
+
+
+def canal_crossing(way):
+    """水路の踏切の名前（way は Track か Road）"""
+    return f"{PREFIX}crossing_{way.key}_canal"
+
+
+def canal_crossing_sheet(way):
+    """水路の踏切のシートの名前（道路は種類ごと、線路は 4 種で共通）"""
+    return f"{PREFIX}crossing_canal_{way.key}" if isinstance(way, Road) else CANAL_CROSSING_RAIL_SHEET
+
+
+CANAL_CROSSINGS = {canal_crossing(_w): _w for _w in TRACKS + ROADS}  # 水路の踏切の名前 → 線路か道路。7 個
+
+
 class Depot:
     """車庫（building の depot。#112）。名前は ami_<種類>_depot（ADR 0008）で、build.py の名前の頭の振り分けでその waytype の pak に入る。
     kind は sheetlib の depot.DEPOT_SHAPES のキー（寸法）、waytype は dat の waytype"""
