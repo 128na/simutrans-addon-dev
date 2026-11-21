@@ -41,6 +41,7 @@ pak は種類ごとに分かれています。使わない種類は入れなく�
   https://github.com/128na/simutrans-addon-dev/issues/89
 - 高架に架線つきの壁を重ねたときの、Y字分岐・三方分岐の見た目は確かめていない
   https://github.com/128na/simutrans-addon-dev/issues/85
+- 壁つきの線路を並べた間に渡り線を敷くと、そのタイルの壁と架線の柱が崩れて見える
 - 道路の分岐の絵（優先道路の十字・T字など）は入っていない
   https://github.com/128na/simutrans-addon-dev/issues/46
 - 旧描画位置（SIS の線路に合う位置）の線路は入っていない
