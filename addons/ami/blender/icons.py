@@ -9,7 +9,7 @@
   （単・後・中・前・双。VERSION_MARK）、下の帯 = 構造（高架・橋・トンネル。橋脚は高架の帯）。
   絵は、その物の直線のセルを北と南の隣のタイルの位置にもつないで、半分の大きさにしたもの（歩道はタイル 1 枚を 1/4 に）。
   等倍で真ん中を切ると、壁の single は片側しか入らず、橋脚は灰色の塊になって見分けにくかった。
-  壁は版の札だけ、架線は左上に稲妻、橋脚は左上に「脚」「門」、歩道は左上に「歩」
+  壁は版の札だけ、架線は左上に稲妻、橋脚は左上に「脚」「門」、歩道は左上に「歩」、車庫は左上に「庫」（絵は道が南へ出る向きの建物を 1/4 に）
 - カーソル（256px のセル）: その物の直線の絵（トンネルは坑口）に、アイコンと同じ背景色の札で「速度 + 版」（例 160後）
 - 絵と札の中身は dat から読む（名前・obj・waytype・topspeed と、image[ns] などのキーが指すセル）。dat の icon・cursor が指すセルに書く
 - シート名を渡すと、そのシートに書くアイコン・カーソルと、そのシートの絵から作るアイコン・カーソル（トンネルは中の way の絵、
@@ -51,6 +51,7 @@ TRANSPARENT = np.array(R.TRANSPARENT)
 PLATE_TOP = 78
 PLATE_H = 14
 PLATE_CHAR_W = 8
+DEPOT_LABEL = "庫"  # 車庫のアイコンの左上の字と、カーソルの札（#112）
 NS_STEP = (64, -32)  # 南北の直線で、北の隣のタイルの画面のずれ（pak128 のタイルは幅 128・高さ 64）
 
 
@@ -92,6 +93,8 @@ def describe(d):
         info.update(kind="pier", label="門" if name.endswith("_gate") else "脚", struct="elev")
     elif name == "ami_sidewalk":
         info.update(kind="sidewalk", label="歩")
+    elif obj == "building":  # 車庫（#112）。速度は無く、左上に「庫」
+        info.update(kind="depot", label=DEPOT_LABEL)
     else:
         info["kind"] = {"bridge": "bridge", "tunnel": "tunnel"}.get(obj, "way")
         info["speed"] = d["topspeed"]
@@ -107,6 +110,8 @@ def picture_keys(d, kind, for_cursor):
         return None  # アイコンは中の way の絵（下の icon_layers）
     if kind == "bridge":
         return [["backimage[ns][0]"]]
+    if kind == "depot":  # 道が南へ出る向き（layout 0）の奥と手前の絵
+        return [["backimage[0][0][0][0][0][0]", "frontimage[0][0][0][0][0][0]"]]
     if kind in ("wall", "catenary"):
         # 近い斜めの分け合うタイル用（twin）は直線を持たないので、平行な 2 つの斜め（nw・se）を重ねる
         return [[f"back{k}", f"front{k}"] for k in ("image[ns]", "image[s]", "image[n]")] + \
@@ -350,7 +355,7 @@ def cell_digest(sheet, r, c):
 
 def icon_picture(d, info, dats):
     d, keys = icon_source(d, info, dats)
-    if info["kind"] == "sidewalk":  # 敷石はタイル全面なので、つなげず、タイル 1 枚を 1/4 にして菱形を見せる
+    if info["kind"] in ("sidewalk", "depot"):  # 敷石・車庫はタイル 1 枚なので、つなげず、タイル 1 枚を 1/4 にして菱形を見せる
         return down(center_crop(layers(d, keys), 4 * ICON), 4)
     return down(center_crop(layers(d, keys, extend=True), 2 * ICON), 2)
 
