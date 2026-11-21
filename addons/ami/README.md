@@ -426,12 +426,19 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 ### リリース用のサムネイル（#96）
 
-公開物に使う画像は `docs/thumbnail/` の `thumbnail.png`（2560x1340、OGP の 1.91:1）と `ogp.jpg`（同じ絵を Web 用に 1200x628 へ縮めた JPEG）。文字なしの画面は `plain.png`。生成画像は使わず、手本の iss（`docs/thumbnail.png`）と同じく、ゲームの画面に文字を重ねて作る。
+公開物に使う画像は `docs/thumbnail/` の `thumbnail.png`（文字入り、OGP の 1.91:1）と `ogp.jpg`（同じ絵を Web 用に 1200x628 へ縮めた JPEG）。文字なしの画面は `plain.png`。生成画像は使わず、手本の iss（`docs/thumbnail.png`）と同じく、ゲームの画面に文字を重ねて作る。
+
+いまの画像は、ユーザーが手動で撮影し、文字入れまで済ませたもの（2026-11-21。OTRPv64_3、画面の中心はおよそ (205,261)。構図の考え方は #103 のコメント）。
+
+- 撮った画像は、ゲームの画面（道具欄と状態欄が入った 2560 幅の画面全体）を、別の道具で縦横同じ倍率に拡大して文字を重ねたもの。左右に透明な帯があってもよい
+- 切り出す: アドオンのディレクトリで `uv run ingame/thumbnail_compose.py --manual <文字入りの画像> --manual-plain <文字なしの画面>`。左右の透明な帯と、上下の道具欄・状態欄（倍率で換算）を切り落とし、残りの高さで 1.91:1 になる幅を左端から切り出す（拡大・縮小はしない）。`thumbnail.png`・`ogp.jpg`・`plain.png` を書き換える。撮った画面の幅が 2560 でないときは `GAME_WIDTH` で渡す
+
+構図を自動で作る仕組み（#103 で詰める）は、次の手順で 1 枚撮れる。
 
 - 見本の街区は `ingame/thumbnail.nut` が `flat_512.sve` の写しに敷く（保存はしない）。並びはスクリプトの冒頭の表
 - どちらもアドオンのディレクトリで動かす。先に `python -X utf8 build.py` で `dist/ami.pak` を作っておく
 - 撮る: `GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> bash ingame/thumbnail_capture.sh`。ゲームを 2560x1400 の画面で起動し、等倍（`gui.set_zoom(3)`）で `work/thumbnail/shot.png` に撮る。敷けなかったときは撮らずに止まる
-- 文字を重ねる: `uv run ingame/thumbnail_compose.py`（`--plain` で文字なしの `plain.png` だけ）。道具欄と状態欄を切り落とすだけで、拡大・縮小はしない。題名・内容・種類の数（`src/` の dat から数える）はスクリプトの頭にある。フォントは Windows の Segoe UI と游ゴシック
+- 文字を重ねる: `uv run ingame/thumbnail_compose.py`（`--plain` で文字なしの `plain.png` だけ）。道具欄と状態欄を切り落とすだけで、拡大・縮小はしない。題名・内容・種類の数（`src/` の dat から数える）はスクリプトの頭にある。フォントは Windows の Segoe UI と游ゴシック。`docs/thumbnail/` の画像を書き換える
 
 ### 後で足すもの
 

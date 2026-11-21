@@ -6,6 +6,15 @@
 
 使い方（アドオンのディレクトリで）:
     uv run ingame/thumbnail_compose.py [撮った画面] [--plain]
+    uv run ingame/thumbnail_compose.py --manual <文字入りの画像> [--manual-plain <文字なしの画面>]
+
+--manual（いまの公開物。2026-11-21、ユーザーが手動で撮影し、文字入れまで済ませた画像を使う）:
+- 文字入りの画像は、ゲームの画面（道具欄と状態欄が入った画面全体）を、別の道具で縦横同じ倍率で拡大して文字を重ねたもの。
+  左右に透明な帯があってもよい（切り落とす）。倍率は、透明な帯を除いた幅 / GAME_WIDTH（撮った画面の幅、既定 2560）で求める。
+- 道具欄（TOOLBAR）と状態欄（STATUSBAR）をその倍率で換算して上下を切り落とし（拡大した画像では境の混ざった行も落とす）、
+  残りの高さいっぱいで 1.91:1 になる幅を、左端（題名と下の一文がある側）から切り出す。拡大・縮小はしない。
+- 出力は docs/thumbnail/thumbnail.png（切り出したそのままの大きさ）と ogp.jpg（1200x628）。
+  --manual-plain を渡すと、文字なしの画面（倍率 1）を同じ割合で切り出して plain.png に書く。
 
 - 撮った画面の既定は work/thumbnail/shot.png（thumbnail_capture.sh の既定の出力。SCREEN=2560x1400 で撮る）。
 - 出力は docs/thumbnail/ の thumbnail.png（文字入り、2560x1340）と ogp.jpg（Web 用に 1200x628 へ縮めた JPEG。2026-11-21、ユーザーの決定）。
@@ -16,6 +25,7 @@
 """
 
 import argparse
+import math
 import os
 import pathlib
 
@@ -62,6 +72,31 @@ def crop(shot: Image.Image) -> Image.Image:
     return shot.crop((x0, y0, x0 + SIZE[0], y0 + SIZE[1])).convert("RGB")
 
 
+GAME_WIDTH = int(os.environ.get("GAME_WIDTH", "2560"))  # --manual: 元の画面の幅（倍率を求める）
+
+
+def crop_manual(img: Image.Image, game_width: int = GAME_WIDTH) -> Image.Image:
+    """手動の画像から、左右の透明な帯と上下の道具欄・状態欄を切り落とし、1.91:1 を左端から切り出す（拡大・縮小しない）。"""
+    rgba = img.convert("RGBA")
+    box = rgba.getchannel("A").getbbox()  # 透明でない部分（左右の帯を除く）
+    if box is None:
+        raise SystemExit("画像が全部透明")
+    x0, _, x1, _ = box
+    scale = (x1 - x0) / game_width
+    edge = 0 if scale == 1 else 1  # 拡大した画像では、欄の境の行が混ざった色になるので 1 行余分に落とす
+    top = math.ceil(TOOLBAR * scale) + edge
+    bottom = rgba.height - math.ceil(STATUSBAR * scale) - edge
+    h = bottom - top
+    w = round(h * SIZE[0] / SIZE[1])
+    if w > x1 - x0:  # 幅が足りないときは高さを詰める（上下の真ん中を残す）
+        w = x1 - x0
+        nh = round(w * SIZE[1] / SIZE[0])
+        top += (h - nh) // 2
+        h = nh
+    print(f"[compose] 倍率 {scale:.4f}、切り出し ({x0},{top})-({x0 + w},{top + h}) {w}x{h}")
+    return rgba.crop((x0, top, x0 + w, top + h)).convert("RGB")
+
+
 def text_with_shadow(img: Image.Image, xy, text, font, offset=6, blur=6, alpha=200) -> None:
     """白い字に、ぼかした黒い影を付けて描く。"""
     shadow = Image.new("RGBA", img.size, (0, 0, 0, 0))
@@ -89,9 +124,21 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("shot", nargs="?", default=str(HERE / "work" / "thumbnail" / "shot.png"))
     ap.add_argument("--plain", action="store_true", help="文字なしの plain.png だけを書く")
+    ap.add_argument("--manual", help="手動で文字まで入れた画像。切り出して thumbnail.png と ogp.jpg に書く（文字は重ねない）")
+    ap.add_argument("--manual-plain", help="--manual と一緒に: 文字なしの画面を同じく切り出して plain.png に書く")
     args = ap.parse_args()
-    base = crop(Image.open(args.shot))
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    if args.manual:
+        img = crop_manual(Image.open(args.manual))
+        img.save(OUT_DIR / "thumbnail.png", optimize=True)
+        img.resize(OGP_SIZE, Image.LANCZOS).save(OUT_DIR / "ogp.jpg", quality=88, optimize=True)
+        print(f"[compose] {OUT_DIR / 'thumbnail.png'} {img.size}、{OUT_DIR / 'ogp.jpg'} {OGP_SIZE}")
+        if args.manual_plain:
+            plain = crop_manual(Image.open(args.manual_plain))
+            plain.save(OUT_DIR / "plain.png", optimize=True)
+            print(f"[compose] {OUT_DIR / 'plain.png'} {plain.size}")
+        return
+    base = crop(Image.open(args.shot))
     if args.plain:
         base.save(OUT_DIR / "plain.png", optimize=True)
         print(f"[compose] {OUT_DIR / 'plain.png'} {base.size}")
