@@ -443,12 +443,14 @@ SIDEWALK_VALUES = dict(waytype="water", cost=1000, maintenance=20, intro_year=19
 # 高架の歩道（ami_sidewalk_elev。#119）: 値は #110 の一覧（README の「歩道の作り」）。高架は地上の 2 倍
 SIDEWALK_ELEV_VALUES = dict(SIDEWALK_VALUES, cost=2000, maintenance=40)
 # 歩道の柵（ami_wall_sidewalk_<版>。#119）: water の way-object。値は #110 の一覧（壁と同じ。速さ 1000 は道路の壁と同じで、
-# 電柱（#120、同じ速さ）と重ねると先に置いた方が残る）
+# 電柱だけの物（#120、同じ速さ）と重ねると先に置いた方が残る。柵つきの電柱（速さ 1010）を重ねると置き換わる）
 SIDEWALK_WALL_VALUES = dict(cost=3000, maintenance=60, intro_year=1900, topspeed=1000)
 # 電柱（ami_sidewalk_pole。#120）: 値は #110 の一覧。柵つきの電柱（ami_wall_sidewalk_<版>_pole）は柵と電柱の和で、速さを柵より大きくし、
 # 柵の上に Ctrl を押さずに重ねると柵つきの電柱に置き換わる（way-addon.md の 10 章）。電柱だけの物は柵と同じ速さで、柵とは置き換わらない
 SIDEWALK_POLE_VALUES = dict(cost=1000, maintenance=20, intro_year=1900, topspeed=1000)
 SIDEWALK_WALL_POLE_VALUES = dict(cost=4000, maintenance=80, intro_year=1900, topspeed=1010)
+# 柵の上に柵つきの電柱を重ねると置き換わり、電柱だけでは置き換わらない関係（obj/wayobj.cc の extend_wayobj は速さの小さい方を置き換える）を守る
+assert SIDEWALK_WALL_POLE_VALUES["topspeed"] > SIDEWALK_WALL_VALUES["topspeed"] == SIDEWALK_POLE_VALUES["topspeed"], "歩道の柵・電柱の速さの関係が崩れた（#120）"
 # 歩道の柵のセル（sheetlib の sidewalk_fence_sheet）: 歩道の way と同じ位置。カーブはシートのカーブのセル（行 2 の列 5〜8）で、斜めのキーは持たない
 SIDEWALK_WALL_KEYS = ("image", "imageup", "imageup2")
 # 歩道のシートにあるセル（sheetlib の sidewalk_sheet）。斜めの絵・分岐の絵は持たない（本体はカーブの絵を使う）

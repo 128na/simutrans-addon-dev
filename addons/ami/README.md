@@ -31,7 +31,7 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 | 電柱 | `ami_sidewalk_pole`（電柱だけ）・`ami_wall_sidewalk_<版>_pole`（柵つき。#120） |
 | 景観 | 盛土 `ami_embankment_front`・`ami_embankment_back`（ADR 0008 の `ami_embankment_<版>`） |
 
-dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`・`ami_rail_concrete`・`ami_rail_concrete_base_<版>`（4 版）・`ami_rail_concrete_elev_<版>`（4 版）・`ami_rail_concrete_bridge`・`ami_rail_concrete_tunnel`・`ami_rail_ladder`・`ami_rail_ladder_base_<版>`（4 版）・`ami_rail_ladder_elev_<版>`（4 版）・`ami_rail_ladder_bridge`・`ami_rail_ladder_tunnel`・`ami_road_local`・`ami_road_general`・`ami_road_expressway`・道路 3 種それぞれの `_base_<版>`（4 版）・`_elev_<版>`（4 版）・`_bridge`・`_tunnel`・`ami_wall_road_<版>`（4 版）・`ami_wall_road_twin`・`ami_wall_road_front_divider`・`ami_wall_road_center_divider`・`ami_wall_road_twin_divider`・`ami_pier_road`・`ami_tram`・`ami_embankment_front`・`ami_embankment_back`・`ami_sidewalk`・`ami_sidewalk_<舗装>`（3 種）・`ami_sidewalk_elev`・`ami_wall_sidewalk_<版>`（3 版）。
+dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`・`ami_rail_concrete`・`ami_rail_concrete_base_<版>`（4 版）・`ami_rail_concrete_elev_<版>`（4 版）・`ami_rail_concrete_bridge`・`ami_rail_concrete_tunnel`・`ami_rail_ladder`・`ami_rail_ladder_base_<版>`（4 版）・`ami_rail_ladder_elev_<版>`（4 版）・`ami_rail_ladder_bridge`・`ami_rail_ladder_tunnel`・`ami_road_local`・`ami_road_general`・`ami_road_expressway`・道路 3 種それぞれの `_base_<版>`（4 版）・`_elev_<版>`（4 版）・`_bridge`・`_tunnel`・`ami_wall_road_<版>`（4 版）・`ami_wall_road_twin`・`ami_wall_road_front_divider`・`ami_wall_road_center_divider`・`ami_wall_road_twin_divider`・`ami_pier_road`・`ami_tram`・`ami_embankment_front`・`ami_embankment_back`・`ami_sidewalk`・`ami_sidewalk_<舗装>`（3 種）・`ami_sidewalk_elev`・`ami_wall_sidewalk_<版>`（3 版）・`ami_sidewalk_pole`・`ami_wall_sidewalk_<版>_pole`（3 版）。
 
 ### 線路（新描画位置）
 
@@ -480,7 +480,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 | 電柱（`ami_sidewalk_pole`） | 1000 | 1000 | 20 | 1900 |
 | 柵つきの電柱（`ami_wall_sidewalk_<版>_pole`） | 1010 | 4000 | 80 | 1900 |
 
-- 置き換え: 柵つきの電柱は柵（1000）より速いので、柵の上に Ctrl を押さずに重ねると置き換わる。電柱だけの物は柵と同じ速さなので、柵の上に重ねても柵が残る（見本の区画 A の南の歩道。`[check]` の行）
+- 置き換え: 柵つきの電柱は柵（1000）より速いので、柵の上に Ctrl を押さずに重ねると置き換わる。電柱だけの物は柵と同じ速さなので、柵の上に重ねても柵が残る（見本の区画 A の南の歩道。`[check]` の行）。柵つきの電柱の版どうし（例: `front_pole` の上に `back_pole`）は同じ速さなので、置き換えるには Ctrl を押して重ねる。置き換えた区間の端では、隣のタイルの柵・電線とのつながりが切れることがある（本体の `~wayobj_t` が隣の向きを外す。ゲームでは確かめていない）ので、そのときは端をまたいで敷き直す
 - 見本: `ingame/pole_sample.nut`（`ingame/game.sh` で流す。降雪側は `OX=276`）。東西・南北の道路の両脇（A・B）、L字・T字・十字（C）、坂・急坂（D）、高架の歩道（E）。残った way-object を `[check]` の行で期待と比べる（違えば返り値の先頭が `check`）。撮った画面は `docs/pole120_<気候>_<区画>.png`（拡大率 3）
 
 ### 中央分離帯の作り（#118）

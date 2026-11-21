@@ -44,7 +44,7 @@ OBJ_ORDER = ("way", "bridge", "tunnel", "way-object", "crossing", "building")
 COLUMNS = ("名前", "種類", "最高速度", "購入費", "維持費", "登場年")
 NOTE = (
     "この一覧はアドオンの定義（dat）から自動で作っています。最高速度は km/h、購入費は cr、維持費は cr/月です。"
-    "壁・柵・橋脚・歩道・盛土・車庫は速度の欄を空けています。踏切の最高速度は「道路/線路」の順です。"
+    "壁・柵・電柱・橋脚・歩道・盛土・車庫は速度の欄を空けています。踏切の最高速度は「道路/線路」の順です。"
 )
 
 
@@ -78,6 +78,9 @@ def kind_label(o):
     name = o.get("name", "")
     if t == "way-object" and name.endswith("_divider"):
         return "中央分離帯"  # 道路の壁の版（ami_wall_road_<版>_divider。#118）
+    if t == "way-object" and name.endswith("_pole"):
+        # 歩道の電柱（ami_sidewalk_pole）と柵つきの電柱（ami_wall_sidewalk_<版>_pole。#120）。SPECIAL の歩道・歩道の柵より先に当てる
+        return "柵つきの電柱" if name.startswith("ami_wall_") else "電柱"
     for prefix, label in SPECIAL.items():
         if name.startswith(prefix):
             return label + ("（高架）" if t == "way" and o.get("system_type") == "1" else "")

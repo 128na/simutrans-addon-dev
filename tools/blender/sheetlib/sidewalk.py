@@ -272,9 +272,9 @@ POLE_CABLE_OFF = 0.3     # 通信線の柱からのずれ（腕木の向き）
 POLE_PAD = 0.6           # 隣のタイルへ続く電線をタイルの外へ延ばす量（持ち分で切る）
 POLE_RISE = 84           # 持ち分を上へ広げる行数（柱の高さ 約 70px と腕木・余り）
 POLE_IN = 0.6            # 柵つきの版で、柵の中心から柱の中心まで（歩道の内側へ）
-_M_POLE = ("sidewalk_pole", (0.66, 0.66, 0.63), 0.7, 0.0)   # コンクリートの柱
-_M_POLE_ARM = ("sidewalk_pole_arm", (0.30, 0.30, 0.31), 0.5, 0.3)  # 鋼の腕木
-_M_POLE_WIRE = ("sidewalk_pole_wire", (0.10, 0.10, 0.11), 0.6, 0.0)  # 電線
+_M_SW_POLE = ("sidewalk_pole", (0.66, 0.66, 0.63), 0.7, 0.0)   # コンクリートの柱
+_M_SW_POLE_ARM = ("sidewalk_pole_arm", (0.30, 0.30, 0.31), 0.5, 0.3)  # 鋼の腕木
+_M_SW_POLE_WIRE = ("sidewalk_pole_wire", (0.10, 0.10, 0.11), 0.6, 0.0)  # 電線
 
 
 def pole_shift(variant):
@@ -288,7 +288,7 @@ def _pole_parts(exits, slope, variant):
     half = TILE / 2
     ox, oy = pole_shift(variant)
     z0 = SIDEWALK_H + PAVING_TH
-    pole, arm, wire = (make_material(m, p) for m, p in ((_M_POLE, "pole"), (_M_POLE_ARM, "pole_arm"), (_M_POLE_WIRE, "pole_wire")))
+    pole, arm, wire = (make_material(m, p) for m, p in ((_M_SW_POLE, "pole"), (_M_SW_POLE_ARM, "pole_arm"), (_M_SW_POLE_WIRE, "pole_wire")))
     obs = []
     low = POLE_H * 0.55
     obs.append(mesh_object("pole_low", *box(ox, oy, z0 + low / 2, POLE_W, POLE_W, low), pole))
