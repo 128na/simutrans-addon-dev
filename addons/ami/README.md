@@ -450,14 +450,14 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 | `ami_sign_min_50` | 最低速度（323 の 2。青い円に白い数字と下線） | 最低速度 50 km/h（`min_speed=50`）。それより遅い車は通れない |
 
 - 絵の置き方は本体が決める（`obj/roadsign.cc` の `calc_image`）。絵は 4 枚（`image[0]`〜`[3]` が北・南・西・東の向きの車に向けた標識）で、その向きの車から見て右の側の、タイルの角の近くに描く（右側通行の絵。左側通行の設定では本体が `offset_left`（既定 14px）だけずらし、奥と手前の描き分けも入れ替える）。両方向の標識は 2 枚が出て、画面に表が見えるのは北行き（右の角）と西行き（上の角）、裏が見えるのは南行き（左の角）と東行き（下の角）。位置は pak128 の標識（`pak128/infrastructure/road_signs/p128_sign_road_misc.png`）にそろえた
-- 柱は Blender で描き（光と影を道路とそろえる）、板は画面の点に 2D の絵を押す（`tools/blender/sheetlib/roadsign.py` の `roadsign_sheet`）。板は画面で 11px（一時停止は幅 13・一方通行は幅 7）で、数字・矢印は 1px 単位の絵。Blender の面に貼った模様では数字がつぶれた。裏は表と同じ形の灰色の板
+- 柱は Blender で描き（光と影を道路とそろえる）、板は画面の点に 2D の絵を押す（`tools/blender/sheetlib/roadsign.py` の `roadsign_sheet`）。板は画面で 11px（一時停止は幅 13・一方通行は幅 7）で、数字・矢印は 1px 単位の絵。Blender の面に貼った模様では数字がつぶれた。裏は表と同じ形の灰色の板。板は道路の進行方向に向ける（表がその向きの車に正対する。2026-11-22、ユーザーの指定）。画面では、南北の道路の板が右へ 2px ごとに 1px 下がり、東西の道路の板が右へ 2px ごとに 1px 上がる。絵の列を 1 列ずつ縦にずらして押すので（せん断）、列の数は減らず数字の画素は残る。裏が見える板（南行き・東行き）では、柱の画素を板で消さない
 - 高さ: 柱の足元から板の上端まで 30px（128px 座標。上の角の絵で y68 から y38）。高架の高さ（pak128 で 32px。[hakozumi.md](../../docs/reference/hakozumi.md) の 4 章）より低い。pak128 の `Minimum80` は 33px
 - 雪の絵は無い（roadsign は季節の絵を持たない）。降雪の地面でも同じ絵（`docs/roadsign122_snow.png`）
-- アイコンは道路の色に、標識の板を画素のまま 2 倍にした絵だけ（字も札も無い。板の模様で見分ける）。カーソルは北行きの絵（`blender/icons.py`）
+- アイコンは道路の色に、標識の板を画素のまま 2 倍にした絵だけ（字も札も無い。板の模様で見分ける）。北行きの絵から作るので、板はゲームの中と同じく斜め。カーソルは北行きの絵（`blender/icons.py`）
 - 名前の訳: 道具の説明に出る名前を日本語にする訳のファイル `release/text/ja_ami.tab`（6 種だけ）。配る zip の `pak128/text/ja_ami.tab` に入り、ゲームの `addons/pak128/text/` から読まれる（本体はファイル名の先頭 2 文字で言語を決める。[way-addon.md](../../docs/reference/way-addon.md) の 5 章）
 - 値: 費用 500 cr、登場 1900（#110 の一覧。`blender/ami_dat.py` の `ROADSIGN_*`）。維持費のキーは無い。`ami_scenery.pak` に入る（ADR 0008）
 - 見本: `ingame/roadsign_sample.nut`。6 種を南北・東西の一般道路に置き、一方通行を 1 回・2 回置いて向きを変える。温暖側 (20,24) と降雪側 (276,24)。`[check]` の行で、置いた標識の名前、一方通行か、道の向き（`dirs`）と標識で絞った向き（`masked`）を期待と比べ（飾りの標識は絞らない、一方通行は南北で 4・2 回で 1、東西で 8・2 回で 2）、訳（`translate`）を出す。最低速度は script から読めないので、情報の窓の「最低速度: 50」で見た（`docs/roadsign122_info_min50.png`）
-- 撮った画面: `docs/roadsign122_temperate.png`・`roadsign122_snow.png`（拡大率 4。上の 4 本が南北の道路の標識 0〜3、左下の東西の道路に標識 0〜2）、`roadsign122_temperate_oneway.png`・`roadsign122_snow_oneway.png`（区画 O）、`roadsign122_plates_x4.png`（6 種の表・裏・アイコンを 4 倍）
+- 撮った画面: `docs/roadsign122_temperate.png`・`roadsign122_snow.png`（拡大率 4。上の 4 本が南北の道路の標識 0〜3、左下に東西の道路の標識の一部）、`roadsign122_temperate_oneway.png`・`roadsign122_snow_oneway.png`（区画 O）、`roadsign122_plates_x4.png`（6 種の表・裏・アイコンを 4 倍）
 
 ### 歩道の種類・高架の歩道・歩道の柵の作り（#119）
 

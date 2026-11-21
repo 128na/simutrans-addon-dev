@@ -8,8 +8,12 @@
     image[1] 南行き: 南西の角（画面の左の角）。表が北を向き、画面には裏が見える
     image[2] 西行き: 北西の角（画面の上の角）。表が東を向き、画面に表が見える
     image[3] 東行き: 南東の角（画面の下の角）。表が西を向き、画面には裏が見える
-柱は Blender で描き（光と影を線路・道路とそろえる）、板は画面の点に 2D の絵を押す。板は pak128 と同じく画面に正対した円・三角・四角で、
-数字・矢印は 1px 単位の絵にする（板は画面で 11px ほどで、Blender の面に貼った模様では数字がつぶれる）。
+柱は Blender で描き（光と影を線路・道路とそろえる）、板は画面の点に 2D の絵を押す。数字・矢印は 1px 単位の絵にする
+（板は画面で 11px ほどで、Blender の面に貼った模様では数字がつぶれる）。
+板は道路の進行方向に向ける（表がその向きの車に正対する。画面では斜め。2026-11-22 のユーザーの指定）。南北の道路の板（image[0]・[1]）は
+東西の面に立ち、画面では右へ 2px 進むごとに 1px 下がる。東西の道路の板（image[2]・[3]）は南北の面に立ち、右へ 2px 進むごとに 1px 上がる。
+絵の列を 1 列ずつ縦にずらして押す（せん断。列の数を減らさないので数字の画素は残る）。画面に裏が見える板（image[1]・[3]）は、柱の手前に
+板があるので柱の画素を上から消さない（柱は板の中心で終わる）。
 セルの中のタイルは pak128 の大きさ（幅 128px）で描かれるので、板の絵は画面の画素のまま押す。
 
 シートの並び（make_sheet。dat を書く側の addons/ami/blender/ami_dat.py の ROADSIGN_* と同じ）:
@@ -34,6 +38,7 @@ ROADSIGN_ALPHA_KEEP = 128         # この不透明度より薄い輪郭の画�
 ROADSIGN_CORNERS = ((1, 1), (-1, -1), (-1, 1), (1, -1))  # image[0]〜[3]: 北東・南西・北西・南東
 ROADSIGN_INSET = 0.87 * TILE / 2
 ROADSIGN_FACE_SHOWN = (True, False, True, False)        # 画面に表が見えるか（上の表）
+ROADSIGN_PLATE_AXES = ((1, 0), (1, 0), (0, 1), (0, 1))  # 板の横の向き（世界の x・y）: 南北の道路の板は東西、東西の道路の板は南北
 ROADSIGN_PLATE_PX = 25            # 板の中心の高さ（128px の画面で、柱の足元から。pak128 の標識の板の中心は約 26px）
 ROADSIGN_POLE_W = 0.2             # 柱の太さ（画面で約 2px。pak128 の標識の柱は 1〜2px）
 _M_ROADSIGN_POLE = ("roadsign_pole", (0.62, 0.63, 0.64), 0.5)  # 亜鉛めっきの鋼の柱
@@ -146,13 +151,19 @@ ROADSIGN_PLATES = {
 }
 
 
-def _stamp(cell, plate, cx, cy):
-    """板の絵を、セルの (cx, cy)（板の中心）に押す"""
+def _stamp(cell, plate, cx, cy, slope=0.0, keep=None):
+    """板の絵を、セルの (cx, cy)（板の中心）に押す。slope は画面で右へ 1px 進むごとの縦のずれ（列ごとに縦にずらす）。
+    keep が真の画素（セルの不透明度で決める）は上書きしない"""
     h, w = plate.shape[:2]
     x0 = int(round(cx)) - w // 2
     y0 = int(round(cy)) - h // 2
-    on = plate[..., 3] > 0
-    cell[y0:y0 + h, x0:x0 + w][on] = plate[on]
+    for i in range(w):
+        dy = int(np.floor((i - (w - 1) / 2) * slope + 0.5))
+        col = plate[:, i]
+        on = col[:, 3] > 0
+        if keep is not None:
+            on &= ~keep[y0 + dy:y0 + dy + h, x0 + i]
+        cell[y0 + dy:y0 + dy + h, x0 + i][on] = col[on]
 
 
 def _cell_xy(p):
@@ -178,7 +189,11 @@ def roadsign_sheet(sheet, plate, work):
         im = load_rgba8(path).copy()
         im[..., 3] = np.where(im[..., 3] >= ROADSIGN_ALPHA_KEEP, 255, 0)
         cx, cy = _cell_xy((x, y, z))
-        _stamp(im, face if ROADSIGN_FACE_SHOWN[i] else back, cx, cy)
+        ax, ay = ROADSIGN_PLATE_AXES[i]
+        ex, ey = _cell_xy((x + ax, y + ay, z))
+        slope = (ey - cy) / (ex - cx)  # 板の横の向きの画面での傾き（東西 +0.5、南北 -0.5）
+        shown = ROADSIGN_FACE_SHOWN[i]
+        _stamp(im, face if shown else back, cx, cy, slope, None if shown else im[..., 3] > 0)
         save_rgba(path, im)
         cells[(0, i)] = path
     # アイコン・カーソルのセルは空けておく（透明。AMI では blender/icons.py が書く）
