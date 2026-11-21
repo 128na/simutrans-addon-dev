@@ -1,11 +1,17 @@
-// 交差点の路面表示（#156）の見本。道路の交差点を作り、口のタイルから交差点のタイルへ表示を敷く（ingame/marking.sh で流す）。
+// 交差点の路面表示（#156）の見本。道路の交差点を作り、交差点の手前の 2 タイルに右折レーンの表示を敷く（ingame/marking.sh で流す）。
+// 敷き方（README の「交差点の路面表示の作り」。関数 approach）: 口のタイル S は交差点の隣、導流帯のタイル T は S の手前
+//   1. S から、進む向きの右の隣のタイルへ ami_mark_branch（枝。絵は無い）
+//   2. 4 車線は、出る側の口（入る側の口の右の隣）から交差点のタイルへ ami_mark_crosswalk_wide
+//   3. 最後に T から S へ ami_mark_stop（2 車線）か ami_mark_stop_wide（4 車線の入る側）
 // 区画（原点 OX・OY から）:
-//   C（中心 (6,4)）: 一般道路の十字。4 つの口に ami_mark_stop
-//   P（中心 (16,4)）: 一般道路の十字。南北の 2 つの口だけに ami_mark_stop（東西が優先。交差点のタイルは表示の直線になり、何も描かない）
-//   T（中心 (26,4)）: 一般道路の T字（南へ枝）。3 つの口に ami_mark_stop
-//   W（交差点 (8..9, 12..13)）: 4 車線どうしの十字（ami_road_general_lane1・lane2 を 2 本ずつ並べる。奥は lane1）。入る側の口に
-//      ami_mark_stop_wide、出る側の口に ami_mark_crosswalk_wide（左側通行: 東西の道は北が東行き、南北の道は東が南行き）
-//   E（交差点 (22..23, 12..13)）: 高速道路の 4 車線どうしの十字（W と同じ並び）
+//   C（中心 (6,4)）: 一般道路の十字。4 つの腕に右折レーン
+//   P（中心 (16,4)）: 一般道路の十字。南北の腕だけ（東西が優先）
+//   T（中心 (26,4)）: 一般道路の T字（南へ枝）。3 つの腕
+//   W（交差点 (8..9, 12..13)）: 一般道路の 4 車線どうしの十字（ami_road_general_lane1・lane2 を 2 本ずつ並べる。奥は lane1）。
+//      左側通行: 東西の道は北が東行き、南北の道は東が南行き
+//   O（y 4・12。x 36〜）: 敷いた順の見本。西の腕だけに敷き、途中で止めた物を東へ並べる
+//      2 車線（y 4）: 交差点 (38,4) は 1 の枝だけ、(44,4) は 1→3（できあがり）、(50,4) は枝を敷かずに 3 だけ（誤り）
+//      4 車線（y 12）: 交差点の西の列 38 は 1 だけ、44 は 1→2、50 は 1→2→3（できあがり）
 // 返り値: 失敗した所と、[link] の行（タイルの表示の名前と向き）
 local OX = 20;
 local OY = 20;
@@ -18,39 +24,52 @@ function look(tag, x, y) {
   local w = tile_x(OX + x, OY + y, 0).get_way(wt_rail);
   report += "[link] " + tag + " (" + x + "," + y + ") " + (w == null ? "-" : w.get_desc().get_name() + "/d" + w.get_dirs()) + "\n";
 }
-// 口 (x,y) から交差点の隣のタイル (x+dx, y+dy) へ表示を敷く
-function mouth(tag, n, x, y, dx, dy) { way(tag, n, c(x, y), c(x + dx, y + dy)); look(tag, x, y); }
+// 口 (x,y) に、交差点の向き (dx,dy) で右折レーンを敷く。steps は敷く手順（1 枝・2 出る側の横断歩道・3 導流帯から口へ）。
+// 画面の y は南が正なので、進む向きの右は (-dy, dx)
+function approach(tag, kind, x, y, dx, dy, steps = [1, 2, 3]) {
+  local rx = x - dy, ry = y + dx;
+  foreach (s in steps) {
+    if (s == 1) way(tag + " branch", "ami_mark_branch", c(x, y), c(rx, ry));
+    if (s == 2 && kind == "ami_mark_stop_wide") way(tag + " out", "ami_mark_crosswalk_wide", c(rx, ry), c(rx + dx, ry + dy));
+    if (s == 3) way(tag + " turn", kind, c(x - dx, y - dy), c(x, y));
+  }
+  look(tag + " taper", x - dx, y - dy); look(tag + " mouth", x, y); look(tag + " right", rx, ry);
+}
 
 local G = "ami_road_general";
+local S2 = "ami_mark_stop", S4 = "ami_mark_stop_wide";
+function cross(tag, x, y) { way(tag + " ew", G, c(x - 4, y), c(x + 4, y)); way(tag + " ns", G, c(x, y - 4), c(x, y + 4)); }
 // C
-way("C ew", G, c(2, 4), c(10, 4)); way("C ns", G, c(6, 0), c(6, 8));
-mouth("C w", "ami_mark_stop", 5, 4, 1, 0); mouth("C e", "ami_mark_stop", 7, 4, -1, 0);
-mouth("C n", "ami_mark_stop", 6, 3, 0, 1); mouth("C s", "ami_mark_stop", 6, 5, 0, -1);
+cross("C", 6, 4);
+approach("C w", S2, 5, 4, 1, 0); approach("C e", S2, 7, 4, -1, 0);
+approach("C n", S2, 6, 3, 0, 1); approach("C s", S2, 6, 5, 0, -1);
 look("C center", 6, 4);
 // P
-way("P ew", G, c(12, 4), c(20, 4)); way("P ns", G, c(16, 0), c(16, 8));
-mouth("P n", "ami_mark_stop", 16, 3, 0, 1); mouth("P s", "ami_mark_stop", 16, 5, 0, -1);
+cross("P", 16, 4);
+approach("P n", S2, 16, 3, 0, 1); approach("P s", S2, 16, 5, 0, -1);
 look("P center", 16, 4);
 // T
 way("T ew", G, c(22, 4), c(30, 4)); way("T s", G, c(26, 4), c(26, 8));
-mouth("T w", "ami_mark_stop", 25, 4, 1, 0); mouth("T e", "ami_mark_stop", 27, 4, -1, 0);
-mouth("T s", "ami_mark_stop", 26, 5, 0, -1);
+approach("T w", S2, 25, 4, 1, 0); approach("T e", S2, 27, 4, -1, 0); approach("T s", S2, 26, 5, 0, -1);
 look("T center", 26, 4);
-// W・E: 4 車線どうしの十字。x0 は交差点の西の列
-function wide(tag, road, x0) {
-  local y0 = 12;
-  way(tag + " ew1", road + "_lane1", c(x0 - 4, y0), c(x0 + 5, y0));
-  way(tag + " ew2", road + "_lane2", c(x0 - 4, y0 + 1), c(x0 + 5, y0 + 1));
-  way(tag + " ns1", road + "_lane1", c(x0, y0 - 4), c(x0, y0 + 5));
-  way(tag + " ns2", road + "_lane2", c(x0 + 1, y0 - 4), c(x0 + 1, y0 + 5));
-  local IN = "ami_mark_stop_wide", OUT = "ami_mark_crosswalk_wide";
-  mouth(tag + " w in", IN, x0 - 1, y0, 1, 0);         mouth(tag + " w out", OUT, x0 - 1, y0 + 1, 1, 0);
-  mouth(tag + " e in", IN, x0 + 2, y0 + 1, -1, 0);    mouth(tag + " e out", OUT, x0 + 2, y0, -1, 0);
-  mouth(tag + " n in", IN, x0 + 1, y0 - 1, 0, 1);     mouth(tag + " n out", OUT, x0, y0 - 1, 0, 1);
-  mouth(tag + " s in", IN, x0, y0 + 2, 0, -1);        mouth(tag + " s out", OUT, x0 + 1, y0 + 2, 0, -1);
-  look(tag + " inner nw", x0, y0); look(tag + " inner se", x0 + 1, y0 + 1);
+// 4 車線どうしの十字。x0 は交差点の西の列、y0 は北の行
+function wide_roads(tag, x0, y0) {
+  way(tag + " ew1", G + "_lane1", c(x0 - 4, y0), c(x0 + 5, y0));
+  way(tag + " ew2", G + "_lane2", c(x0 - 4, y0 + 1), c(x0 + 5, y0 + 1));
+  way(tag + " ns1", G + "_lane1", c(x0, y0 - 4), c(x0, y0 + 5));
+  way(tag + " ns2", G + "_lane2", c(x0 + 1, y0 - 4), c(x0 + 1, y0 + 5));
 }
-wide("W", G, 8);
-wide("E", "ami_road_expressway", 22);
+// W
+wide_roads("W", 8, 12);
+approach("W w", S4, 7, 12, 1, 0);  approach("W e", S4, 10, 13, -1, 0);
+approach("W n", S4, 9, 11, 0, 1);  approach("W s", S4, 8, 14, 0, -1);
+look("W inner nw", 8, 12); look("W inner se", 9, 13);
+// O: 敷いた順
+cross("O2a", 38, 4); approach("O2a w", S2, 37, 4, 1, 0, [1]);
+cross("O2b", 44, 4); approach("O2b w", S2, 43, 4, 1, 0, [1, 3]);
+cross("O2c", 50, 4); approach("O2c w", S2, 49, 4, 1, 0, [3]);
+wide_roads("O4a", 38, 12); approach("O4a w", S4, 37, 12, 1, 0, [1]);
+wide_roads("O4b", 44, 12); approach("O4b w", S4, 43, 12, 1, 0, [1, 2]);
+wide_roads("O4c", 50, 12); approach("O4c w", S4, 49, 12, 1, 0, [1, 2, 3]);
 gui.close_all_windows();
 return report;

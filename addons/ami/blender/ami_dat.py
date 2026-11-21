@@ -469,10 +469,12 @@ def embankment_dat_text(name, sheet):
 # 交差点の路面表示の way（#156。ADR 0009）: 道路に重ねて敷く白線だけの way。waytype は橋脚・盛土と同じ tram_track、速さ 1
 # （路面軌道・線路とつながっても速く走れない。車の速さは変わらない）。値は橋脚・盛土と同じ（2026-11-22、ユーザーの決定。#156）
 MARKING_VALUES = dict(waytype="tram_track", cost=1000, maintenance=100, intro_year=1900, topspeed=1)
-# 口の絵のある形（行き止まり）→ セル。シートを描く側の tools/blender/sheetlib/marking.py の MARKING_CELLS と同じ並び
-MARKING_CELLS = {"[s]": (0, 5), "[w]": (0, 6), "[n]": (0, 7), "[e]": (0, 8)}
-# 交差点のタイルの形（直線・曲がり・T字・十字・1 タイル）は空のセル（marking.py の MARKING_EMPTY_CELL）。坂・斜め・分岐の絵は持たない
-MARKING_EMPTY = ("[ns]", "[ew]", "[-]", "[sw]", "[nw]", "[ne]", "[se]", "[nse]", "[new]", "[nsw]", "[sew]", "[nsew]")
+# 絵のある形 → セル。行き止まりは導流帯、曲がりは口（tools/blender/sheetlib/marking.py の MARKING_DEADENDS・MARKING_CURVES と同じ並び）。
+# 種類ごとに絵のある形は違い（marking.py の marking_curve_dir）、描かないセルは空のまま。branch はどれも空
+MARKING_CELLS = {"[s]": (0, 5), "[w]": (0, 6), "[n]": (0, 7), "[e]": (0, 8),
+                 "[sw]": (2, 5), "[nw]": (2, 6), "[ne]": (2, 7), "[se]": (2, 8)}
+# ほかの形（直線・T字・十字・1 タイル）は空のセル（marking.py の MARKING_EMPTY_CELL）。坂・斜め・分岐の絵は持たない
+MARKING_EMPTY = ("[ns]", "[ew]", "[-]", "[nse]", "[new]", "[nsw]", "[sew]", "[nsew]")
 MARKING_EMPTY_CELL = (0, 9)
 
 
@@ -480,7 +482,7 @@ def marking_dat_text(name, sheet):
     """交差点の路面表示の way の dat。雪の絵（[1]）は夏と同じセル（道路は車道を除雪した想定で、白線は夏と同じ）"""
     v = MARKING_VALUES
     out = [
-        f"# AMI: {name}（CC BY 4.0）。道路に重ねて敷く交差点の路面表示の way。行き止まりの形が交差点へ入る口。シートは blender/render.py が描く",
+        f"# AMI: {name}（CC BY 4.0）。道路に重ねて敷く交差点の路面表示の way。行き止まりの形が導流帯、曲がりの形が交差点の口。シートは blender/render.py が描く",
         "obj=way",
         f"name={name}",
         "copyright=AMI (CC BY 4.0)",

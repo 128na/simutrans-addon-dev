@@ -10,7 +10,7 @@
   絵は、その物の直線のセルを北と南の隣のタイルの位置にもつないで、半分の大きさにしたもの（歩道はタイル 1 枚を 1/4 に）。
   等倍で真ん中を切ると、壁の single は片側しか入らず、橋脚は灰色の塊になって見分けにくかった。
   壁は版の札だけ（中央分離帯つきは左上に「分」、電柱と柵つきの電柱は左上に「柱」）、架線は左上に稲妻、橋脚は左上に「脚」「門」、歩道は左上に「歩」、車庫は左上に「庫」（絵は道が南へ出る向きの建物を 1/4 に）、
-  盛土は左上に「盛」と版の札（背景は路面軌道の色。tram_track の way）、交差点の路面表示は左上に「停」「横」（MARK_LABELS。背景は路面軌道の色）
+  盛土は左上に「盛」と版の札（背景は路面軌道の色。tram_track の way）、交差点の路面表示は左上に「停」「横」「枝」（MARK_LABELS。背景は路面軌道の色）
 - カーソル（256px のセル）: その物の直線の絵（トンネルは坑口）に、アイコンと同じ背景色の札で「速度 + 版」（例 160後）
 - 絵と札の中身は dat から読む（名前・obj・waytype・topspeed と、image[ns] などのキーが指すセル）。dat の icon・cursor が指すセルに書く
 - シート名を渡すと、そのシートに書くアイコン・カーソルと、そのシートの絵から作るアイコン・カーソル（トンネルは中の way の絵、
@@ -81,7 +81,7 @@ def ref(v):
 
 
 # 交差点の路面表示（#156）の左上の字。4 車線以上の版（_wide）は右下に札「広」（VERSION_MARK の wide）を足す
-MARK_LABELS = {"ami_mark_stop": "停", "ami_mark_stop_wide": "停", "ami_mark_crosswalk_wide": "横"}
+MARK_LABELS = {"ami_mark_stop": "停", "ami_mark_stop_wide": "停", "ami_mark_crosswalk_wide": "横", "ami_mark_branch": "枝"}
 
 def describe(d):
     """dat から、アイコンの決まりに使う中身を取る"""
@@ -116,7 +116,7 @@ def describe(d):
         info.update(kind="depot", label=DEPOT_LABEL)
     elif name.startswith("ami_embankment"):  # 盛土（#123）: 左上に「盛」、右下に版（前・後）
         info.update(kind="embankment", label="盛")
-    elif name.startswith("ami_mark_"):  # 交差点の路面表示（#156）: 左上に MARK_LABELS の字（停止線つきは「停」、横断歩道だけは「横」）
+    elif name.startswith("ami_mark_"):  # 交差点の路面表示（#156）: 左上に MARK_LABELS の字（停止線つきは「停」、横断歩道だけは「横」、口の向きを決める枝は「枝」）
         info.update(kind="marking", label=MARK_LABELS[name], version="wide" if name.endswith("_wide") else None)
     else:
         info["kind"] = {"bridge": "bridge", "tunnel": "tunnel"}.get(obj, "way")
@@ -133,8 +133,8 @@ def picture_keys(d, kind, for_cursor):
         return None  # アイコンは中の way の絵（下の icon_layers）
     if kind == "bridge":
         return [["backimage[ns][0]"]]
-    if kind == "marking":  # 北の口（行き止まり [n]）の白線
-        return [["image[n][0]"]]
+    if kind == "marking":  # 北へ向かう口（stop・stop_wide は曲がり [se]、crosswalk_wide は [nw]）の白線。枝（branch）は絵が無い
+        return [["image[se][0]"], ["image[nw][0]"]]
     if kind == "yard":  # 1 タイルの南北の線路（layout 6。両端に階段）の奥の絵
         return [["backimage[6][0][0][0][0][0]"]]
     if kind == "depot":  # 道が南へ出る向き（layout 0）の奥と手前の絵

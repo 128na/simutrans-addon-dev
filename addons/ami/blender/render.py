@@ -664,10 +664,12 @@ for _name, _side in catalog.EMBANKMENTS.items():
     SHEETS[_name] = (lambda n, s: lambda: R.embankment_sheet(n, s, mat_skin=_emb_skin("ami_embankment_grass", EMBANKMENT_GRASS),
                                                              snow_skin=_emb_skin("ami_embankment_snow", EMBANKMENT_SNOW)))(_name, _side)
 
-# 交差点の路面表示の way（#156。ADR 0009）: 道路に重ねて敷く白線だけの way（sheetlib の marking_sheet）。行き止まりの形が交差点へ入る口
+# 交差点の路面表示の way（#156。ADR 0011）: 道路に重ねて敷く白線の way（sheetlib の marking_sheet）。行き止まりの形が導流帯、
+# 曲がりの形が交差点の口。下の道路の線を消す帯は、一般道路の路面の材質で描く（表示は一般道路に敷く物。高速道路の路面の色は違う）
 MARKING_LABEL = "M"  # 描画のアイコンの文字（ゲームのアイコンは icons.py が書き直す）
+MARKING_PATCH = ROAD_SETTINGS[catalog.ROAD_GENERAL.key]["skin"]["asphalt"]
 for _name, _kind in catalog.MARKINGS.items():
-    SHEETS[_name] = (lambda n, k: lambda: R.marking_sheet(n, k, label=MARKING_LABEL))(_name, _kind)
+    SHEETS[_name] = (lambda n, k: lambda: R.marking_sheet(n, k, label=MARKING_LABEL, patch=MARKING_PATCH))(_name, _kind)
 
 # 踏切（#111）: 道路の種類ごとに 1 枚（線路の 4 種で共有）。奥の絵の下地に、その道路の直線のセルを写すので、道路のシートの後に描く
 # （SHEETS の登録順に描く。別の Blender で並べて描くときは、道路のシートを先に描き終えておく）。
