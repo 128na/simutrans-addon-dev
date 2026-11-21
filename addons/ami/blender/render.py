@@ -665,8 +665,8 @@ for _name, _side in catalog.EMBANKMENTS.items():
     SHEETS[_name] = (lambda n, s: lambda: R.embankment_sheet(n, s, mat_skin=_emb_skin("ami_embankment_grass", EMBANKMENT_GRASS),
                                                              snow_skin=_emb_skin("ami_embankment_snow", EMBANKMENT_SNOW)))(_name, _side)
 
-# 交差点の路面表示の way（#156。ADR 0011）: 道路に重ねて敷く白線の way（sheetlib の marking_sheet）。行き止まりの形が導流帯、
-# 曲がりの形が交差点の口。下の道路の線を消す帯は、一般道路の路面の材質で描く（表示は一般道路に敷く物。高速道路の路面の色は違う）
+# 交差点の路面表示の way（#156。ADR 0011）: 道路に重ねて敷く白線の way（sheetlib の marking_sheet）。行き止まりの形が導流帯か
+# 2 車線の口、曲がりの形が 4 車線の口。下の道路の線を消す帯は、一般道路の路面の材質で描く（表示は一般道路に敷く物。高速道路の路面の色は違う）
 MARKING_LABEL = "M"  # 描画のアイコンの文字（ゲームのアイコンは icons.py が書き直す）
 MARKING_PATCH = ROAD_SETTINGS[catalog.ROAD_GENERAL.key]["skin"]["asphalt"]
 for _name, _kind in catalog.MARKINGS.items():

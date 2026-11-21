@@ -4,7 +4,7 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 
 > **ベータ版。** ロードマップ（[#61](https://github.com/128na/simutrans-addon-dev/issues/61)）の第 1 弾を、ベータ版として配る（[#91](https://github.com/128na/simutrans-addon-dev/issues/91)。基準は「多少課題があってもゲーム内で動作すれば OK」）。正式版までに、物の名前・値・見た目が変わることがある。既知の課題（ベータの後に回したもの）は [ACCEPTANCE.md の「ベータ版（第 1 弾）での扱い」](ACCEPTANCE.md#ベータ版第-1-弾での扱い)、遊ぶ人向けの説明は配る zip の `ami_readme.txt`（元は [release/readme.txt](release/readme.txt)。簡潔な説明・導入方法・注意点だけで、物の一覧は「主な中身」として網羅を保証しない。すべての物の一覧は、zip に入れる `ami_lineup.txt`（dat から `lineup.py` が作る。[#138](https://github.com/128na/simutrans-addon-dev/issues/138)）。名前が変わったときのセーブデータの扱いは [ADR 0009](../../docs/adr/0009-ami-beta-renames-without-readme-notice.md)）。敷き方の説明は下の「[遊ぶ人向けの敷き方](#遊ぶ人向けの敷き方)」。
 
-**今あるのは在来線の通常の版（`ami_rail_ballast`）と、在来線の基盤の 4 版・壁だけの way-object・架線つきの壁の way-object（`ami_rail_ballast_base_*`・`ami_wall_rail_*`・`ami_wall_rail_*_catenary`）、高架の 4 版と橋脚の way（`ami_rail_ballast_elev_*`・`ami_pier_rail`・門型の `ami_pier_rail_gate`）、橋とトンネル（`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`）、高速線（スラブ軌道）の通常の版・基盤の 4 版・高架の 4 版・橋・トンネル（`ami_rail_slab`・`ami_rail_slab_base_*`・`ami_rail_slab_elev_*`・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`）、弾性まくらぎ直結軌道（コンクリート道床）とフローティング・ラダー軌道の同じ一式（`ami_rail_concrete`・`ami_rail_concrete_*`・`ami_rail_ladder`・`ami_rail_ladder_*`）、道路 3 種の通常の版（`ami_road_local`・`ami_road_general`・`ami_road_expressway`）と、道路の基盤の 4 版・高架の 4 版・橋・トンネル（`ami_road_*_base_*`・`ami_road_*_elev_*`・`ami_road_*_bridge`・`ami_road_*_tunnel`）、道路の路面表示の版（`ami_road_general_lane<n>`・`ami_road_expressway_lane<n>`）、道路の壁の way-object（`ami_wall_road_*`）と中央分離帯つきの壁（`ami_wall_road_*_divider`）、道路用の橋脚（`ami_pier_road`）、路面軌道の通常の版（`ami_tram`）、歩道（`ami_sidewalk`）と歩道の種類・高架の歩道・歩道の柵（`ami_sidewalk_<舗装>`・`ami_sidewalk_elev`・`ami_wall_sidewalk_<版>`）、線路×道路の踏切（`ami_crossing_*`）、盛土（`ami_embankment_front`・`ami_embankment_back`）、交差点の路面表示（`ami_mark_stop`・`ami_mark_stop_wide`・`ami_mark_crosswalk_wide`）、電柱（`ami_sidewalk_pole_<版>`・`ami_wall_sidewalk_<版>_pole`）、道路標識 6 種（`ami_sign_<名前>`）。** 描画から pak までの骨組み（[#14](https://github.com/128na/simutrans-addon-dev/issues/14)）の上に、在来線の壁の無い通常の版を仕上げ（[#15](https://github.com/128na/simutrans-addon-dev/issues/15)。全方位・分岐の絵・近い斜め・雪・汚れ）、基盤の版と壁を足した（[#16](https://github.com/128na/simutrans-addon-dev/issues/16)。下の「壁の敷き方」）。壁に架線を持たせた版を足した（[#17](https://github.com/128na/simutrans-addon-dev/issues/17)。下の「架線の作り」）。高架の 4 版と、高架の真下の地面に敷く橋脚の way を足した（[#18](https://github.com/128na/simutrans-addon-dev/issues/18)。下の「高架と橋脚の作り」）。橋とトンネルを足した（[#19](https://github.com/128na/simutrans-addon-dev/issues/19)。下の「橋とトンネルの作り」）。高速線を足した（[#20](https://github.com/128na/simutrans-addon-dev/issues/20)。下の「高速線の作り」）。道路 3 種の通常の版を足した（[#21](https://github.com/128na/simutrans-addon-dev/issues/21)。下の「道路の作り」）。道路の壁・基盤の版・高架・橋脚・橋・トンネルを足した（[#22](https://github.com/128na/simutrans-addon-dev/issues/22)。下の「道路の壁・高架・橋脚・橋・トンネルの作り」）。路面軌道を足した（[#23](https://github.com/128na/simutrans-addon-dev/issues/23)。下の「路面軌道の作り」）。歩道を足した（[#24](https://github.com/128na/simutrans-addon-dev/issues/24)。下の「歩道の作り」）。バリエーションの第 1 弾（[#61](https://github.com/128na/simutrans-addon-dev/issues/61)）として、弾性まくらぎ直結軌道を足した（[#62](https://github.com/128na/simutrans-addon-dev/issues/62)。下の「弾性まくらぎ直結軌道の作り」）。続けてフローティング・ラダー軌道を足した（[#67](https://github.com/128na/simutrans-addon-dev/issues/67)。下の「フローティング・ラダー軌道の作り」）。線路×道路の踏切を足した（[#111](https://github.com/128na/simutrans-addon-dev/issues/111)。下の「踏切の作り」）。第 2 弾（[ADR 0008](../../docs/adr/0008-ami-scope-second-phase.md)）の景観として、盛土を足した（[#123](https://github.com/128na/simutrans-addon-dev/issues/123)。下の「盛土の作り」）。4 車線の中央分離帯を足した（[#118](https://github.com/128na/simutrans-addon-dev/issues/118)。下の「中央分離帯の作り」）。第 2 弾（[ADR 0008](../../docs/adr/0008-ami-scope-second-phase.md)）として、歩道の種類・高架の歩道・歩道の柵を足した（[#119](https://github.com/128na/simutrans-addon-dev/issues/119)。下の「歩道の種類・高架の歩道・歩道の柵の作り」）。多車線の路面表示の版を足した（[#121](https://github.com/128na/simutrans-addon-dev/issues/121)。下の「路面表示の版の作り」）。交差点の路面表示を足した（[#156](https://github.com/128na/simutrans-addon-dev/issues/156)。下の「交差点の路面表示の作り」）。第 2 弾の景観として、電柱を足した（[#120](https://github.com/128na/simutrans-addon-dev/issues/120)。下の「電柱の作り」）。第 2 弾の景観として、道路標識を足した（[#122](https://github.com/128na/simutrans-addon-dev/issues/122)。下の「道路標識の作り」）。下の表の残りは作る予定のもの（開発ステップの一覧は [#27](https://github.com/128na/simutrans-addon-dev/issues/27)）。範囲と作りを決めた理由は次の ADR にある。
+**今あるのは在来線の通常の版（`ami_rail_ballast`）と、在来線の基盤の 4 版・壁だけの way-object・架線つきの壁の way-object（`ami_rail_ballast_base_*`・`ami_wall_rail_*`・`ami_wall_rail_*_catenary`）、高架の 4 版と橋脚の way（`ami_rail_ballast_elev_*`・`ami_pier_rail`・門型の `ami_pier_rail_gate`）、橋とトンネル（`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`）、高速線（スラブ軌道）の通常の版・基盤の 4 版・高架の 4 版・橋・トンネル（`ami_rail_slab`・`ami_rail_slab_base_*`・`ami_rail_slab_elev_*`・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`）、弾性まくらぎ直結軌道（コンクリート道床）とフローティング・ラダー軌道の同じ一式（`ami_rail_concrete`・`ami_rail_concrete_*`・`ami_rail_ladder`・`ami_rail_ladder_*`）、道路 3 種の通常の版（`ami_road_local`・`ami_road_general`・`ami_road_expressway`）と、道路の基盤の 4 版・高架の 4 版・橋・トンネル（`ami_road_*_base_*`・`ami_road_*_elev_*`・`ami_road_*_bridge`・`ami_road_*_tunnel`）、道路の路面表示の版（`ami_road_general_lane<n>`・`ami_road_expressway_lane<n>`）、道路の壁の way-object（`ami_wall_road_*`）と中央分離帯つきの壁（`ami_wall_road_*_divider`）、道路用の橋脚（`ami_pier_road`）、路面軌道の通常の版（`ami_tram`）、歩道（`ami_sidewalk`）と歩道の種類・高架の歩道・歩道の柵（`ami_sidewalk_<舗装>`・`ami_sidewalk_elev`・`ami_wall_sidewalk_<版>`）、線路×道路の踏切（`ami_crossing_*`）、盛土（`ami_embankment_front`・`ami_embankment_back`）、交差点の路面表示（`ami_mark_*` の 5 種）、電柱（`ami_sidewalk_pole_<版>`・`ami_wall_sidewalk_<版>_pole`）、道路標識 6 種（`ami_sign_<名前>`）。** 描画から pak までの骨組み（[#14](https://github.com/128na/simutrans-addon-dev/issues/14)）の上に、在来線の壁の無い通常の版を仕上げ（[#15](https://github.com/128na/simutrans-addon-dev/issues/15)。全方位・分岐の絵・近い斜め・雪・汚れ）、基盤の版と壁を足した（[#16](https://github.com/128na/simutrans-addon-dev/issues/16)。下の「壁の敷き方」）。壁に架線を持たせた版を足した（[#17](https://github.com/128na/simutrans-addon-dev/issues/17)。下の「架線の作り」）。高架の 4 版と、高架の真下の地面に敷く橋脚の way を足した（[#18](https://github.com/128na/simutrans-addon-dev/issues/18)。下の「高架と橋脚の作り」）。橋とトンネルを足した（[#19](https://github.com/128na/simutrans-addon-dev/issues/19)。下の「橋とトンネルの作り」）。高速線を足した（[#20](https://github.com/128na/simutrans-addon-dev/issues/20)。下の「高速線の作り」）。道路 3 種の通常の版を足した（[#21](https://github.com/128na/simutrans-addon-dev/issues/21)。下の「道路の作り」）。道路の壁・基盤の版・高架・橋脚・橋・トンネルを足した（[#22](https://github.com/128na/simutrans-addon-dev/issues/22)。下の「道路の壁・高架・橋脚・橋・トンネルの作り」）。路面軌道を足した（[#23](https://github.com/128na/simutrans-addon-dev/issues/23)。下の「路面軌道の作り」）。歩道を足した（[#24](https://github.com/128na/simutrans-addon-dev/issues/24)。下の「歩道の作り」）。バリエーションの第 1 弾（[#61](https://github.com/128na/simutrans-addon-dev/issues/61)）として、弾性まくらぎ直結軌道を足した（[#62](https://github.com/128na/simutrans-addon-dev/issues/62)。下の「弾性まくらぎ直結軌道の作り」）。続けてフローティング・ラダー軌道を足した（[#67](https://github.com/128na/simutrans-addon-dev/issues/67)。下の「フローティング・ラダー軌道の作り」）。線路×道路の踏切を足した（[#111](https://github.com/128na/simutrans-addon-dev/issues/111)。下の「踏切の作り」）。第 2 弾（[ADR 0008](../../docs/adr/0008-ami-scope-second-phase.md)）の景観として、盛土を足した（[#123](https://github.com/128na/simutrans-addon-dev/issues/123)。下の「盛土の作り」）。4 車線の中央分離帯を足した（[#118](https://github.com/128na/simutrans-addon-dev/issues/118)。下の「中央分離帯の作り」）。第 2 弾（[ADR 0008](../../docs/adr/0008-ami-scope-second-phase.md)）として、歩道の種類・高架の歩道・歩道の柵を足した（[#119](https://github.com/128na/simutrans-addon-dev/issues/119)。下の「歩道の種類・高架の歩道・歩道の柵の作り」）。多車線の路面表示の版を足した（[#121](https://github.com/128na/simutrans-addon-dev/issues/121)。下の「路面表示の版の作り」）。交差点の路面表示を足した（[#156](https://github.com/128na/simutrans-addon-dev/issues/156)。下の「交差点の路面表示の作り」）。第 2 弾の景観として、電柱を足した（[#120](https://github.com/128na/simutrans-addon-dev/issues/120)。下の「電柱の作り」）。第 2 弾の景観として、道路標識を足した（[#122](https://github.com/128na/simutrans-addon-dev/issues/122)。下の「道路標識の作り」）。下の表の残りは作る予定のもの（開発ステップの一覧は [#27](https://github.com/128na/simutrans-addon-dev/issues/27)）。範囲と作りを決めた理由は次の ADR にある。
 
 - [ADR 0002](../../docs/adr/0002-ami-scope.md): 範囲・対象・ライセンス・配布（第 1 弾まで。ADR 0008 に置き換えた）
 - [ADR 0003](../../docs/adr/0003-ami-walls-base-piers-as-separate-objects.md): 壁・基盤・橋脚・歩道の分け方
@@ -25,7 +25,7 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 | 基盤・高架の版 | `<way の名前>_base_<版>`・`<way の名前>_elev_<版>`（版は `single`・`back`・`center`・`front`） |
 | 橋・トンネル | `<way の名前>_bridge`・`<way の名前>_tunnel` |
 | 道路の路面表示の版 | `<道路の way の名前>_lane<n>`（一般道路・高速道路の n = 1〜7。#121。下の「路面表示の版の作り」） |
-| 交差点の路面表示 | `ami_mark_stop`・`ami_mark_stop_wide`・`ami_mark_crosswalk_wide`（道路に重ねる路面軌道の way。#156。下の「交差点の路面表示の作り」） |
+| 交差点の路面表示 | `ami_mark_stop`・`ami_mark_taper`・`ami_mark_stop_wide`・`ami_mark_crosswalk_wide`・`ami_mark_branch`（道路に重ねる路面軌道の way。#156。下の「交差点の路面表示の作り」） |
 | 線路の壁 | `ami_wall_rail_<版>`（`single`・`back`・`center`・`front`。`center` は行き止まりの端の壁だけ）、架線つきは `ami_wall_rail_<版>_catenary`（`center` は架線と、行き止まりの端の壁だけ）。近い斜めの分け合うタイル用に `ami_wall_rail_twin`（壁だけ。下の「壁の敷き方」）と `ami_wall_rail_twin_catenary`（架線つき。下の「架線の作り」） |
 | 道路の壁 | `ami_wall_road_<版>`（`single`・`back`・`center`・`front`。`center` は行き止まりの端の壁だけ）。近い斜めの分け合うタイル用に `ami_wall_road_twin`（名前は確定。2026-11-19、ユーザーの決定。下の「道路の壁・高架・橋脚・橋・トンネルの作り」）。中央分離帯つきは `ami_wall_road_front_divider`・`ami_wall_road_center_divider`・`ami_wall_road_twin_divider`（下の「中央分離帯の作り」） |
 | 橋脚・歩道 | `ami_pier_rail`（門型は `ami_pier_rail_gate`）・`ami_pier_road`・`ami_sidewalk`。歩道の種類は `ami_sidewalk_<舗装>`（`asphalt`・`brick`・`tile`）、高架の歩道は `ami_sidewalk_elev`（#119） |
@@ -37,7 +37,7 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 | 車庫 | `ami_rail_depot`・`ami_tram_depot`・`ami_road_depot`・`ami_monorail_depot`・`ami_canal_depot`（ADR 0008） |
 | 操車場 | `ami_rail_yard`（#115） |
 
-dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`・`ami_rail_concrete`・`ami_rail_concrete_base_<版>`（4 版）・`ami_rail_concrete_elev_<版>`（4 版）・`ami_rail_concrete_bridge`・`ami_rail_concrete_tunnel`・`ami_rail_ladder`・`ami_rail_ladder_base_<版>`（4 版）・`ami_rail_ladder_elev_<版>`（4 版）・`ami_rail_ladder_bridge`・`ami_rail_ladder_tunnel`・`ami_road_local`・`ami_road_general`・`ami_road_expressway`・道路 3 種それぞれの `_base_<版>`（4 版）・`_elev_<版>`（4 版）・`_bridge`・`_tunnel`・`ami_wall_road_<版>`（4 版）・`ami_wall_road_twin`・`ami_wall_road_front_divider`・`ami_wall_road_center_divider`・`ami_wall_road_twin_divider`・`ami_pier_road`・`ami_tram`・`ami_embankment_front`・`ami_embankment_back`・`ami_mark_stop`・`ami_mark_stop_wide`・`ami_mark_crosswalk_wide`・`ami_sidewalk`・`ami_sidewalk_<舗装>`（3 種）・`ami_sidewalk_elev`・`ami_wall_sidewalk_<版>`（3 版）・`ami_sidewalk_pole_<版>`（2 版）・`ami_wall_sidewalk_<版>_pole`（2 版）・`ami_monorail_straddle`・`ami_monorail_straddle_elev_<版>`（3 版）・`ami_monorail_straddle_tunnel`・`ami_canal`・車庫 5 つ・`ami_rail_yard`。
+dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`・`ami_rail_concrete`・`ami_rail_concrete_base_<版>`（4 版）・`ami_rail_concrete_elev_<版>`（4 版）・`ami_rail_concrete_bridge`・`ami_rail_concrete_tunnel`・`ami_rail_ladder`・`ami_rail_ladder_base_<版>`（4 版）・`ami_rail_ladder_elev_<版>`（4 版）・`ami_rail_ladder_bridge`・`ami_rail_ladder_tunnel`・`ami_road_local`・`ami_road_general`・`ami_road_expressway`・道路 3 種それぞれの `_base_<版>`（4 版）・`_elev_<版>`（4 版）・`_bridge`・`_tunnel`・`ami_wall_road_<版>`（4 版）・`ami_wall_road_twin`・`ami_wall_road_front_divider`・`ami_wall_road_center_divider`・`ami_wall_road_twin_divider`・`ami_pier_road`・`ami_tram`・`ami_embankment_front`・`ami_embankment_back`・`ami_mark_stop`・`ami_mark_taper`・`ami_mark_stop_wide`・`ami_mark_crosswalk_wide`・`ami_mark_branch`・`ami_sidewalk`・`ami_sidewalk_<舗装>`（3 種）・`ami_sidewalk_elev`・`ami_wall_sidewalk_<版>`（3 版）・`ami_sidewalk_pole_<版>`（2 版）・`ami_wall_sidewalk_<版>_pole`（2 版）・`ami_monorail_straddle`・`ami_monorail_straddle_elev_<版>`（3 版）・`ami_monorail_straddle_tunnel`・`ami_canal`・車庫 5 つ・`ami_rail_yard`。
 
 ### 線路（新描画位置）
 
@@ -562,33 +562,63 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 ### 交差点の路面表示の作り（#156）
 
-交差点の口の停止線と横断歩道を、道路に重ねて敷く路面軌道の way（`waytype=tram_track`・`system_type=0`）で描く。手本は iss の `../refs/iss/src/util/road_misc/intersection.dat`。作り・部品・値は、2026-11-22 にユーザーが決めた（[#156](https://github.com/128na/simutrans-addon-dev/issues/156)。理由は [ADR 0011](../../docs/adr/0011-ami-intersection-marking-as-overlaid-tram-way.md)。見た目はユーザーが PR で確かめる）。
+交差点の手前の右折レーン（導流帯・車線の線・矢印）と、口の停止線・横断歩道を、道路に重ねて敷く路面軌道の way（`waytype=tram_track`・`system_type=0`）で描く。手本は iss の `../refs/iss/src/util/road_misc/intersection.dat`。作り・部品・値は、2026-11-22 にユーザーと進捗管理が決めた（[#156](https://github.com/128na/simutrans-addon-dev/issues/156)。理由は [ADR 0011](../../docs/adr/0011-ami-intersection-marking-as-overlaid-tram-way.md)。見た目はユーザーが PR で確かめる）。
 
-- 役割は way のつながる形で決める
-  - 行き止まり（n・e・s・w）: 交差点へ入る口のタイル。行き止まりの向きが交差点の側で、その辺の手前に横断歩道、その手前に停止線
-  - ほかの形（直線・曲がり・T字・十字・1 タイル）: 交差点のタイル。何も描かない（口に表示を敷くと、交差点のタイルにも表示が載るため）
-- 部品（`blender/catalog.py` の `MARKINGS`）:
+- 右折レーンは交差点の手前の 2 タイルに作る（iss と同じ。ユーザーの決定「案 B」）。口のタイル（S）は交差点の隣、導流帯のタイル（T）は S の手前
+  - T: 道路の線が分かれ、そのあいだに導流帯（斜めの縞）。右折レーンが開く所
+  - S: 3 車線（2 車線の道路は入る 2・出る 1、4 車線の道路の入る側は入る 3）の線、矢印（左折と直進・直進・右折）、停止線、横断歩道。下の道路の真ん中の線（2 車線の中央線、4 車線の車線の境の破線）は、一般道路の路面の色の細い帯で消す
+- 役割は way の名前とつながる形で決める。最後に敷いた way の名前がタイルに残り、つながる向きは足される。1 タイルだけ敷くと、向きはそのままで名前だけが置き換わる（2026-11-22、ゲームで確かめた）
 
-| 名前 | 使う所 | 描くもの | アイコン |
+| 名前 | 使う所 | 絵のある形 | アイコン |
 |---|---|---|---|
-| `ami_mark_stop` | 2 車線の道路（通常の版）の口 | 路側線のあいだの横断歩道（7 本）と、入ってくる車線の半分の停止線 | 停 |
-| `ami_mark_stop_wide` | 4 車線の道路（路面表示の版 `_lane1`・`_lane2`）の入る側の口 | 中央線の側のタイルの辺から路側線までの横断歩道（8 本）と停止線 | 停・広 |
-| `ami_mark_crosswalk_wide` | 4 車線の道路の出る側の口 | 路側線から中央線の側のタイルの辺までの横断歩道（8 本）だけ | 横・広 |
+| `ami_mark_taper` | 2 車線の道路（通常の版）の T | 行き止まり（向きが交差点の側）に導流帯 | 導 |
+| `ami_mark_stop` | 2 車線の道路の S | 行き止まり（向きが T の側。交差点はその反対）に口。横断歩道は路側線のあいだ（7 本）、停止線は新しい中央線から路側線まで | 停 |
+| `ami_mark_stop_wide` | 4 車線の道路（路面表示の版 `_lane1`・`_lane2`）の入る側の T と S | 行き止まり（向きが交差点の側）に導流帯、曲がり（T の側と進む向きの右）に口。横断歩道は中央線の側のタイルの辺から路側線まで（8 本）、停止線も同じ範囲 | 停・広 |
+| `ami_mark_crosswalk_wide` | 4 車線の道路の出る側の口（入る側の S の右の隣） | 曲がり（交差点の側と進む向きの左）に横断歩道（路側線から中央線の側のタイルの辺まで 8 本）だけ | 横・広 |
+| `ami_mark_branch` | 4 車線の口の向きを決める枝 | どの形も何も描かない | 枝 |
 
-- 停止線は左側通行の側（進入する向きの左）。右側通行の版と、4 車線どうしの交差点の中の線は作らない
-- 寸法: 横断歩道の縞は幅 0.5・間 0.5（周期 1.0 で、4 車線の入る側と出る側の縞は中央線をまたいでそろう）、帯はタイルの中心から 1.5〜4.5。停止線は中心がタイルの中心から 0.6、幅は優先道路の十字の停止線と同じ 0.35。描くのは `tools/blender/sheetlib/marking.py`（`MARKING_*`）
+- 上に無い形（直線・T字・十字・1 タイル、種類ごとの残りの形）は何も描かない。交差点のタイルに表示が載っても何も出ない
+
+#### 敷き方
+
+左側通行。進む向きは交差点へ向かう車の向き（2 車線の東の腕なら西向き）。図は西の腕（東へ進んで交差点 J に入る）で、上が北。
+
+```text
+2 車線                         4 車線（北の列が東行き、南の列が西行き）
+   T      S      J                T      S      J
+ [ 導 ]→[ 停 ] [   ]            [   ]→[ 停 ] [   ]   3. 停・広で T→S（最後）
+                                         ↓ 1. 枝で S→O
+ 1. 導で T→S（ドラッグ）                 [ O ]→[   ]   2. 横・広で O→J
+ 2. 停で S（1 回クリック）
+```
+
+- 2 車線（`ami_mark_taper`・`ami_mark_stop`）:
+  1. 導流帯の道具（導）で、T から S へドラッグする。T に導流帯が出る。S には向きの逆の導流帯が出る
+  2. 口の道具（停）で、S を 1 回だけクリックする（S の 1 タイルだけを敷く）。S の名前だけが置き換わり、口が出る
+  - 反対の順でも同じになる: 口の道具で T から S へドラッグし、導流帯の道具で T を 1 回クリックする
+  - 道路のタイルだけを使う。口の右の隣は歩道（別の waytype の way）や建物のことが多く、そこへは way を敷けないため（2026-11-22、ゲームで確かめた。進捗管理の決定「案 B2」）
+- 4 車線（`ami_mark_branch`・`ami_mark_crosswalk_wide`・`ami_mark_stop_wide`）。入る側の S の右の隣が出る側の口（O）:
+  1. 枝の道具（枝）で、S から O へドラッグする。何も出ない
+  2. 横断歩道の道具（横・広）で、O から交差点のタイル J へドラッグする。O に横断歩道が出る
+  3. 停・広の道具で、T から S へドラッグする。T に導流帯、S に口が出る。S は最後に敷く（先に敷くと、1 の枝で名前が置き換わる）
+- 撤去するときは、表示を敷いたタイル（T・S、4 車線は O と J も）の表示を撤去する
+
+#### 寸法・値・置けない所
+
+- 停止線は左側通行の側。右側通行の版と、4 車線どうしの交差点の中の線は作らない
+- 寸法: 横断歩道の縞は幅 0.5・間 0.5（周期 1.0 で、4 車線の入る側と出る側の縞は中央線をまたいでそろう）、帯はタイルの中心から 1.5〜4.5。停止線は中心がタイルの中心から 0.6、幅は優先道路の十字の停止線と同じ 0.35。車線は路側線のあいだ（4 車線は中央線から路側線まで）を 3 等分する。導流帯の縞は線に 45°、間隔 1.0・幅 0.3。描くのは `tools/blender/sheetlib/marking.py`（`MARKING_*`）
 - 路側帯（路側線の外）には、どの種類も横断歩道と停止線を描かない。停止線の路側の端は路側線の内の縁（2026-11-22、ユーザーの指摘。#156）
 - 白の色: 道路の白線（幅 1px）はゲームの画面で路面と混ざって灰色がかって見えるので、面で描く表示は色と発光を落とした（`MARKING_LINE`）。拡大率 1 の画面で、道路の白線と横断歩道の縞の画素の平均がそろうようにした（2026-11-22、ユーザーの指摘。#156）
-- 坂・斜め・分岐の絵は持たない（交差点は平らな所に作る）。雪の絵は夏と同じセル（道路は車道を除雪した想定で、白線は夏と同じ）
+- 下の線を消す帯は一般道路の路面の材質（`blender/render.py` の `MARKING_PATCH`）
+- 坂・斜め・分岐の絵は持たない（交差点は平らな所に作る）。雪の絵は夏と同じセル（道路は車道を除雪した想定で、白線と路面は夏と同じ）
 - 値: 速さ 1、費用 1000、維持費 100、登場 1900（橋脚・盛土と同じ。`blender/ami_dat.py` の `MARKING_VALUES`）。速さは車には効かない。路面電車や汽車が表示につながっても速く走れないように 1 にした
 - pak は道路の `ami_road.pak`（と全部入りの `ami.pak`）。道具は路面軌道のメニューにある（waytype が `tram_track`）。道具の一覧（`lineup.py`）では「交差点の路面表示」
-- 敷き方: 口のタイルから交差点のタイルへ 1 タイル分ドラッグする。口ごとに 1 回ずつ。4 車線どうしの十字では、入る側の口に `_stop_wide`、出る側の口に `_crosswalk_wide` を敷く（左側通行: 東西の道は北が東行き、南北の道は東が南行き）
 - 置けない所（ゲームで確かめた。#156 のコメントと `docs/records/2026-11-22_ami-intersection-marking.md`）:
   - 路面軌道の通る道路: そのタイルの `ami_tram` が表示に置き換わる。路面電車は表示の速さで通り抜ける
   - 線路を横切る所: 線路のタイルが表示に置き換わり、線路が途切れる（踏切はできない）
   - 表示の端に路面軌道・線路を突き当てるとつながる（橋脚・盛土と同じ。[way-addon.md](../../docs/reference/way-addon.md) の 5 章）
 - 重ねたときのふるまい（`OTRPv64_3.exe`、`flat_512.sve`、2026-11-22）: 車は 120 km/h のまま走り、道路の向きは変わらない。表示につなげた路面電車と汽車は、表示の上を 1 km/h で走った（`ingame/marking_check.nut`）
-- 見本: `ingame/marking_sample.nut` を `ingame/marking.sh` で敷く（撮る場所は `marking.sh` の `SPOTS`）。2 車線の十字（C）・優先道路の十字（P。南北の口だけ）・T字（T）・一般道路の 4 車線どうしの十字（W）・高速道路の 4 車線どうしの十字（E）を、温暖側と降雪側に敷く。`[link]` の行で、口が行き止まり、交差点のタイルが十字・直線・T字・曲がりになったことを確かめる（`docs/marking156_*.png`）
+- 見本: `ingame/marking_sample.nut` を `ingame/marking.sh` で敷く（撮る場所は `marking.sh` の `SPOTS`）。2 車線の十字（C）・優先道路の十字（P。南北の腕だけ）・T字（T）・一般道路の 4 車線どうしの十字（W）・歩道つきの 2 車線の十字（K）と、敷いた順の見本（O2・O4。途中で止めた物を並べる）を、温暖側と降雪側に敷く。`[link]` の行で、各タイルの表示の名前と向きを確かめる（`docs/marking156_*.png`）
 
 ### 踏切の作り（#111）
 
@@ -728,7 +758,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 電柱は船のメニューの way-object にある（札は 柱 と版。柵なしと柵つきは札が同じで、名前で見分ける）。電柱だけを立てるときは、柱を立てたい側（道路の側など）の版を選ぶ。柵の歩道に立てるときは、同じ版の柵つきの電柱を重ねる（柵が置き換わる）。同じ版を並べると電線がつながる（「電柱の作り」）
 - 中央分離帯は道路のメニューの壁（way-object）にある（札は 分前・分中・分双）。4 車線は、奥のタイルに基盤の版 `back` と壁 `back`、手前のタイルに基盤の版 `front` と `front_divider` を敷く。輪にするときは、東西の辺の `front_divider` を、角が `back` のタイルの 1 つ手前で止める（「中央分離帯の作り」）
 - 多車線の白線は、道路のメニューの路面表示の版（札の右下が 1〜7）で敷く。4 車線は奥から 1・2、6 車線は 3・4・5、8 車線は 3・6・7・5（「路面表示の版の作り」）
-- 交差点の停止線と横断歩道は、路面軌道のメニューにある（札は 停・横）。口のタイルから交差点のタイルへ 1 タイル分ドラッグして敷く。路面軌道の通る道路と、線路を横切る所には置かない（「交差点の路面表示の作り」）
+- 交差点の右折レーン・停止線・横断歩道は、路面軌道のメニューにある（札は 導・停・横・枝）。2 車線は、導流帯の道具で交差点の 2 つ手前のタイルから 1 つ手前のタイルへドラッグし、口の道具で 1 つ手前のタイルを 1 回クリックする。4 車線は手順が 3 つある。路面軌道の通る道路と、線路を横切る所には置かない（「交差点の路面表示の作り」）
 - 操車場は線路のメニュー（駅の道具）にある。地上の直線の線路の上に建てると、乗客も郵便も扱わない駅になり、列車を止めておける。乗客の駅の隣に建てると、その駅の一部になる（「操車場の作り」）
 - 道路標識は道路のメニューの標識の道具にある。最高速度・一時停止の標識は飾りで、車の速さは変わらない。最低速度の標識は、それより遅い車を通さない。一方通行の標識は、同じタイルにもう一度置くと向きが逆になる（「道路標識の作り」）
 - ベータの既知の課題は [ACCEPTANCE.md の「ベータ版（第 1 弾）での扱い」](ACCEPTANCE.md#ベータ版第-1-弾での扱い)
@@ -925,7 +955,7 @@ PORT=47300 bash ingame/game.sh STOP
 - 運河（#114）: 見た目（水面の色、護岸と笠石の幅、雪の絵）はユーザーが PR で確かめる。本家 125 での読み込みは見ていない。運河と歩道は突き当てるとつながり、船が歩道を通る（上の「運河の作り」）
 - 跨座式モノレール（#113）: 見た目（桁の幅・高さ、柱の位置と太さ、雪の絵）はユーザーが PR で確かめる。高架の上を走る編成と、本家 125 での読み込みは見ていない。分岐の絵は本体が `monorail_track` で自動では選ばない
 - 操車場（#115）: 見た目（通路の形・色・柵の高さ・階段）はユーザーが PR で見る。高架の上に建てたときの浮いた通路（[#159](https://github.com/128na/simutrans-addon-dev/issues/159)）、建設費のずれ（[#160](https://github.com/128na/simutrans-addon-dev/issues/160)）、本家 125 での読み込みは見ていない
-- 交差点の路面表示（#156）: 見た目（縞の太さと数、停止線の位置）はユーザーが PR で確かめる。`_wide` の版は 4 車線用で、6・8 車線の内側のタイル（路側線の無いタイル）には合わない。車両との重なり、本家 125 での読み込みは見ていない
+- 交差点の路面表示（#156）: 見た目（縞の太さと数、停止線の位置、導流帯と矢印の形）はユーザーが PR で確かめる。画面の道具で 1 タイルだけを敷く操作（2 車線の口）は、スクリプトの `build_way` で確かめた。`_wide` の版は 4 車線用で、6・8 車線の内側のタイル（路側線の無いタイル）には合わない。車両との重なり、本家 125 での読み込みは見ていない
 - 電柱（#120）: 見た目（柱の高さ・色、腕木と電線の本数・太さ、柱の位置）と、版の違う電柱の境で電線がずれることはユーザーが PR で確かめる。歩行者・車両との重なり、本家 125 での読み込みは見ていない
 - 中央分離帯（#118）: 見た目（縁石の帯とガードレールの形・色・細さ）と、4 車線の輪の北東の角で分離帯が途切れることは、ユーザーが見る。道路を走る車両との重なり、本家 125 での読み込みは見ていない
 - 道路標識（#122）: 見た目（板の形・色・大きさ、柱の位置・高さ）、6 種の選び方と訳の名前はユーザーが PR で確かめる。最低速度で遅い車が止められることは車を走らせて見ていない（情報の窓の表示だけ）。訳のファイルは OTRP でだけ読めることを見た（本家 125 は見ていない）。左側通行の設定（日本の道路に合わせて選ぶ人が多い）での位置と奥・手前の重なりは見ていない（検証用のセーブは右側通行）。英語の表示では名前だけが出て「飾り」の注記が出ない（dat に説明のキーが無いので、注記は訳のファイルにだけ書いた）。一方通行の板は 4 向きとも画面に正対した上向きの矢印で、効く向きに対して自然に見えるかはユーザーが見る

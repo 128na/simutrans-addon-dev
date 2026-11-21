@@ -1,22 +1,28 @@
 """交差点の路面表示の way（waytype=tram_track。AMI #156）のシート（共通の描画の道具 sheetlib の一部。tools/README.md）。
 
 道路の上に重ねて敷く路面軌道の way の絵で、白線を描く（路面は、下の道路の線を消す細い帯のほかは描かない。下の道路の絵が見える）。
-iss の util/road_misc/intersection.dat と同じく、交差点の手前の 2 タイルに右折レーンを作る（2026-11-22、ユーザーの決定「案 B」）:
-  導流帯のタイル（行き止まり n・e・s・w）: 口のタイルの手前。行き止まりの向き（つながる辺）が交差点の側。右折レーンが開く所で、
-      線が分かれ、そのあいだに導流帯（斜めの縞）を描く
-  口のタイル（曲がり ne・se・sw・nw）: 交差点の隣。右折レーンを含む車線の線・矢印・停止線・横断歩道を描く。曲がりの一方は
-      導流帯のタイル（交差点と反対の側）、もう一方は進む向きの右（枝。下の敷き方）で、交差点の向きは曲がりの形で決まる
-  ほかの形（直線・T字・十字・1 タイル）: 何も描かない
-敷き方（ingame/marking_sample.nut の mouth と同じ順。README の「交差点の路面表示の作り」）:
-  1. 口のタイルから、進む向きの右の隣のタイルへ、枝の way（branch。絵は無い）を敷く
-  2. 4 車線は、出る側の口から交差点のタイルへ crosswalk_wide を敷く（出る側の口は、入る側の口の右の隣。1 の枝の先と同じタイル）
-  3. 最後に、導流帯のタイルから口のタイルへ、stop か stop_wide を敷く。最後に敷いた way の名前がタイルに残り、向きは足される
+iss の util/road_misc/intersection.dat と同じく、交差点の手前の 2 タイルに右折レーンを作る（2026-11-22、ユーザーの決定「案 B」）。
+口のタイル S は交差点の隣、導流帯のタイル T は S の手前。役割は way の名前とつながる形で決める:
+  導流帯（taper・stop_wide の行き止まり n・e・s・w）: 行き止まりの向き（つながる辺）が交差点の側。右折レーンが開く所で、線が分かれ、
+      そのあいだに導流帯（斜めの縞）を描く
+  2 車線の口（stop の行き止まり）: 行き止まりの向きは導流帯の側で、交差点はその反対。車線の線・矢印・停止線・横断歩道を描く
+  4 車線の口（stop_wide の曲がり ne・se・sw・nw）: 曲がりの一方は導流帯、もう一方は進む向きの右（出る側の口）。
+  4 車線の出る側の口（crosswalk_wide の曲がり）: 曲がりの一方は交差点、もう一方は進む向きの左（入る側の口）。横断歩道だけ
+  ほかの形（直線・T字・十字・1 タイル）と、上に無い組: 何も描かない
+敷き方（ingame/marking_sample.nut の approach と同じ順。README の「交差点の路面表示の作り」）。最後に敷いた way の名前がタイルに残り、
+向きは足される。1 タイルだけ敷くと、向きはそのままで名前だけが置き換わる（2026-11-22、ゲームで確かめた）:
+  2 車線: 1. T から S へ taper を敷く（ドラッグ）  2. S だけに stop を敷く（1 回クリック）
+      口の右の隣のタイルは歩道（別の waytype の way）や建物のことが多く、そこへは way を敷けないので、2 車線は道路のタイルだけで作る
+      （2026-11-22、進捗管理の決定「案 B2」）
+  4 車線: 1. S（入る側の口）から右の隣の出る側の口へ branch  2. 出る側の口から交差点のタイルへ crosswalk_wide
+      3. T から S へ stop_wide。どれも道路のタイルの上
 種類（kind）:
-  stop:           2 車線の道路（1 タイルに片側 1 車線ずつ）。路側線のあいだを 3 車線（入る 2・出る 1）に分ける
-  stop_wide:      4 車線の道路（1 タイルに同じ向きの 2 車線。AMI #121 の lane の版の 1・2）の入る側。中央線（タイルの辺）から
+  stop:           2 車線の道路（1 タイルに片側 1 車線ずつ）の口。路側線のあいだを 3 車線（入る 2・出る 1）に分ける
+  taper:          2 車線の道路の導流帯
+  stop_wide:      4 車線の道路（1 タイルに同じ向きの 2 車線。AMI #121 の lane の版の 1・2）の入る側の導流帯と口。中央線（タイルの辺）から
                   路側線までを 3 車線に分ける
-  crosswalk_wide: 4 車線の道路の出る側の口。横断歩道だけ。曲がりの一方は交差点、もう一方は入る側の口（進む向きの左）
-  branch:         口の向きを決める枝。どの形も何も描かない
+  crosswalk_wide: 4 車線の道路の出る側の口。横断歩道だけ
+  branch:         4 車線の口の向きを決める枝。どの形も何も描かない
 路側帯（路側線の外）には、どの種類も横断歩道と停止線を描かない（2026-11-22、ユーザーの指摘。#156）
 位置と幅は道路の白線（road_parts の EDGE_LINE・LINE_W・LINE_TOP・STOP_LINE_W）に合わせる。雪の絵は持たない（道路は車道を除雪した想定で、
 車道の白線と路面は夏と同じ。dat は雪の絵に夏のセルを使う）。坂・斜めの絵は持たない（交差点は平らな所に作る）
@@ -71,7 +77,9 @@ MARKING_LINE = ("marking_line", (0.80, 0.80, 0.82), 0.6, 0.0, 0.35)
 MARKING_PATCH = lambda: noisy_material("marking_patch", *STREET_ASPHALT, scale=60, rough=0.9)
 
 # 種類 → 横断歩道の並び（口のタイル）
-MARKING_KINDS = {"stop": "narrow", "stop_wide": "wide_in", "crosswalk_wide": "wide_out", "branch": None}
+MARKING_KINDS = {"stop": "narrow", "taper": None, "stop_wide": "wide_in", "crosswalk_wide": "wide_out", "branch": None}
+# 車線の境の寸法（MARKING_LANES のキー）
+MARKING_GEOMETRY = {"stop": "stop", "taper": "stop", "stop_wide": "stop_wide"}
 # セル（行, 列）→ 形。位置は線路の way と同じ（ami_dat.py の IMAGES の image[s] など）
 MARKING_DEADENDS = {(0, 5): (0, -1), (0, 6): (-1, 0), (0, 7): (0, 1), (0, 8): (1, 0)}  # 行き止まり → つながる向き
 MARKING_CURVES = {(2, 5): "sw", (2, 6): "nw", (2, 7): "ne", (2, 8): "se"}
@@ -81,10 +89,10 @@ _DIRS = {"n": (0, 1), "e": (1, 0), "s": (0, -1), "w": (-1, 0)}
 
 def marking_curve_dir(kind, curve):
     """曲がりの形 → 口の交差点の向き a（描かない種類・形は None）。
-    stop・stop_wide の口は、交差点と反対（導流帯）と進む向きの右（枝）、crosswalk_wide の口は、交差点と進む向きの左（入る側の口）"""
+    stop_wide の口は、交差点と反対（導流帯）と進む向きの右（出る側の口）、crosswalk_wide の口は、交差点と進む向きの左（入る側の口）"""
     d1, d2 = (_DIRS[c] for c in curve)
     for x, y in ((d1, d2), (d2, d1)):
-        if kind in ("stop", "stop_wide"):
+        if kind == "stop_wide":
             a = (-x[0], -x[1])  # x が交差点と反対（導流帯）、y が進む向きの右
             if y == (a[1], -a[0]):
                 return a
@@ -95,9 +103,9 @@ def marking_curve_dir(kind, curve):
     return None
 
 
-def marking_deadend_draws(kind):
-    """行き止まりの形に導流帯を描くか（stop・stop_wide だけ。crosswalk_wide の行き止まりは交差点のタイル、branch は枝の先）"""
-    return kind in ("stop", "stop_wide")
+def marking_deadend_role(kind):
+    """行き止まりの形に描くもの: "taper"（つながる向きが交差点）、"mouth"（つながる向きが導流帯。2 車線の口）か None"""
+    return {"taper": "taper", "stop_wide": "taper", "stop": "mouth"}.get(kind)
 
 
 # ---------------------------------------------------------------- 形
@@ -206,7 +214,7 @@ def marking_mouth(kind, a, patch=MARKING_PATCH):
         return
     pm = patch()
     _patch(a, pm)
-    outer, b1, b2, edge = MARKING_LANES[kind]
+    outer, b1, b2, edge = MARKING_LANES[MARKING_GEOMETRY[kind]]
     if kind == "stop":  # 新しい中央線（右折レーンと出る車線の境）。横断歩道の手前まで
         _seg("marking_center", a, (-MARKING_HALF, outer + _W2), (MARKING_CENTER_END, outer + _W2), mat)
         stop0, lanes = b1, ((b1, b2, "right"), (b2, edge, "straight_left"))
@@ -225,9 +233,9 @@ def marking_taper(kind, a, patch=MARKING_PATCH):
     mat = material(*MARKING_LINE)
     _patch(a, patch())
     h = MARKING_HALF
-    outer, b1, b2, edge = MARKING_LANES[kind]
+    outer, b1, b2, edge = MARKING_LANES[MARKING_GEOMETRY[kind]]
     e = LINE_W / 2
-    if kind == "stop":  # v = 0 の中央線が、新しい中央線（b1）と右折レーンの境（b2）に分かれる
+    if kind == "taper":  # v = 0 の中央線が、新しい中央線（b1）と右折レーンの境（b2）に分かれる
         p_lo, p_hi = ((-h, 0.0), (h, b1)), ((-h, 0.0), (h, b2))
         _seg("marking_center", a, *p_lo, mat)
         _seg("marking_lane", a, *p_hi, mat)
@@ -241,17 +249,22 @@ def marking_taper(kind, a, patch=MARKING_PATCH):
 
 
 def marking_sheet(sheet, kind, label="M", patch=MARKING_PATCH):
-    """交差点の路面表示の way のシート（3 行）。行き止まりのセル（MARKING_DEADENDS）に導流帯、曲がりのセル（MARKING_CURVES）に口、
-    アイコン（0,0）は仮の絵（AMI は icons.py が描き直す）、カーソル（0,1）は北へ向かう口の絵。MARKING_EMPTY_CELL は空。
+    """交差点の路面表示の way のシート（3 行）。行き止まりのセル（MARKING_DEADENDS）に導流帯か 2 車線の口、曲がりのセル
+    （MARKING_CURVES）に 4 車線の口、アイコン（0,0）は仮の絵（AMI は icons.py が描き直す）、カーソル（0,1）は北へ向かう口の絵。MARKING_EMPTY_CELL は空。
     patch は下の道路の線を消す路面の材質（関数）"""
     set_anchor(ROAD_CY)  # 道路と同じ（dat のオフセット -64,-32）
     cells = {}
-    if marking_deadend_draws(kind):
-        for rc, a in MARKING_DEADENDS.items():
-            clear_models()
-            marking_taper(kind, a, patch)
-            cells[rc] = render_cell(f"{sheet}_{rc[0]}_{rc[1]}")
+    role = marking_deadend_role(kind)
     cursor_a = None
+    for rc, d in MARKING_DEADENDS.items():
+        if role is None:
+            break
+        a = d if role == "taper" else (-d[0], -d[1])
+        clear_models()
+        (marking_taper if role == "taper" else marking_mouth)(kind, a, patch)
+        cells[rc] = render_cell(f"{sheet}_{rc[0]}_{rc[1]}")
+        if a == (0, 1):
+            cursor_a = rc
     for rc, curve in MARKING_CURVES.items():
         a = marking_curve_dir(kind, curve)
         if a is None:
@@ -261,9 +274,12 @@ def marking_sheet(sheet, kind, label="M", patch=MARKING_PATCH):
         cells[rc] = render_cell(f"{sheet}_{rc[0]}_{rc[1]}")
         if a == (0, 1):
             cursor_a = rc
-    clear_models()
-    if cursor_a:
-        marking_mouth(kind, (0, 1), patch)
+    if cursor_a:  # カーソルは北へ向かう口（無ければ導流帯）。アイコンの仮の絵も同じ物から描く
         cells[(0, 1)] = cells[cursor_a]
+    clear_models()
+    if kind in ("stop", "stop_wide", "crosswalk_wide"):
+        marking_mouth(kind, (0, 1), patch)
+    elif kind == "taper":
+        marking_taper(kind, (0, 1), patch)
     cells[(0, 0)] = _s.render_icon(sheet + "_icon", 0.5, shift=(-0.14, 0.2), label=label, style="tram")
     make_sheet(cells, 3, 10, os.path.join(_s.SRC, sheet + ".png"))

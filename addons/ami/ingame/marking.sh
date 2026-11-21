@@ -1,6 +1,6 @@
 #!/bin/bash
 # 交差点の路面表示（#156）の見本と確かめ。NUT（既定は ingame/marking_sample.nut）を流す。
-#   ingame/marking_sample.nut … 交差点の見本（2 車線の十字・優先道路の十字・T字、4 車線どうしの十字、敷いた順の見本 O2・O4）
+#   ingame/marking_sample.nut … 交差点の見本（2 車線の十字・優先道路の十字・T字、4 車線どうしの十字、歩道つきの十字 K、敷いた順の見本 O2・O4）
 #   ingame/marking_check.nut  … 表示を道路に重ねたときの車の速さ・路面電車と汽車が走れるか・路面軌道と線路とのつながりを見る
 # ゲームは work/marking_game/<PORT>/ の写し（GAME_DIR の exe・dll・設定・pak128・addons と保存データ）に AMI の pak を足して起動する。
 # GAME_DIR には書き込まない。EXTRA_PAKS（空白区切り）の pak は写しの addons/pak128/ にだけ入れる。敷いた後はゲームを開いたままにする。
@@ -25,8 +25,13 @@ SPOTS=${SPOTS:-"C 6 4
 P 16 4
 T 26 4
 W 8 12
-O2 44 4
-O4 44 12"}
+K 60 4
+O2a 38 4
+O2b 44 4
+O2c 50 4
+O4a 38 12
+O4b 44 12
+O4c 50 12"}
 
 stop_game() {
   local win; win=$(cd "$WORK" 2> /dev/null && pwd -W) || return 0

@@ -1,4 +1,4 @@
-# AMI: ami_mark_stop_wide（CC BY 4.0）。道路に重ねて敷く交差点の路面表示の way。行き止まりの形が導流帯、曲がりの形が交差点の口。シートは blender/render.py が描く
+# AMI: ami_mark_stop_wide（CC BY 4.0）。道路に重ねて敷く交差点の路面表示の way。行き止まりの形が導流帯か 2 車線の口、曲がりの形が 4 車線の口。シートは blender/render.py が描く
 obj=way
 name=ami_mark_stop_wide
 copyright=AMI (CC BY 4.0)
