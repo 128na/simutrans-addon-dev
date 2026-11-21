@@ -43,7 +43,6 @@ from .track_parts import RAIL_IN, RAIL_OUT, RAIL_Z1
 
 # ---- 踏板（線路に沿ってタイルの端から端まで。道路の路面の上に重ねる）
 PANEL_HALF = 1.25          # 踏板の半幅（経路の中心から。レールの外側 0.52 の外へ約 0.7。iss・pak128 の踏切の板と同じくらい）
-PANEL_TOP = RAIL_Z1        # 踏板の上面（レールの頭と同じ高さ。線路の way のレールと同じ基準面で動かす）
 FLANGE_W = 0.10            # レールの内側の溝（車輪のフランジの通り道）の幅
 _M_PANEL = ("crossing_panel", (0.075, 0.075, 0.08), 0.9)         # ゴムの踏板（黒灰。光が当たって画面では約 0.2 の灰）
 _M_FLANGE = ("crossing_flange", (0.01, 0.01, 0.01), 0.9)          # 溝
@@ -95,15 +94,16 @@ def _strip(path, u0, u1, z, th, mat, name):
 
 
 def _deck(track_path, snow, datums, rail):
-    """踏板とレールの頭・溝。rail はレールの頭の横の範囲（経路の中心からの内側・外側）。
-    線路の way のレールと同じ基準面（datums["rail"]）で動かし、タイルの外を切る"""
+    """踏板とレールの頭・溝。rail はレールの頭の横の範囲（経路の中心からの内側・外側）と上面の高さ。
+    踏板の上面はレールの頭と同じ高さ。線路の way のレールと同じ基準面（datums["rail"]）で動かし、タイルの外を切る"""
+    top = rail[2]
     panel = make_material(_M_PANEL_SNOW if snow else _M_PANEL, "crossing_panel")
-    obs = [_strip(track_path, -PANEL_HALF, PANEL_HALF, PANEL_TOP, PANEL_TOP + 0.3, panel, "crossing_panel")]
+    obs = [_strip(track_path, -PANEL_HALF, PANEL_HALF, top, top + 0.3, panel, "crossing_panel")]
     for side in (-1, 1):
         head = sorted((side * rail[0], side * rail[1]))
         flange = sorted((side * (rail[0] - FLANGE_W), side * rail[0]))
-        obs.append(_strip(track_path, *head, PANEL_TOP + 0.002, 0.01, make_material(_M_RAIL_HEAD, "rail_head"), "rail_head"))
-        obs.append(_strip(track_path, *flange, PANEL_TOP + 0.002, 0.01, make_material(_M_FLANGE, "crossing_flange"),
+        obs.append(_strip(track_path, *head, top + 0.002, 0.01, make_material(_M_RAIL_HEAD, "rail_head"), "rail_head"))
+        obs.append(_strip(track_path, *flange, top + 0.002, 0.01, make_material(_M_FLANGE, "crossing_flange"),
                           "crossing_flange"))
     move = datum_move(datums["rail"])
     for ob in obs:
@@ -194,11 +194,12 @@ def _road_cell(road_png, row, col):
     return cell
 
 
-def crossing_sheet(sheet, road_sheet, datums, rail=(RAIL_IN, RAIL_OUT), road_cells=None, road_snow_rows=4):
+def crossing_sheet(sheet, road_sheet, datums, rail=(RAIL_IN, RAIL_OUT, RAIL_Z1), road_cells=None, road_snow_rows=4):
     """踏切のシート。road_sheet は道路の way のシートのファイル名（src/ の中。先に描いておく）で、その直線のセル（road_cells。
     既定は道路の向き → (行, 列) が ns: (0, 2)・ew: (0, 3)。雪は road_snow_rows 行下）を奥の絵の下地に写す。
     datums は線路の way の基準面（レールと踏板を datums["rail"] で動かし、隣の線路のタイルのレールとつなぐ）。
-    rail はレールの頭の横の範囲（線路の way のレールに合わせる）"""
+    rail はレールの頭の横の範囲と上面の高さ (内側, 外側, 上面)。踏板の上面もこの高さにする。線路の way のレールの値を渡す
+    （既定は sheetlib の track_parts の値。アドオンがレールの寸法を変えたら、その値を渡さないと踏板とレールがずれる）"""
     road_cells = road_cells or {"ns": (0, 2), "ew": (0, 3)}
     road_png = os.path.join(_core.SRC, road_sheet)  # 書き出し先（_s.SRC）は SHEET_ONLY・LAYOUT で替わるが、道路は src/ から読む
     if not os.path.exists(road_png):
