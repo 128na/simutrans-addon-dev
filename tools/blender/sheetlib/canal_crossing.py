@@ -36,8 +36,10 @@ CANAL_CROSSING_HINGE = TILE / 2 - CANAL_BANK  # 桁の軸の、タイルの中�
 RAISE_DEG = 78                 # 閉じた絵で桁を起こす角度（水平から）
 ROAD_DECK_HALF = TILE / 2 - 0.15  # 道路の床の半幅（運河の笠石の外の縁まで）
 RAIL_DECK_HALF = 1.6           # 線路の床の半幅
-DECK_T = 0.12                  # 床の板の厚み
-GIRDER_D = 0.45                # 床の縁の下の桁の深さ（床の板の下から）
+DECK_T = 0.08                  # 床の板の厚み
+# 床の縁の下の桁の深さ（床の板の下から）。桁の下端を運河の水面（CANAL_WATER_Z = −0.45）より上に置く（水面に食い込んで見えないように。
+# 2026-11-22、#117 のユーザーの確認）。道路は下端が −0.28。線路は基準面（datums["rail"]）で画面の下へ動くので、さらに浅くする
+GIRDER_D = {"road": 0.20, "rail": 0.10}
 GIRDER_W = 0.18                # 桁の幅
 RAILING_H = 0.8                # 欄干の高さ（床から）
 RAILING_W = 0.06               # 欄干の柱・手すりの太さ
@@ -127,7 +129,7 @@ def _leaf(kind, hinge, snow, rail, top):
     p.box(-half, half, s0, s1, top - DECK_T, top, deck, "canal_crossing_deck")
     for side in (-1, 1):
         u = side * (half - GIRDER_W / 2)
-        p.box(u - GIRDER_W / 2, u + GIRDER_W / 2, s0, s1, top - DECK_T - GIRDER_D, top - DECK_T, girder, "canal_crossing_girder")
+        p.box(u - GIRDER_W / 2, u + GIRDER_W / 2, s0, s1, top - DECK_T - GIRDER_D[kind], top - DECK_T, girder, "canal_crossing_girder")
     _railings(p, half, s0, s1, top, make_material(_M_RAILING, "canal_crossing_railing"))
     if kind == "road":
         # 起こした桁で見える路面（下ろした絵では、写した道路のセルが上に乗る）
@@ -215,7 +217,7 @@ def canal_crossing_sheet(sheet, canal_sheet, kind, datums=None, rail=None, road_
                 tag = f"{sheet}_{'snow_' if snow else ''}{way_dir}_{'closed' if closed else 'open'}"
                 leaves = {sgn: _leaf(kind, sgn * CANAL_CROSSING_HINGE, snow, rail, top) for sgn in (-1, 1)}
                 if closed:
-                    leaves = {sgn: lf.raised(sgn * CANAL_CROSSING_HINGE, top - DECK_T - GIRDER_D, RAISE_DEG)
+                    leaves = {sgn: lf.raised(sgn * CANAL_CROSSING_HINGE, top - DECK_T - GIRDER_D[kind], RAISE_DEG)
                               for sgn, lf in leaves.items()}
                 far = leaves[-near].build(way_dir, move)
                 near_obs = leaves[near].build(way_dir, move)
