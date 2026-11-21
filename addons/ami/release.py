@@ -21,7 +21,7 @@ DIST = os.path.join(HERE, "dist")
 OUT = os.path.join(HERE, "work", "release")
 TEMPLATE = os.path.join(HERE, "release")
 THUMBNAIL = os.path.join(HERE, "docs", "thumbnail.png")
-KINDS = ("ami_rail", "ami_road", "ami_tram", "ami_extra")  # build.py の KINDS と同じ
+KINDS = ("ami_rail", "ami_road", "ami_tram", "ami_extra", "ami_scenery")  # build.py の KINDS と同じ
 
 
 def main():

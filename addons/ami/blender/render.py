@@ -582,7 +582,7 @@ SHEETS[catalog.SIDEWALK] = lambda: R.sidewalk_sheet(catalog.SIDEWALK, label=SIDE
 
 # 盛土の way（#123）: 高架の脇の地面に敷く法面の楔（sheetlib の embankment_sheet）。法面は芝の土（2026-11-21、ユーザーの決定。#123）。
 # 芝は 2 色のまだら（EMBANKMENT_GRASS の暗い色・明るい色・細かさ）、雪の絵は雪のまだら
-EMBANKMENT_GRASS = ((0.07, 0.16, 0.03), (0.15, 0.30, 0.07), 30.0)
+EMBANKMENT_GRASS = ((0.086, 0.315, 0.03), (0.185, 0.59, 0.07), 30.0)  # ゲームの草地（画面で約 80,147,53）に合わせた
 EMBANKMENT_SNOW = ((0.80, 0.84, 0.90), (0.92, 0.95, 0.99), 30.0)
 _emb_skin = lambda nm, spec: {R.EMBANKMENT_MAT[0]: lambda: R.noisy_material(nm, spec[0], spec[1], scale=spec[2], rough=0.95)}
 for _name, _side in catalog.EMBANKMENTS.items():
