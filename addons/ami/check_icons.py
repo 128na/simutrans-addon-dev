@@ -45,7 +45,7 @@ BG_BORROW = {
     **{_n: "road" for _n in ("ami_sidewalk_asphalt", "ami_sidewalk_brick", "ami_sidewalk_tile", "ami_sidewalk_elev",
                              "ami_wall_sidewalk_single", "ami_wall_sidewalk_back", "ami_wall_sidewalk_front")},  # 同上（歩道の種類・高架・柵。#119）
 }
-HUE_MIN_DIFF = 20  # waytype の違う物どうしの、背景の色相の差の下限（度）。今の値は線路 149〜150・路面軌道 44・道路 219・高速道路 230・モノレール 285。
+HUE_MIN_DIFF = 20  # waytype の違う物どうしの、背景の色相の差の下限（度）。今の値は線路 149〜150・路面軌道 44・道路 219・高速道路 230・モノレール 285、運河 186。
 # 組は dat の waytype なので、道路と高速道路（どちらも road）は比べない
 SATURATION_MIN = 60  # 色相を見る画素の、RGB の最大と最小の差の下限（文字の白・影・絵の灰色を除く）
 
