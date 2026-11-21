@@ -36,19 +36,23 @@ OBJ_ORDER = ("way", "bridge", "tunnel", "way-object", "crossing", "building")
 COLUMNS = ("名前", "種類", "最高速度", "購入費", "維持費", "登場年")
 NOTE = (
     "この一覧はアドオンの定義（dat）から自動で作っています。最高速度は km/h、購入費は cr、維持費は cr/月です。"
-    "壁・橋脚・歩道・車庫は速度の欄を空けています。"
+    "壁・橋脚・歩道・車庫は速度の欄を空けています。踏切の最高速度は「道路/線路」の順です。"
 )
 
 
 def read_dat(path):
-    """dat の 1 つ目の物のキーと値（キーは小文字）。AMI の dat は 1 ファイルに 1 つの物"""
+    """dat の物のキーと値（キーは小文字）。AMI の dat は 1 ファイルに 1 つの物。2 つ目の物があれば止まる（一覧から黙って落とさない）"""
     obj = {}
+    after_sep = False
     with open(path, encoding="utf8") as f:
         for line in f:
             line = line.strip()
             if line.startswith("---"):
-                break
-            if not line or line.startswith("#") or "=" not in line:
+                after_sep = True
+                continue
+            if after_sep and line.lower().startswith("obj="):
+                raise ValueError(f"{os.path.basename(path)}: 1 つの dat に物が 2 つ以上ある（lineup.py は 1 つずつを前提にしている）")
+            if after_sep or not line or line.startswith("#") or "=" not in line:
                 continue
             k, v = line.split("=", 1)
             obj.setdefault(k.strip().lower(), v.strip())
@@ -89,7 +93,10 @@ def kind_label(o):
 def money(v):
     if v is None:
         return ""
-    n = int(v)
+    try:
+        n = int(v)
+    except ValueError:
+        raise ValueError(f"数でない費用: {v}") from None
     return f"{n // 100:,}" if n % 100 == 0 else f"{n / 100:,.2f}"
 
 
@@ -115,7 +122,12 @@ def row(o):
 
 def pak_rows(pak):
     """pak の名前（拡張子なし）に入る物の行。並びは種類（OBJ_ORDER）、名前の順"""
-    prefixes = KINDS.get(pak + ".pak", ("",)) if pak != "ami" else ("",)
+    if pak == "ami":
+        prefixes = ("",)
+    elif pak + ".pak" in KINDS:
+        prefixes = KINDS[pak + ".pak"]
+    else:
+        raise ValueError(f"知らない pak: {pak}（build.py の KINDS）")
     objs = []
     for path in sorted(glob.glob(os.path.join(SRC, "ami_*.dat"))):
         if os.path.basename(path).startswith(prefixes):
@@ -125,6 +137,13 @@ def pak_rows(pak):
             objs.append(o)
     objs.sort(key=lambda o: (OBJ_ORDER.index(o["obj"]) if o.get("obj") in OBJ_ORDER else len(OBJ_ORDER), o["name"]))
     return [row(o) for o in objs]
+
+
+def check_kinds():
+    """種類別の pak の物を合わせると全部入り（ami）と同じになるか。どの KINDS にも当たらない dat があれば、その名前を返す"""
+    every = {r[0] for r in pak_rows("ami")}
+    parts = [r[0] for k in KINDS for r in pak_rows(k[:-4])]
+    return sorted(every - set(parts)) + sorted({n for n in parts if parts.count(n) > 1})
 
 
 def width(s):
@@ -187,10 +206,17 @@ def main():
     ap.add_argument("--version", help="見出しに入れる版の名前")
     ap.add_argument("--format", choices=("txt", "html"), default="txt")
     ap.add_argument("-o", "--output", help="書き出すファイル（無ければ標準出力）")
+    ap.add_argument("--check", action="store_true", help="全部の dat から作れることと、種類別の pak で全部の物を一度ずつ覆うことを確かめる（check.sh）")
     a = ap.parse_args()
-    unknown = [p for p in a.paks if p != "ami" and p + ".pak" not in KINDS]
-    if unknown:
-        sys.exit(f"[lineup] 知らない pak: {' '.join(unknown)}（build.py の KINDS）")
+    if a.check:
+        try:
+            bad = check_kinds()
+        except ValueError as err:
+            sys.exit(f"[lineup] {err}")
+        if bad:
+            sys.exit("[lineup] 種類別の pak に入らないか、二重に入る物: " + " ".join(bad))
+        print(f"[lineup] {len(pak_rows('ami'))} 個の物が種類別の pak に一度ずつ入る")
+        return
     try:
         text = lineup(a.paks, a.version, a.format)
     except ValueError as err:

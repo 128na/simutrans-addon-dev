@@ -66,8 +66,8 @@ step "踏切のシートが今の道路のシートから描かれているか�
 step "車庫の絵の大きさ（箱積み駅舎の箱 1 段に収まるか。check_depot.py）"
 "$PY" -X utf8 "$AMI/check_depot.py"
 
-step "物の一覧が全部の dat から作れるか（lineup.py。知らない obj で止まる）"
-"$PY" -X utf8 "$AMI/lineup.py" --paks ami > /dev/null
+step "物の一覧が全部の dat から作れるか、種類別の pak で全部を覆うか（lineup.py --check）"
+"$PY" -X utf8 "$AMI/lineup.py" --check
 
 step "道具を用意する（makeobj: $MAKEOBJ、dat_linter: $DAT_LINTER）"
 bash "$ROOT/tools/ci/setup-dat-linter.sh" "$DAT_LINTER" "$TOOLS_DIR/dat_linter"
