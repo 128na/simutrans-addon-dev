@@ -45,6 +45,7 @@ SKIP_DATS = ("ex_donors.dat",)
 WAY_BG = {"rail": ((0, 196, 96), (0, 112, 56)), "tram": ((214, 160, 0), (140, 92, 0)),
           "road": ((96, 132, 196), (40, 64, 120)), "expwy": ((70, 90, 190), (24, 30, 96))}
 VERSION_MARK = {"single": "単", "back": "後", "center": "中", "front": "前", "twin": "双"}
+VERSION_MARK.update({f"lane{_n}": str(_n) for _n in range(1, 8)})  # 道路の路面表示の版（ami_road_<種類>_lane<n>。#121）: 右下に n
 DECK = (215, 215, 220)  # 帯の床・柱の色
 BOLT = [(13, 1), (4, 15), (9, 15), (6, 26), (17, 10), (12, 10), (16, 1)]  # 稲妻（32px の座標）
 TRANSPARENT = np.array(R.TRANSPARENT)
@@ -78,7 +79,7 @@ def ref(v):
 def describe(d):
     """dat から、アイコンの決まりに使う中身を取る"""
     name, obj = d["name"], d["obj"]
-    m = re.search(r"_(single|back|center|front|twin)(_catenary|_divider)?$", name)
+    m = re.search(r"_(single|back|center|front|twin|lane[1-7])(_catenary|_divider)?$", name)
     info = dict(name=name, version=m.group(1) if m else None, speed=None, struct=None, label=None)
     if name.startswith(("ami_tram", "ami_embankment")):  # 盛土は tram_track の way（路面軌道の道具の一覧に出る）
         info["way"] = "tram"
