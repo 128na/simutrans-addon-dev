@@ -1,6 +1,6 @@
 # ADR: blender-poc の成果を新しいアドオン AMI として作り、線路 3 種・道路 3 種から始める
 
-> ステータス: Accepted (2026-11-15)
+> ステータス: Superseded by ADR-0008（[0008-ami-scope-second-phase.md](0008-ami-scope-second-phase.md)、2026-11-21）
 > 由来: [addons/blender-poc](../../addons/blender-poc/README.md) の POC の完了
 
 ## 背景と問題
