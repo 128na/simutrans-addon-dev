@@ -424,6 +424,14 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 版の札の漢字は、等倍（13px の札に字の高さ 10px）では細部がつぶれるが、雰囲気で読める（2026-11-21、ユーザーの判断）
 - ゲームで撮るのは `GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> bash ingame/icon_capture.sh`（`work/icons/`。メニューの中の位置はスクリプトの `CURSORS`）
 
+### リリース用のサムネイル（#96）
+
+公開物に使う画像は `docs/thumbnail/` の `thumbnail.png`（2560x1340、OGP の 1.91:1）と `ogp.jpg`（同じ絵の JPEG）。文字なしの画面は `plain.png`。生成画像は使わず、手本の iss（`docs/thumbnail.png`）と同じく、ゲームの画面に文字を重ねて作る。
+
+- 見本の街区は `ingame/thumbnail.nut` が `flat_512.sve` の写しに敷く（保存はしない）。並びはスクリプトの冒頭の表
+- 撮る: `GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> bash ingame/thumbnail_capture.sh`。ゲームを 2560x1400 の画面で起動し、等倍（`gui.set_zoom(3)`）で `work/thumbnail/shot.png` に撮る。敷けなかったときは撮らずに止まる
+- 文字を重ねる: `uv run ingame/thumbnail_compose.py`（`--plain` で文字なしの `plain.png` だけ）。道具欄と状態欄を切り落とすだけで、拡大・縮小はしない。題名・内容・種類の数（`src/` の dat から数える）はスクリプトの頭にある。フォントは Windows の Segoe UI と游ゴシック
+
 ### 後で足すもの
 
 - 旧描画位置（SIS に合う）の線路。新描画位置で全部を作り終えてから、まとめて作る（別の PR でよい）
