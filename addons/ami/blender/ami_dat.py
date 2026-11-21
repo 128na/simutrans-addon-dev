@@ -75,6 +75,8 @@ VALUES = {
     "ami_road_expressway": dict(waytype="road", speed=360, cost=20000, maintenance=500, intro_year=1990),
     # 跨座式モノレール（#113）。値は #110 の一覧（在来線の高架と同じ費用・維持費。速さは pak128 のモノレールの車両の最高 150）
     "ami_monorail_straddle": dict(waytype="monorail_track", speed=150, cost=30000, maintenance=600, intro_year=1900),
+    # 運河（#114）。値は #110 の一覧（速さは pak128 の船の最高 53 km/h が走れる値）
+    "ami_canal": dict(waytype="water", speed=60, cost=25000, maintenance=500, intro_year=1900),
 }
 
 # カーブを斜めの絵で表すシート（pak128 標準の線路と同じ。dat の image[sw]・[nw]・[ne]・[se] が diagonal と同じセルを指す。
@@ -82,6 +84,7 @@ VALUES = {
 DIAG_CURVES = {_t.way for _t in catalog.TRACKS} | {_r.way for _r in catalog.ROADS}  # 道路 3 種もカーブは斜めの絵（README の「道路の作り」）
 # 跨座式モノレール（#113）: 地上・高架の版とも、カーブは斜めの絵（手本の iss の跨座式の dat と同じ）
 DIAG_CURVES |= {catalog.MONORAIL, *catalog.MONORAIL_ELEVS}
+DIAG_CURVES.add(catalog.CANAL)  # 運河（#114）もカーブは斜めの絵
 DIAG_CURVES |= {_r.lane(_n) for _r in catalog.LANE_ROADS for _n in catalog.LANES}  # 路面表示の版（#121）も通常の版と同じ
 CURVE_TO_DIAG = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
 
@@ -156,6 +159,12 @@ for _n in catalog.MONORAIL_ELEVS:
                       maintenance=VALUES[catalog.MONORAIL]["maintenance"] * ELEV_COST_K)
     NO_CLOSE.add(_n)
     ELEVATED.add(_n)
+
+# ---------------------------------------------------------------- 運河（#114）
+# 地上の版だけ（iss の運河と同じ。2026-11-22、ユーザーの決定）。近い斜めの絵は持つ（壁の無い way と同じ）。分岐の絵（1・2）は持たない
+# （本体は water の way の分岐の絵を選ばない。boden/wege/weg.cc の calc_image は track_wt と road_wt だけ）
+BUILT[catalog.CANAL] = catalog.CANAL
+NO_SWITCH = {catalog.CANAL}  # 分岐の絵（image[nse1] など）を書かない way
 
 # ---------------------------------------------------------------- 橋脚の way（#18）
 # 高架の真下の地面のタイルに敷く。waytype は tram_track（iss と同じ。ユーザーの決定、2026-11-18。README の「高架と橋脚の作り」）。
@@ -318,6 +327,8 @@ def dat_text(name, sheet, donor=False):
             if key == "image" and idx in SWITCH_IDX and v["waytype"] == "road" and not ROAD_SWITCH_IMAGES:
                 continue
             if key == "image" and idx in SWITCH_IDX and name == catalog.TRAM and not TRAM_SWITCH_IMAGES:
+                continue
+            if key == "image" and idx in SWITCH_IDX and name in NO_SWITCH:
                 continue
             if key == "image" and sheet in DIAG_CURVES and idx in CURVE_TO_DIAG:
                 row, col = CURVE_TO_DIAG[idx]
@@ -570,7 +581,8 @@ def crossing_dat_text(name, track, road):
 # 列 4 の行 0・1 がアイコン・カーソル）。layout は道の出る向き（0 = 南・1 = 東・2 = 北・3 = 西。simtool.cc の tool_depot_aux）。
 # 費用・維持費は省かず pak128 の既定値を書く（README の「車庫の作り」。省いたり 0 にしたりしない）。dat の値は 1/100 cr
 DEPOT_VALUES = {"track": dict(cost=850000, maintenance=1800), "tram_track": dict(cost=850000, maintenance=1800),
-                "road": dict(cost=700000, maintenance=1800), "monorail_track": dict(cost=850000, maintenance=1800)}
+                "road": dict(cost=700000, maintenance=1800), "monorail_track": dict(cost=850000, maintenance=1800),
+                "water": dict(cost=900000, maintenance=1800)}  # 船の車庫（#114）
 DEPOT_INTRO_YEAR = 1900
 DEPOT_LAYOUTS = 4
 DEPOT_SNOW_ROW = 2  # sheetlib の depot.DEPOT_SNOW_ROW と同じ
@@ -606,6 +618,47 @@ def depot_dat_text(depot):
             row = season * DEPOT_SNOW_ROW
             out.append(f"backimage[{layout}][0][0][0][0][{season}]={sheet}.{row}.{layout},{DEPOT_OFFSET}")
             out.append(f"frontimage[{layout}][0][0][0][0][{season}]={sheet}.{row + 1}.{layout},{DEPOT_OFFSET}")
+    return NL.join(out) + NL
+
+
+# 操車場（building の stop。#115）。シートの並びは sheetlib の yard.py（列 = layout 0〜7、行 0・1 が夏・雪の奥の絵、列 8 の行 0・1 が
+# アイコン・カーソル）。layout は線路の向きと、隣の駅の建物の有無（ビット 0 = 東西、2 = 南・東の端、4 = 北・西の端。本体の
+# hausbauer.cc の build_station_extension_depot。README の「操車場の作り」）。荷を扱わない（enables_* を書かない）。
+# 費用・維持費は省かず書く（#110。pak128 の cost_multiply_station 600 cr・maintenance_building 1800。dat の値は 1/100 cr）
+YARD_VALUES = dict(cost=60000, maintenance=1800, level=1)
+YARD_INTRO_YEAR = 1900
+YARD_LAYOUTS = 8
+YARD_SNOW_ROW = 1  # sheetlib の yard.YARD_SNOW_ROW と同じ
+YARD_ICON_CELL = f"0.{YARD_LAYOUTS}"  # sheetlib の yard.YARD_ICON_CELL と同じ
+YARD_CURSOR_CELL = f"1.{YARD_LAYOUTS}"
+
+
+def yard_dat_text(name):
+    v = YARD_VALUES
+    out = [
+        f"# AMI: {name}（CC BY 4.0）。操車場（荷を扱わない線路の駅の建物）。シートは blender/render.py が描く（sheetlib の yard.py）",
+        "obj=building",
+        f"name={name}",
+        "copyright=AMI (CC BY 4.0)",
+        "type=stop",
+        "waytype=track",
+        f"intro_year={YARD_INTRO_YEAR}",
+        "intro_month=1",
+        "retire_year=2999",
+        "retire_month=1",
+        f"cost={v['cost']}",
+        f"maintenance={v['maintenance']}",
+        f"level={v['level']}",
+        "noinfo=1",
+        "noconstruction=1",
+        f"dims=1,1,{YARD_LAYOUTS}",
+        "needs_ground=1",
+        f"icon=> {name}.{YARD_ICON_CELL}",
+        f"cursor={name}.{YARD_CURSOR_CELL}",
+    ]
+    for season in (0, 1):
+        for layout in range(YARD_LAYOUTS):
+            out.append(f"backimage[{layout}][0][0][0][0][{season}]={name}.{season * YARD_SNOW_ROW}.{layout},{DEPOT_OFFSET}")
     return NL.join(out) + NL
 
 
@@ -711,6 +764,9 @@ def main():
         with open(os.path.join(SRC, depot.name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(depot_dat_text(depot))
         print(f"[dat] {depot.name}.dat")
+    with open(os.path.join(SRC, catalog.RAIL_YARD + ".dat"), "w", encoding="utf8", newline=NL) as f:
+        f.write(yard_dat_text(catalog.RAIL_YARD))
+    print(f"[dat] {catalog.RAIL_YARD}.dat")
     for name, key in catalog.ROADSIGNS.items():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(roadsign_dat_text(name, key))

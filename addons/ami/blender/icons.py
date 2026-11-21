@@ -44,7 +44,8 @@ SKIP_DATS = ("ex_donors.dat",)
 # 背景色（左上 → 右下のグラデーション）。種類で決める
 WAY_BG = {"rail": ((0, 196, 96), (0, 112, 56)), "tram": ((214, 160, 0), (140, 92, 0)),
           "road": ((96, 132, 196), (40, 64, 120)), "expwy": ((70, 90, 190), (24, 30, 96)),
-          "monorail": ((168, 72, 200), (96, 32, 120))}  # モノレール（#113）は紫（色相 285。ほかの waytype と 20 度以上離す。check_icons.py）
+          "monorail": ((168, 72, 200), (96, 32, 120)),  # モノレール（#113）は紫（色相 285。ほかの waytype と 20 度以上離す。check_icons.py）
+          "canal": ((0, 170, 190), (0, 96, 112))}  # 運河（#114）は青緑（色相 186）
 VERSION_MARK = {"single": "単", "back": "後", "center": "中", "front": "前", "twin": "双"}
 VERSION_MARK.update({f"lane{_n}": str(_n) for _n in range(1, 8)})  # 道路の路面表示の版（ami_road_<種類>_lane<n>。#121）: 右下に n
 DECK = (215, 215, 220)  # 帯の床・柱の色
@@ -54,6 +55,7 @@ TRANSPARENT = np.array(R.TRANSPARENT)
 PLATE_TOP = 78
 PLATE_H = 14
 PLATE_CHAR_W = 8
+YARD_LABEL = "操"  # 操車場のアイコンの左上の字と、カーソルの札（#115）
 DEPOT_LABEL = "庫"  # 車庫のアイコンの左上の字と、カーソルの札（#112）
 NS_STEP = (64, -32)  # 南北の直線で、北の隣のタイルの画面のずれ（pak128 のタイルは幅 128・高さ 64）
 
@@ -88,6 +90,8 @@ def describe(d):
         info["way"] = "expwy"
     elif name.startswith("ami_monorail"):  # 跨座式モノレールの way・高架・トンネルと車庫（#113）
         info["way"] = "monorail"
+    elif name.startswith("ami_canal"):  # 運河と船の車庫（#114）
+        info["way"] = "canal"
     elif "road" in name or "sidewalk" in name or obj == "roadsign":  # 歩道（ami_sidewalk*）と歩道の柵（ami_wall_sidewalk_*）は道路の色（#25・#119）。道路標識も（#122）
         info["way"] = "road"
     else:
@@ -100,6 +104,8 @@ def describe(d):
         info.update(kind="pier", label="門" if name.endswith("_gate") else "脚", struct="elev")
     elif name.startswith("ami_sidewalk"):  # 歩道の種類と高架の歩道（#119）も同じ決まり。高架は下の帯
         info.update(kind="sidewalk", label="歩", struct="elev" if name.endswith("_elev") else None)
+    elif obj == "building" and d.get("type") == "stop":  # 操車場（#115）。速度は無く、左上に「操」
+        info.update(kind="yard", label=YARD_LABEL)
     elif obj == "building":  # 車庫（#112）。速度は無く、左上に「庫」
         info.update(kind="depot", label=DEPOT_LABEL)
     elif obj == "roadsign":  # 道路標識（#122）: 字も札も無く、標識の板を 2 倍にした絵だけ（板の模様で見分ける）
@@ -121,6 +127,8 @@ def picture_keys(d, kind, for_cursor):
         return None  # アイコンは中の way の絵（下の icon_layers）
     if kind == "bridge":
         return [["backimage[ns][0]"]]
+    if kind == "yard":  # 1 タイルの南北の線路（layout 6。両端に階段）の奥の絵
+        return [["backimage[6][0][0][0][0][0]"]]
     if kind == "depot":  # 道が南へ出る向き（layout 0）の奥と手前の絵
         return [["backimage[0][0][0][0][0][0]", "frontimage[0][0][0][0][0][0]"]]
     if kind == "sign":  # 北行きの絵（画面の右の角。表が見える）
@@ -370,7 +378,7 @@ def icon_picture(d, info, dats):
     d, keys = icon_source(d, info, dats)
     if info["kind"] == "sign":  # 標識の上の側（板と柱の上）を ICON/2 四方で切り、画素のまま 2 倍にする（板の字がつぶれないように）
         return sign_picture(layers(d, keys))
-    if info["kind"] in ("sidewalk", "depot"):  # 敷石・車庫はタイル 1 枚なので、つなげず、タイル 1 枚を 1/4 にして菱形を見せる
+    if info["kind"] in ("sidewalk", "depot", "yard"):  # 敷石・車庫はタイル 1 枚なので、つなげず、タイル 1 枚を 1/4 にして菱形を見せる
         return down(center_crop(layers(d, keys), 4 * ICON), 4)
     return down(center_crop(layers(d, keys, extend=True), 2 * ICON), 2)
 
