@@ -13,7 +13,7 @@
 // 違えば got/want を、通常の絵と同じなら plain を出す。way-object の絵は番号を読めないので、画面で見る（ex_capture.sh）。
 // 名札は ASCII（MCP 経由の日本語は崩れる）。行頭の空白と // で始まる行は ex_check.sh が消して渡すので、複数行の文字列は書かない
 // 高架の版（名前に _elev_ を含む way）は、地面の座標で敷き（本体が ELEV_UP 段の高さに架ける）、固定の道具と絵の番号の読み出しを
-// ELEV_UP 段のタイルで行う（#82）。way-object は重ねない（null にする）。既定の WAYS には入れていない（区画が地図の南へはみ出す）ので、
+// ELEV_UP 段のタイルで行う（#82）。way-object を重ねるときは ELEV_UP 段の高さに敷く（#85）。既定の WAYS には入れていない（区画が地図の南へはみ出す）ので、
 // WAYS で渡す（ex_check.sh の WAYS。例は ex_check.sh の先頭）
 local WAYS = [["ami_rail_ballast", null], ["ami_rail_concrete", null], ["ami_rail_ladder", null], ["ami_rail_slab", null], ["ami_tram", null], ["ami_rail_ballast_base_single", "ami_wall_rail_single_catenary"], ["ami_rail_ballast_base_back", "ami_wall_rail_back_catenary"], ["ami_rail_ballast_base_center", "ami_wall_rail_center_catenary"], ["ami_rail_ballast_base_front", "ami_wall_rail_front_catenary"]];
 local OX = 150;
@@ -39,7 +39,8 @@ function lay(w, wo, ox, oy, z) {
   local c = function(x, y) { return coord3d(ox + x, oy + y, 0); };
   local line = function(x0, y0, x1, y1) {
     local e = command_x.build_way(pl, c(x0, y0), c(x1, y1), w, true);
-    if (e == null && wo != null) e = command_x.build_wayobj(pl, c(x0, y0), c(x1, y1), wo);
+    // way-object は way の乗る高さに敷く（高架は z = ELEV_UP。#85）
+    if (e == null && wo != null) e = command_x.build_wayobj(pl, coord3d(ox + x0, oy + y0, z), coord3d(ox + x1, oy + y1, z), wo);
     return e;
   };
   // Y・3W: 両隣を先に 1 本で通してから根元と両隣の曲がりを足す（カーブになったタイルから 3 本目を足すと、つながりが崩れた）

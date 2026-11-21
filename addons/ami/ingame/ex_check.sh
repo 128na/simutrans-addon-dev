@@ -5,6 +5,7 @@
 #   GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe PORT=47300 bash ingame/ex_check.sh
 # PORT は必ず渡す（ほかの作業とポートを分けるため）。WAYS で敷く組を替えられる（ex_sample.nut の WAYS の行を置き換える。Squirrel の配列の式）
 #   高架の版の例（#82）: WAYS='[["ami_rail_ballast_elev_single", null], ["ami_rail_ladder_elev_single", null]]'
+#   高架に架線つきの壁を重ねる例（#85）: WAYS='[["ami_rail_ballast_elev_single", "ami_wall_rail_single_catenary"]]'
 GAME_DIR=${GAME_DIR:?GAME_DIR を指定する（例: F:/Simutrans/addon_check）}
 EXE=${EXE:?EXE を指定する（例: OTRPv64_3.exe）}
 PORT=${PORT:?PORT を指定する}
