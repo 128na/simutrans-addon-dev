@@ -73,11 +73,15 @@ VALUES = {
     "ami_road_local": dict(waytype="road", speed=40, cost=5000, maintenance=100, intro_year=1900),
     "ami_road_general": dict(waytype="road", speed=120, cost=8000, maintenance=200, intro_year=1930),
     "ami_road_expressway": dict(waytype="road", speed=360, cost=20000, maintenance=500, intro_year=1990),
+    # 跨座式モノレール（#113）。値は #110 の一覧（在来線の高架と同じ費用・維持費。速さは pak128 のモノレールの車両の最高 150）
+    "ami_monorail_straddle": dict(waytype="monorail_track", speed=150, cost=30000, maintenance=600, intro_year=1900),
 }
 
 # カーブを斜めの絵で表すシート（pak128 標準の線路と同じ。dat の image[sw]・[nw]・[ne]・[se] が diagonal と同じセルを指す。
 # シートのカーブのセル（行 2 の列 5〜8）は描かない。render.py の diag_curves と同じにする）
 DIAG_CURVES = {_t.way for _t in catalog.TRACKS} | {_r.way for _r in catalog.ROADS}  # 道路 3 種もカーブは斜めの絵（README の「道路の作り」）
+# 跨座式モノレール（#113）: 地上・高架の版とも、カーブは斜めの絵（手本の iss の跨座式の dat と同じ）
+DIAG_CURVES |= {catalog.MONORAIL, *catalog.MONORAIL_ELEVS}
 DIAG_CURVES |= {_r.lane(_n) for _r in catalog.LANE_ROADS for _n in catalog.LANES}  # 路面表示の版（#121）も通常の版と同じ
 CURVE_TO_DIAG = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
 
@@ -139,6 +143,19 @@ for _r in catalog.ROADS:
                           maintenance=VALUES[_r.way]["maintenance"] * ELEV_COST_K)
         NO_CLOSE.add(_n)
         ELEVATED.add(_n)
+
+# ---------------------------------------------------------------- 跨座式モノレール（#113）
+# 物の並びは iss の跨座式に合わせる（2026-11-21、ユーザーの決定）: 地上・高架の 3 版（front・center・back。system_type=1）・トンネル。
+# 近い斜めの絵は持たない（iss の dat にキーが無い）。分岐の絵（1・2）は iss と同じく書く（本体は今のところ monorail_track では選ばない。
+# boden/wege/weg.cc の calc_image は track_wt と road_wt だけ select_switch_image を呼ぶ）。高架の値の倍率は線路と同じ ELEV_COST_K
+BUILT[catalog.MONORAIL] = catalog.MONORAIL
+NO_CLOSE.add(catalog.MONORAIL)
+for _n in catalog.MONORAIL_ELEVS:
+    BUILT[_n] = _n
+    VALUES[_n] = dict(VALUES[catalog.MONORAIL], cost=VALUES[catalog.MONORAIL]["cost"] * ELEV_COST_K,
+                      maintenance=VALUES[catalog.MONORAIL]["maintenance"] * ELEV_COST_K)
+    NO_CLOSE.add(_n)
+    ELEVATED.add(_n)
 
 # ---------------------------------------------------------------- 橋脚の way（#18）
 # 高架の真下の地面のタイルに敷く。waytype は tram_track（iss と同じ。ユーザーの決定、2026-11-18。README の「高架と橋脚の作り」）。
@@ -226,6 +243,7 @@ BRIDGES.update({_r.bridge: (_r.way, _r.bridge) for _r in catalog.ROADS})  # 道�
 TUNNEL_DIRS = (("n", 2), ("s", 3), ("e", 4), ("w", 5))
 TUNNELS = {_t.tunnel: (_t.way, _t.tunnel) for _t in catalog.TRACKS}  # 名前 → (中の way, シート)
 TUNNELS.update({_r.tunnel: (_r.way, _r.tunnel) for _r in catalog.ROADS})  # 道路のトンネル（#22）。シートの並びは線路のトンネルと同じ
+TUNNELS[catalog.MONORAIL_TUNNEL] = (catalog.MONORAIL, catalog.MONORAIL_TUNNEL)  # 跨座式モノレールのトンネル（#113）。中の way は地上の版
 
 
 def _head(name, kind, obj, base, cost_k, sheet):
@@ -558,7 +576,7 @@ def crossing_dat_text(name, track, road):
 # 列 4 の行 0・1 がアイコン・カーソル）。layout は道の出る向き（0 = 南・1 = 東・2 = 北・3 = 西。simtool.cc の tool_depot_aux）。
 # 費用・維持費は省かず pak128 の既定値を書く（README の「車庫の作り」。省いたり 0 にしたりしない）。dat の値は 1/100 cr
 DEPOT_VALUES = {"track": dict(cost=850000, maintenance=1800), "tram_track": dict(cost=850000, maintenance=1800),
-                "road": dict(cost=700000, maintenance=1800)}
+                "road": dict(cost=700000, maintenance=1800), "monorail_track": dict(cost=850000, maintenance=1800)}
 DEPOT_INTRO_YEAR = 1900
 DEPOT_LAYOUTS = 4
 DEPOT_SNOW_ROW = 2  # sheetlib の depot.DEPOT_SNOW_ROW と同じ

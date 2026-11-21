@@ -5,7 +5,7 @@
 アドオンのディレクトリで動かす。シート名を渡さなければ全部。render.py は描いたシートについて、最後にこれを別の Blender で動かす
 （文字を描く場面を、シートの場面と分けるため）。決まり（2026-11-21、ユーザーの決定。#25 の案 A・版の字は漢字）:
 
-- アイコン（32px）: 背景色 = 種類（線路・路面軌道・道路・高速道路。WAY_BG）、左上 = 最高速度、右下の黒い札 = 版の漢字
+- アイコン（32px）: 背景色 = 種類（線路・路面軌道・道路・高速道路・モノレール。WAY_BG）、左上 = 最高速度、右下の黒い札 = 版の漢字
   （単・後・中・前・双。VERSION_MARK）、下の帯 = 構造（高架・橋・トンネル。橋脚は高架の帯）。
   絵は、その物の直線のセルを北と南の隣のタイルの位置にもつないで、半分の大きさにしたもの（歩道はタイル 1 枚を 1/4 に）。
   等倍で真ん中を切ると、壁の single は片側しか入らず、橋脚は灰色の塊になって見分けにくかった。
@@ -43,7 +43,8 @@ SKIP_DATS = ("ex_donors.dat",)
 
 # 背景色（左上 → 右下のグラデーション）。種類で決める
 WAY_BG = {"rail": ((0, 196, 96), (0, 112, 56)), "tram": ((214, 160, 0), (140, 92, 0)),
-          "road": ((96, 132, 196), (40, 64, 120)), "expwy": ((70, 90, 190), (24, 30, 96))}
+          "road": ((96, 132, 196), (40, 64, 120)), "expwy": ((70, 90, 190), (24, 30, 96)),
+          "monorail": ((168, 72, 200), (96, 32, 120))}  # モノレール（#113）は紫（色相 285。ほかの waytype と 20 度以上離す。check_icons.py）
 VERSION_MARK = {"single": "単", "back": "後", "center": "中", "front": "前", "twin": "双"}
 VERSION_MARK.update({f"lane{_n}": str(_n) for _n in range(1, 8)})  # 道路の路面表示の版（ami_road_<種類>_lane<n>。#121）: 右下に n
 DECK = (215, 215, 220)  # 帯の床・柱の色
@@ -85,6 +86,8 @@ def describe(d):
         info["way"] = "tram"
     elif name.startswith("ami_road_expressway"):
         info["way"] = "expwy"
+    elif name.startswith("ami_monorail"):  # 跨座式モノレールの way・高架・トンネルと車庫（#113）
+        info["way"] = "monorail"
     elif "road" in name or "sidewalk" in name:  # 歩道（ami_sidewalk*）と歩道の柵（ami_wall_sidewalk_*）は道路の色（#25・#119）
         info["way"] = "road"
     else:
