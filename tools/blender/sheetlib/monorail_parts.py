@@ -139,10 +139,13 @@ def monorail_pier_fills(side):
 #     - 高架の版は、同じ形の柱を下の地面まで延ばす
 # AMI では、跨座式の高架の柱（_supports・_pier_geometry）と同じ並びで、梁を桁の上に渡す。柱はタイルの内側に面を合わせて立てる（跨座式と同じ）。
 # 手前の側（南・東）の柱と梁は手前の絵（frontimage。車両の後に描く）、桁と奥の側の柱・梁は奥の絵に描く（iss の rear・surface と同じ分け方）。
-SUSP_BEAM_BOT = 3.2       # 桁の下面の高さ（way の高さから。iss の地上の桁の下面 約 25px）
-SUSP_BEAM_TOP = 4.5       # 桁の上面の高さ（iss の地上の桁の上面 約 35px）
+# 桁の高さ: 最初は iss の地上の桁（下面 約 25px・上面 約 35px）に合わせたが、ユーザーが渡した懸垂式の車両（Higashiyama_1A）を
+# 走らせると、屋根の吊り具の先と桁の下面の間が約 3px 空いた（pak128 の Schwebebahn は桁の下面が車両の屋根に接する）。
+# 桁を 0.4（約 3px）下げて、吊り具が桁に届くようにした（2026-11-22。#116 の PR の画面）
+SUSP_BEAM_BOT = 2.8       # 桁の下面の高さ（way の高さから。約 22px）
+SUSP_BEAM_TOP = 4.1       # 桁の上面の高さ（約 32px）
 SUSP_BEAM_W = MONO_BEAM_W  # 桁の幅（跨座式と同じ）
-SUSP_ARM_D = 0.6          # 梁の深さ（桁の上に載る。柱の頭は桁の上面 + これ − 食い込み。約 39px）
+SUSP_ARM_D = 0.6          # 梁の深さ（桁の上に載る。柱の頭は桁の上面 + これ − 食い込み。約 36px）
 SUSP_RISE = 50            # 持ち分を上へ広げる行数（柱の頭 約 39px と余り）
 
 _M_SUSP_BEAM = track_noise("susp_beam", MONO_BEAM_LO, MONO_BEAM_HI, MONO_GRAIN)
