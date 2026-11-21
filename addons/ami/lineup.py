@@ -30,13 +30,20 @@ WAYTYPES = {
     "maglev_track": "リニア",
     "narrowgauge_track": "狭軌",
 }
-# 別の waytype を借りている way（橋脚は路面軌道、歩道は運河。iss と同じ作り）。種類はこの名前で出し、速度の欄は空ける
-SPECIAL_WAYS = {"ami_pier_rail": "線路の橋脚", "ami_pier_road": "道路の橋脚", "ami_sidewalk": "歩道"}
+# 別の waytype を借りている物（橋脚・盛土は路面軌道、歩道と歩道の柵は運河。iss と同じ作り）。名前の頭で種類を出し、速度の欄は空ける。
+# 高架（system_type=1）の way には「（高架）」を足す。上から順に当てる
+SPECIAL = {
+    "ami_pier_rail": "線路の橋脚",
+    "ami_pier_road": "道路の橋脚",
+    "ami_sidewalk": "歩道",
+    "ami_wall_sidewalk_": "歩道の柵",
+    "ami_embankment_": "盛土",
+}
 OBJ_ORDER = ("way", "bridge", "tunnel", "way-object", "crossing", "building")
 COLUMNS = ("名前", "種類", "最高速度", "購入費", "維持費", "登場年")
 NOTE = (
     "この一覧はアドオンの定義（dat）から自動で作っています。最高速度は km/h、購入費は cr、維持費は cr/月です。"
-    "壁・橋脚・歩道・車庫は速度の欄を空けています。踏切の最高速度は「道路/線路」の順です。"
+    "壁・柵・橋脚・歩道・盛土・車庫は速度の欄を空けています。踏切の最高速度は「道路/線路」の順です。"
 )
 
 
@@ -68,9 +75,9 @@ def kind_label(o):
     t = o.get("obj")
     wt = waytype(o.get("waytype", ""))
     name = o.get("name", "")
-    for prefix, label in SPECIAL_WAYS.items():
-        if t == "way" and name.startswith(prefix):
-            return label
+    for prefix, label in SPECIAL.items():
+        if name.startswith(prefix):
+            return label + ("（高架）" if t == "way" and o.get("system_type") == "1" else "")
     if t == "way":
         if o.get("system_type") == "1":
             return wt + "（高架）"
@@ -104,7 +111,7 @@ def speed(o):
     t = o.get("obj")
     if t == "crossing":
         return "/".join(o.get(f"speed[{i}]", "?") for i in (0, 1))
-    if t in ("way-object", "building") or o.get("name", "").startswith(tuple(SPECIAL_WAYS)):
+    if t in ("way-object", "building") or o.get("name", "").startswith(tuple(SPECIAL)):
         return ""
     return o.get("topspeed", "")
 
