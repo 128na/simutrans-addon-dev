@@ -6,6 +6,7 @@
 //   C 曲がり・分岐: L字 (28,1)-(34,1)-(34,7) に柵つきの電柱 single、T字 (38,1)-(44,1) と (41,1)-(41,5) と十字 (48,3)-(54,3) と (51,0)-(51,6) に電柱だけ
 //   D 坂: 南北の歩道 (60,0)-(60,8) に電柱だけ。(·,4) を 1 段上げた坂（x59〜61）。急坂は (66,·) に 2 段
 //   E 高架: 東西の一般道路の高架 (2,10)-(12,10) の北 (·,9) に高架の歩道と柵つきの電柱 front、南 (·,11) に電柱だけ。真下の地面に ami_pier_road
+//   F 架線と比べる: 東西の線路 (2,15)-(16,15)（ami_rail_ballast_base_single と架線つきの壁 single）の北 (·,14) の歩道に柵つきの電柱 front（電柱の高さを架線の柱と比べる。#120）
 // 返り値の先頭が ok なら全部敷けて、[check] の期待どおり。違えば先頭が check で、「名前 場所=[…]」が続く。最後に [check] の行が続く
 local OX = 20;
 local OY = 24;
@@ -71,6 +72,15 @@ report += r("E sideS", way(selev, 2, 11, 12, 11));
 foreach (y in [9, 10, 11]) report += r("E pier", way(pier, 2, y, 12, y));
 report += r("E front_pole", obj(PF, 2, 9, 12, 9, 2));
 report += r("E pole", obj(P, 2, 11, 12, 11, 2));
+// F
+local rbase = wd("ami_rail_ballast_base_single");
+local CAT = null;
+foreach (d in wayobj_desc_x.get_available_wayobjs(wt_rail)) if (d.get_name() == "ami_wall_rail_single_catenary") CAT = d;
+if (CAT == null) report += "ami_wall_rail_single_catenary wayobj=[missing]\n";
+report += r("F rail", way(rbase, 2, 15, 16, 15));
+report += r("F cat", obj(CAT, 2, 15, 16, 15));
+report += r("F side", way(sw, 2, 14, 16, 14));
+report += r("F front_pole", obj(PF, 2, 14, 16, 14));
 
 // [check]: タイルに残った way-object の名前（柵と電柱の置き換え）
 function wayobj_name(t) {
@@ -97,6 +107,6 @@ report += expect("D slope", 60, 3, 0, "ami_sidewalk_pole");
 report += expect("E N", 6, 9, 2, "ami_wall_sidewalk_front_pole");
 report += expect("E S", 6, 11, 2, "ami_sidewalk_pole");
 if (OX > 200)
-  report += r("climate", command_x(tool_set_climate).work(pl, c(-2, -6), c(72, 16), "7"));
+  report += r("climate", command_x(tool_set_climate).work(pl, c(-2, -6), c(72, 18), "7"));
 gui.close_all_windows();
 return (report == "" ? "ok\n" : "check\n" + report) + checks;
