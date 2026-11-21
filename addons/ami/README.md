@@ -594,7 +594,7 @@ GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe NUT=ingame/sidewalk_sample
 
 ### 第 2 弾の物の値
 
-[ADR 0008](../../docs/adr/0008-ami-scope-second-phase.md) で足す物の値は、作る前に次のとおり決めた（2026-11-21、ユーザーの決定。[#110](https://github.com/128na/simutrans-addon-dev/issues/110)）。物を作ったら、その値をこの表から物の節へ移す。iss・pak128 の値と並べた比べ方と、確かめた本体の場所は、#110 のコメントにある。
+[ADR 0008](../../docs/adr/0008-ami-scope-second-phase.md) で足す物の値は、作る前に次のとおり決めた（2026-11-21、ユーザーの決定。[#110](https://github.com/128na/simutrans-addon-dev/issues/110)）。物を作ったら、その値をこの表から物の節へ移す。iss・pak128 の値と並べた比べ方は、記録 [2026-11-21_ami-second-phase-values](../../docs/records/2026-11-21_ami-second-phase-values.md)。
 
 決め方:
 
