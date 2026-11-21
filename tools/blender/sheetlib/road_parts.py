@@ -12,6 +12,7 @@ from mathutils import Vector
 
 from .core import (  # noqa: F401
     H,
+    along,
     Part,
     _SNOW,
     box,
@@ -190,6 +191,46 @@ ROAD_PARTS += tuple(Part(n, "bed", "lane", _M_WALL, _wall_shape(sg, EXPWY_WALL_U
                          corridor=EXPWY_WALL_U, thick=EXPWY_WALL_W) for n, sg in (("wallL", -1), ("wallR", 1)))
 
 ROAD_PARTS += (Part("endw", "bed", "lane", _M_WALL, _end_wall(EXPWY_WALL_W, EXPWY_WALL_H), "wall", "end", tall=True),)
+
+# 中央分離帯（AMI #118。ADR 0008）: 4 車線（道路を 2 タイル並べる）の上下線の境に立つ、縁石の帯とガードレール。手前のタイルの、奥の側壁の
+# 位置に立てる（ユーザーの指定、2026-11-21。iss の center_divider と同じく、タイルの辺に沿う細い帯）。側壁と同じ位置（経路から
+# EXPWY_WALL_U〜タイルの端の少し内側）に左右 1 本ずつ作り、select_walls が奥の 1 本だけを残す（pname が median で始まる部品）。
+# 分岐・十字では、ほかの経路の車道（中心から EXPWY_WALL_U）に入る部分を削る（側壁と同じ）
+MEDIAN_U = EXPWY_WALL_U - 0.25  # 縁石の帯の内側（経路から）。外側は側壁の外の面と同じ（EXPWY_WALL_U + EXPWY_WALL_W）
+MEDIAN_W = EXPWY_WALL_W + 0.25  # 縁石の帯の幅
+MEDIAN_CURB_H = 0.15            # 縁石の帯の高さ
+MEDIAN_RAIL_Z = (0.45, 0.72)    # ガードレールの板の下端・上端（路面から）
+MEDIAN_RAIL_T = 0.05            # ガードレールの板の厚み
+MEDIAN_POST = (0.10, 0.70, 2.0)  # 支柱の太さ・高さ（路面から）・間隔
+_M_MEDIAN_CURB = ("median_curb", (0.62, 0.61, 0.59))
+_M_MEDIAN_RAIL = ("median_rail", (0.78, 0.79, 0.80))
+
+
+def _median_shapes(s):
+    """中央分離帯の縁石の帯・ガードレール（s=-1 が左、1 が右）。斜めは側壁と同じく経路からの距離に k を掛ける。"""
+    def curb(path, k):
+        u0, u1 = s * MEDIAN_U * k, s * (MEDIAN_U + MEDIAN_W) * k
+        return sweep(path, [(u0, 0.0), (u1, 0.0), (u1, MEDIAN_CURB_H), (u0, MEDIAN_CURB_H)][::s])
+
+    def rail(path, k):
+        uc = s * (MEDIAN_U + MEDIAN_W / 2) * k
+        # 板は帯の中心線の両側に 1 枚ずつ（上下線の両方から見える両面のガードレール）
+        boards = [sweep(path, [(uc + d - MEDIAN_RAIL_T / 2, MEDIAN_RAIL_Z[0]), (uc + d + MEDIAN_RAIL_T / 2, MEDIAN_RAIL_Z[0]),
+                               (uc + d + MEDIAN_RAIL_T / 2, MEDIAN_RAIL_Z[1]), (uc + d - MEDIAN_RAIL_T / 2, MEDIAN_RAIL_Z[1])])
+                  for d in (-MEDIAN_POST[0], MEDIAN_POST[0])]
+        pw, ph, step = MEDIAN_POST
+        posts = []
+        for p, ang in along(path, step, step / 2):
+            n = Vector((math.sin(ang), -math.cos(ang), 0))
+            c = Vector((p.x, p.y, 0)) + n * uc
+            posts.append(box(c.x, c.y, ph / 2, pw, pw, ph, rot=ang))
+        return merge(boards + posts)
+    return curb, rail
+
+
+ROAD_PARTS += tuple(Part(f"median_{n}{'L' if s < 0 else 'R'}", "bed", "lane", mat, shp, "median", tall=True,
+                         corridor=EXPWY_WALL_U, thick=EXPWY_WALL_W)
+                    for s in (-1, 1) for n, mat, shp in zip(("curb", "rail"), (_M_MEDIAN_CURB, _M_MEDIAN_RAIL), _median_shapes(s)))
 
 EXPWY_PIER_ACROSS = 2 * EXPWY_WALL_U  # 高架の橋脚の、道を横切る向きの長さ。床がタイルいっぱいなので、両側の壁の下まで届かせて床の縁から見せる（中央だけの柱は床に隠れた）
 
