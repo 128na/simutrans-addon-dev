@@ -13,6 +13,7 @@
 - 結果を #115 に書き、見た目の案を返した。ユーザーの決定（進捗管理から、2026-11-22）: 案 A（線路脇の構内通路）、`dims=1,1,8`、地上の直線の `ami_rail_yard` 1 種
 - 描く共通部分 `tools/blender/sheetlib/yard.py` を足した（`yard_sheet`）。車庫の `depot.py` の箱・層の描き方と位置（`BUILDING_DROP`）を使い回す
 - AMI 側: `blender/catalog.py` の `RAIL_YARD`、`blender/ami_dat.py` の `yard_dat_text`・`YARD_VALUES`、`blender/render.py` の `SHEETS`、`blender/icons.py`（札は「操」）、`lineup.py`（種類「線路の操車場」）
+- ユーザーの指摘（2026-11-22、進捗管理から）「線路と離れすぎていている。プラットフォームの線路寄りに合わせるとよいかな」を受け、通路の線路の側の縁を、線路の中心から 3.1 から 1.0 へ寄せた（タイル 1 辺 = 10）。1.0 は、見本で選ばれる乗客の駅 `train_platform_early`（pak128 の `SNFOSstations.png` の layout 6）のプラットフォームの線路の側の縁を、絵の画素から測った値（行 96 で縁が x≈51、下の角が (25.5,108.8)。地面の高さの縁として計算が合う）
 - 見本 `addons/ami/ingame/yard_sample.nut` を足し（撮る場所は `sample_spots.sh` の `YARD_SPOTS`）、`sample_parallel.sh` で温暖・降雪に敷いて撮った（ポート 47210〜）
 
 ## 分かったこと（事実）
