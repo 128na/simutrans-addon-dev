@@ -580,6 +580,15 @@ SHEETS[catalog.PIER_ROAD] = lambda: R.pier_sheet(catalog.PIER_ROAD, R.FLAT, labe
 SIDEWALK_LABEL = "S"  # アイコンの文字（仮。アイコンはステップ 13 でまとめて作る）
 SHEETS[catalog.SIDEWALK] = lambda: R.sidewalk_sheet(catalog.SIDEWALK, label=SIDEWALK_LABEL, paving=SIDEWALK_PAVING, snow=ROAD_SNOW)
 
+# 盛土の way（#123）: 高架の脇の地面に敷く法面の楔（sheetlib の embankment_sheet）。法面は芝の土（2026-11-21、ユーザーの決定。#123）。
+# 芝は 2 色のまだら（EMBANKMENT_GRASS の暗い色・明るい色・細かさ）、雪の絵は雪のまだら
+EMBANKMENT_GRASS = ((0.07, 0.16, 0.03), (0.15, 0.30, 0.07), 30.0)
+EMBANKMENT_SNOW = ((0.80, 0.84, 0.90), (0.92, 0.95, 0.99), 30.0)
+_emb_skin = lambda nm, spec: {R.EMBANKMENT_MAT[0]: lambda: R.noisy_material(nm, spec[0], spec[1], scale=spec[2], rough=0.95)}
+for _name, _side in catalog.EMBANKMENTS.items():
+    SHEETS[_name] = (lambda n, s: lambda: R.embankment_sheet(n, s, mat_skin=_emb_skin("ami_embankment_grass", EMBANKMENT_GRASS),
+                                                             snow_skin=_emb_skin("ami_embankment_snow", EMBANKMENT_SNOW)))(_name, _side)
+
 # 踏切（#111）: 道路の種類ごとに 1 枚（線路の 4 種で共有）。奥の絵の下地に、その道路の直線のセルを写すので、道路のシートの後に描く
 # （SHEETS の登録順に描く。別の Blender で並べて描くときは、道路のシートを先に描き終えておく）。
 # レールと踏板は線路の way と同じ基準面（_DATUMS の rail。4 種で同じ）。レールの横の範囲と上面の高さ（踏板の上面）も線路と同じ値を渡す（#129）
