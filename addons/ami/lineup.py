@@ -6,7 +6,7 @@
 
 手で書かず dat から作るので、一覧は dat と必ず一致する。どの dat がどの pak に入るかは build.py の KINDS（名前の頭）。
 release.py は zip を作るときに、選んだ pak の分の一覧（txt）を ami_lineup.txt として入れる。
-列: 名前・種類・最高速度（km/h）・購入費（cr）・維持費（cr/月）・登場年。dat の cost・maintenance は 1/100 cr なので 100 で割る。
+列: 名前・種類・最高速度（km/h）・購入費（cr）・維持費（cr/月）・登場年。dat の cost・maintenance は 1/100 cr なので 100 で割る（roadsign の cost は cr 単位なのでそのまま。#122）。
 知らない obj があれば止まる（新しい種類を足したら KIND_LABELS を直す）。
 """
 import argparse
@@ -94,6 +94,8 @@ def kind_label(o):
         return f"踏切（{waytype(o.get('waytype[0]', ''))}×{waytype(o.get('waytype[1]', ''))}）"
     if t == "building" and o.get("type") == "depot":
         return f"{wt}の車庫"
+    if t == "roadsign":
+        return "道路標識"
     raise ValueError(f"{o.get('name')}: 知らない obj（{t} {o.get('type', '')}）。lineup.py の kind_label に足す")
 
 
@@ -111,7 +113,7 @@ def speed(o):
     t = o.get("obj")
     if t == "crossing":
         return "/".join(o.get(f"speed[{i}]", "?") for i in (0, 1))
-    if t in ("way-object", "building") or o.get("name", "").startswith(tuple(SPECIAL)):
+    if t in ("way-object", "building", "roadsign") or o.get("name", "").startswith(tuple(SPECIAL)):
         return ""
     return o.get("topspeed", "")
 
@@ -121,7 +123,7 @@ def row(o):
         o["name"],
         kind_label(o),
         speed(o),
-        money(o.get("cost")),
+        money(o.get("cost")) if o.get("obj") != "roadsign" else f"{int(o['cost']):,}",  # roadsign の cost は cr 単位（way-addon.md の 5 章）
         money(o.get("maintenance")),
         o.get("intro_year", ""),
     )
