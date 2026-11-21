@@ -1252,10 +1252,11 @@ def _emb_solid(hfun, top, exits=""):
         verts.append(Vector((x, y, z)))
         return len(verts) - 1
 
-    def at(x, y):   # つながる辺の点は外へ EMB_OVERLAP ずらす（隣のタイルの絵と重ねて、つなぎ目に 1px の透けが出ないように）
+    def at(x, y):   # つながる辺の点は外へ EMB_OVERLAP ずらす（隣のタイルの絵と重ねて、つなぎ目に 1px の透けが出ないように）。
+        z = top * min(1.0, max(0.0, hfun(x, y)))   # 高さは辺の元の点で決め、辺の断面のまま延ばす（隣の楔と高さが合う）
         x += EMB_OVERLAP * ((x >= half - 1e-6 and "e" in exits) - (x <= -half + 1e-6 and "w" in exits))
         y += EMB_OVERLAP * ((y >= half - 1e-6 and "n" in exits) - (y <= -half + 1e-6 and "s" in exits))
-        return v(x, y, top * min(1.0, max(0.0, hfun(x, y))))
+        return v(x, y, z)
 
     for i in range(n + 1):
         for j in range(n + 1):
@@ -1274,7 +1275,7 @@ def _emb_solid(hfun, top, exits=""):
     for k in range(len(ring)):
         t0, t1 = idx[ring[k]], idx[ring[(k + 1) % len(ring)]]
         b0, b1 = low[k], low[(k + 1) % len(ring)]
-        if side_of[k] not in exits and (verts[t0].z - bottom > 1e-6 or verts[t1].z - bottom > 1e-6):
+        if side_of[k] not in exits and (verts[t0].z > 1e-6 or verts[t1].z > 1e-6):   # 高さ 0 の辺には側面を作らない
             faces.append((b0, b1, t1, t0))   # 外を向く側面
     faces.append(tuple(reversed(low)))   # 底（下を向く）
     return verts, faces

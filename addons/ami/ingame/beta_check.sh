@@ -12,7 +12,7 @@ GAME_DIR=${GAME_DIR:?GAME_DIR に検証用のフォルダを指定する}
 EXE=${EXE:?EXE を指定する（例: OTRPv64_3.exe）}
 PORT=${PORT:?PORT に MCP のポートを指定する}
 SAVE=${SAVE:-flat_512}
-PAKS=${PAKS:-"dist/ami_rail.pak dist/ami_road.pak dist/ami_tram.pak dist/ami_extra.pak"}
+PAKS=${PAKS:-"dist/ami_rail.pak dist/ami_road.pak dist/ami_tram.pak dist/ami_extra.pak dist/ami_scenery.pak"}
 NUT=ingame/beta_check.nut
 source "$(dirname "$0")/mcp_client.sh"
 M="python -X utf8 $MCP_CLIENT --port $PORT"

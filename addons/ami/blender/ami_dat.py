@@ -382,7 +382,7 @@ def pier_dat_text(name, sheet):
     return NL.join(out) + NL
 
 # 盛土の way（#123。ADR 0008 の景観 6）: 高架の脇の地面に敷く法面の楔。waytype は橋脚と同じ tram_track、速さ 1（ADR 0008）。値は #110 の一覧
-EMBANKMENT_VALUES = dict(PIER_VALUES)
+EMBANKMENT_VALUES = dict(waytype="tram_track", cost=1000, maintenance=100, intro_year=1900, topspeed=1)
 # 雪の絵（[1]）の行のずらし。シートを描く側の tools/blender/sheetlib/sheetlib.py の _EMB_SNOW_ROW と同じ値にする
 EMBANKMENT_SNOW_ROWS = 4
 # 曲がり（image[sw] など）は行 2 の列 0〜3 の曲がりのセル。斜めの絵（diagonal）は持たない（本体は曲がりの絵を使い、斜めに敷くと角が並ぶ）

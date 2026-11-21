@@ -1,6 +1,7 @@
 """AMI の配る zip を作る（アドオンのディレクトリで。先に `python -X utf8 build.py` で dist/ を作っておく）。
 
     python -X utf8 release.py --version beta.1 --paks ami_rail ami_road ami_tram ami_extra
+    （第 2 弾の景観を入れるときは ami_scenery も並べる。#123）
 
 zip（work/release/ami-<版>.zip）の中身:
     pak128/<pak>.pak   --paks で選んだ dist/ の pak（名前は拡張子なし）。ゲームの addons/ に展開すると addons/pak128/ に入る

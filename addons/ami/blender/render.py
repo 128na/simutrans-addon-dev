@@ -26,6 +26,7 @@
     src/ami_pier_road.png     道路の高架の真下の地面に敷く橋脚の way
     src/ami_tram.png          路面軌道（tram_track）の通常の版。道路の上に重ねて敷く想定で、コンクリートの床・縁の帯・レールの頭・溝だけ（段も壁も無い）
     src/ami_sidewalk.png      歩道の way（道路の隣のタイルに敷く。敷石と、つながらない辺の縁石）
+    src/ami_embankment_<front|back>.png  盛土の way（高架の脇の地面に敷く芝の法面の楔。#123）
     work/                    セルごとの生の描画結果（確認用）
 """
 import dataclasses
