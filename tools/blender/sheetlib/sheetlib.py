@@ -745,6 +745,13 @@ DIAG_WIDTHS = {"gauge": DIAG_RAIL, "bed": DIAG_BALLAST}
 
 
 def track_sheet(profile="new"):
+    """線路のシート（中身は _track_sheet）。描くあいだだけ、描き分けの "mat_skin"（無くてよい）で材質を名前で差し替える
+    （core の named_materials。road_sheet と同じ。AMI の線路の基盤・高架の躯体のコンクリート。#78）"""
+    with named_materials(TRACK_PROFILES[profile].get("mat_skin")):
+        _track_sheet(profile)
+
+
+def _track_sheet(profile="new"):
     prof = TRACK_PROFILES[profile]
     half = TILE / 2
     N, S, E, W, O = (0, half), (0, -half), (half, 0), (-half, 0), (0, 0)
