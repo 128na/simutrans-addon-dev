@@ -433,7 +433,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 ## 対象
 
-- Simutrans 本家 125.0.1 と OTRP（pak128）。OTRP だけの絵（分岐の絵・近い斜め）は本家では使われないだけ
+- Simutrans 本家 125.0.1 と OTRP（pak128）。OTRP だけの絵（分岐の絵・近い斜め・分岐の追加画像）は本家では使われないだけで、本家用の pak は分けない（ベータで決めた。2026-11-21、ユーザーの決定）
 - 画像は 256px セル（`pak256` で切り出し、ゲームは pak128）
 
 ## ライセンス
@@ -464,13 +464,14 @@ python -X utf8 build.py                                                        #
 - 同じシートの通常の描画とレイアウト検証用の描画を同時に動かさない。セルごとの生の絵（`work/<シート>_<セル>.png`）の名前が同じで、互いのセルを取り込んだシートができた（2026-11-17）
 - `src/`（dat とシート）はコミットする。`dist/` と `work/` はコミットしない
 - 配る zip は `python -X utf8 release.py --version <版> --paks <pak>...`（`work/release/ami-<版>.zip`。`--paks` は `dist/` の pak の名前を拡張子なしで並べる）。中身は `pak128/` の pak と、`release/readme.txt`（遊ぶ人向けの説明。`{version}` を版の名前に置き換える）・`release/license.txt`（CC BY 4.0 と帰属）。全部入りの `ami` と種類別を同時に選ぶと止まる（同じ物を二重に読む）。`--extract` で `work/release/ami-<版>/` にも展開する
+  - 配る形（2026-11-21、ユーザーの決定。#91）: このリポジトリの GitHub リリース（プレリリース）に、種類別の 4 つを入れた zip を置く。全部入りの `ami.pak` は入れない（同じフォルダに両方を置くと二重に読む）。ベータの版は `beta.<n>`、タグは `ami-beta.<n>`。第 1 弾は `python -X utf8 release.py --version beta.1 --paks ami_rail ami_road ami_tram ami_extra`
 - 精細化のラウンドの版（#56）: `blender/round.py` が、在来線一式を `_round<n>` の名前で描いて `rounds/ami_round<n>.pak` を作る（`src/`・`dist/` は変えない）。ラウンドの描き分けは `round.py` の `ROUND_SETTINGS`（ラウンド 1〜7 の値は、ラウンド 8 で本番に入れる前の `render.py` に重ねる値。今の `render.py` に重ねると二重にかかる）。在来線のほかの系統（`rail_slab`・`tram`・`road`）は `AMI_FAMILY=<系統>` で選び、描き分けは `blender/round_<系統>.py`、pak は `rounds/ami_<系統>_round<n>.pak`。描かずに `python -X utf8 blender/round.py <n>` だけを流すと、今の `src/` の絵を `_round<n>` の名前にした pak を作る（本番の絵をラウンドの版と並べて撮るとき）。`rounds/` の pak は記録としてコミットする。見本は `SUFFIX=_round<n> EXTRA_PAKS=rounds/ami_round<n>.pak bash ingame/sample_parallel.sh`、くどさは `ingame/calib_capture.sh`（`WAYS_NUT`・`PAKS`・`NUT`。検証用のフォルダの写しで起動する。基盤・高架の版は `NUT=ingame/calib_struct.nut`）と `tools/blender/busy_measure.py`（基盤・高架の版は `BUSY_REF` に通常の版の名前を渡し、その範囲に限った値で判定する）。橋・トンネルは `NUT=ingame/calib_bt.nut`（トンネルは地形を作るので `PRE=1`）、壁・橋脚を重ねた版は `NUT=ingame/calib_wall.nut`（重ねる前と比べるのは `BUSY_PAIR`）、拡大率ごとの値は `ZOOMS` と `BUSY_BYZOOM=1`で測る（物差しは [way-addon.md](../../docs/reference/way-addon.md) の 11 章）。回し方はスキル [way-refine-rounds](../../.claude/skills/way-refine-rounds/SKILL.md)
 - 設定は `blender/catalog.py`（軌道の種類と、そこから導く way・基盤・高架・橋・トンネルの名前）、`blender/render.py`（描き分け・シート名）、`blender/ami_dat.py`（dat と値）、`blender/addon_config.py`（判定の道具が読む対応表）
 
 ## 導入と検証
 
 ゲームでの確認は blender-poc と同じく、アドオンを確かめるゲームの OTRP 版で `flat_512.sve` を開き、MCP のスクリプトを流す。
-makeobj は本家と同じもの（60.12）なので、本家での確認はしない。
+makeobj は本家と同じもの（60.12）なので、ふだんの確認は OTRP だけで行う。配る pak の本家 125.0.1 での読み込みは、配る前にユーザーが確かめる（スクリプトが使えない。ACCEPTANCE の 6-4）。
 
 ```bash
 GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe bash ingame/sample_check.sh
