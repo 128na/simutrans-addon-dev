@@ -423,7 +423,7 @@ def _road_sheet(style="street"):
         # 路面表示の版の交差点（T字・十字・分岐の絵・1 タイル）は線なしの路面（#121。2026-11-21、ユーザーの決定）。並べた多車線の
         # 交差点で、どの道路を後から敷いても中がつながる
         for pos_, job in list(jobs.items()):
-            if _junction(job[0]) in ("single", "nse", "new", "nsw", "sew", "nsew") or job[0] == "single":
+            if _junction(job[0]) in ("single", "nse", "new", "nsw", "sew", "nsew"):
                 jobs[pos_] = (job[0], job[1], [], *job[3:])
     walls = prof.get("walls")
     wall_sheet, write_walls, wall_only = prof.get("wall_sheet"), prof.get("write_walls", True), prof.get("wall_only", False)

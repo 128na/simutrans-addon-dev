@@ -69,7 +69,8 @@ function lay(name, ox, oy) {
   s += expect(name + " L4 (5,1)", ox + 5, oy + 1, name);
   // L6
   s += row("L6 3", 3, 4) + row("L6 4", 4, 5) + row("L6 5", 5, 6);
-  s += expect(name + " L6 (2,5)", ox + 2, oy + 5, name + "_lane4");
+  s += expect(name + " L6 (2,4)", ox + 2, oy + 4, name + "_lane3") + expect(name + " L6 (2,5)", ox + 2, oy + 5, name + "_lane4")
+     + expect(name + " L6 (2,6)", ox + 2, oy + 6, name + "_lane5");
   // L8
   s += row("L8 3", 3, 8) + row("L8 6", 6, 9) + row("L8 7", 7, 10) + row("L8 5", 5, 11);
   s += r("L8 cross", command_x.build_way(pl, c(5, 7), c(5, 13), w, true));
@@ -91,6 +92,7 @@ function lay(name, ox, oy) {
   s += expect(name + " LD (18,1)", ox + 18, oy + 1, name + "_lane1");
   s += r("LD6 3", stair(ln[3], ox + 18, oy + 8, 5)) + r("LD6 4", stair(ln[4], ox + 19, oy + 8, 5))
      + r("LD6 5", stair(ln[5], ox + 20, oy + 8, 5));
+  s += expect(name + " LD6 (18,9)", ox + 18, oy + 9, name + "_lane3");
   return s;
 }
 
