@@ -294,6 +294,7 @@ ex 画像を持つ way だけが対象。形は blender-poc の見本（`ingame/
   - 敷いた組: 在来線の基盤の 4 版（`ami_rail_ballast_base_<版>`）と高架の 4 版（`_elev_<版>`）に、同じ版の架線つきの壁（`ami_wall_rail_<版>_catenary`）を重ねた 8 組。way-object は way の乗る高さ（高架は 2 段上）の座標で敷く。
   - 確かめ方: 高架の組と、同じ版の地上の組を、Y字分岐・三方分岐の根元の 4 向きで同じ場所へ飛んで撮り（温暖・降雪、等倍）、高架の画面を 32px（2 段）ずらして背景を引いた物の画素を比べた（`tools/blender/shift_diff.py`）。差は高架の床の側面の厚み、雪の模様の点、画面の端の別の物だけで、分岐のタイルの架線・壁・レールには無かった。way の ex の番号も地上と同じだった。
   - 地上の版の架線は way と同じ経路に張られている（#67、[記録](../records/2026-11-21_ami-rail-switch-ex.md)）ので、高架の架線も下の way と同じ経路に張られる。`OTRPv64_3.exe`、`flat_512.sve`、2026-11-21。[記録](../records/2026-11-21_ami-elev-catenary-ex.md)
+  - 確かめていない: ラダー軌道・道路の高架、架線の無い壁を重ねた組（way-object の絵の選び方は way の種類によらないので、同じ結果になる見込み）
 - 公開版の OTRP は `v63_4`（2026-11-21 から。それまでは `teamhimeh/simutrans` の `v63_3`）。`v63_3` は 9.1 の KUTA_v6 のコミットを含む。`v63_3` と、`128na/simutrans` の `feature/script-save`（`1cc2e78b9`）・`v63_4`（2026-11-21）の間で、選ぶ処理と読む処理のファイル（`boden/wege/weg.cc`・`boden/grund.cc`・`obj/wayobj.cc`・`obj/wayobj.h`・`descriptor/way_desc.h`・`descriptor/way_obj_desc.h`・`descriptor/reader/way_reader.cc`・`way_obj_reader.cc`）の差は、`v63_4` の `weg.cc` の情報表示の 1 行（車両のずれの表示）だけ（`git diff`、2026-11-21）。v63.3・v63.4 でも同じ絵が選ばれると読める（ゲームでは確かめていない）
 
 ### 9.5 本家での読み込み

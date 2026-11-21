@@ -32,11 +32,13 @@
   - single: 12〜408
   - front: 113〜734
   - back・center: 1420〜7282
-- 差を赤にした画像では、差は次の 3 つだけだった（例: `addons/ami/docs/ex85_diff_back_YE.png`、back の Y字の東向き）
+- 64 組の差を赤にした画像では、差は次の 4 つだけだった（例: `addons/ami/docs/ex85_diff_back_YE.png`・`ex85_diff_back_3WE.png`・`ex85_diff_center_snow_YS.png`）
   - 高架の床の側面（高架の躯体は地上の基盤より厚い。床の広い back・center で多い）
   - 雪の床の細かい点（雪の模様）
   - 画面の端に入った隣の区画の物
+  - マウスの下のタイルの強調と虫眼鏡のカーソル（撮った画面に写る。降雪の center の Y字の南向き（数が最大の 7282 の組）の右端の赤い面は、地上の画面にだけ写った強調だった。撮った画面を並べて見て確かめた）
 - 分岐のタイルの架線・壁・レールには差が無かった
+- 動かない物を外す処理が本物の差を隠していないかを、外さずに数えて見た（温暖の center の Y字の東向き、single の三方分岐の北向き）。増えたのは名札と床の縁だけで、架線・壁・レールに差は出なかった。外した画素の数は `shift_diff.py` の出力の `fixed=` に出る
 - 比べ方が差を拾えることの対照
   - 地上の single と高架の back を比べると 20902
   - 地上の Y字の東向きと三方分岐の東向き（同じ版）を比べると 7467
@@ -50,7 +52,7 @@
   - 列は左から、地上の single、高架の single・back・center・front
   - 行は上から、東・南・西・北向きの根元
   - 画面の x 10〜570・y 160〜510 を切り出した。地上の列は、高架の列より絵が 32px 下に出る
-- `ex85_diff_back_YE.png`: 高架の back と地上の back の差（赤）
+- `ex85_diff_back_YE.png`・`ex85_diff_back_3WE.png`・`ex85_diff_center_snow_YS.png`: 高架と地上の同じ版の差（赤）。画面は地上の組（暗くしてある）
 
 ## 推測・未確認事項
 
@@ -63,7 +65,8 @@
 ## 結果どうしたか
 
 - `ingame/ex_sample.nut` で、way-object を way の乗る高さで敷くように直した
-- `tools/blender/shift_diff.py` を足した（`tools/README.md` に載せた）
+- `tools/blender/shift_diff.py` を足した（`tools/README.md` に載せた）。`ingame/ex_check.sh` の先頭に、高架に架線つきの壁を重ねる `WAYS` の例を足した
+- `addons/ami/README.md` の「架線つきの壁を高架に重ねた組は確かめていない」を、この結果に替えた
 - `docs/reference/way-addon.md` の 9.4 の「確かめていない」を、この結果に替えた
 - 遊ぶ人向けの `release/readme.txt` の既知の課題から #85 の行を外し、`ACCEPTANCE.md` の後に回した課題から #85 を外した
 - 絵・dat は変えていない
