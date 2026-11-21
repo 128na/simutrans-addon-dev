@@ -21,7 +21,7 @@ Y字、三方分岐などOTRPでのみ表示可能なものも含まれていま
 zip の中の pak128 フォルダを、Simutrans の addons フォルダ（無ければ作る）に入れてください。
   例: <Simutrans のフォルダ>/addons/pak128/ami_rail.pak
 pak は種類ごとに分かれています。使わない種類は入れなくてもかまいませんが、ami_extra.pak は線路・道路の壁と橋脚が入っているので、ami_rail.pak か ami_road.pak を使うときは一緒に入れてください。
-主な中身は次のとおりです（すべてを載せてはいません）。
+主な中身は次のとおりです（すべてを載せてはいません。すべての物の一覧は ami_lineup.txt にあります）。
 
   ami_rail.pak   線路：地上・高架・橋・トンネル
   ami_road.pak   道路：地上・高架・橋・トンネル
