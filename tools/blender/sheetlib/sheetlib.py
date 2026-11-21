@@ -1241,7 +1241,14 @@ PIER_GATE_FRONT_ROW = 4
 _GATE_CENTER_FRONT = ("diag_nw",)
 
 
-def pier_gate_sheet(sheet, datums, label="G"):
+def pier_gate_sheet(sheet, datums, label="G", mat_skin=None):
+    """門型の橋脚の way のシート（中身は _pier_gate_sheet）。mat_skin（無くてよい）は描くあいだだけの材質の名前による差し替え
+    （pier_sheet と同じ）。柱と梁の材質の名前は角・辺ごとに pier_post_<角>・pier_beam_<辺>（_gate_parts の角と辺）"""
+    with named_materials(mat_skin):
+        return _pier_gate_sheet(sheet, datums, label)
+
+
+def _pier_gate_sheet(sheet, datums, label="G"):
     """門型の橋脚の way のシート（AMI。#18 の追加）。セルの位置・高さ・基準面・坂・持ち分は単柱の橋脚（pier_sheet）と同じ。
     柱と梁の置き方は _gate_parts。梁と柱の上端は躯体の下面より PIER_GATE_BEAM_EMBED 上（躯体に食い込む）で、梁の深さは PIER_GATE_BEAM_D
     （躯体の下面より下に見えるのは PIER_GATE_BEAM_SHOW）。
