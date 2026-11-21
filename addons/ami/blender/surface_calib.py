@@ -67,7 +67,7 @@ def _concrete(R, name, rgb, step):
         nt = m.node_tree
         N, L = nt.nodes, nt.links
         bsdf = N["Principled BSDF"]
-        bsdf.inputs["Roughness"].default_value = 0.9
+        bsdf.inputs["Roughness"].default_value = 0.8  # 今の材質（core の material() の既定）と同じ。変えるのは色だけ
         tc = N.new("ShaderNodeTexCoord")
         sep = N.new("ShaderNodeSeparateXYZ")
         L.new(tc.outputs["Object"], sep.inputs["Vector"])
