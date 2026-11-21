@@ -260,6 +260,8 @@ T字のカーブの向きは、blender-poc の見本（`ingame/switch_auto.nut`�
   - 道路の T字を固定するときの選択肢の名前（`feature/switch-image-override` の `gui/ground_info.cc` の `switch_choice_label`）は、選択 1（dat の「2」）が sew は東、nse は南、new は西、nsw は北で、選択 2（「1」）はその反対。線路の絵は名前の側の本線の端と枝をつなぐカーブ（9.2 の表）。名前の向きへ走ってきた車が枝へ曲がる跡として道路の絵を描くと、カーブは枝と名前の反対側の端をつなぎ、線路と向きが逆になる（AMI の道路の轍で描いて、ゲームで固定して確かめた。2026-11-19）
   - 道路の十字を固定するときの選択肢（`feature/switch-image-override` の `gui/ground_info.cc`）は、値 1「十字（左右が直進）」が `image[nsew2]`、値 2「十字（上下が直進）」が `image[nsew1]`。言葉は線路の絵（タイルの角を結ぶ直線。9.2 の表）に合わせたもので、道路の南北・東西の軸（画面ではどちらも斜め）とは対応しない
   - AMI の道路（`addons/ami`）で確かめた: 区画 H の渡り口で、自動選択の絵が固定の `image[…1]` と同じで、通常の T字と違う（`way_x.get_image_id()`）。固定の道具 `tool_set_switch_image` は `"" + wt_road + ",1"` で `image[…2]`、`",2"` で `image[…1]` になる（2026-11-19、`OTRPv64_3.exe`。道具は本体の `feature/switch-image-override` の版にだけある）。
+- 線路の渡り線（隣り合う平行の 2 本を、向かい合う T字どうしで 1 タイルつなぐ形）: 信号の無いときの自動選択は、両方の T字とも通常の T字の絵になる。列車が渡る経路を予約すると、2 タイルとも分岐の絵に変わり、通った後もその絵のまま残る（約 1 秒おきに 100 回読んだ間）。iss（`iss_wtg_0240_back`・`front`）と AMI（在来線の通常の版・基盤の版）で同じだった（`OTRPv64_3.exe`、2026-11-21、[記録](../records/2026-11-21_ami-curve-switch-variants-study.md)）
+- スクリプトでの癖: 固定の道具の効き目は、同じ `run_squirrel` の呼び出しの中では `get_image_id()` に出ず、次の呼び出し（約 2 秒後）で出た（呼び出しを分けたことか、時間が経ったことかは分けていない）。渡り線を `build_way` で敷くと両端のタイルがその way に置き換わるので、線をそれぞれの way で敷き直す（つながりは残る。同じ記録）
 - 確かめ方: ゲームで T字を作り、タイルを開いて選択肢を順に選ぶ。スクリプトなら `command_x(tool_set_switch_image).work(pl, pos, "" + wt_rail + ",1")` で選び、`way_x(...).get_image_id()` で絵が変わることを見る（OTRP 本体の自動テスト `test_switch_image_override.nut`）。
 
 ### 9.4 ex 画像が自動で選ばれる線路の形
