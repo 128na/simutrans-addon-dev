@@ -730,6 +730,38 @@ def yard_dat_text(name):
     return NL.join(out) + NL
 
 
+# 道路標識（roadsign。#122）。値は #110 の一覧（費用 500 cr。roadsign の cost は cr 単位で、makeobj が 100 倍する。維持費のキーは無い）。
+# 効き目は一方通行（single_way）と最低速度（min_speed）だけ。止まれ・最高速度は飾り（本体に速さの上限のキーが無い。#122 の案 A）
+ROADSIGN_COST = 500
+ROADSIGN_INTRO_YEAR = 1900
+ROADSIGN_EFFECT = {"one_way": "single_way=1", "min_50": "min_speed=50"}
+ROADSIGN_OFFSET_LEFT = 14  # 左側通行のときのずらし（本体の既定と同じ値を明示する。obj/roadsign.cc の calc_image）
+ROADSIGN_ICON_CELL = "0.4"  # sheetlib の roadsign.ROADSIGN_ICON_CELL と同じ
+ROADSIGN_CURSOR_CELL = "1.4"  # sheetlib の roadsign.ROADSIGN_CURSOR_CELL と同じ
+ROADSIGN_OFFSET = "-64,-32"  # 道路の way と同じ（sheetlib の ROAD_CY）
+
+
+def roadsign_dat_text(name, key):
+    out = [
+        f"# AMI: {name}（CC BY 4.0）。道路標識。シートは blender/render.py が描く（sheetlib の roadsign.py）",
+        "obj=roadsign",
+        f"name={name}",
+        "copyright=AMI (CC BY 4.0)",
+        "waytype=road",
+        f"intro_year={ROADSIGN_INTRO_YEAR}",
+        "intro_month=1",
+        "retire_year=2999",
+        "retire_month=1",
+        f"cost={ROADSIGN_COST}",
+        f"offset_left={ROADSIGN_OFFSET_LEFT}",
+    ]
+    if key in ROADSIGN_EFFECT:
+        out.append(ROADSIGN_EFFECT[key])
+    out += [f"icon=> {name}.{ROADSIGN_ICON_CELL}", f"cursor={name}.{ROADSIGN_CURSOR_CELL}"]
+    out += [f"image[{i}]={name}.0.{i},{ROADSIGN_OFFSET}" for i in range(4)]
+    return NL.join(out) + NL
+
+
 def main():
     os.makedirs(SRC, exist_ok=True)
     for name, sheet in BUILT.items():
@@ -812,6 +844,10 @@ def main():
     with open(os.path.join(SRC, catalog.RAIL_YARD + ".dat"), "w", encoding="utf8", newline=NL) as f:
         f.write(yard_dat_text(catalog.RAIL_YARD))
     print(f"[dat] {catalog.RAIL_YARD}.dat")
+    for name, key in catalog.ROADSIGNS.items():
+        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
+            f.write(roadsign_dat_text(name, key))
+        print(f"[dat] {name}.dat")
 
 
 if __name__ == "__main__":

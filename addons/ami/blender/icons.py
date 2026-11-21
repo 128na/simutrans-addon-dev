@@ -10,7 +10,7 @@
   絵は、その物の直線のセルを北と南の隣のタイルの位置にもつないで、半分の大きさにしたもの（歩道はタイル 1 枚を 1/4 に）。
   等倍で真ん中を切ると、壁の single は片側しか入らず、橋脚は灰色の塊になって見分けにくかった。
   壁は版の札だけ（中央分離帯つきは左上に「分」、電柱と柵つきの電柱は左上に「柱」）、架線は左上に稲妻、橋脚は左上に「脚」「門」、歩道は左上に「歩」、車庫は左上に「庫」（絵は道が南へ出る向きの建物を 1/4 に）、
-  盛土は左上に「盛」と版の札（背景は路面軌道の色。tram_track の way）
+  盛土は左上に「盛」と版の札（背景は路面軌道の色。tram_track の way）、道路標識は道路の色に標識の板を 2 倍にした絵だけ（#122）
 - カーソル（256px のセル）: その物の直線の絵（トンネルは坑口）に、アイコンと同じ背景色の札で「速度 + 版」（例 160後）
 - 絵と札の中身は dat から読む（名前・obj・waytype・topspeed と、image[ns] などのキーが指すセル）。dat の icon・cursor が指すセルに書く
 - シート名を渡すと、そのシートに書くアイコン・カーソルと、そのシートの絵から作るアイコン・カーソル（トンネルは中の way の絵、
@@ -92,7 +92,7 @@ def describe(d):
         info["way"] = "monorail"
     elif name.startswith("ami_canal"):  # 運河と船の車庫（#114）
         info["way"] = "canal"
-    elif "road" in name or "sidewalk" in name:  # 歩道（ami_sidewalk*）と歩道の柵（ami_wall_sidewalk_*）は道路の色（#25・#119）
+    elif "road" in name or "sidewalk" in name or obj == "roadsign":  # 歩道（ami_sidewalk*）と歩道の柵（ami_wall_sidewalk_*）は道路の色（#25・#119）。道路標識も（#122）
         info["way"] = "road"
     else:
         info["way"] = "rail"
@@ -112,6 +112,8 @@ def describe(d):
         info.update(kind="yard", label=YARD_LABEL)
     elif obj == "building":  # 車庫（#112）。速度は無く、左上に「庫」
         info.update(kind="depot", label=DEPOT_LABEL)
+    elif obj == "roadsign":  # 道路標識（#122）: 字も札も無く、標識の板を 2 倍にした絵だけ（板の模様で見分ける）
+        info["kind"] = "sign"
     elif name.startswith("ami_embankment"):  # 盛土（#123）: 左上に「盛」、右下に版（前・後）
         info.update(kind="embankment", label="盛")
     else:
@@ -135,6 +137,8 @@ def picture_keys(d, kind, for_cursor):
         return [["backimage[6][0][0][0][0][0]"]]
     if kind == "depot":  # 道が南へ出る向き（layout 0）の奥と手前の絵
         return [["backimage[0][0][0][0][0][0]", "frontimage[0][0][0][0][0][0]"]]
+    if kind == "sign":  # 北行きの絵（画面の右の角。表が見える）
+        return [["image[0]"]]
     if kind in ("wall", "catenary"):
         # 近い斜めの分け合うタイル用（twin）は直線を持たないので、平行な 2 つの斜め（nw・se）を重ねる
         return [[f"back{k}", f"front{k}"] for k in ("image[ns]", "image[s]", "image[n]")] + \
@@ -378,9 +382,19 @@ def cell_digest(sheet, r, c):
 
 def icon_picture(d, info, dats):
     d, keys = icon_source(d, info, dats)
+    if info["kind"] == "sign":  # 標識の上の側（板と柱の上）を ICON/2 四方で切り、画素のまま 2 倍にする（板の字がつぶれないように）
+        return sign_picture(layers(d, keys))
     if info["kind"] in ("sidewalk", "depot", "yard"):  # 敷石・車庫はタイル 1 枚なので、つなげず、タイル 1 枚を 1/4 にして菱形を見せる
         return down(center_crop(layers(d, keys), 4 * ICON), 4)
     return down(center_crop(layers(d, keys, extend=True), 2 * ICON), 2)
+
+
+def sign_picture(c):
+    ys, xs = np.nonzero(c[..., 3] > 0.05)
+    out = np.zeros((ICON // 2, ICON // 2, 4), np.float32)
+    if len(ys):
+        over(out, c, ICON // 4 - (xs.min() + xs.max()) // 2, 2 - ys.min())
+    return out.repeat(2, 0).repeat(2, 1)
 
 
 def put(sheet, r, c, rgba):
