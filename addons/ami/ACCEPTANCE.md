@@ -23,7 +23,7 @@ AMI の初版を「できた」と言うための条件。blender-poc の [ACCEP
 | 4-2 | 橋の高さ・橋脚の位置は仮。橋の坂の傾き | [#90](https://github.com/128na/simutrans-addon-dev/issues/90) |
 | 4-3 | 線路 4 種と道路 3 種だけ（路面軌道には橋・トンネルが無い） | 正式版に向けて改めて決める |
 
-表に無い、ベータの後に回した課題: 壁つきの線路を並べた間の渡り線で、壁と架線の柱が崩れて見える（#96 のサムネイルを撮るときに見つかった。直す issue はまだ無い。2026-11-21、ユーザーの決定で既知の課題に入れた）、[#85](https://github.com/128na/simutrans-addon-dev/issues/85)（高架に架線つきの壁を重ねたときの分岐の追加画像）、[#89](https://github.com/128na/simutrans-addon-dev/issues/89)（1/2 の画面で線路が粒に見える）、[#26](https://github.com/128na/simutrans-addon-dev/issues/26)（旧描画位置）、[#46](https://github.com/128na/simutrans-addon-dev/issues/46)（道路の分岐の絵）。開発の道具の課題: [#97](https://github.com/128na/simutrans-addon-dev/issues/97)（icon・cursor の参照先の検査）、[#98](https://github.com/128na/simutrans-addon-dev/issues/98)（スキルへのリンク）。ロードマップの表で弾 1 のまま起票していないもの（木まくらぎ・FFU・路面軌道 40/80・道路の種類・橋の種類・ゆるやかな分岐・踏切・転車台）は #61。
+表に無い、ベータの後に回した課題: 壁つきの線路を並べた間の渡り線で、壁と架線の柱が崩れて見える（#96 のサムネイルを撮るときに見つかった。直す issue はまだ無い。2026-11-21、ユーザーの決定で既知の課題に入れた）、[#89](https://github.com/128na/simutrans-addon-dev/issues/89)（1/2 の画面で線路が粒に見える）、[#26](https://github.com/128na/simutrans-addon-dev/issues/26)（旧描画位置）、[#46](https://github.com/128na/simutrans-addon-dev/issues/46)（道路の分岐の絵）。開発の道具の課題: [#97](https://github.com/128na/simutrans-addon-dev/issues/97)（icon・cursor の参照先の検査）、[#98](https://github.com/128na/simutrans-addon-dev/issues/98)（スキルへのリンク）。ロードマップの表で弾 1 のまま起票していないもの（木まくらぎ・FFU・路面軌道 40/80・道路の種類・橋の種類・ゆるやかな分岐・踏切・転車台）は #61。
 
 ## 1. 全種類に共通
 
