@@ -214,3 +214,113 @@ def suspended_pier_fills(side, elevated=False):
         return make
     return tuple((Part(f"susp_pier_{'front' if near else 'back'}", "rail", "gauge", _M_SUSP_PIER, None, tall=True, front=near), maker(near))
                  for near in (False, True))
+
+
+# ---------------------------------------------------------------- モノレールの電化の way-object（給電レールと碍子。#116）
+# 電車のモノレールの車両（ユーザーが渡した Higashiyama_1A など）は、電化した way でしか走らない。電化は own_waytype=electrified_track の
+# way-object で付ける（本体の weg_t の IS_ELECTRIFIED）。物は方式ごとに 2 つ（2026-11-22、進捗管理の決定。#116）:
+#   ami_monorail_power（跨座式用）: 桁の両の側面に給電レールと碍子
+#   ami_monorail_suspended_power（懸垂式用）: 桁の下面の両脇に給電レールと、柱の所ごとに碍子
+# way-object の絵は way の高さを基準に描かれ、桁の高さは方式で違うので、見た目が合うのはそれぞれの方式の way の上だけ（README）。
+# 手前の側のレール・碍子は手前の絵（frontimage。車両の後に描く）、奥の側は奥の絵。桁は holdout（透明に描いて、後ろを隠す）で置き、
+# 桁の向こうの奥のレールを隠す（way の絵の桁の上に、奥のレールが描かれないように）。画面で手前と奥の決まらない向き（経路が _FRONT に沿う）の
+# レールは、両側とも奥の絵に描く
+POWER_RAIL_W = 0.1        # 給電レールの横幅（画面で約 1px）
+POWER_RAIL_H = 0.16       # 給電レールの高さ
+POWER_INS = (0.16, 0.18, 0.26)  # 碍子（経路に沿う長さ・横幅・高さ）
+POWER_INS_IN = 0.35       # 碍子をタイルの辺の中点からタイルの内へ寄せる量（辺ちょうどだと持ち分で半分に切られる）
+POWER_STRADDLE_Z = 0.28   # 跨座式: 給電レールの下面の高さ（桁の側面の中ほど。桁の上面は MONO_BEAM_TOP）
+POWER_SUSP_DROP = 0.04    # 懸垂式: 給電レールを桁の下面より下げる量（下面の縁にぶら下げる）
+POWER_RISE = SUSP_RISE    # 持ち分を上へ広げる行数（懸垂式の桁の高さまで）
+
+_M_POWER_RAIL = ("power_rail", (0.16, 0.16, 0.17), 0.5, 0.6)       # 鋼の給電レール（暗い灰色）
+_M_POWER_INS = ("power_insulator", (0.86, 0.84, 0.76), 0.4, 0.0)   # 磁器の碍子（白に近い象牙色）
+
+
+def _holdout():
+    import bpy
+    m = bpy.data.materials.get("power_beam_holdout")
+    if m is None:
+        m = bpy.data.materials.new("power_beam_holdout")
+        m.use_nodes = True
+        nt = m.node_tree
+        nt.nodes.clear()
+        out = nt.nodes.new("ShaderNodeOutputMaterial")
+        ho = nt.nodes.new("ShaderNodeHoldout")
+        nt.links.new(ho.outputs[0], out.inputs["Surface"])
+    return m
+
+
+def _near_sign(path):
+    """経路の右（sweep の u の正）が手前なら 1、左が手前なら -1、決まらなければ 0"""
+    d = Vector((path[-1].x - path[0].x, path[-1].y - path[0].y))
+    if d.length < 1e-6:
+        return 0
+    d.normalize()
+    dot = Vector((d.y, -d.x)).dot(_FRONT)
+    return 0 if abs(dot) < 1e-3 else (1 if dot > 0 else -1)
+
+
+def _power_spec(suspended):
+    """方式ごとの (桁の半幅, 桁の下面, 桁の上面, レールの横の範囲 (内, 外), レールの高さの範囲 (下, 上))"""
+    if suspended:
+        u = SUSP_BEAM_W / 2
+        z1 = SUSP_BEAM_BOT - POWER_SUSP_DROP
+        return u, SUSP_BEAM_BOT, SUSP_BEAM_TOP + MONO_TOP_T, (u - POWER_RAIL_W, u), (z1 - POWER_RAIL_H, z1 + POWER_SUSP_DROP)
+    u = MONO_BEAM_W / 2
+    return u, MONO_BEAM_TOP - MONO_ELEV_BEAM_D, MONO_BEAM_TOP + MONO_TOP_T, (u, u + POWER_RAIL_W), (POWER_STRADDLE_Z, POWER_STRADDLE_Z + POWER_RAIL_H)
+
+
+def power_parts(suspended):
+    """電化の way-object の部品（TRACK_PROFILES の "track_parts"）: 桁の holdout と、手前・奥の給電レール"""
+    _, zb, zt, (ui, uo), (z0, z1) = _power_spec(suspended)
+
+    def beam(path, k):
+        u = _power_spec(suspended)[0] * k
+        return sweep(path, [(-u, zb), (u, zb), (u, zt), (-u, zt)])
+
+    def rail(near):
+        def shape(path, k):
+            s = _near_sign(path)
+            sides = [s if near else -s] if s else ([] if near else [1, -1])
+            geo = [sweep(path, [(g * ui * k, z0), (g * uo * k, z0), (g * uo * k, z1), (g * ui * k, z1)][::g])
+                   for g in sides]
+            return merge(geo) if geo else None
+        return shape
+    return (
+        Part("power_beam_hold", "rail", "gauge", _holdout, beam, tall=True),
+        Part("power_rail_back", "rail", "gauge", _M_POWER_RAIL, rail(False), tall=True, thin=True),
+        Part("power_rail_front", "rail", "gauge", _M_POWER_RAIL, rail(True), tall=True, thin=True, front=True),
+    )
+
+
+def power_insulator_fills(suspended):
+    """碍子（TRACK_PROFILES の "cell_fills"）。桁がタイルを出入りする辺の中点（と桁の端）から少し内の、桁の両脇に 1 つずつ。
+    手前の側は手前の絵、奥の側は奥の絵（手前と奥の決まらない向きは両方とも奥）"""
+    u, zb, _, (ui, uo), (z0, z1) = _power_spec(suspended)
+    L, W, Hh = POWER_INS
+    if suspended:  # 桁の下面から下へぶら下げる
+        zc, off = zb - Hh / 2, u - W / 2
+    else:  # 桁の側面から外へ出す（レールを支える）
+        zc, off = (z0 + z1) / 2, u + W / 2
+
+    def maker(near):
+        def make(paths):
+            geo = []
+            for q, o in _supports(paths):
+                q, o = Vector((q.x, q.y)), Vector((o.x, o.y))
+                t = Vector((-o.y, o.x))
+                c0 = q - o * POWER_INS_IN
+                for s in (1, -1):
+                    dot = (t * s).dot(_FRONT)
+                    if (dot > 1e-3) != near:
+                        continue
+                    c = c0 + t * (s * off)
+                    geo.append(box(c.x, c.y, zc, L, W, Hh, rot=math.atan2(o.y, o.x)))
+            if not geo:
+                return None
+            g = merge(geo)
+            return lambda path, k: g
+        return make
+    return tuple((Part(f"power_ins_{'front' if near else 'back'}", "rail", "gauge", _M_POWER_INS, None, tall=True, front=near), maker(near))
+                 for near in (False, True))

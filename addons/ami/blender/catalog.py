@@ -107,6 +107,9 @@ def monorail_suspended(variant, elevated=False):
 
 MONORAIL_SUSPENDEDS = tuple(monorail_suspended(_v) for _v in MONORAIL_SUSPENDED_VARIANTS)
 MONORAIL_SUSPENDED_ELEVS = tuple(monorail_suspended(_v, True) for _v in MONORAIL_SUSPENDED_VARIANTS)
+# モノレールの電化の way-object（own_waytype=electrified_track。#116）: 電車のモノレールの車両を走らせる。方式ごとに 2 つ
+# （2026-11-22、進捗管理の決定）。名前 → 懸垂式用か（絵の作りは sheetlib の monorail_parts の power_*）
+MONORAIL_POWERS = {f"{PREFIX}monorail_power": False, f"{PREFIX}monorail_suspended_power": True}
 
 # 運河（60 km/h、water。#114。名前は ADR 0008）。物の並びは iss の運河（地上だけ。高架・橋・トンネルは無い）に合わせる
 # （2026-11-22、ユーザーの決定）。歩道（ami_sidewalk）と同じ waytype なので、突き当てるとつながる（README の「運河の作り」）

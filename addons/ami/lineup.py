@@ -78,6 +78,9 @@ def kind_label(o):
     name = o.get("name", "")
     if t == "way-object" and name.endswith("_divider"):
         return "中央分離帯"  # 道路の壁の版（ami_wall_road_<版>_divider。#118）
+    if t == "way-object" and name.startswith("ami_monorail") and name.endswith("_power"):
+        # モノレールの電化（#116）。見た目が合うのは、それぞれの方式の way の上
+        return "モノレールの電化（" + ("懸垂式用" if "_suspended_" in name else "跨座式用") + "）"
     for prefix, label in SPECIAL.items():
         if name.startswith(prefix):
             return label + ("（高架）" if t == "way" and o.get("system_type") == "1" else "")

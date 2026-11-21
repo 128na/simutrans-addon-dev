@@ -417,6 +417,43 @@ def wall_dat_text(name, sheet, twin=False, catenary=False, road=False, donor=Fal
     return NL.join(out) + NL
 
 
+# モノレールの電化の way-object（#116）: waytype=monorail_track・own_waytype=electrified_track。値は線路の架線つきの壁（CATENARY_VALUES）と同じ（仮。
+# #110 の一覧に無い）。topspeed は電化した編成の速さを縛る（本体の max_wayobj_speed）ので、モノレール（150 km/h）より大きい
+MONORAIL_POWER_VALUES = dict(CATENARY_VALUES)
+
+
+def monorail_power_dat_text(name, suspended):
+    """モノレールの電化の way-object の dat。シートは way-object の並び（奥の絵 0〜3 行・手前の絵 WALL_FRONT_ROW 下）で、
+    セルは跨座式の way と同じ位置。カーブは斜めのセル（跨座式と同じ）。分岐の絵・近い斜めは持たない"""
+    v = MONORAIL_POWER_VALUES
+    kind = "懸垂式モノレールの電化（桁の下面の給電レールと碍子）" if suspended else "跨座式モノレールの電化（桁の側面の給電レールと碍子）"
+    out = [
+        f"# AMI: {name}（CC BY 4.0）。{kind}の way-object。シートは blender/render.py が描く",
+        "obj=way-object",
+        f"name={name}",
+        "copyright=AMI (CC BY 4.0)",
+        f"intro_year={v['intro_year']}",
+        "intro_month=1",
+        "retire_year=2999",
+        "retire_month=1",
+        "waytype=monorail_track",
+        "own_waytype=electrified_track",
+        f"cost={v['cost']}",
+        f"maintenance={v['maintenance']}",
+        f"topspeed={v['topspeed']}",
+        f"icon=> {name}.0.0",
+        f"cursor={name}.0.1,-64,-32",
+    ]
+    for key, idx, row, col in IMAGES:
+        if key not in WAYOBJ_KEYS or idx.startswith("[close") or (key == "image" and idx in SWITCH_IDX):
+            continue
+        if key == "image" and idx in CURVE_TO_DIAG:
+            row, col = CURVE_TO_DIAG[idx]
+        for side, dr in (("back", 0), ("front", WALL_FRONT_ROW)):
+            out.append(f"{side}{WAYOBJ_KEYS[key]}{idx}={name}.{row + dr}.{col},-64,-32")
+    return NL.join(out) + NL
+
+
 def pier_dat_text(name, sheet):
     """橋脚の way の dat。カーブは斜めのセル、分岐の絵は T字・十字のセル。雪の絵（[1]）は夏と同じセル（柱に雪は描かない）。
     PIER_FRONT_ROW にある橋脚は、同じキーの手前の絵（front<キー>）を、行を下げたセルで足す"""
@@ -703,6 +740,10 @@ def main():
     for name, sheet in CATENARY.items():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(wall_dat_text(name, sheet, catenary=True))
+        print(f"[dat] {name}.dat")
+    for name, suspended in catalog.MONORAIL_POWERS.items():
+        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
+            f.write(monorail_power_dat_text(name, suspended))
         print(f"[dat] {name}.dat")
     with open(os.path.join(SRC, "ami_wall_rail_twin_catenary.dat"), "w", encoding="utf8", newline=NL) as f:
         f.write(wall_dat_text("ami_wall_rail_twin_catenary", "ami_wall_rail_twin_catenary_back", twin=True, catenary=True))

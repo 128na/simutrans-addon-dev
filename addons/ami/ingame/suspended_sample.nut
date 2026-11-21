@@ -5,7 +5,11 @@
 //   P 複線（y = 72）: 地上で、南北は西の線を back・東の線を front、東西は北の線を back・南の線を front（柱が外側に立つ組）
 //   S 坂（y = 80〜88）: 地上の center の南北 (2,80)-(2,88)。(·,84) を 1 段上げた坂（x1〜3）
 //   V 車両（y = 92〜98）: 地上の center の輪 (3,92)-(12,92)-(12,98)-(3,98) と、西の車庫（跨座式の ami_monorail_depot、(1,92)。口の道が東へ出る）。
-//     懸垂式の車両（ユーザーが渡した Higashiyama_1A。game.sh の EXTRA_PAKS で写しにだけ入れる）が輪を回る。無ければ 1 両で走れる monorail の車両
+//     輪と車庫の口に懸垂式用の電化（ami_monorail_suspended_power）を張り、懸垂式の車両（ユーザーが渡した電車の Higashiyama_1A。
+//     game.sh の EXTRA_PAKS で写しにだけ入れる）が輪を回る。無ければ 1 両で走れる monorail の車両
+//   電化の見た目: G・E の center の直線・L 字・T字・斜めと S の坂に、懸垂式用の電化を重ねる
+//   W 跨座式用の電化（y = 102〜108）: 跨座式の地上の way の 南北 (2,102)-(2,108)・東西 (4,105)-(12,105)・L 字 (14,102)-(20,102)-(20,108)・
+//     斜め (24,102)-(30,108) と、高架の center の東西 (4,111)-(12,111) に ami_monorail_power を重ねる
 // つながりは [check] の行で、タイルの way の名前と向き（ribi）を期待と比べる。
 // 返り値の先頭が ok なら全部敷けて、[check] の期待どおり。違えば先頭が check で、「名前 場所=[…]」が続く。最後に [check] の行が続く
 local OX = 20;
@@ -52,6 +56,37 @@ way("V N", gc, 3, 92, 12, 92);
 way("V E", gc, 12, 92, 12, 98);
 way("V S", gc, 12, 98, 3, 98);
 way("V W", gc, 3, 98, 3, 92);
+// 電化の way-object（#116）
+local POW = {};
+foreach (d in wayobj_desc_x.get_available_wayobjs(wt_monorail)) POW[d.get_name()] <- d;
+function pd(n) { if (!(n in POW)) { report += n + " wayobj=[missing]\n"; return null; } return POW[n]; }
+function pow(tag, d, x0, y0, x1, y1, z = 0) { if (d != null) report += r(tag, command_x.build_wayobj(pl, c(x0, y0, z), c(x1, y1, z), d)); }
+local SP = pd("ami_monorail_suspended_power"), MP = pd("ami_monorail_power");
+foreach (seg in [[1, 92, 3, 92], [3, 92, 12, 92], [12, 92, 12, 98], [12, 98, 3, 98], [3, 98, 3, 92]]) pow("V power", SP, seg[0], seg[1], seg[2], seg[3]);
+foreach (k, y in [12, 48]) {
+  local z = k == 0 ? 0 : 2;
+  pow("G/E power ns", SP, 2, y, 2, y + 6, z);
+  pow("G/E power ew", SP, 4, y + 3, 12, y + 3, z);
+  pow("G/E power L1", SP, 14, y, 20, y, z);
+  pow("G/E power L2", SP, 20, y, 20, y + 6, z);
+  pow("G/E power T", SP, 17, y, 17, y + 4, z);
+  pow("G/E power diag", SP, 24, y, 30, y + 6, z);
+}
+pow("S power", SP, 2, 80, 2, 88);
+// W
+local st = wd("ami_monorail_straddle"), ste = wd("ami_monorail_straddle_elev_center");
+way("W ns", st, 2, 102, 2, 108);
+way("W ew", st, 4, 105, 12, 105);
+way("W L1", st, 14, 102, 20, 102);
+way("W L2", st, 20, 102, 20, 108);
+way("W diag", st, 24, 102, 30, 108);
+way("W elev", ste, 4, 111, 12, 111);
+pow("W power ns", MP, 2, 102, 2, 108);
+pow("W power ew", MP, 4, 105, 12, 105);
+pow("W power L1", MP, 14, 102, 20, 102);
+pow("W power L2", MP, 20, 102, 20, 108);
+pow("W power diag", MP, 24, 102, 30, 108);
+pow("W power elev", MP, 4, 111, 12, 111, 2);
 local depot = null;
 foreach (d in building_desc_x.get_building_list(building_desc_x.depot)) if (d.get_name() == "ami_monorail_depot") depot = d;
 if (depot == null) report += "ami_monorail_depot=[missing]\n";
@@ -96,7 +131,23 @@ foreach (i, v in VARIANTS) {
 }
 report += expect("S top", 2, 84, 1, "ami_monorail_suspended_center", 5);
 report += expect("S ramp", 2, 83, 0, "ami_monorail_suspended_center", 5);
+// 電化: タイルの way-object の名前
+function expect_obj(tag, x, y, z, want) {
+  local s = square_x(OX + x, OY + y);
+  local t = z == 0 ? s.get_ground_tile() : s.get_tile_at_height(z);
+  local o = t == null ? null : t.find_object(mo_wayobj);
+  local got = o == null ? "-" : o.get_desc().get_name();
+  checks += "[check] " + tag + " (" + x + "," + y + "," + z + ")=" + got + "\n";
+  return got == want ? "" : tag + " (" + x + "," + y + ")=[" + got + " want " + want + "]\n";
+}
+report += expect_obj("V power", 8, 98, 0, "ami_monorail_suspended_power");
+report += expect_obj("V power depot", 2, 92, 0, "ami_monorail_suspended_power");
+report += expect_obj("G power diag", 26, 14, 0, "ami_monorail_suspended_power");
+report += expect_obj("E power ew", 8, 51, 2, "ami_monorail_suspended_power");
+report += expect_obj("S power", 2, 84, 1, "ami_monorail_suspended_power");
+report += expect_obj("W power L", 20, 102, 0, "ami_monorail_power");
+report += expect_obj("W power elev", 8, 111, 2, "ami_monorail_power");
 if (OX > 200)
-  report += r("climate", command_x(tool_set_climate).work(pl, c(-2, -6), c(34, 100), "7"));
+  report += r("climate", command_x(tool_set_climate).work(pl, c(-2, -6), c(34, 114), "7"));
 gui.close_all_windows();
 return (report == "" ? "ok\n" : "check\n" + report) + checks;

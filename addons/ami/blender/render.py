@@ -296,6 +296,12 @@ for _v in catalog.MONORAIL_SUSPENDED_VARIANTS:
             R.TRACK_PROFILES[MONORAIL_KEY], sheet=_n, track_parts=R.suspended_parts(), snow_skin=R.SUSP_SNOW_SKIN,
             cell_fills=R.suspended_pier_fills(_v, _elev), front_row=4, rise=R.SUSP_RISE, badge=_v[0].upper(),
             **(dict(lower=MONORAIL_ELEV_LOWER, band="elevated") if _elev else {}))
+# 電化の way-object（ami_monorail_power・ami_monorail_suspended_power。#116）: way-object のシート（奥の絵 4 行 → 手前の絵 4 行。雪の絵は無い）。
+# 給電レールと碍子だけを描き、桁は holdout で置いて奥のレールを隠す（sheetlib の monorail_parts の power_*）。並びは跨座式の way と同じ
+for _n, _susp in catalog.MONORAIL_POWERS.items():
+    R.TRACK_PROFILES[catalog.profile(_n)] = dict(
+        R.TRACK_PROFILES[MONORAIL_KEY], sheet=_n, track_parts=R.power_parts(_susp), cell_fills=R.power_insulator_fills(_susp),
+        front_row=4, rise=R.POWER_RISE, snow=False, snow_skin={}, label="E", badge="S" if _susp else None)
 
 # ---------------------------------------------------------------- 基盤の版と壁の way-object（ADR 0003。#16）
 # 基盤の版の way（ami_rail_ballast_base_<版>）は、通常の版の道床の下に基盤を敷き、基盤は壁の位置で止まる（壁の無い側はタイルの端まで）。
@@ -597,7 +603,7 @@ SHEETS[catalog.TRAM] = _track_target(TRAM_KEY)
 SHEETS[catalog.MONORAIL] = _track_target(MONORAIL_KEY)
 for _n in catalog.MONORAIL_ELEVS:
     SHEETS[_n] = _track_target(catalog.profile(_n))
-for _n in catalog.MONORAIL_SUSPENDEDS + catalog.MONORAIL_SUSPENDED_ELEVS:
+for _n in catalog.MONORAIL_SUSPENDEDS + catalog.MONORAIL_SUSPENDED_ELEVS + tuple(catalog.MONORAIL_POWERS):
     SHEETS[_n] = _track_target(catalog.profile(_n))
 SHEETS[catalog.MONORAIL_TUNNEL] = lambda: R.tunnel_sheet("track", profile=MONORAIL_KEY, sheet=catalog.MONORAIL_TUNNEL, label=MONORAIL_LABEL,
                                                           mat_skin=TRACK_WALL_SKIN)

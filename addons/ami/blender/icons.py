@@ -100,6 +100,8 @@ def describe(d):
         info["kind"] = "catenary" if d.get("own_waytype") == "electrified_track" else "wall"
         if name.endswith("_divider"):
             info["label"] = "分"  # 中央分離帯つきの壁（#118）: 左上に「分」
+        elif name.startswith("ami_monorail_suspended"):
+            info["label"] = "懸"  # 懸垂式モノレールの電化（#116）: 跨座式用（電気の印だけ）と見分けるため左上に「懸」
     elif name.startswith("ami_pier"):
         info.update(kind="pier", label="門" if name.endswith("_gate") else "脚", struct="elev")
     elif name.startswith("ami_sidewalk"):  # 歩道の種類と高架の歩道（#119）も同じ決まり。高架は下の帯
