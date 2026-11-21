@@ -186,3 +186,9 @@ DEPOTS = (Depot("rail", "track"), Depot("tram", "tram_track"), Depot("road", "ro
 # 操車場（building の stop。#115。ADR 0008 の ami_rail_yard）: 荷を扱わない線路の駅の建物。線路の脇の構内通路（2026-11-22、ユーザーの決定）。
 # 名前の頭 ami_rail_ で、build.py が線路の pak（ami_rail.pak）に入れる
 RAIL_YARD = f"{PREFIX}rail_yard"
+
+
+# 道路標識（roadsign。#122）。名前は ami_sign_<名前>（ADR 0008）で、build.py の振り分けで ami_scenery.pak に入る。
+# 値は 6 種（2026-11-21、ユーザーの決定。#122 の案 A）。キーは sheetlib の roadsign.ROADSIGN_PLATES のキー（板の絵）
+ROADSIGN_KEYS = ("one_way", "stop", "speed_40", "speed_60", "speed_80", "min_50")
+ROADSIGNS = {f"{PREFIX}sign_{_k}": _k for _k in ROADSIGN_KEYS}
