@@ -18,6 +18,9 @@ way の画素: bare と way の色の差が MASK_DIFF 以上の画素から、�
              way が車両と同じくらい目立つ
 環境変数 BUSY_REF に通常の版の名前（画像の名前の <名前>）を渡すと、各版の way の画素のうち、通常の版の way の画素と重なる所
 だけで測った値の表を足す（ref_row）。基盤・高架の版の基盤や躯体の面を除いて、軌道の部分を通常の版と比べる（#72）
+環境変数 BUSY_PAIR に名前の後ろに付ける文字（例: nowall）を渡すと、<名前> と <名前><BUSY_PAIR> の画像がそろう版について、
+<名前> の way の画素のうち <名前><BUSY_PAIR> の way の画素と重なる所だけで測った値の表を足す（壁・橋脚を重ねる前の範囲で比べる。#79）
+環境変数 BUSY_BYZOOM を空でない値にすると、撮った拡大率ごとに、線を除いた細かさ・孤立点を出す表を足す（#79。拡大率 3 の行は上の表と同じ値）
 """
 import os
 import re
@@ -122,6 +125,21 @@ def way_pixels(folder, season, name, z):
     return lum(w), m
 
 
+ZOOM_NUM = (2, 3, 4, 1, 3, 5, 1, 3, 1, 1)  # 本体 display/simgraph16.cc の zoom_num・zoom_den（3 が等倍）
+ZOOM_DEN = (1, 2, 3, 1, 4, 8, 2, 8, 4, 8)
+
+
+def same_area(shape, f):
+    """縮めた画面（倍率 f < 1）で、等倍の画面に写っていた範囲。画面の中心（切る前の画像の中心）から f 倍の距離の内側。
+    shape は上下を切った後の大きさ"""
+    h, w = shape
+    full_h = h + CROP_TOP + CROP_BOTTOM
+    cy, cx = full_h / 2 - CROP_TOP, w / 2
+    ys = np.arange(h)[:, None]
+    xs = np.arange(w)[None, :]
+    return ((np.abs(xs - cx) <= cx * f) & (ys >= cy - (cy) * f) & (ys <= cy + (h - cy) * f))
+
+
 def vehicle_fineness(paths):
     vals = []
     for p in paths:
@@ -168,6 +186,25 @@ def main():
         lines.append(f"| {season} | {name} | {int(m3.sum())} | {f.get(3, float('nan')):.4f} | {f.get(4, float('nan')):.4f} | "
                      f"{f.get(6, float('nan')):.4f} | {crush:.3f} | {isolated(L3, m3):.2f} | {f.get(3, float('nan')) / vf:.3f} | "
                      f"{100.0 * x3.sum() / max(1, m3.sum()):.1f} | {fineness(L3, m3 & ~x3):.4f} | {isolated_excl(L3, m3, x3):.2f} |")
+    if os.environ.get("BUSY_BYZOOM"):
+        lines += ["", "拡大率ごとの値（線を除く。線と孤立点もその拡大率の画面で選ぶ）。「等倍の範囲」は、縮めた画面（拡大率 4 以上）を、",
+                  "等倍の画面に写っていた範囲（画面の中心から同じ距離）に限った値。縮めた画面は広く写るので、等倍では画面の外の物も入る:", "",
+                  "| 気候 | 名前 | 拡大率 | way の画素 | 細かさ（線を除く） | 孤立点/千（線を除く） | 線 % | 等倍の範囲の画素 | "
+                  "等倍の範囲の細かさ | 等倍の範囲の孤立点/千 |",
+                  "|" + "---|" * 10]
+        for season, name in sorted(keys, key=order):
+            for z in sorted(keys[(season, name)]):
+                L, m = way_pixels(folder, season, name, z)
+                x = line_mask(L, m)
+                row = (f"| {season} | {name} | {z} | {int(m.sum())} | {fineness(L, m & ~x):.4f} | "
+                       f"{isolated_excl(L, m, x):.2f} | {100.0 * x.sum() / max(1, m.sum()):.1f} |")
+                f = ZOOM_NUM[z] / ZOOM_DEN[z]
+                if f < 1:
+                    c = same_area(m.shape, f) & m
+                    row += f" {int(c.sum())} | {fineness(L, c & ~x):.4f} | {isolated_excl(L, c, x):.2f} |"
+                else:
+                    row += " — | — | — |"
+                lines.append(row)
     ref = os.environ.get("BUSY_REF")
     if ref:
         lines += ["", f"通常の版（{ref}）の範囲に限った値（等倍、線を除く）:", "",
@@ -176,6 +213,14 @@ def main():
         for season, name in sorted(keys, key=order):
             if (season, ref) in keys:
                 lines.append(ref_row(folder, season, name, ref))
+    pair = os.environ.get("BUSY_PAIR")
+    if pair:
+        lines += ["", f"名前に {pair} を足した画像（重ねる前の同じ版）の範囲に限った値（等倍、線を除く）:", "",
+                  "| 気候 | 名前 | ずらし dy | 範囲の画素 | way の画素に占める % | 細かさ（線を除く） | 孤立点/千（線を除く） |",
+                  "|" + "---|" * 7]
+        for season, name in sorted(keys, key=order):
+            if (season, name + pair) in keys:
+                lines.append(ref_row(folder, season, name, name + pair))
     text = "\n".join(lines) + "\n"
     with open(out, "w", encoding="utf8", newline="\n") as fo:
         fo.write(text)
