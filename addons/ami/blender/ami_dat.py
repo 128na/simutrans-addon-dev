@@ -82,6 +82,7 @@ VALUES = {
 DIAG_CURVES = {_t.way for _t in catalog.TRACKS} | {_r.way for _r in catalog.ROADS}  # 道路 3 種もカーブは斜めの絵（README の「道路の作り」）
 # 跨座式モノレール（#113）: 地上・高架の版とも、カーブは斜めの絵（手本の iss の跨座式の dat と同じ）
 DIAG_CURVES |= {catalog.MONORAIL, *catalog.MONORAIL_ELEVS}
+DIAG_CURVES |= {_r.lane(_n) for _r in catalog.LANE_ROADS for _n in catalog.LANES}  # 路面表示の版（#121）も通常の版と同じ
 CURVE_TO_DIAG = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
 
 # 絵を作った way（名前 → シート名）。dat と pak を作る
@@ -106,6 +107,11 @@ TRAM_SWITCH_IMAGES = True
 # 道路 3 種の通常の版（#21）。並びは線路の通常の版と同じ（近い斜め・分岐の絵を持つ）。waytype と値は VALUES
 for _r in catalog.ROADS:
     BUILT[_r.way] = _r.way
+# 道路の路面表示の版（#121）: 並び・値は通常の版と同じ（近い斜め・分岐の絵を持つ）。白線だけが違う
+for _r in catalog.LANE_ROADS:
+    for _n in catalog.LANES:
+        BUILT[_r.lane(_n)] = _r.lane(_n)
+        VALUES[_r.lane(_n)] = VALUES[_r.way]
 # 道路の地上の基盤の版（#22。2026-11-19 にユーザーが確定）: 線路の基盤の版と同じく近い斜めの絵を持たず、カーブはカーブのセル（斜めの形）。
 # 値は通常の版と同じ（README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
 for _r in catalog.ROADS:

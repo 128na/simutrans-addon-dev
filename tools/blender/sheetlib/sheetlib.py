@@ -167,6 +167,32 @@ DIAG_EXT = 8.0
 ROAD_BASE_DROP = 0.05
 
 
+def _far_sign(path):
+    """経路の横位置 u の、奥（北・西）の側の符号。sweep の +u は経路の右（南→北なら東、西→東なら南）。画面で縦向きの斜め
+    （北西–南東の向きの法線が奥と手前のどちらにも寄らない）は、西の側を奥にする（近い斜めの壁の twin と同じ並べ方）"""
+    t = path[-1] - path[0]
+    n = Vector((t.y, -t.x))
+    v = -n.x + n.y
+    if abs(v) < 1e-6 * t.length:
+        v = -n.x
+    return 1 if v > 0 else -1
+
+
+def lane_lines(path, lanes, k=1.0, c=0.0, e=None):
+    """路面表示の版の白線（#121）。lanes は (奥の境, 真ん中, 手前の境)。k は横位置の倍率（斜めは road_sheet の build_diag の k）、
+    c は真ん中の線のずらし、e は路側線の横位置（無ければ EDGE_LINE * k）"""
+    far = _far_sign(path)
+    e = EDGE_LINE * k if e is None else e
+    border = TILE / 2 * k
+
+    def side(kind, s):
+        if kind == "edge":
+            return [(path, s * e)]
+        return [(path, s * border)] if kind == "center" else [(path, s * border, "cdash")]
+    mid = [(path, c)] if lanes[1] == "center" else [(path, c, "cdash")]
+    return side(lanes[0], far) + mid + side(lanes[2], -far)
+
+
 def road_sheet(style="street"):
     """道路のシート（中身は _road_sheet）。描くあいだだけ、描き分けの "mat_skin"（無くてよい）で材質を名前で差し替える（core の named_materials）"""
     with named_materials(ROAD_PROFILES[style].get("mat_skin")):
@@ -196,6 +222,9 @@ def _road_sheet(style="street"):
     elev_body: 基盤の下に躯体を足す（深さ body_d、壁のある側は壁の外の面から body_inset 内で止める、材質 body_mat。
         既定は高架の ELEV_BODY_D・ELEV_BODY_INSET・_M_ELEV_BODY。橋の桁は body_inset=0 と桁の材質）
     curve_cells: カーブのセル（2, 5〜8）も斜めの形で描き、タイルの半分で切らない（壁の無い側をタイルの端まで。地上の基盤の版・高架）
+    lanes: 路面表示の版（AMI #121）。(奥の境, 真ん中, 手前の境) の線の種類。境は "edge"（今の路側線）・"center"（中央線、実線）・
+        "lane"（車線の境、破線）、真ん中は "center" か "lane"。境の線はタイルの辺（中心から TILE/2）に引き、隣のタイルと半分ずつ描く。
+        奥は北・西の側（画面で縦向きの斜めは西の側。_far_sign）。T字・十字・分岐の絵・1 タイルは線を引かない（並べた多車線の交差点の中がつながる）
     lower と solid を両方持つ橋は、平らなセルだけ持ち分を下へ広げる（端の坂と坂から始まる端は広げない。track_sheet と同じ）"""
     prof = ROAD_PROFILES[style]
     expwy = prof.get("expressway", False)
@@ -218,6 +247,9 @@ def _road_sheet(style="street"):
         return [(p, u, "cdash")] if center_kind == "dash" else [(p, u)]
 
     both = lambda p: [(p, -EDGE_LINE)] + center(p) + [(p, EDGE_LINE)]  # 両側の白線と中央線
+    lanes = prof.get("lanes")
+    if lanes:
+        both = lambda p: lane_lines(p, lanes)
     # 行き止まり: 車道は奥の歩道の手前（両脇の歩道と同じ幅を残す）まで
     end = lambda d: [-Vector(d).normalized() * ROAD_HW, Vector(d) * 1.12]
     sides = lambda p: [(p, -EDGE_LINE), (p, EDGE_LINE)]
@@ -387,6 +419,12 @@ def _road_sheet(style="street"):
                 paths = [sn, we] if base_name == "nsew" else [sn if "ns" in base_name else we]
                 jobs[(2, 10 + col)] = (f"{base_name}1", paths, lines1, None)
                 jobs[(3, 10 + col)] = (f"{base_name}2", paths, lines2, None)
+    if lanes:
+        # 路面表示の版の交差点（T字・十字・分岐の絵・1 タイル）は線なしの路面（#121。2026-11-21、ユーザーの決定）。並べた多車線の
+        # 交差点で、どの道路を後から敷いても中がつながる
+        for pos_, job in list(jobs.items()):
+            if _junction(job[0]) in ("single", "nse", "new", "nsw", "sew", "nsew"):
+                jobs[pos_] = (job[0], job[1], [], *job[3:])
     walls = prof.get("walls")
     wall_sheet, write_walls, wall_only = prof.get("wall_sheet"), prof.get("write_walls", True), prof.get("wall_only", False)
     if walls:
@@ -570,7 +608,8 @@ def _road_sheet(style="street"):
                 # 路側の白線も、経路（画素の行の境）からの距離を「整数 + 0.5」px に丸めて1行に収める（約 0.3px 内へ）。
                 # 縦向きの斜め（sw・ne）はそのままで列に収まる。両方を同時に収める EDGE_LINE は無い
                 e = (math.floor(EDGE_LINE * DIAG_EDGE * DIAG_PX) + 0.5) / DIAG_PX / ROAD_DIAG
-            return build_road([path], [(path, -e)] + center(path, c) + [(path, e)], scale=ROAD_DIAG,
+            lines = lane_lines(path, lanes, k, c, e) if lanes else [(path, -e)] + center(path, c) + [(path, e)]
+            return build_road([path], lines, scale=ROAD_DIAG,
                               half=path if cut_half else None, hw=ROAD_HW * k, curb_w=CURB_W * DIAG_EDGE, half_over=over, **kw)
 
         for pos, (name, path) in diag.items():
