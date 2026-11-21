@@ -7,9 +7,11 @@
   ほかの形（直線・曲がり・T字・十字）: 交差点のタイル（口の表示を敷くと交差点のタイルにも表示が載る）。何も描かない
 種類（kind）:
   stop:           2 車線の道路（1 タイルに片側 1 車線ずつ）の口。横断歩道は路側線のあいだ、停止線は入ってくる車線の半分
-  stop_wide:      4 車線以上の道路（1 タイルに同じ向きの 2 車線。AMI #121 の lane の版）の入る側。横断歩道と停止線をタイルの幅いっぱいに
-  crosswalk_wide: 4 車線以上の道路の出る側。横断歩道だけをタイルの幅いっぱいに
-位置と幅は道路の白線（road_parts の EDGE_LINE・LINE_TOP・STOP_LINE_W）に合わせる。雪の絵は持たない（道路は車道を除雪した想定で、
+  stop_wide:      4 車線の道路（1 タイルに同じ向きの 2 車線。AMI #121 の lane の版の 1・2）の入る側。横断歩道と停止線を、
+                  中央線の側のタイルの辺から路側線まで（左側通行なので、路側線は進入する向きの左）
+  crosswalk_wide: 4 車線の道路の出る側。横断歩道だけを、路側線（進入する向きの右）から中央線の側のタイルの辺まで
+路側帯（路側線の外）には、どの種類も横断歩道と停止線を描かない（2026-11-22、ユーザーの指摘。#156）
+位置と幅は道路の白線（road_parts の EDGE_LINE・LINE_W・LINE_TOP・STOP_LINE_W）に合わせる。雪の絵は持たない（道路は車道を除雪した想定で、
 車道の白線は夏と同じ。dat は雪の絵に夏のセルを使う）。坂・斜めの絵は持たない（交差点は平らな所に作る）
 """
 import os
@@ -17,23 +19,30 @@ import os
 from . import sheetlib as _s
 from .cells import ROAD_CY, make_sheet, render_cell
 from .core import clear_models, material, mesh_object, set_anchor, TILE
-from .road_parts import EDGE_LINE, LINE_TOP, STOP_LINE_W, _M_LINE
+from .road_parts import EDGE_LINE, LINE_TOP, LINE_W, STOP_LINE_W
 
 # ---------------------------------------------------------------- 寸法（部品の 1 単位 ≈ 1 m。道路の車線は 1 本 約 3.4）
 MARKING_CROSSWALK_NEAR = 1.5   # 横断歩道の帯の、タイルの中心の側の端（タイルの中心から交差点の向きへ）
 MARKING_CROSSWALK_FAR = 4.5    # 横断歩道の帯の、交差点の側の端（タイルの辺 5 の 0.5 手前）
 MARKING_STRIPE_W = 0.5         # 横断歩道の縞の幅（縞のあいだも同じ幅。周期 1.0 で、隣のタイルの縞と同じ並びになる）
-MARKING_STRIPES = {"narrow": [i - 3.0 for i in range(7)],   # 2 車線: 路側線（±EDGE_LINE）の内に 7 本
-                   "wide": [i - 4.5 for i in range(10)]}    # 4 車線以上: タイルの幅いっぱいに 10 本（隣のタイルとつながる）
+# 縞の中心（進入する向きの左を正とする横位置）。どれも路側線（±EDGE_LINE）の内に収める。周期 1.0 で、4 車線の入る側と出る側の
+# 縞は、2 タイルの境（中央線）をまたいで同じ並びになる
+MARKING_STRIPES = {"narrow": [i - 3.0 for i in range(7)],      # 2 車線: 路側線の内に 7 本
+                   "wide_in": [i - 4.5 for i in range(8)],     # 4 車線の入る側: 中央線の側の辺（-5）から左の路側線の内まで 8 本
+                   "wide_out": [i - 2.5 for i in range(8)]}    # 4 車線の出る側: 右の路側線の内から中央線の側の辺（+5）まで 8 本
 MARKING_STOP_U = 0.6           # 停止線の中心（タイルの中心から交差点の向きへ。横断歩道の帯の手前）
 MARKING_Z = (0.0, LINE_TOP + 0.004)  # 白線の下面・上面（道路の白線より少しだけ上）
 MARKING_DRIVE_LEFT = True      # 停止線の通行の側（日本は左側通行。右側通行の版は作らない。2026-11-22、ユーザーの決定）
+MARKING_STOP_END = EDGE_LINE - LINE_W / 2  # 停止線の路側の端: 路側線の内の縁まで（路側帯へ出さない）
+# 白の材質: 道路の白線（road_parts の _M_LINE。幅 1px で、ゲームの画面では路面と混ざって灰色がかって見える）と同じ明るさに見えるよう、
+# 面で描く表示は色と発光を落とす。値は、ゲームの画面（拡大率 1）で道路の白線の画素の平均と、横断歩道の縞の画素の平均を比べて決めた
+MARKING_LINE = ("marking_line", (0.80, 0.80, 0.82), 0.6, 0.0, 0.35)
 
 # 種類 → (横断歩道の並び, 停止線の横の範囲（進入する向きの左を正とする横位置）か None)
 MARKING_KINDS = {
-    "stop": ("narrow", (0.0, EDGE_LINE)),
-    "stop_wide": ("wide", (-TILE / 2, TILE / 2)),
-    "crosswalk_wide": ("wide", None),
+    "stop": ("narrow", (0.0, MARKING_STOP_END)),
+    "stop_wide": ("wide_in", (-TILE / 2, MARKING_STOP_END)),
+    "crosswalk_wide": ("wide_out", None),
 }
 # セル（行, 列）→ 行き止まりの向き（交差点の側の辺）。位置は線路の way と同じ（ami_dat.py の IMAGES の image[s] など）
 MARKING_CELLS = {(0, 5): (0, -1), (0, 6): (-1, 0), (0, 7): (0, 1), (0, 8): (1, 0)}
@@ -57,7 +66,7 @@ def _quad(name, a, u0, u1, v0, v1, mat):
 def marking_build(kind, a):
     """口のタイル 1 枚の白線。a は交差点の側の向き"""
     stripes, stop = MARKING_KINDS[kind]
-    mat = material(*_M_LINE)
+    mat = material(*MARKING_LINE)
     w = MARKING_STRIPE_W / 2
     for i, c in enumerate(MARKING_STRIPES[stripes]):
         _quad(f"marking_stripe{i}", a, MARKING_CROSSWALK_NEAR, MARKING_CROSSWALK_FAR, c - w, c + w, mat)
