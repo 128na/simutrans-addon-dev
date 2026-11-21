@@ -39,6 +39,8 @@ for d in config font themes text script music pak128 addons; do
 done
 cp "$GAME_DIR/save/$SAVE.sve" "$WORK/save/" || exit 1
 [ -f "$GAME_DIR/settings.xml" ] && { cp "$GAME_DIR/settings.xml" "$WORK/settings.xml"; chmod u+w "$WORK/settings.xml"; }
+# GAME_DIR に入っている AMI の pak（種類別の pak など）を外し、dist/ami.pak だけを入れる（二重に読まないため。icon_capture.sh と同じ）
+rm -f "$WORK"/addons/pak128/ami*.pak
 cp dist/ami.pak "$WORK/addons/pak128/ami.pak" || exit 1
 # 昼夜で画面の明るさが変わらないように止める
 printf '\nday_night_shift = 0\n' >> "$WORK/config/simuconf.tab"

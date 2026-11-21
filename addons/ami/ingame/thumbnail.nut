@@ -4,9 +4,10 @@
 // 見せたい物（交差・分岐・曲がり・路面軌道）は画面の真ん中から右に寄せ、左下には道路の碁盤だけを置く。
 //
 // 並び（C からのずれ (dx,dy)。東西の線は画面の左上から右下へ、dy が小さいほど画面の右上。南北の線は右上から左下へ）:
-//   dy=-10 一般道路（ami_road_general）に路面軌道（ami_tram）、両側に歩道（ami_sidewalk）。路面軌道は大通りから曲がって入る。北に歩道の広場
+//   dy=-12 一般道路（ami_road_general）に路面軌道（ami_tram）、両側に歩道（ami_sidewalk）。路面軌道は大通りから曲がって入る。北に歩道の広場
+//   dy=-10 ラダー軌道（ami_rail_ladder_base_single）に壁。大通りを橋（ami_rail_ladder_bridge）で越える
+//     （高架のすぐ北に置くと、手前の高架の床に隠れる。高架との間を 1 タイル空ける）
 //   dy=-8,-7 高速道路の高架（ami_road_expressway_elev_back・front）に道路の壁、真下に道路用の橋脚
-//   dy=-6 ラダー軌道（ami_rail_ladder_base_single）に壁。大通りを橋（ami_rail_ladder_bridge）で越える
 //   dy=-5,-4 高速線の高架（ami_rail_slab_elev_back・front）に架線つきの壁、真下に橋脚。大通りの上だけ門型の橋脚
 //   dy=-2..0 在来線の地上の 3 線（ami_rail_ballast_base_back・center・front）に架線つきの壁。西の丘（dx<HX）のトンネルから出てくる。
 //     坑口は線路の来る側に口が開くので、口が画面に見えるよう、丘を西に置いて東向きに口を開ける。
@@ -91,10 +92,10 @@ foreach (v in [["back", -8], ["front", -7]]) {
 }
 
 // ラダー軌道: 大通りを橋で越える
-way("ladder W", "ami_rail_ladder_base_single", c(-24, -6), c(AV - 3, -6));
-way("ladder E", "ami_rail_ladder_base_single", c(AV + 3, -6), c(24, -6));
-bridge("ladder bridge", "ami_rail_ladder_bridge", c(AV - 3, -6), c(AV + 3, -6));
-obj("ladder wall", "ami_wall_rail_single", c(-24, -6), c(24, -6));
+way("ladder W", "ami_rail_ladder_base_single", c(-24, -10), c(AV - 3, -10));
+way("ladder E", "ami_rail_ladder_base_single", c(AV + 3, -10), c(24, -10));
+bridge("ladder bridge", "ami_rail_ladder_bridge", c(AV - 3, -10), c(AV + 3, -10));
+obj("ladder wall", "ami_wall_rail_single", c(-24, -10), c(24, -10));
 
 // 大通り: 北から高架の下を通り、線路を橋で越えて南へ
 way("avenue N", "ami_road_general", c(AV, -24), c(AV, -3));
@@ -102,11 +103,11 @@ way("avenue S", "ami_road_general", c(AV, 4), c(AV, 24));
 bridge("avenue bridge", "ami_road_general_bridge", c(AV, -3), c(AV, 4));
 
 // 北の一般道路と路面軌道（大通りの北から来て、十字で西へ曲がる）、両側の歩道と広場
-way("general N", "ami_road_general", c(-24, -10), c(24, -10));
-way("tram N", "ami_tram", c(AV, -24), c(AV, -10));
-way("tram N", "ami_tram", c(AV, -10), c(-24, -10));
-foreach (y in [-11, -9]) walk_ew(y, -24, 24, [AV]);
-plaza(AV + 2, -15, AV + 6, -12);
+way("general N", "ami_road_general", c(-24, -12), c(24, -12));
+way("tram N", "ami_tram", c(AV, -24), c(AV, -12));
+way("tram N", "ami_tram", c(AV, -12), c(-24, -12));
+foreach (y in [-13, -11]) walk_ew(y, -24, 24, [AV]);
+plaza(AV + 2, -17, AV + 6, -14);
 
 // 南の道路の碁盤: 一般道路 dy=5、生活道路 dy=9・13 と dx=-6・8・12
 way("general S", "ami_road_general", c(-24, 5), c(24, 5));
