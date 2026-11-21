@@ -531,8 +531,8 @@ def embankment_dat_text(name, sheet):
 # 交差点の路面表示の way（#156。ADR 0009）: 道路に重ねて敷く白線だけの way。waytype は橋脚・盛土と同じ tram_track、速さ 1
 # （路面軌道・線路とつながっても速く走れない。車の速さは変わらない）。値は橋脚・盛土と同じ（2026-11-22、ユーザーの決定。#156）
 MARKING_VALUES = dict(waytype="tram_track", cost=1000, maintenance=100, intro_year=1900, topspeed=1)
-# 絵のある形 → セル。行き止まりは導流帯か 2 車線の口、曲がりは 4 車線の口（tools/blender/sheetlib/marking.py の MARKING_DEADENDS・MARKING_CURVES と同じ並び）。
-# 種類ごとに絵のある形は違い（marking.py の marking_curve_dir）、描かないセルは空のまま。branch はどれも空
+# 絵のある形 → セル。行き止まりは導流帯か口（種類による。marking.py の marking_deadend）、曲がりは 4 車線の入る側の口
+# （tools/blender/sheetlib/marking.py の MARKING_DEADENDS・MARKING_CURVES と同じ並び）。種類ごとに絵のある形は違い、描かないセルは空のまま
 MARKING_CELLS = {"[s]": (0, 5), "[w]": (0, 6), "[n]": (0, 7), "[e]": (0, 8),
                  "[sw]": (2, 5), "[nw]": (2, 6), "[ne]": (2, 7), "[se]": (2, 8)}
 # ほかの形（直線・T字・十字・1 タイル）は空のセル（marking.py の MARKING_EMPTY_CELL）。坂・斜め・分岐の絵は持たない

@@ -1,8 +1,7 @@
 // 交差点の路面表示（#156）の見本。道路の交差点を作り、交差点の手前の 2 タイルに右折レーンの表示を敷く（ingame/marking.sh で流す）。
 // 敷き方（README の「交差点の路面表示の作り」。関数 approach）: 口のタイル S は交差点の隣、導流帯のタイル T は S の手前
 //   2 車線: 1. T から S へ ami_mark_taper  2. S だけに ami_mark_stop（1 タイル。向きはそのままで名前だけが置き換わる）
-//   4 車線: 1. S から、進む向きの右の隣（出る側の口）へ ami_mark_branch（枝。絵は無い）
-//           2. 出る側の口から交差点のタイルへ ami_mark_crosswalk_wide  3. T から S へ ami_mark_stop_wide
+//   4 車線: 1. 進む向きの右の隣（出る側の口）から S へ ami_mark_crosswalk_wide（横に敷く）  2. T から S へ ami_mark_stop_wide
 // 区画（原点 OX・OY から）:
 //   C（中心 (6,4)）: 一般道路の十字。4 つの腕に右折レーン
 //   P（中心 (16,4)）: 一般道路の十字。南北の腕だけ（東西が優先）
@@ -12,7 +11,7 @@
 //   O（y 4・12。x 36〜）: 敷いた順の見本。西の腕だけに敷き、途中で止めた物を東へ並べる
 //      2 車線（y 4）: 交差点 (38,4) は 1 だけ、(44,4) は 1→2（できあがり）、(50,4) は反対の順（ami_mark_stop を T から S へ敷き、
 //         T だけに ami_mark_taper。できあがりは 44 と同じ）
-//      4 車線（y 12）: 交差点の西の列 38 は 1 だけ、44 は 1→2、50 は 1→2→3（できあがり）
+//      4 車線（y 12）: 交差点の西の列 38 は 1 だけ、44 は 1→2（できあがり）
 //   K（中心 (60,4)）: 一般道路の十字の両脇に歩道（ami_sidewalk）を敷き、4 つの腕に右折レーン（口の右の隣が歩道でも敷ける）
 // 返り値: 失敗した所と、[link] の行（タイルの表示の名前と向き）
 local OX = 20;
@@ -27,7 +26,7 @@ function look(tag, x, y) {
   report += "[link] " + tag + " (" + x + "," + y + ") " + (w == null ? "-" : w.get_desc().get_name() + "/d" + w.get_dirs()) + "\n";
 }
 // 口 (x,y) に、交差点の向き (dx,dy) で右折レーンを敷く。steps は敷く手順（上の番号）。画面の y は南が正なので、進む向きの右は (-dy, dx)
-function approach(tag, kind, x, y, dx, dy, steps = [1, 2, 3]) {
+function approach(tag, kind, x, y, dx, dy, steps = [1, 2]) {
   local tx = x - dx, ty = y - dy, rx = x - dy, ry = y + dx;
   foreach (s in steps) {
     if (kind == "ami_mark_stop") {
@@ -36,9 +35,8 @@ function approach(tag, kind, x, y, dx, dy, steps = [1, 2, 3]) {
       if (s == -1) way(tag + " stop", kind, c(tx, ty), c(x, y));       // 反対の順の 1
       if (s == -2) way(tag + " taper", "ami_mark_taper", c(tx, ty), c(tx, ty));  // 反対の順の 2
     } else {
-      if (s == 1) way(tag + " branch", "ami_mark_branch", c(x, y), c(rx, ry));
-      if (s == 2) way(tag + " out", "ami_mark_crosswalk_wide", c(rx, ry), c(rx + dx, ry + dy));
-      if (s == 3) way(tag + " turn", kind, c(tx, ty), c(x, y));
+      if (s == 1) way(tag + " out", "ami_mark_crosswalk_wide", c(rx, ry), c(x, y));
+      if (s == 2) way(tag + " turn", kind, c(tx, ty), c(x, y));
     }
   }
   look(tag + " taper", tx, ty); look(tag + " mouth", x, y); look(tag + " right", rx, ry);
@@ -78,7 +76,6 @@ cross("O2b", 44, 4); approach("O2b w", S2, 43, 4, 1, 0, [1, 2]);
 cross("O2c", 50, 4); approach("O2c w", S2, 49, 4, 1, 0, [-1, -2]);
 wide_roads("O4a", 38, 12); approach("O4a w", S4, 37, 12, 1, 0, [1]);
 wide_roads("O4b", 44, 12); approach("O4b w", S4, 43, 12, 1, 0, [1, 2]);
-wide_roads("O4c", 50, 12); approach("O4c w", S4, 49, 12, 1, 0, [1, 2, 3]);
 // K: 歩道つきの十字
 cross("K", 60, 4);
 foreach (d in [-1, 1]) foreach (e in [-1, 1]) {  // 角ごとに L 字の歩道（道路は横切らない）

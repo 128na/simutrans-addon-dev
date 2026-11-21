@@ -30,8 +30,7 @@ O2a 38 4
 O2b 44 4
 O2c 50 4
 O4a 38 12
-O4b 44 12
-O4c 50 12"}
+O4b 44 12"}
 
 stop_game() {
   local win; win=$(cd "$WORK" 2> /dev/null && pwd -W) || return 0

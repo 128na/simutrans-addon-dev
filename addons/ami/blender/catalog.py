@@ -146,9 +146,9 @@ SIDEWALK = "ami_sidewalk"  # 歩道の way（道路の隣のタイルに敷く�
 EMBANKMENT_SIDES = ("front", "back")
 EMBANKMENTS = {f"{PREFIX}embankment_{_s}": _s for _s in EMBANKMENT_SIDES}
 # 交差点の路面表示の way（#156。ADR 0011）: 道路に重ねて敷く tram_track の way。名前 → 種類（sheetlib の marking の MARKING_KINDS）。
-# stop は 2 車線の道路の口、taper は 2 車線の導流帯、stop_wide は 4 車線の入る側（導流帯と口）、crosswalk_wide は 4 車線の出る側
-# （横断歩道だけ）、branch は 4 車線の口の向きを決める枝（絵は無い）
-MARKINGS = {f"{PREFIX}mark_{_k}": _k for _k in ("stop", "taper", "stop_wide", "crosswalk_wide", "branch")}
+# stop は 2 車線の道路の口（1 マス目）、taper は 2 車線の導流帯（2 マス目）、stop_wide は 4 車線の入る側（2 マス目と 1 マス目）、
+# crosswalk_wide は 4 車線の出る側の 1 マス目（横断歩道だけ。入る側の 1 マス目へ横に敷き、入る側の 1 マス目の曲がりを作る）
+MARKINGS = {f"{PREFIX}mark_{_k}": _k for _k in ("stop", "taper", "stop_wide", "crosswalk_wide")}
 # 歩道の種類（#119。ADR 0008 の ami_sidewalk_<舗装>）: 舗装の名前。ami_sidewalk（灰色の敷石）は名前を変えずに残す
 SIDEWALK_PAVINGS = ("asphalt", "brick", "tile")
 SIDEWALK_ELEV = "ami_sidewalk_elev"  # 高架の歩道（system_type=1。敷石は ami_sidewalk と同じ）
