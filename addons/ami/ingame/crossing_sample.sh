@@ -64,7 +64,11 @@ tile_of() {  # $1=ox $2=oy $3=線 $4=k
 
 shoot() {  # $1=x $2=y $3=ファイル
   $M --run-squirrel "gui.close_all_windows(); gui.set_zoom(3); gui.jump(coord3d($1,$2,0)); return 1;" > /dev/null 2>&1
-  sleep "${SHOT_WAIT:-2}"  # 1 秒だと、前に飛んだ場所の画面が撮れることがあった（2026-11-21、閉じた絵の 48 枚のうち 8 枚）
+  # 飛んだ直後の 1 回目の撮影は、前に飛んだ場所の画面になることがある（2026-11-21、閉じた絵の 48 枚のうち 8 枚。待ちを 2 秒にしても 3 枚）。
+  # 1 回目は捨てて、2 回目を残す
+  sleep "${SHOT_WAIT:-1}"
+  $M --capture "$3" > /dev/null 2>&1
+  sleep 1
   $M --capture "$3" > /dev/null 2>&1 && echo "[capture] $3 ($1,$2)"
 }
 

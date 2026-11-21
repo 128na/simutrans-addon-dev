@@ -83,7 +83,7 @@ _ASSEMBLIES = {
     "ew": (("s", "n"), [((-POST_TRACK, POST_SIDE), (0, -1), (-1, 0), False),
                         ((POST_TRACK, -POST_SIDE), (0, 1), (1, 0), True)]),
 }
-_EDGE = {"n": (0, TILE / 2), "s": (0, -TILE / 2), "e": (TILE / 2, 0), "w": (-TILE / 2, 0)}
+_TILE_EDGE = {"n": (0, TILE / 2), "s": (0, -TILE / 2), "e": (TILE / 2, 0), "w": (-TILE / 2, 0)}
 # (道路の向き, 閉じた絵か) → 列
 CROSSING_COLS = {("ns", False): 0, ("ns", True): 1, ("ew", False): 2, ("ew", True): 3}
 CROSSING_SNOW_ROW = 2      # 雪の絵の行のずらし（夏の奥・手前が行 0・1）
@@ -210,7 +210,7 @@ def crossing_sheet(sheet, road_sheet, datums, rail=(RAIL_IN, RAIL_OUT), road_cel
         for road_dir, (ends, assemblies) in _ASSEMBLIES.items():
             if _core.ONLY and road_dir not in _core.ONLY:
                 continue
-            track_path = straight(Vector(_EDGE[ends[0]]), Vector(_EDGE[ends[1]]), PATH_EXT)
+            track_path = straight(Vector(_TILE_EDGE[ends[0]]), Vector(_TILE_EDGE[ends[1]]), PATH_EXT)
             r, c = road_cells[road_dir]
             base = _road_cell(road_png, r + (road_snow_rows if snow else 0), c)
             for closed in (False, True):
