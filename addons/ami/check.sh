@@ -63,7 +63,7 @@ step "アイコン・カーソルの参照先（セルの重なり・絵の有�
 step "踏切のシートが今の道路のシートから描かれているか（check_crossing.py）"
 "$PY" -X utf8 "$AMI/check_crossing.py"
 
-step "車庫の絵の大きさ（箱積み駅舎の箱 1 段に収まるか。check_depot.py）"
+step "車庫・操車場の絵の大きさ（箱積み駅舎の箱 1 段に収まるか。check_depot.py）"
 "$PY" -X utf8 "$AMI/check_depot.py"
 
 step "物の一覧が全部の dat から作れるか、種類別の pak で全部を覆うか（lineup.py --check）"

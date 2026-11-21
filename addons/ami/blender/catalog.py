@@ -182,3 +182,7 @@ class Depot:
 
 DEPOTS = (Depot("rail", "track"), Depot("tram", "tram_track"), Depot("road", "road"), Depot("monorail", "monorail_track"),
           Depot("canal", "water"))
+
+# 操車場（building の stop。#115。ADR 0008 の ami_rail_yard）: 荷を扱わない線路の駅の建物。線路の脇の構内通路（2026-11-22、ユーザーの決定）。
+# 名前の頭 ami_rail_ で、build.py が線路の pak（ami_rail.pak）に入れる
+RAIL_YARD = f"{PREFIX}rail_yard"
