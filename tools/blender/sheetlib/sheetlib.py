@@ -898,7 +898,8 @@ def _track_sheet(profile="new"):
         jobs = {k: v for k, v in jobs.items() if v[0] in prof["only"]}
     if ONLY:
         jobs = {k: v for k, v in jobs.items() if v[0] in ONLY + ("ns",)}  # ns はカーソルにも使うのでいつも描く
-    if "walls" in prof:
+    if "walls" in prof or not prof.get("close", True):
+        # prof["close"]（無くてよい。既定は真）: 偽なら近い斜めの絵を描かない（跨座式モノレール。手本の iss の dat に近い斜めのキーが無い）。
         # 側壁・高架の版は近い斜めの絵を持たない。本体は、近い斜めの絵が無い way の近い斜めを「1 タイルに 2 本の way」で作るので、
         # 奥の線を back、手前の線を front の版にでき、2 本の間に壁が立たない（絵があると十字 1 本の way になり、両方が同じ版になる）
         jobs = {k: v for k, v in jobs.items() if not v[0].startswith("close")}

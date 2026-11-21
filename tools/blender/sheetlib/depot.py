@@ -278,6 +278,7 @@ DEPOT_SHAPES = {
     "rail": DepotShape(door_w=3.4),
     "tram": DepotShape(door_w=3.2),
     "road": DepotShape(door_w=4.6),
+    "monorail": DepotShape(door_w=3.4),  # 跨座式モノレール（#113）。入口は線路と同じ（車体の幅は線路の車両と同じくらい）
 }
 
 

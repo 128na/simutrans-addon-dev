@@ -263,6 +263,26 @@ R.TRACK_PROFILES[TRAM_KEY] = {
     "snow_skin": R.TRAM_SNOW_SKIN, "end_from_edge": END_FROM_EDGE, "cell_fills": R.TRAM_CELL_FILLS, "ex_switches": True,
 }
 
+# ---------------------------------------------------------------- 跨座式モノレール（ami_monorail。#113）
+# 物の並びは iss の跨座式（地上・高架の 3 版・トンネル）に合わせる（2026-11-21、ユーザーの決定）。部品は sheetlib の monorail_parts（桁と、高架の柱・腕）。
+# 桁は走行面（rail）の基準面に乗せ、分岐の絵は分岐の経路の桁を描く。カーブは斜めの絵（iss と同じく dat の image[sw] などが斜めのセルを指す）、
+# 近い斜めの絵は描かない（iss の dat にキーが無い）。基準面は動かさない（FLAT）ので、絵の基準位置は地面の高さ（128）。
+# 雪の絵は桁の上面だけを雪にする（iss の跨座式は雪の絵を持たない。AMI のほかの way にそろえて足した）
+MONORAIL_KEY = catalog.profile(catalog.MONORAIL)
+MONORAIL_LABEL = "150"
+R.TRACK_PROFILES[MONORAIL_KEY] = {
+    "sheet": catalog.MONORAIL, "label": MONORAIL_LABEL, "spill": 1, "datums": R.FLAT, "snow": True, "anchor": 128,
+    "groups": ("body",), "track_parts": R.monorail_parts(), "snow_skin": R.MONO_SNOW_SKIN, "diag_curves": True, "close": False,
+}
+# 高架の 3 版（ami_monorail_elev_<版>、dat は system_type=1）: 桁を下へ深くし、桁が出入りする辺の角に柱と腕を足す（版で柱の側が違う）。
+# 柱は高架の高さ（ELEV_STEPS 段）下の地面まで伸ばし、持ち分も同じだけ下へ広げる。アイコンは下の帯で高架を示す
+MONORAIL_ELEV_LOWER = R.ELEV_LOWER + 4
+for _v in catalog.MONORAIL_ELEV_VARIANTS:
+    R.TRACK_PROFILES[catalog.profile(catalog.monorail_elev(_v))] = dict(
+        R.TRACK_PROFILES[MONORAIL_KEY], sheet=catalog.monorail_elev(_v),
+        track_parts=R.monorail_parts(R.MONO_BEAM_TOP - R.MONO_ELEV_BEAM_D), cell_fills=R.monorail_pier_fills(_v),
+        lower=MONORAIL_ELEV_LOWER, band="elevated", badge=_v[0].upper())
+
 # ---------------------------------------------------------------- 基盤の版と壁の way-object（ADR 0003。#16）
 # 基盤の版の way（ami_rail_ballast_base_<版>）は、通常の版の道床の下に基盤を敷き、基盤は壁の位置で止まる（壁の無い側はタイルの端まで）。
 # 壁そのものは way の絵に描かず、同じ版の壁の way-object（ami_wall_rail_<版>）のシートに描く（sheetlib の wall_sheet）。
@@ -554,6 +574,11 @@ def _tunnel_target(track):
 
 SHEETS = {_t.way: _track_target(_t.key) for _t in catalog.TRACKS}
 SHEETS[catalog.TRAM] = _track_target(TRAM_KEY)
+SHEETS[catalog.MONORAIL] = _track_target(MONORAIL_KEY)
+for _n in catalog.MONORAIL_ELEVS:
+    SHEETS[_n] = _track_target(catalog.profile(_n))
+SHEETS[catalog.MONORAIL_TUNNEL] = lambda: R.tunnel_sheet("track", profile=MONORAIL_KEY, sheet=catalog.MONORAIL_TUNNEL, label=MONORAIL_LABEL,
+                                                          mat_skin=TRACK_WALL_SKIN)
 for _t in catalog.TRACKS:
     for _v in BASE_VARIANTS:
         SHEETS[_t.base(_v)] = _track_target(_p(_t.base(_v)))
