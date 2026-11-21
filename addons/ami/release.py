@@ -9,6 +9,8 @@ zip（work/release/ami-<版>.zip）の中身:
     ami_license.txt    release/license.txt（CC BY 4.0 と帰属）
     ami_lineup.txt     --paks で選んだ pak に入る物の一覧。src/ の dat から lineup.py が作る（#138）
     thumbnail.png      docs/thumbnail.png があれば入れる（#96）
+    pak128/text/ja_ami.tab  release/text/ja_ami.tab（日本語の名前。今は道路標識の 6 種。#122）。ゲームの addons/pak128/text/ に入り、
+                       本体はファイル名の先頭 2 文字で言語を決める（dataobj/translator.cc）。読んでいない pak の物の訳は使われないだけ
 pak の名前が dist/ に無いとき、--paks に ami（全部入り）と種類別を混ぜたとき（同じ物を二重に読む）は止まる。
 展開した中身を ingame/beta_check.sh の PAKS に渡すと、配る形のままゲームで確かめられる（--extract で work/release/ami-<版>/ にも展開する）。
 """
@@ -24,6 +26,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DIST = os.path.join(HERE, "dist")
 OUT = os.path.join(HERE, "work", "release")
 TEMPLATE = os.path.join(HERE, "release")
+TEXTS = os.path.join(TEMPLATE, "text")
 THUMBNAIL = os.path.join(HERE, "docs", "thumbnail.png")
 KINDS = ("ami_rail", "ami_road", "ami_tram", "ami_monorail", "ami_canal", "ami_extra", "ami_scenery")  # build.py の KINDS と同じ
 
@@ -61,6 +64,8 @@ def main():
         with open(os.path.join(TEMPLATE, "license.txt"), encoding="utf8") as f:
             z.writestr("ami_license.txt", "﻿" + f.read().replace("\r\n", "\n").replace("\n", "\r\n"))
         z.writestr("ami_lineup.txt", "﻿" + listing.replace("\r\n", "\n").replace("\n", "\r\n"))
+        for t in sorted(os.listdir(TEXTS)) if os.path.isdir(TEXTS) else ():  # 訳は手を加えずそのまま（先頭の § を残す）
+            z.write(os.path.join(TEXTS, t), "pak128/text/" + t)
         if os.path.isfile(THUMBNAIL):
             z.write(THUMBNAIL, "thumbnail.png")
     with zipfile.ZipFile(zpath) as z:

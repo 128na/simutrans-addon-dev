@@ -22,6 +22,7 @@
     marking      交差点の路面表示の way のシート（道路に重ねる白線。名前が marking・MARKING で始まるものだけを出す）
     depot        車庫（building の depot）など 1 タイルの建物のシート（4 方向 × 奥・手前 × 夏・雪）
     yard         操車場（building の stop。線路の脇の構内通路）のシート（8 layout × 夏・雪。depot の描き方を使う）
+    roadsign     道路標識（roadsign）のシート（柱を描き、板の 2D の絵を押す）
 
 アドオンの入口と判定の道具からは `import sheetlib as R` で、どのモジュールの名前も `R.名前` で引ける（下で全部をここに出す）。
 """
@@ -33,8 +34,9 @@ from . import depot
 from . import yard
 from . import canal
 from . import marking
+from . import roadsign
 
-for _m in (core, track_parts, slab_parts, tram_parts, monorail_parts, wall_parts, catenary_parts, road_parts, assemble, cells, _sheets, sidewalk, crossing, depot, yard):
+for _m in (core, track_parts, slab_parts, tram_parts, monorail_parts, wall_parts, catenary_parts, road_parts, assemble, cells, _sheets, sidewalk, crossing, depot, yard, roadsign):
     globals().update({_k: _v for _k, _v in vars(_m).items() if not _k.startswith("__")})
 # 運河は、ほかのモジュールと同じ名前の _jobs・_own などを持つので、名前が canal・CANAL で始まるものだけを出す
 globals().update({_k: _v for _k, _v in vars(canal).items() if _k.lower().startswith("canal")})

@@ -1,0 +1,18 @@
+# AMI: ami_sign_min_50（CC BY 4.0）。道路標識。シートは blender/render.py が描く（sheetlib の roadsign.py）
+obj=roadsign
+name=ami_sign_min_50
+copyright=AMI (CC BY 4.0)
+waytype=road
+intro_year=1900
+intro_month=1
+retire_year=2999
+retire_month=1
+cost=500
+offset_left=14
+min_speed=50
+icon=> ami_sign_min_50.0.4
+cursor=ami_sign_min_50.1.4
+image[0]=ami_sign_min_50.0.0,-64,-32
+image[1]=ami_sign_min_50.0.1,-64,-32
+image[2]=ami_sign_min_50.0.2,-64,-32
+image[3]=ami_sign_min_50.0.3,-64,-32

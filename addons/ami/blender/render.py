@@ -30,6 +30,7 @@
     src/ami_sidewalk.png      歩道の way（道路の隣のタイルに敷く。敷石と、つながらない辺の縁石）
     src/ami_embankment_<front|back>.png  盛土の way（高架の脇の地面に敷く芝の法面の楔。#123）
     src/ami_mark_<種類>.png  交差点の路面表示の way（道路に重ねる停止線・横断歩道。#156）
+    src/ami_sign_<名前>.png   道路標識（roadsign）。柱と板の 4 向きの絵（#122）
     src/ami_sidewalk_<舗装>.png  歩道の種類（asphalt・brick・tile。形は ami_sidewalk と同じで敷石の材質だけ違う。#119）
     src/ami_sidewalk_elev.png  高架の歩道（板の下に道路の高架と同じ深さの基盤と躯体。#119）
     src/ami_wall_sidewalk_<版>.png  歩道の柵の way-object（single・back・front。#119）
@@ -683,6 +684,10 @@ for _d in catalog.DEPOTS:
     SHEETS[_d.name] = (lambda d: lambda: R.depot_sheet(R.sheet_path(d.name + ".png"), d.kind, R.WORK))(_d)
 # 操車場（#115）: 線路の脇の構内通路。形と寸法は sheetlib の yard.py
 SHEETS[catalog.RAIL_YARD] = lambda: R.yard_sheet(R.sheet_path(catalog.RAIL_YARD + ".png"), R.WORK)
+
+# 道路標識（#122）: 標識ごとに 1 枚。柱を描き、板の 2D の絵を押す（sheetlib の roadsign.py）
+for _n, _k in catalog.ROADSIGNS.items():
+    SHEETS[_n] = (lambda n, k: lambda: R.roadsign_sheet(R.sheet_path(n + ".png"), k, R.WORK))(_n, _k)
 
 if __name__ == "__main__":
     R.run_targets(SHEETS, list(SHEETS))

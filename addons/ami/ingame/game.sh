@@ -1,7 +1,7 @@
 #!/bin/bash
 # 検証用のフォルダの写しでゲームを 1 台起動し、見本を流して開いたままにする。撮る・閉じるも同じスクリプトで行う（#119）。
 # ゲームは work/game/<PORT>/ の写し（GAME_DIR の exe・dll・設定・pak128・addons と保存データ）に、AMI の pak（PAK）と EXTRA_PAKS を足して起動する。
-# GAME_DIR には書き込まない。
+# GAME_DIR には書き込まない。EXTRA_TEXTS に訳のファイル（*.tab）を渡すと、写しの addons/pak128/text/ に入れる。
 # 使い方（アドオンのディレクトリで。python -X utf8 build.py で dist/ami.pak を作っておく）:
 #   GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe PORT=47300 NUT=ingame/sidewalk_struct.nut bash ingame/game.sh   … 起動して NUT を流す
 #   PORT=47300 NUT=<見本> bash ingame/game.sh RUN                                         … 動いているゲームに NUT を流す
@@ -58,6 +58,8 @@ cp "$GAME_DIR/save/$SAVE.sve" "$WORK/save/" || exit 1
 [ -f "$GAME_DIR/settings.xml" ] && { cp "$GAME_DIR/settings.xml" "$WORK/settings.xml"; chmod u+w "$WORK/settings.xml"; }
 cp "$PAK" "$WORK/addons/pak128/ami.pak" || exit 1
 for p in ${EXTRA_PAKS:-}; do cp "$p" "$WORK/addons/pak128/$(basename "$p")" || exit 1; done
+# 訳のファイル（addons/pak128/text/<言語>_<名前>.tab。本体は名前の先頭 2 文字で言語を決める: dataobj/translator.cc）
+for t in ${EXTRA_TEXTS:-}; do mkdir -p "$WORK/addons/pak128/text" && cp "$t" "$WORK/addons/pak128/text/$(basename "$t")" || exit 1; done
 (cd "$WORK" && "./$EXE" -objects pak128/ -addons -load "$SAVE" -mcp-port "$PORT" > /dev/null 2>&1 &)
 for i in $(seq 1 60); do $M --run-squirrel "return 1;" > /dev/null 2>&1 && break; sleep 2; done
 [ -n "$NUT" ] && echo "$($M --run-squirrel "$(script_of "$NUT")" --timeout 300)"
