@@ -13,7 +13,8 @@
 - トロリ線（cat_wire）・ちょう架線（cat_messenger）: 経路に沿う上下 2 本の線。分岐・十字では全部の経路に張る。
   1px ほどの細い線なので Part.thin（高さのある部品の層で、半透明の画素も THIN_ALPHA 以上なら残す）
 
-柱・梁・吊り金具（group "catenary_support"）は経路が 1 本のセルだけに作る（track_sheet。分岐・十字に経路ごとの門ができないように）。
+柱・梁・吊り金具（group "catenary_support"）は経路が 1 本のセルではその経路に、分岐・十字のセルでは通り抜ける直線（南北・東西）にだけ作る
+（track_sheet。分岐の経路ごとに門ができないように。渡り線の T字に柱・梁が無いと線だけが浮いて見えた。AMI #101）。
 線（group "catenary"）は全部のセルに作る。梁・吊り金具・線は、車両より手前の絵（Part.front）に描く。
 """
 import dataclasses
