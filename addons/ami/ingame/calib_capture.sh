@@ -6,6 +6,7 @@
 # ゲームは work/calib_game/<PORT>/ の写し（GAME_DIR の exe・dll・設定・pak128・addons と保存データ）に PAKS を足して起動し、
 # 撮り終えたら閉じて写しも消す。GAME_DIR には書き込まない（同時に別のセッションが撮っても取り合わない。ポートは PORT で分ける）。
 # NUT（既定 ingame/calib.nut）で敷く見本を替えられる（WAYS の行を WAYS_NUT で置き換える）。
+# PRE=1 を渡すと、地面を撮る前に NUT の STAGE を "pre" にして流す（地形を作る見本: ingame/calib_bt.nut）。
 # 画像は OUT（既定 work/calib/shots）に <気候>_<段の名前>_z<拡大率>_<bare|way>.png で置く
 GAME_DIR=${GAME_DIR:?GAME_DIR に検証用のフォルダを指定する}
 EXE=${EXE:?EXE を指定する（例: OTRPv64_3.exe）}
@@ -68,8 +69,11 @@ shoot() {  # $1 = bare|way
   done
 }
 
-shoot bare
 WAYS_SQ="[$(printf '"%s",' $WAYS_NUT | sed 's/,$//')]"
-echo "[calib] $($M --run-squirrel "$(sed -e 's/^[[:space:]]*//' -e '/^\/\//d' -e '/^$/d' -e "s/^local WAYS = .*/local WAYS = $WAYS_SQ;/" "$NUT")" --timeout 300)"
+nut() { sed -e 's/^[[:space:]]*//' -e '/^\/\//d' -e '/^$/d' -e "s/^local WAYS = .*/local WAYS = $WAYS_SQ;/" -e "s/^local STAGE = .*/local STAGE = \"$1\";/" "$NUT"; }
+# PRE=1: 地面を撮る前に、NUT の STAGE を "pre" にして流す（地形を作る。ingame/calib_bt.nut のトンネル）
+[ -n "$PRE" ] && echo "[calib] pre: $($M --run-squirrel "$(nut pre)" --timeout 300)"
+shoot bare
+echo "[calib] $($M --run-squirrel "$(nut lay)" --timeout 300)"
 shoot way
 echo "[calib] $OUT に撮った（ゲームは閉じ、写しは消す）"
