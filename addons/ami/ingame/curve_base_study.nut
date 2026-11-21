@@ -7,7 +7,7 @@
 // SETS の組ごとに南へ SDY ずつ並べる: [名札, back の way, front の way, back の壁, front の壁]（壁は null で重ねない）。
 // 壁（way-object）は、同じ速さの物を後から敷くと前の版のまま向きだけ足される（obj/wayobj.cc の extend_wayobj）ので、
 // 角のタイルに残したい版の辺を先に敷く（way と逆の順）。
-// 返り値の [check] の行に、角のタイルとその隣の way・way-object の名前を出す（敷いた版が思ったとおりかを確かめる）。
+// 返り値の [check] の行に、外の角のタイルとその隣（12 か所）と内の角のタイル（4 か所）の way・way-object の名前を出す（敷いた版が思ったとおりかを目で確かめる。期待値との照合はしない）。
 // 名札は ASCII。行頭の空白と // で始まる行は curve_base_study.sh が消して渡す
 local SETS = [
   ["iss", "iss_wtg_0240_back", "iss_wtg_0240_front", null, null],
@@ -33,7 +33,9 @@ function names(x, y) {
 }
 
 foreach (si, set in SETS) {
-  local wb = way_desc_x(set[1]), wf = way_desc_x(set[2]);
+  // local は 1 つずつ書く（docs/reference/way-addon.md の 8.2）
+  local wb = way_desc_x(set[1]);
+  local wf = way_desc_x(set[2]);
   local ob = set[3] == null ? null : wayobj_desc_x(set[3]);
   local of = set[4] == null ? null : wayobj_desc_x(set[4]);
   if (wb == null || wf == null || (set[3] != null && (ob == null || of == null))) { report += set[0] + " desc=[missing]\n"; continue; }
@@ -42,7 +44,8 @@ foreach (si, set in SETS) {
     local oy = OY + si * SDY;
     local c = function(x, y) { return coord3d(ox + x, oy + y, 0); };
     local s = "";
-    s += r("label", marker.work(pl, c(0, -2), set[0] + " " + lay));
+    // 名札は 4 つの角の 1 タイル外に置く（角ごとに撮った画面に、その輪の名札が入るように）
+    foreach (p in [[-1, -1], [7, -1], [7, 7], [-1, 7]]) s += r("label", marker.work(pl, c(p[0], p[1]), set[0] + " " + lay));
     // 辺: [版, x0, y0, x1, y1]。外の輪の北・西は奥（back）、南・東は手前（front）。内の輪は逆
     local EW = [["back", 0, 0, 6, 0], ["front", 0, 6, 6, 6], ["front", 1, 1, 5, 1], ["back", 1, 5, 5, 5]];
     local NS = [["back", 0, 0, 0, 6], ["front", 6, 0, 6, 6], ["front", 1, 1, 1, 5], ["back", 5, 1, 5, 5]];
