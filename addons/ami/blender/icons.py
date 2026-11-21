@@ -9,7 +9,8 @@
   （単・後・中・前・双。VERSION_MARK）、下の帯 = 構造（高架・橋・トンネル。橋脚は高架の帯）。
   絵は、その物の直線のセルを北と南の隣のタイルの位置にもつないで、半分の大きさにしたもの（歩道はタイル 1 枚を 1/4 に）。
   等倍で真ん中を切ると、壁の single は片側しか入らず、橋脚は灰色の塊になって見分けにくかった。
-  壁は版の札だけ、架線は左上に稲妻、橋脚は左上に「脚」「門」、歩道は左上に「歩」、車庫は左上に「庫」（絵は道が南へ出る向きの建物を 1/4 に）
+  壁は版の札だけ、架線は左上に稲妻、橋脚は左上に「脚」「門」、歩道は左上に「歩」、車庫は左上に「庫」（絵は道が南へ出る向きの建物を 1/4 に）、
+  盛土は左上に「盛」と版の札（背景は路面軌道の色。tram_track の way）
 - カーソル（256px のセル）: その物の直線の絵（トンネルは坑口）に、アイコンと同じ背景色の札で「速度 + 版」（例 160後）
 - 絵と札の中身は dat から読む（名前・obj・waytype・topspeed と、image[ns] などのキーが指すセル）。dat の icon・cursor が指すセルに書く
 - シート名を渡すと、そのシートに書くアイコン・カーソルと、そのシートの絵から作るアイコン・カーソル（トンネルは中の way の絵、
@@ -79,7 +80,7 @@ def describe(d):
     name, obj = d["name"], d["obj"]
     m = re.search(r"_(single|back|center|front|twin)(_catenary)?$", name)
     info = dict(name=name, version=m.group(1) if m else None, speed=None, struct=None, label=None)
-    if name.startswith("ami_tram"):
+    if name.startswith(("ami_tram", "ami_embankment")):  # 盛土は tram_track の way（路面軌道の道具の一覧に出る）
         info["way"] = "tram"
     elif name.startswith("ami_road_expressway"):
         info["way"] = "expwy"
@@ -95,6 +96,8 @@ def describe(d):
         info.update(kind="sidewalk", label="歩")
     elif obj == "building":  # 車庫（#112）。速度は無く、左上に「庫」
         info.update(kind="depot", label=DEPOT_LABEL)
+    elif name.startswith("ami_embankment"):  # 盛土（#123）: 左上に「盛」、右下に版（前・後）
+        info.update(kind="embankment", label="盛")
     else:
         info["kind"] = {"bridge": "bridge", "tunnel": "tunnel"}.get(obj, "way")
         info["speed"] = d["topspeed"]

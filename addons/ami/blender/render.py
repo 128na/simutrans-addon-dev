@@ -26,6 +26,7 @@
     src/ami_pier_road.png     道路の高架の真下の地面に敷く橋脚の way
     src/ami_tram.png          路面軌道（tram_track）の通常の版。道路の上に重ねて敷く想定で、コンクリートの床・縁の帯・レールの頭・溝だけ（段も壁も無い）
     src/ami_sidewalk.png      歩道の way（道路の隣のタイルに敷く。敷石と、つながらない辺の縁石）
+    src/ami_embankment_<front|back>.png  盛土の way（高架の脇の地面に敷く芝の法面の楔。#123）
     work/                    セルごとの生の描画結果（確認用）
 """
 import dataclasses
@@ -579,6 +580,15 @@ SHEETS[catalog.PIER_ROAD] = lambda: R.pier_sheet(catalog.PIER_ROAD, R.FLAT, labe
 # 絵の位置・持ち分は道路と同じ（ROAD_CY）
 SIDEWALK_LABEL = "S"  # アイコンの文字（仮。アイコンはステップ 13 でまとめて作る）
 SHEETS[catalog.SIDEWALK] = lambda: R.sidewalk_sheet(catalog.SIDEWALK, label=SIDEWALK_LABEL, paving=SIDEWALK_PAVING, snow=ROAD_SNOW)
+
+# 盛土の way（#123）: 高架の脇の地面に敷く法面の楔（sheetlib の embankment_sheet）。法面は芝の土（2026-11-21、ユーザーの決定。#123）。
+# 芝は 2 色のまだら（EMBANKMENT_GRASS の暗い色・明るい色・細かさ）、雪の絵は雪のまだら
+EMBANKMENT_GRASS = ((0.086, 0.315, 0.03), (0.185, 0.59, 0.07), 30.0)  # ゲームの草地（画面で約 80,147,53）に合わせた
+EMBANKMENT_SNOW = ((0.80, 0.84, 0.90), (0.92, 0.95, 0.99), 30.0)
+_emb_skin = lambda nm, spec: {R.EMBANKMENT_MAT[0]: lambda: R.noisy_material(nm, spec[0], spec[1], scale=spec[2], rough=0.95)}
+for _name, _side in catalog.EMBANKMENTS.items():
+    SHEETS[_name] = (lambda n, s: lambda: R.embankment_sheet(n, s, mat_skin=_emb_skin("ami_embankment_grass", EMBANKMENT_GRASS),
+                                                             snow_skin=_emb_skin("ami_embankment_snow", EMBANKMENT_SNOW)))(_name, _side)
 
 # 踏切（#111）: 道路の種類ごとに 1 枚（線路の 4 種で共有）。奥の絵の下地に、その道路の直線のセルを写すので、道路のシートの後に描く
 # （SHEETS の登録順に描く。別の Blender で並べて描くときは、道路のシートを先に描き終えておく）。

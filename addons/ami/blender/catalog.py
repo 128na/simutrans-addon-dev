@@ -86,6 +86,9 @@ ROAD_WALL_VARIANTS = ("single", "back", "center", "front")  # 道路の壁の wa
 ROAD_WALL_TWIN = "ami_wall_road_twin"
 PIER_ROAD = "ami_pier_road"  # 道路用の橋脚の way
 SIDEWALK = "ami_sidewalk"  # 歩道の way（道路の隣のタイルに敷く、別の waytype の way。ADR 0003）
+# 盛土の way（#123。ADR 0008 の景観 6）: 高架の脇の地面に敷く法面の楔。front は法面が手前（南・東）、back は奥（北・西）を向く
+EMBANKMENT_SIDES = ("front", "back")
+EMBANKMENTS = {f"{PREFIX}embankment_{_s}": _s for _s in EMBANKMENT_SIDES}
 
 
 def crossing(track, road):

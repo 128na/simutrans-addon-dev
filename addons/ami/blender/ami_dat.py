@@ -381,6 +381,47 @@ def pier_dat_text(name, sheet):
                 out.append(f"{'front' if dr else ''}{key}{idx}[{season}]={sheet}.{row + dr}.{col},-64,-32")
     return NL.join(out) + NL
 
+# 盛土の way（#123。ADR 0008 の景観 6）: 高架の脇の地面に敷く法面の楔。waytype は橋脚と同じ tram_track、速さ 1（ADR 0008）。値は #110 の一覧
+EMBANKMENT_VALUES = dict(waytype="tram_track", cost=1000, maintenance=100, intro_year=1900, topspeed=1)
+# 雪の絵（[1]）の行のずらし。シートを描く側の tools/blender/sheetlib/sheetlib.py の _EMB_SNOW_ROW と同じ値にする
+EMBANKMENT_SNOW_ROWS = 4
+# 曲がり（image[sw] など）は行 2 の列 0〜3 の曲がりのセル。斜めの絵（diagonal）は持たない（本体は曲がりの絵を使い、斜めに敷くと角が並ぶ）
+EMBANKMENT_CURVES = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
+
+
+def embankment_dat_text(name, sheet):
+    """盛土の way の dat。セルは橋脚のシートと同じ並び（曲がりは EMBANKMENT_CURVES、分岐の絵は T字・十字のセル）。
+    雪の絵（[1]）は EMBANKMENT_SNOW_ROWS 下の行"""
+    v = EMBANKMENT_VALUES
+    cell = {(key, idx): (row, col) for key, idx, row, col in IMAGES}
+    out = [
+        f"# AMI: {name}（CC BY 4.0）。高架の脇の地面に敷く盛土（法面）の way。シートは blender/render.py が描く",
+        "obj=way",
+        f"name={name}",
+        "copyright=AMI (CC BY 4.0)",
+        f"intro_year={v['intro_year']}",
+        "intro_month=1",
+        "retire_year=2999",
+        "retire_month=1",
+        f"waytype={v['waytype']}",
+        f"cost={v['cost']}",
+        f"maintenance={v['maintenance']}",
+        f"topspeed={v['topspeed']}",
+        "system_type=0",
+        f"icon=> {sheet}.0.0",
+        f"cursor={sheet}.0.1,-64,-32",
+    ]
+    for season in (0, 1):
+        for key, idx, row, col in IMAGES:
+            if key == "diagonal":
+                continue
+            if key == "image" and idx in EMBANKMENT_CURVES:
+                row, col = EMBANKMENT_CURVES[idx]
+            elif key == "image" and idx in PIER_SWITCH:
+                row, col = cell[("image", PIER_SWITCH[idx])]
+            out.append(f"{key}{idx}[{season}]={sheet}.{row + season * EMBANKMENT_SNOW_ROWS}.{col},-64,-32")
+    return NL.join(out) + NL
+
 # 歩道の way（ami_sidewalk。#24）。waytype は iss の歩道（../refs/iss/src/util/sidewalk/ground.dat）と同じ water（README の「歩道の作り」）。
 # 値は仮（費用・維持費は橋脚と同じ考え方の小さい値。速さ 1 は橋脚と同じ）
 SIDEWALK_VALUES = dict(waytype="water", cost=1000, maintenance=20, intro_year=1900, topspeed=1)
@@ -530,6 +571,10 @@ def main():
     with open(os.path.join(SRC, catalog.SIDEWALK + ".dat"), "w", encoding="utf8", newline=NL) as f:
         f.write(sidewalk_dat_text(catalog.SIDEWALK, catalog.SIDEWALK))
     print(f"[dat] {catalog.SIDEWALK}.dat")
+    for name in catalog.EMBANKMENTS:
+        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
+            f.write(embankment_dat_text(name, name))
+        print(f"[dat] {name}.dat")
     # 分岐の追加画像の提供用の物（build.py が別の pak に作り、ex_graft.py で写す）。1 つの dat に --- で区切って並べる
     donors = [dat_text(n, BUILT[n], donor=True) for n in EX_WAYS]
     donors += [wall_dat_text(n, CATENARY[n], catenary=True, donor=True) for n in EX_WAYOBJS]

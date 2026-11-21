@@ -1209,6 +1209,126 @@ def _pier_sheet(sheet, datums, label="P", across=PIER_SIZE * PIER_ACROSS_K, anch
     make_sheet(cells, 4, 10, os.path.join(SRC, sheet + ".png"))
 
 
+# 盛土の way（AMI。#123）: 1 タイルの全面を楔にした法面。高い側の辺は高架と同じ高さ（ELEV_STEPS 段）で、反対の辺は地面。
+# 名前 → 高さの割合 f(x, y)（0 = 地面、1 = 高架の高さ）。側（side）は front（法面が手前の南・東を向き、高い側が北・西）と back（逆）
+EMB_OVERLAP = 0.25  # つながる辺で隣のタイルへ延ばす長さ（約 2px。持ち分の外は切られる）
+_EMB_SNOW_ROW = 4  # 雪の絵の行のずらし。dat を書く側の addons/ami/blender/ami_dat.py の EMBANKMENT_SNOW_ROWS と同じ値にする
+
+
+def _emb_height(name, side):
+    """盛土のセルの高さの割合の関数。直線・行き止まり・坂は直線の楔（front は北・西が高い）。
+    曲がり（corner_<角>）は台の角: 外の角は、隣の 2 つの楔の高い辺が会う角だけが高い面（f_a + f_b − 1）、
+    内の角は、その逆で低い角だけが地面の面（f_a + f_b）。どちらも 0〜1 で切り、斜めの稜線で折れる（iss の法面の八角形の角と同じ）。
+    front の内の角は se、back の内の角は nw。ne・sw は front と back が会う角で、盛り上げた台の角（外の角）にも
+    窪みの角（内の角）にもなるので、front は外の角、back は内の角を描く（台の角には front を、窪みの角には back を後から敷く）。
+    T字・十字・1 タイルは上が平らな箱"""
+    half = TILE / 2
+    f = {"n": lambda x, y: (y + half) / TILE, "s": lambda x, y: (half - y) / TILE,
+         "e": lambda x, y: (x + half) / TILE, "w": lambda x, y: (half - x) / TILE}
+    hi_ns, hi_ew = ("w", "n") if side == "front" else ("e", "s")
+    if name in ("ns", "n", "s", "up12", "up3", "up2_12", "up2_3"):
+        return f[hi_ns]
+    if name in ("ew", "e", "w", "up9", "up6", "up2_9", "up2_6"):
+        return f[hi_ew]
+    if name.startswith("corner_"):
+        c = name[len("corner_"):]
+        inner = c == "se" if side == "front" else c in ("nw", "ne", "sw")
+        if inner:   # 低い角 c の向かいの 2 辺が高い
+            a, b = (_OPPOSITE[c[0]], _OPPOSITE[c[1]])
+            return lambda x, y: min(1.0, f[a](x, y) + f[b](x, y))
+        return lambda x, y: max(0.0, f[c[0]](x, y) + f[c[1]](x, y) - 1.0)
+    return lambda x, y: 1.0
+
+
+def _emb_solid(hfun, top, exits=""):
+    """高さ top * hfun(x, y) の面を上に持つ、タイル 1 枚の塊（頂点, 面）。面は 2×2 の升を中心の点で 4 つの三角に割るので、
+    タイルの 2 本の対角線が辺になり、角の面の稜線で正しく折れる。底は地面より少し下（坂の当てで沈まないように）。
+    つながる辺（exits）には側面を作らない（隣のタイルの盛土が続くので見えず、作るとつなぎ目に細い線が出た）"""
+    half, n = TILE / 2, 2
+    step = TILE / n
+    verts, faces, idx = [], [], {}
+
+    def v(x, y, z):
+        verts.append(Vector((x, y, z)))
+        return len(verts) - 1
+
+    def at(x, y):   # つながる辺の点は外へ EMB_OVERLAP ずらす（隣のタイルの絵と重ねて、つなぎ目に 1px の透けが出ないように）。
+        z = top * min(1.0, max(0.0, hfun(x, y)))   # 高さは辺の元の点で決め、辺の断面のまま延ばす（隣の楔と高さが合う）
+        x += EMB_OVERLAP * ((x >= half - 1e-6 and "e" in exits) - (x <= -half + 1e-6 and "w" in exits))
+        y += EMB_OVERLAP * ((y >= half - 1e-6 and "n" in exits) - (y <= -half + 1e-6 and "s" in exits))
+        return v(x, y, z)
+
+    for i in range(n + 1):
+        for j in range(n + 1):
+            idx[(i, j)] = at(-half + i * step, -half + j * step)
+    for i in range(n):
+        for j in range(n):
+            c = at(-half + (i + 0.5) * step, -half + (j + 0.5) * step)
+            a, b, d, e = idx[(i, j)], idx[(i + 1, j)], idx[(i + 1, j + 1)], idx[(i, j + 1)]
+            faces += [(a, b, c), (b, d, c), (d, e, c), (e, a, c)]   # 上から見て反時計回り
+    # 外周（上から見て反時計回り）と、その真下の底の点
+    ring = [(i, 0) for i in range(n)] + [(n, j) for j in range(n)] + [(i, n) for i in range(n, 0, -1)] + \
+           [(0, j) for j in range(n, 0, -1)]
+    side_of = "s" * n + "e" * n + "n" * n + "w" * n   # 外周の辺 k がタイルのどの辺か
+    bottom = -0.05
+    low = [v(verts[idx[k]].x, verts[idx[k]].y, bottom) for k in ring]
+    for k in range(len(ring)):
+        t0, t1 = idx[ring[k]], idx[ring[(k + 1) % len(ring)]]
+        b0, b1 = low[k], low[(k + 1) % len(ring)]
+        if side_of[k] not in exits and (verts[t0].z > 1e-6 or verts[t1].z > 1e-6):   # 高さ 0 の辺には側面を作らない
+            faces.append((b0, b1, t1, t0))   # 外を向く側面
+    faces.append(tuple(reversed(low)))   # 底（下を向く）
+    return verts, faces
+
+
+def _emb_jobs():
+    """盛土のシートのセル: (行, 列) → (名前, 坂)。並びは橋脚のシートと同じ（曲がりは行 2 の列 0〜3 で、斜めの絵の代わりに曲がりの絵）"""
+    half = TILE / 2
+    up = lambda n, g: (lambda x, y: n * H * g(x, y) / TILE)
+    jobs = {(0, 2): ("ns", None), (0, 3): ("ew", None), (0, 5): ("s", None), (0, 6): ("w", None), (0, 7): ("n", None),
+            (0, 8): ("e", None), (0, 9): ("single", None),
+            (2, 0): ("corner_sw", None), (2, 1): ("corner_nw", None), (2, 2): ("corner_ne", None), (2, 3): ("corner_se", None),
+            (3, 5): ("nse", None), (3, 6): ("new", None), (3, 7): ("nsw", None), (3, 8): ("sew", None), (3, 9): ("nsew", None)}
+    for n, base in ((1, 0), (2, 5)):
+        pre = "up" if n == 1 else "up2_"
+        jobs[(1, base)] = (f"{pre}12", up(n, lambda x, y: y + half))
+        jobs[(1, base + 1)] = (f"{pre}9", up(n, lambda x, y: half - x))
+        jobs[(1, base + 2)] = (f"{pre}3", up(n, lambda x, y: half - y))
+        jobs[(1, base + 3)] = (f"{pre}6", up(n, lambda x, y: x + half))
+    if ONLY:
+        jobs = {k: v for k, v in jobs.items() if v[0] in ONLY + ("ns",)}
+    return jobs
+
+
+EMBANKMENT_MAT = ("embankment", (0.16, 0.30, 0.07))   # 法面の材質（芝）。描き分けは呼ぶ側の mat_skin で名前ごと差し替える
+
+
+def embankment_sheet(sheet, side, label="盛", mat_skin=None, snow_skin=None):
+    """盛土の way のシート（AMI。#123）。side は front・back。行 0〜3 が夏の絵、行 4〜7 が雪の絵（_EMB_SNOW_ROW）。
+    高い辺は高架と同じ高さ（ELEV_STEPS 段）で、地面のタイルに敷くので基準面は動かさない（絵の基準位置と持ち分は地面の菱形）。
+    坂は地形の坂を当てる（高架は地形の坂を引き継ぐので、楔の上の辺も地形に沿って上がる）。持ち分は橋脚と同じ（_pier_cell）。
+    mat_skin・snow_skin は夏・雪の絵の材質の名前による差し替え（"embankment" → 材質を返す関数）"""
+    top = ELEV_STEPS * H
+    set_anchor(GROUND_CY)
+    cells = {}
+    for row0, skin, tag in ((0, mat_skin, ""), (_EMB_SNOW_ROW, snow_skin, "_snow")):
+        with named_materials(skin):
+            for (r, c), (name, slope) in _emb_jobs().items():
+                clear_models()
+                ob = mesh_object("embankment", *_emb_solid(_emb_height(name, side), top, exits_of(name)),
+                                 material(*EMBANKMENT_MAT))
+                if slope:
+                    apply_slope(ob, slope)
+                cells[(row0 + r, c)] = _pier_cell(f"{sheet}{tag}_{name}", slope)
+    # アイコン（仮の絵。icons.py が描き直す）: 直線の楔。カーソルは南北の直線
+    with named_materials(mat_skin):
+        clear_models()
+        mesh_object("embankment", *_emb_solid(_emb_height("ns", side), top, "ns"), material(*EMBANKMENT_MAT))
+        cells[(0, 0)] = render_icon(sheet + "_icon", 0.5, shift=(-0.14, 0.2), label=label, style="tram")
+    cells[(0, 1)] = cells[(0, 2)]
+    make_sheet(cells, 2 * _EMB_SNOW_ROW, 10, os.path.join(SRC, sheet + ".png"))
+
+
 _EDGE = {"n": (0, 1), "s": (0, -1), "e": (1, 0), "w": (-1, 0)}
 _OPPOSITE = {"n": "s", "s": "n", "e": "w", "w": "e"}
 # 斜めのセル → 経路の外側の角（近い斜めの分け合うタイルは 2 本分）
