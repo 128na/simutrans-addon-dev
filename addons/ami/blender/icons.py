@@ -12,6 +12,10 @@
   壁は版の札だけ、架線は左上に稲妻、橋脚は左上に「脚」「門」、歩道は左上に「歩」
 - カーソル（256px のセル）: その物の直線の絵（トンネルは坑口）に、アイコンと同じ背景色の札で「速度 + 版」（例 160後）
 - 絵と札の中身は dat から読む（名前・obj・waytype・topspeed と、image[ns] などのキーが指すセル）。dat の icon・cursor が指すセルに書く
+- シート名を渡すと、そのシートに書くアイコン・カーソルと、そのシートの絵から作るアイコン・カーソル（トンネルは中の way の絵、
+  twin の壁は front の版の斜め）を書き直す（#141）。render.py は --own を付けて呼び、描いたシートにだけ書く（並べて描くとき、
+  ほかのプロセスが描いている途中のシートを上書きしないように）。ほかのシートにある分は、描き終えてから流す命令を出す
+- ほかのシートの絵から作った物は、絵のセルの sha256 を、書いたシートの横の <シート>.icon_sources.txt に控える。check_icons.py が比べる
 """
 import glob
 import hashlib
@@ -363,32 +367,45 @@ def put(sheet, r, c, rgba):
     full[y0:y0 + CELL, x0:x0 + CELL, 3] = 255
 
 
-def main(targets=None):
+def key_sheets(d, keys):
+    """キーの候補が指すセルのシート（画素は読まない）"""
+    return {ref(d[k])[0] for group in keys or () for k in group if k in d}
+
+
+def main(targets=None, own_only=False):
     dats = {}
     for p in sorted(glob.glob(os.path.join(SRC, "*.dat"))):
         if os.path.basename(p) in SKIP_DATS:
             continue
         d = read_dat(p)
         dats[d["name"]] = d
-    touched = set()
+    touched, skipped = set(), set()
+    targets = set(targets or ())
     for name, d in dats.items():
         if "icon" not in d:
             continue  # 踏切（obj=crossing。#111）は道具が無く、アイコン・カーソルを持たない
         isheet, ir, ic_ = ref(d["icon"])
         csheet, cr, cc = ref(d["cursor"])
         info = describe(d)
-        # ほかのシートの絵から作るアイコン（トンネルは中の way の絵。#141）は、絵のシートを描き直したときにも作り直す
-        icells = used_cells(*icon_source(d, info, dats))
-        ccells = used_cells(d, picture_keys(d, info["kind"], True))
-        if targets and not ({isheet, csheet} | {c[0] for c in icells + ccells}) & set(targets):
-            continue
+        pd, pkeys = icon_source(d, info, dats)
+        ckeys = picture_keys(d, info["kind"], True)
+        if targets and not {isheet, csheet} & targets:
+            # ほかのシートの絵から作るアイコン（トンネルは中の way の絵。#141）は、絵のシートを渡したときにも作り直す。
+            # own_only（render.py から呼ぶとき）は、ほかのプロセスが描いている途中のシートに書かないよう、書かずに知らせる
+            if not (key_sheets(pd, pkeys) | key_sheets(d, ckeys)) & targets:
+                continue
+            if own_only:
+                skipped.add(name)
+                continue
+        icells = used_cells(pd, pkeys)
+        ccells = used_cells(d, ckeys)
         stamp = {isheet: [], csheet: []}
         stamp[isheet] += [(name, "icon", *c, cell_digest(*c)) for c in icells if c[0] != isheet]
         stamp[csheet] += [(name, "cursor", *c, cell_digest(*c)) for c in ccells if c[0] != csheet]
         for sheet, rows in stamp.items():
             stamps = load_stamps(sheet)
             stamps[:] = [t for t in stamps if t[0] != name] + rows
-        icon =make_icon(info, icon_picture(d, info, dats))
+        icon = make_icon(info, icon_picture(d, info, dats))
         cell = np.zeros((CELL, CELL, 4), np.float32)
         cell[:ICON, :ICON] = icon
         cur = make_cursor(info, layers(d, picture_keys(d, info["kind"], True)))
@@ -401,6 +418,14 @@ def main(targets=None):
         R.save_rgb(os.path.join(SRC, sheet + ".png"), _sheets[sheet][..., :3])
         print(f"[icon] wrote {sheet}.png")
         write_stamps(sheet, dats)
+    if not targets:  # 全部を書いたときは、アイコンを書かなくなったシートの控えを消す
+        for path in glob.glob(os.path.join(SRC, "*" + STAMP_SUFFIX)):
+            if os.path.basename(path)[:-len(STAMP_SUFFIX)] not in touched:
+                os.remove(path)
+                print(f"[icon] removed {os.path.basename(path)}")
+    if skipped:
+        print("[icon] 描いたシートの絵から作るアイコン・カーソルが、ほかのシートにある（書いていない）。描き終えたら作り直す: "
+              "blender -b --factory-startup --python blender/icons.py -- " + " ".join(sorted(targets)))
 
 
 # ---------------------------------------------------------------- ほかのシートの絵の控え（#141）
@@ -421,7 +446,7 @@ def load_stamps(sheet):
         if os.path.exists(path):
             for line in open(path, encoding="utf8"):
                 t = line.split()
-                if len(t) == 6 and not line.startswith("#"):
+                if len(t) == 6 and not line.startswith("#") and t[3].isdigit() and t[4].isdigit():  # 壊れた行は捨てて書き直す
                     rows.append((t[0], t[1], t[2], int(t[3]), int(t[4]), t[5]))
         _stamps[sheet] = rows
     return _stamps[sheet]
@@ -443,7 +468,7 @@ def write_stamps(sheet, dats):
 
 def run_in_new_blender(targets):
     """render.py から呼ぶ。文字の場面をシートの場面と分けるため、別の Blender で動かす"""
-    cmd = [bpy.app.binary_path, "-b", "--factory-startup", "--python", os.path.abspath(__file__), "--"] + list(targets)
+    cmd = [bpy.app.binary_path, "-b", "--factory-startup", "--python", os.path.abspath(__file__), "--", "--own"] + list(targets)
     r = subprocess.run(cmd, cwd=os.path.join(_HERE, ".."), capture_output=True, text=True, encoding="utf8", errors="replace")
     for line in r.stdout.splitlines():
         if line.startswith("[icon]") or "Error" in line or "Traceback" in line:
@@ -455,4 +480,4 @@ def run_in_new_blender(targets):
 
 if __name__ == "__main__":
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-    main(set(args) or None)
+    main({a for a in args if a != "--own"} or None, own_only="--own" in args)

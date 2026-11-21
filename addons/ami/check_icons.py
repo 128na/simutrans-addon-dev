@@ -190,8 +190,8 @@ def source_digest(rows, row, col):
 
 def check_sources(src, objs):
     """icons.py が <シート>.icon_sources.txt に控えた、ほかのシートの絵のセルの sha256 を、今のシートと比べる。
-    トンネルのアイコンは中の way のシートの絵から作るので、トンネルには控えが無ければならない"""
-    errors, cache, stamped = [], {}, set()
+    控えが要る物（expected_sources）に控えがあり、控えのセルが今の dat の指すセルか、も見る"""
+    errors, cache, stamped = [], {}, {}
     names = {o["name"] for o in objs}
     for path in sorted(glob.glob(os.path.join(src, "*" + STAMP_SUFFIX))):
         stamp = os.path.basename(path)
@@ -206,7 +206,7 @@ def check_sources(src, objs):
             if name not in names:
                 errors.append(f"{stamp}: dat に無い物 {name} の行がある。blender/icons.py を流し直す")
                 continue
-            stamped.add((name, kind))
+            stamped.setdefault((name, kind), set()).add((sheet, row, col))
             need = (row + 1) * CELL
             if sheet not in cache or len(cache[sheet][2]) < need:
                 png = os.path.join(src, sheet + ".png")
@@ -220,10 +220,43 @@ def check_sources(src, objs):
             elif source_digest(rows, row, col) != digest:
                 errors.append(f"{name} の {kind} が、今の {sheet} のセル {row}.{col} から作られていない。"
                               f"絵のシートを描き直したら blender/icons.py を流し直す")
-    for o in objs:
-        if o["obj"] == "tunnel" and (o["name"], "icon") not in stamped:
-            errors.append(f"{o['name']}: icon の絵（中の way のシート）の控え（<シート>{STAMP_SUFFIX}）が無い。blender/icons.py を流し直す")
+    for (name, kind), cells in expected_sources(objs).items():
+        got = stamped.get((name, kind))
+        if not got:
+            errors.append(f"{name}: {kind} を作ったほかのシートの絵の控え（<シート>{STAMP_SUFFIX}）が無い。blender/icons.py を流し直す")
+        elif got != cells:
+            errors.append(f"{name}: {kind} の控えのセル {sorted(got)} が、今の dat の指す絵のセル {sorted(cells)} と合わない。"
+                          f"blender/icons.py を流し直す")
     return errors
+
+
+TUNNEL_PICTURE_KEYS = ("image[ns][0]", "frontimage[ns][0]")  # blender/icons.py の picture_keys(way) と同じ
+# blender/icons.py の picture_keys(壁・架線) と同じ候補の組（近い斜めの twin は直線を持たないので、斜めの組になる）
+WAYOBJ_PICTURE_GROUPS = [[f"back{k}", f"front{k}"] for k in ("image[ns]", "image[s]", "image[n]")] +     [["backdiagonal[nw]", "frontdiagonal[nw]", "backdiagonal[se]", "frontdiagonal[se]"]]
+
+
+def expected_sources(objs):
+    """ほかのシートの絵から作るので控えが要る (物, icon|cursor) → 絵のセルの集合（控えのセルと等しくなければならない）。
+    トンネルの icon は中の way の直線のセル。way-object（壁・架線）は、icons.py と同じ候補の組のうち dat にある最初の組で、
+    そのセルが icon・cursor と別のシートにあるもの（twin の壁は front の版の斜め）"""
+    by_name = {o["name"]: o for o in objs}
+    out = {}
+    for o in objs:
+        keys = o["keys"]
+        if o["obj"] in NO_TOOL_OBJS or "icon" not in keys or "cursor" not in keys:
+            continue
+        if o["obj"] == "tunnel":
+            way = by_name.get(keys.get("way"))
+            out[(o["name"], "icon")] = {cell_of(way["keys"][k]) for k in TUNNEL_PICTURE_KEYS if way and k in way["keys"]} - {None}
+        elif o["obj"] == "way-object":
+            group = next((g for g in WAYOBJ_PICTURE_GROUPS if any(k in keys for k in g)), [])
+            cells = {cell_of(keys[k]) for k in group if k in keys} - {None}
+            for kind in ("icon", "cursor"):
+                own = cell_of(keys[kind])
+                other = {c for c in cells if own and c[0] != own[0]}
+                if other:
+                    out[(o["name"], kind)] = other
+    return out
 
 
 def main(src):
