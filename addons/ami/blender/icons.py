@@ -44,7 +44,8 @@ SKIP_DATS = ("ex_donors.dat",)
 # 背景色（左上 → 右下のグラデーション）。種類で決める
 WAY_BG = {"rail": ((0, 196, 96), (0, 112, 56)), "tram": ((214, 160, 0), (140, 92, 0)),
           "road": ((96, 132, 196), (40, 64, 120)), "expwy": ((70, 90, 190), (24, 30, 96)),
-          "monorail": ((168, 72, 200), (96, 32, 120))}  # モノレール（#113）は紫（色相 285。ほかの waytype と 20 度以上離す。check_icons.py）
+          "monorail": ((168, 72, 200), (96, 32, 120)),  # モノレール（#113）は紫（色相 285。ほかの waytype と 20 度以上離す。check_icons.py）
+          "canal": ((0, 170, 190), (0, 96, 112))}  # 運河（#114）は青緑（色相 186）
 VERSION_MARK = {"single": "単", "back": "後", "center": "中", "front": "前", "twin": "双"}
 VERSION_MARK.update({f"lane{_n}": str(_n) for _n in range(1, 8)})  # 道路の路面表示の版（ami_road_<種類>_lane<n>。#121）: 右下に n
 DECK = (215, 215, 220)  # 帯の床・柱の色
@@ -89,6 +90,8 @@ def describe(d):
         info["way"] = "expwy"
     elif name.startswith("ami_monorail"):  # 跨座式モノレールの way・高架・トンネルと車庫（#113）
         info["way"] = "monorail"
+    elif name.startswith("ami_canal"):  # 運河と船の車庫（#114）
+        info["way"] = "canal"
     elif "road" in name or "sidewalk" in name:  # 歩道（ami_sidewalk*）と歩道の柵（ami_wall_sidewalk_*）は道路の色（#25・#119）
         info["way"] = "road"
     else:
