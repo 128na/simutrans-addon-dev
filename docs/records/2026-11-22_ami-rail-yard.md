@@ -1,0 +1,38 @@
+# 作業ログ: AMI の操車場（ami_rail_yard）を作る（#115）
+
+（2026-11-22）
+
+## 目的 / 発端
+
+[ADR 0008](../adr/0008-ami-scope-second-phase.md) の第 2 弾の物として、線路の操車場 `ami_rail_yard`（building の `stop`）を作る（#115）。ADR は「作る前に、ゲームで何に使えるかを確かめる」としている。値は AMI の README の「第 2 弾の物の値」（#110）で、費用 60000・維持費 1800・登場 1900。大きさは車庫（#112）と同じく、箱積み駅舎の箱 1 段（#140）に収める。
+
+## やったこと
+
+- 荷を扱わない `type=stop` の試しの pak（`work/yardtest/`。コミットしない）を作り、`addon_check` の写しで建てて、何に使えるかを見た
+- 配置（layout）の選び方を見るため、8 つの配置に 1〜8 本の棒を描いた絵の試しの pak を作り、建てる順を変えて画面で見た（スクリプトの API には建物の配置を読む関数が無いため）
+- 結果を #115 に書き、見た目の案を返した。ユーザーの決定（進捗管理から、2026-11-22）: 案 A（線路脇の構内通路）、`dims=1,1,8`、地上の直線の `ami_rail_yard` 1 種
+- 描く共通部分 `tools/blender/sheetlib/yard.py` を足した（`yard_sheet`）。車庫の `depot.py` の箱・層の描き方と位置（`BUILDING_DROP`）を使い回す
+- AMI 側: `blender/catalog.py` の `RAIL_YARD`、`blender/ami_dat.py` の `yard_dat_text`・`YARD_VALUES`、`blender/render.py` の `SHEETS`、`blender/icons.py`（札は「操」）、`lineup.py`（種類「線路の操車場」）
+- 見本 `addons/ami/ingame/yard_sample.nut` を足し（撮る場所は `sample_spots.sh` の `YARD_SPOTS`）、`sample_parallel.sh` で温暖・降雪に敷いて撮った（ポート 47210〜）
+
+## 分かったこと（事実）
+
+- `enables_*` を書かない `type=stop` の建物を線路の上に建てると、乗客も郵便も扱わない駅になる。時刻表に入れた列車はそこへ行って止まり、折り返す。乗客の駅の隣に建てると、その駅の一部になる。線路のメニューの駅の道具に並ぶ（`hausbauer_t::fill_menu`）
+- `cost`・`maintenance` を書けば、その値を使う（level から決まる既定の値は、書かないときだけ）
+- 配置（`dims=1,1,8`）: ビット 0 が線路の向き（0 = 南北、1 = 東西）、ビット 1（2）が南・東の隣に駅の建物が無いこと、ビット 2（4）が北・西の隣に駅の建物が無いこと。0・1 = 中ほど、2・3 = 南・東の端、4・5 = 北・西の端、6・7 = 1 タイル。建てる順は関係ない。隣の駅の建物は、ほかの物（乗客の駅）でもよい。本体は `bauer/hausbauer.cc` の `build_station_extension_depot`
+- 斜めの線路には「No through station here!」、坂には「Stops on slope require a slope-capable descriptor!」で建たない。高架の線路（`ami_rail_ballast_elev_single`）の上には建つ。`needs_ground` は地面の絵を消すかを決めるだけで、高架を止めない（`obj/gebaeude.cc`）。絵は地上用なので、高架の上では通路が高架の脇に浮いて見える（`addons/ami/docs/yard115_elevated_zoom.png`）
+- 見本の結果（2026-11-22、`OTRPv64_3.exe`、`flat_512.sve`）: 区画 Y1・YE・YW の操車場は乗客・郵便を扱わない駅、YP は乗客の駅と同じ駅になった。YT で車庫から出した機関車が操車場で止まり、通路の上に描かれた。確認画像は `addons/ami/docs/yard115_*.png`（README の「操車場の作り」）
+- 1 タイル建てたときに所持金から引かれた額は、温暖側 576 cr・降雪側 640 cr。dat の値は 600 cr。測る間のほかの出入り（時間の経過など）が混ざったとみて、それ以上は確かめていない
+
+## つまずき
+
+- 最初の絵では、柵が細すぎて 1px に満たず、輪郭の薄い画素として捨てられた（太さ 0.15 にした）。階段が浮いて見えたので、段を地面から積んだ。端の支柱が線路の側に出ていたので、柵の位置にそろえた
+- アイコンは dat の絵から作るので、`icons.py` は `ami_dat.py` の後に回す（先に回すと操車場のアイコンが無い）
+- 見本の Squirrel で、`base` を変数の名前にするとコンパイルできない（予約語）。時刻表は 2 つ以上の停車地が要る（1 つだと「less than two entries remained」）。いちばん速い機関車を選ぶと電気機関車になり、電化していない線路を走れないので、`needs_electrification()` が偽のものから選ぶ
+- `depot.sh … | tail` のようにパイプでつなぐと、ゲームを止めるまで戻らない。出力はファイルに受ける
+
+## 確かめていないこと
+
+- 見た目（通路の形・色・柵の高さ・階段）は、ユーザーが PR で見る
+- 本家 125 での読み込み
+- 高架の上に建てたときの対処（高架用の版を作るか、そのままにするか）
