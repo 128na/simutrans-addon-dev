@@ -422,7 +422,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 道具が無いので、アイコン・カーソルは持たない（`blender/icons.py` は dat に `icon` の無い物を飛ばす）
 - pak は付属（`ami_extra.pak`）に入れる（線路・道路と組で使う）
 - 値（仮。#110 で決める）: 速さは両方の way の最高速度（踏切で速度を落とさない）、登場年は 2 つの way の遅い方、音なし（`sound=-1`。iss と同じ）。`blender/ami_dat.py` の `crossing_dat_text`
-- 見本は `ingame/crossing_sample.sh`（`ingame/crossing_sample.nut`・`crossing_train.nut`）。12 組を、道路が南北の向き（H 線）と東西の向き（V 線）で温暖・降雪に敷き、開いた絵と、列車を走らせて閉じた絵を撮る。撮った画面は `docs/crossing_<気候>_<線>_<開閉>.png`（左上から、行が道路 local・general・expressway、列が線路 ballast・concrete・ladder・slab）
+- 見本は `ingame/crossing_sample.sh`（`ingame/crossing_sample.nut`・`crossing_train.nut`）。12 組を、道路が南北の向き（H 線）と東西の向き（V 線）で温暖・降雪に敷き、開いた絵と、列車を走らせて閉じた絵を撮る。撮った画面に AMI の踏切の絵が出ているかは `JUDGE=1` で判定する（`ingame/crossing_judge.py`。AMI の遮断機・警報機の黄色と、pak128 の踏切の標識の赤の画素を数え、どちらも無ければ踏切が写っていないとする。script からは踏切の名前が読めず、ほかの pak の踏切が選ばれても way の速さは変わらないため。#128）。撮った画面は `docs/crossing_<気候>_<線>_<開閉>.png`（左上から、行が道路 local・general・expressway、列が線路 ballast・concrete・ladder・slab）
 
 ### アイコン・カーソル（#25）
 
