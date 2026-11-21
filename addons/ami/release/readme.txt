@@ -39,6 +39,7 @@ pak は種類ごとに分かれています。使わない種類は入れなく�
 - 1/2 に縮めた画面で、線路のレール・まくらぎの明暗が粒に見える
   https://github.com/128na/simutrans-addon-dev/issues/89
 - 壁つきの線路を並べた間に渡り線を敷くと、渡り線のタイルの基盤に草の帯が出たり、基盤が壁の外へはみ出したりする。渡り線を敷いた後に、それぞれの線をその線の版でもう一度敷き直すと直る
+  https://github.com/128na/simutrans-addon-dev/issues/101
 - 道路の分岐の絵（優先道路の十字・T字など）は入っていない
   https://github.com/128na/simutrans-addon-dev/issues/46
 - 旧描画位置（SIS の線路に合う位置）の線路は入っていない

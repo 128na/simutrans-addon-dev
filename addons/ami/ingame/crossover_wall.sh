@@ -37,13 +37,13 @@ if [ "$CAPTURE" = 1 ]; then
   OUT=${OUT:-work/crossover/shots}
   ZOOM=${ZOOM:-3}
   SETS=${SETS:-"ami_wall ami_cat iss_cat"}
-  MODES=${MODES:-"main all late plain"}
+  MODES=${MODES:-"main all late plain relay"}
   LINES=${LINES:-"bf:0 bc:4 cf:8 bcf:12"}
   mkdir -p "$OUT"
   si=0
   for s in ami_wall ami_cat iss_cat; do
     mi=0
-    for m in main all late plain; do
+    for m in main all late plain relay; do
       for gspec in $LINES; do
         IFS=: read g gy <<< "$gspec"
         if [[ " $SETS " == *" $s "* && " $MODES " == *" $m "* ]]; then

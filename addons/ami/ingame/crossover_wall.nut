@@ -8,7 +8,8 @@
 //   all  … 本線に敷いた後、渡り線の経路にも同じ版の壁を敷く
 //   late … 本線と壁を敷いた後に、上の線の版で渡り線を敷く（敷き直さない。下の線の T字のタイルは上の線の版に置き換わる）
 //   plain … 本線と壁を敷いた後に、壁の無い通常の版（ami_rail_ballast。iss は iss_wtg_0240_single）で渡り線を敷く
-// main・all の way は本線の版。渡り線は先に敷き、本線をそれぞれの版で敷き直す（渡り線を敷くと端のタイルがその way に置き換わる。リファレンス 9.2）。
+//   relay … late の後に、本線をそれぞれの版で敷き直す（README の「壁の敷き方」で勧める手順。壁は敷き直さない）
+// main・all の way は本線の版。渡り線は先に敷き、本線をそれぞれの版で敷き直す（渡り線を敷くと端のタイルがその way に置き換わる。リファレンスの 6 章）。
 // 降雪側（x=256〜）に敷くときは crossover_wall.sh が OX に 256 を足す。降雪側なら敷いた後に一帯を降雪に塗る。
 // 返り値: 失敗した所と、T字のタイルの way・壁の名前と向き（[t] の行）
 local OX = 20;
@@ -26,7 +27,7 @@ local SETS = [
   {name = "iss_cat", way = "iss_wtg_0240_", wo = "iss_ot_new_position_catenary_", wosuf = "", plain = "iss_wtg_0240_single"},
 ];
 local GROUPS = [["back", "front"], ["back", "center"], ["center", "front"], ["back", "center", "front"]];
-local MODES = ["main", "all", "late", "plain"];
+local MODES = ["main", "all", "late", "plain", "relay"];
 
 function stair(w, x, y, n, dy) {
   for (local k = 0; k < n; k++) {
@@ -63,9 +64,10 @@ foreach (si, s in SETS) foreach (mi, m in MODES) {
       // 本線と壁 → 渡り線（敷き直さない）
       foreach (i, v in g) r(s.name + " " + v, command_x.build_way(pl, c(x0, y + i), c(x0 + 14, y + i), way_desc_x(s.way + v), true));
       foreach (i, v in g) r(s.name + " wo " + v, command_x.build_wayobj(pl, c(x0, y + i), c(x0 + 14, y + i), wayobj_desc_x(s.wo + v + s.wosuf)));
-      local sw = m == "late" ? wd : way_desc_x(s.plain);
+      local sw = m == "plain" ? way_desc_x(s.plain) : wd;
       stair(sw, x0 + 3, y, n - 1, 1);
       stair(sw, x0 + 9, y + n - 1, n - 1, -1);
+      if (m == "relay") foreach (i, v in g) r(s.name + " relay " + v, command_x.build_way(pl, c(x0, y + i), c(x0 + 14, y + i), way_desc_x(s.way + v), true));
     }
     // T字のタイル（向きが 3 本以上）の way と壁を出す
     for (local i = 0; i < n; i++) for (local x = x0; x <= x0 + 14; x++) {
@@ -79,6 +81,6 @@ foreach (si, s in SETS) foreach (mi, m in MODES) {
     y += n + 2;
   }
 }
-if (OX >= 256) r("climate", command_x(tool_set_climate).work(pl, c(OX - 2, OY - 2), c(OX + 4 * MODE_DX, OY + 3 * SET_DY), "7"));
+if (OX >= 256) r("climate", command_x(tool_set_climate).work(pl, c(OX - 2, OY - 2), c(OX + 5 * MODE_DX, OY + 3 * SET_DY), "7"));
 gui.close_all_windows();
 return report;

@@ -10,7 +10,7 @@
 
 - 組: AMI の壁（`ami_rail_ballast_base_<版>` + `ami_wall_rail_<版>`）、AMI の架線つきの壁（`_catenary`）、iss の架線（`iss_wtg_0240_<版>` + `iss_ot_new_position_catenary_<版>`。手本）
 - 線の並び: back+front・back+center・center+front・back+center+front。渡り線は階段の形で、南東へ下るものと北東へ上るもの
-- 敷き方: main（渡り線の後に本線をそれぞれの版で敷き直し、本線に壁）・all（main + 渡り線にも壁）・late（本線と壁の後に、上の線の版で渡り線）・plain（本線と壁の後に、壁の無い通常の版で渡り線）
+- 敷き方: main（渡り線の後に本線をそれぞれの版で敷き直し、本線に壁）・all（main + 渡り線にも壁）・late（本線と壁の後に、上の線の版で渡り線）・plain（本線と壁の後に、壁の無い通常の版で渡り線）・relay（late の後に本線をそれぞれの版で敷き直す。壁は敷き直さない。レビューの指摘で足した）
 - 温暖側 (20,20) と降雪側 (276,20)
 
 ## 分かったこと
@@ -20,6 +20,9 @@
 | main | 基盤・壁は崩れない。架線の T字は線だけで柱・梁が無い | 崩れない（T字は single の絵） |
 | all | main と画素まで同じ | main と同じ |
 | late・plain | 草の帯と、壁の外へはみ出す基盤 | 崩れない |
+| relay | main と同じ（架線つきの壁は画素まで同じ。壁だけの版は道床の縁の草の 1〜3 画素だけ違い、敷いた場所の地面の模様の差） | main と同じ |
+
+- late の崩れは、4 つの線の並び（back+front・back+center・center+front・3 本）と温暖・降雪の全部に出た（main との差は AMI の壁だけの組で 4320〜9436 px、架線つきの組で 4726〜10407 px。iss は全部 0 px）。relay と main の差は、どの並び・気候でも AMI の架線つきの組と iss で 0 px、AMI の壁だけの組で 0〜3 px
 
 1. 渡り線の経路のタイルは、渡り線を敷いた way に置き換わる。late で、front の線の直線のタイル (64,21) が back の版になった（両端の T字も）。線路の道具は Ctrl なしでも、既存の way が速いときだけ残す（`simtool.cc` 3301 行付近）。AMI の版はどれも 160 km/h なので、手で敷いても置き換わる。
 2. iss は基盤がどの版もタイル全体を塗る（壁は架線の way-object に入っている）。AMI の基盤は壁の側を壁で止めるので、置き換わったタイルに草の帯が出て、壁の外へ基盤がはみ出す。
@@ -34,12 +37,16 @@
 ## 直したこと
 
 - `tools/blender/sheetlib/sheetlib.py` の `_track_sheet`: 架線の柱・梁（`catenary_support`）を、経路が複数のセルでは通り抜ける直線（`_through_paths`）にだけ作る。
-- 架線つきの壁のシート 6 枚を描き直した（`ami_wall_rail_{single,back,center,front}_catenary`・`ami_wall_rail_twin_catenary_{back,front}`）。`sheet_diff.py` で、変わったのは T字・十字・分岐の絵・ex 画像のセルだけ（直線・斜め・坂・行き止まりのセルは 0 px）。
+- 架線つきの壁のシート 6 枚を描き直した（`ami_wall_rail_{single,back,center,front}_catenary`・`ami_wall_rail_twin_catenary_{back,front}`）。`sheet_diff.py` で、変わったのは T字・十字・分岐の絵（行 2〜3・6〜7 の列 5〜14）と ex 画像のセル（手前の絵の行 4〜5 の列 10〜13。奥の柱を持つ single・back は奥の絵の行 0〜1 の列 10〜13 も）だけで、直線・斜め・坂・行き止まりのセルは 0 px。twin の 2 枚は dat が斜めのセルだけを指すので、ゲームの見た目は変わらない。
 - ゲームで前後を同じ位置・等倍で撮って比べた: 壁だけの組と iss の組は全部 0 px（降雪側の iss の 2 枚は、画面に残った道具の印の差）。架線つきの組だけが変わった。
-- 確認画像: `addons/ami/docs/rail_crossover_catenary_{temperate,snow,pair,zoom}.png`（左が前、右が後）、`rail_crossover_iss.png`（左が iss、右が AMI の後）、`rail_crossover_relay.png`（左から main・late・plain。壁だけの版）。
+- 確認画像: `addons/ami/docs/rail_crossover_catenary_{temperate,snow,pair,zoom}.png`（左が前、右が後）、`rail_crossover_iss.png`（左が iss、右が AMI の後）、`rail_crossover_relay.png`（左が late、右が relay。壁だけの版、3 本並び）。
 
 ## 確かめていないこと
 
+- 十字のタイルに、南北と東西の 2 組の柱・梁が立つ見た目（シートのセルでは見た。画面では見ていない）。
+- Y字分岐・三方分岐（ex 画像）のタイルの柱・梁。柱・梁は T字・十字の通り抜ける直線に立つので、走行面に直線の無い Y字にも立つ。
+- 渡り線の画面で縦向きの斜めの線（1px）は、直した後も同じ位置に残る。柱・梁が横に立つことで線に見えるか。
 - 車両を走らせたときの、柱・梁と車両の重なり。
 - 高架に架線つきの壁を重ねた渡り線（#85 の範囲）。
 - 本家 125.0.1 での見え方。
+- T字・十字の柱・梁が消えても自動では見つからない（`check.sh` はシートを描かない。#50）。見つけられるのは、手で回す `sheet_diff.py` と `ingame/crossover_wall.sh` の撮影だけ。
