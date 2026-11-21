@@ -69,6 +69,9 @@ step "車庫の絵の大きさ（箱積み駅舎の箱 1 段に収まるか。ch
 step "物の一覧が全部の dat から作れるか、種類別の pak で全部を覆うか（lineup.py --check）"
 "$PY" -X utf8 "$AMI/lineup.py" --check
 
+step "盛土の絵の形と割り当て（向き・角・T字・十字・1 タイル・坂が期待のセルと形か。check_embankment.py）"
+"$PY" -X utf8 "$AMI/check_embankment.py"
+
 step "道具を用意する（makeobj: $MAKEOBJ、dat_linter: $DAT_LINTER）"
 bash "$ROOT/tools/ci/setup-dat-linter.sh" "$DAT_LINTER" "$TOOLS_DIR/dat_linter"
 export PATH="$TOOLS_DIR/dat_linter:$PATH"
