@@ -426,7 +426,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 ### リリース用のサムネイル（#96）
 
-公開物に使う画像は `docs/thumbnail/` の `thumbnail.png`（2560x1340、OGP の 1.91:1）と `ogp.jpg`（同じ絵の JPEG）。文字なしの画面は `plain.png`。生成画像は使わず、手本の iss（`docs/thumbnail.png`）と同じく、ゲームの画面に文字を重ねて作る。
+公開物に使う画像は `docs/thumbnail/` の `thumbnail.png`（2560x1340、OGP の 1.91:1）と `ogp.jpg`（同じ絵を Web 用に 1200x628 へ縮めた JPEG）。文字なしの画面は `plain.png`。生成画像は使わず、手本の iss（`docs/thumbnail.png`）と同じく、ゲームの画面に文字を重ねて作る。
 
 - 見本の街区は `ingame/thumbnail.nut` が `flat_512.sve` の写しに敷く（保存はしない）。並びはスクリプトの冒頭の表
 - 撮る: `GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> bash ingame/thumbnail_capture.sh`。ゲームを 2560x1400 の画面で起動し、等倍（`gui.set_zoom(3)`）で `work/thumbnail/shot.png` に撮る。敷けなかったときは撮らずに止まる

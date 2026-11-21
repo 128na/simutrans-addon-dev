@@ -5,7 +5,7 @@
 #   GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=47300 bash ingame/thumbnail_capture.sh
 # ゲームは work/thumbnail_game/<PORT>/ の写し（GAME_DIR の exe・dll・設定・pak128・addons と保存データ）に dist/ami.pak を足して起動し、
 # 撮り終えたら閉じて写しも消す。GAME_DIR には書き込まない（保存データ flat_512.sve は写しを読むだけで、保存しない）。
-# 画面の大きさは SCREEN（既定 2560x1400。上の道具欄と下の状態欄を thumbnail_compose.py が切り落として 2560x1340、OGP の 1.91:1 にする）。撮る場所（画面の中心のタイル "x,y"）は VIEW（既定 100,99。空白で区切って複数渡すと、_0・_1… を付けて撮り分ける）。
+# 画面の大きさは SCREEN（既定 2560x1400。上の道具欄と下の状態欄を thumbnail_compose.py が切り落として 2560x1340、OGP の 1.91:1 にする）。撮る場所（画面の中心のタイル "x,y"）は VIEW（既定 101,101。空白で区切って複数渡すと、_0・_1… を付けて撮り分ける）。
 # 画像は OUT（既定 work/thumbnail/shot.png）。KEEP=1 を渡すと、撮った後もゲームを閉じない（構図を探すとき。VIEW を替えて shoot だけ呼ぶ）
 GAME_DIR=${GAME_DIR:?GAME_DIR に検証用のフォルダを指定する}
 EXE=${EXE:?EXE を指定する（例: OTRPv64_3.exe）}
@@ -14,7 +14,7 @@ SAVE=${SAVE:-flat_512}
 SCREEN=${SCREEN:-2560x1400}
 NUT=${NUT:-ingame/thumbnail.nut}
 OUT=${OUT:-work/thumbnail/shot.png}
-VIEW=${VIEW:-100,99}
+VIEW=${VIEW:-101,101}
 SETTLE=${SETTLE:-6}   # 敷いた後、建設費の表示が消えるまで待つ秒数
 source "$(dirname "$0")/mcp_client.sh"   # MCP_CLIENT の既定（リポジトリの隣の simutrans/）
 M="python -X utf8 $MCP_CLIENT --port $PORT"
@@ -55,11 +55,13 @@ sleep "$SETTLE"
 shoot() {  # $1 = x,y  $2 = 出力先
   $M --run-squirrel "gui.close_all_windows(); gui.set_zoom(3); gui.jump(coord3d($1,0)); return 1;" > /dev/null 2>&1
   sleep 1.5
-  $M --capture "$2" > /dev/null 2>&1 && echo "[thumb] $2 を撮った（中心 $1）" || echo "[thumb] 撮れなかった: $2"
+  rm -f "$2"
+  $M --capture "$2" > /dev/null 2>&1 && [ -f "$2" ] && echo "[thumb] $2 を撮った（中心 $1）" || { echo "[thumb] 撮れなかった: $2"; FAILED=1; }
 }
 i=0
 for v in $VIEW; do
   if [ "$(echo $VIEW | wc -w)" -eq 1 ]; then shoot "$v" "$OUT"; else shoot "$v" "${OUT%.png}_$i.png"; fi
   i=$((i + 1))
 done
-[ -n "$KEEP" ] && echo "[thumb] ゲームは開いたまま（ポート $PORT、写しは $WORK）"
+if [ -n "$KEEP" ]; then echo "[thumb] ゲームは開いたまま（ポート $PORT、写しは $WORK）"; fi
+[ -z "$FAILED" ]

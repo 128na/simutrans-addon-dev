@@ -8,7 +8,7 @@
     uv run ingame/thumbnail_compose.py [撮った画面] [--plain]
 
 - 撮った画面の既定は work/thumbnail/shot.png（thumbnail_capture.sh の既定の出力。SCREEN=2560x1400 で撮る）。
-- 出力は docs/thumbnail/ の thumbnail.png（文字入り、2560x1340）と ogp.jpg（同じ大きさの JPEG。手本の iss と同じく、縮めるのはファイルの大きさだけで、画素は縮めない）。
+- 出力は docs/thumbnail/ の thumbnail.png（文字入り、2560x1340）と ogp.jpg（Web 用に 1200x628 へ縮めた JPEG。2026-11-21、ユーザーの決定）。
   --plain を付けると、文字なしの plain.png だけを書く（構図の確かめ用）。
 - 比率は OGP の 1.91:1（2560x1340）。撮った画面の地図の部分（道具欄の下から状態欄の上まで）の真ん中から切り出す。
 - 文字は手本（iss の docs/thumbnail.png）の作りに合わせる: 上に白の太い斜体の英語の題名と影、左下に「内容」の箇条書きと種類の数。
@@ -24,6 +24,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 HERE = pathlib.Path(__file__).resolve().parent.parent  # アドオンのディレクトリ
 OUT_DIR = HERE / "docs" / "thumbnail"
 SIZE = (2560, 1340)  # 1.91:1
+OGP_SIZE = (1200, 628)  # OGP の推奨の大きさ（1.91:1）
 TOOLBAR = 32  # 画面の上の道具欄の高さ（px）
 STATUSBAR = 16  # 画面の下の状態欄の高さ（px）
 
@@ -32,7 +33,6 @@ FONT_TITLE = os.environ.get("FONT_TITLE", str(FONTS / "segoeuiz.ttf"))  # Segoe 
 FONT_BODY = os.environ.get("FONT_BODY", str(FONTS / "YuGothB.ttc"))  # 游ゴシック Bold
 
 TITLE = "AI Marunage Infrastructure"
-BADGE = os.environ.get("BADGE", "")  # 題名の後ろに足す字（例: "β"。ベータ版の字を入れる案）
 BODY = [
     "内容",
     "　線路 4 種（バラスト・直結・ラダー・スラブ）",
@@ -75,9 +75,8 @@ def text_with_shadow(img: Image.Image, xy, text, font, offset=6, blur=6, alpha=2
 
 def compose(base: Image.Image) -> Image.Image:
     img = base.convert("RGBA")
-    title = TITLE + (" " + BADGE if BADGE else "")
     font_title = ImageFont.truetype(FONT_TITLE, 150)
-    text_with_shadow(img, (60, 10), title, font_title, offset=8, blur=8)
+    text_with_shadow(img, (60, 10), TITLE, font_title, offset=8, blur=8)
     font_body = ImageFont.truetype(FONT_BODY, 64)
     lines = BODY + [COUNT.format(n=round(count_objects(), -1))]
     line_h = 84
@@ -101,8 +100,8 @@ def main() -> None:
         return
     img = compose(base)
     img.save(OUT_DIR / "thumbnail.png", optimize=True)
-    img.save(OUT_DIR / "ogp.jpg", quality=85, optimize=True)
-    print(f"[compose] {OUT_DIR / 'thumbnail.png'} {img.size}、{OUT_DIR / 'ogp.jpg'}")
+    img.resize(OGP_SIZE, Image.LANCZOS).save(OUT_DIR / "ogp.jpg", quality=88, optimize=True)
+    print(f"[compose] {OUT_DIR / 'thumbnail.png'} {img.size}、{OUT_DIR / 'ogp.jpg'} {OGP_SIZE}")
 
 
 if __name__ == "__main__":
