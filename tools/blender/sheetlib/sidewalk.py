@@ -37,7 +37,7 @@ SIDEWALK_SNOW_ROWS = 4
 # 高架の版: 板（縁石の色）は道路の高架の路面の下の基盤の上面（ROAD_BASE_DROP 下）まで。その下に基盤（BASE_H）と躯体（ELEV_BODY_D）。
 # 深さは道路の高架（sheetlib の road_sheet の elev_body）と同じにし、並べた高架の道路と床の下の縁をそろえる。
 # 躯体は、つながらない辺で ELEV_BODY_INSET 内へ下げる（道路の高架の、壁のある側と同じ）。道路用の橋脚（ami_pier_road）の上端もこの深さに合う
-ELEV_LOWER = math.ceil((BASE_H + ELEV_BODY_D + _s.ROAD_BASE_DROP) * 16 / H) + 2  # 持ち分を下へ広げる行数（AMI の道路の高架と同じ）
+SIDEWALK_ELEV_LOWER = math.ceil((BASE_H + ELEV_BODY_D + _s.ROAD_BASE_DROP) * 16 / H) + 2  # 持ち分を下へ広げる行数（AMI の道路の高架と同じ）
 
 # 歩道の柵（横断防止柵・転落防止柵の形。白く塗った鋼）。寸法の単位は 1 ≈ 1.15m（docs/reference/way-addon.md の 12 章）。
 # 画面で 1px を切る部品は消えるので、横木・柱は 1.3px 以上（高さ 1 ≈ 7.8px）にする
@@ -134,7 +134,7 @@ def _cell(cname, exits, slope, snow, paving_mat, snow_mat, elevated):
     clear_models()
     _build(exits, slope, snow, paving_mat, snow_mat, elevated)
     path = render_cell(cname)
-    _own(cname, slope, SIDEWALK_RISE, ELEV_LOWER if elevated else 0)
+    _own(cname, slope, SIDEWALK_RISE, SIDEWALK_ELEV_LOWER if elevated else 0)
     return path
 
 
