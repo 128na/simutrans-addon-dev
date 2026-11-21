@@ -21,14 +21,16 @@ import struct
 import sys
 import zlib
 
+from ex_graft import DONOR_SUFFIX as SHARE_SUFFIX
+
 CELL = 256
 ICON = 32
 TRANSPARENT = (231, 255, 255)
 REF = re.compile(r"^>?\s*([A-Za-z0-9_\-]+)\.(\d+)\.(\d+)\s*(?:,|$)")
 
 # 意図して共有するもの: 名前が <物><SHARE_SUFFIX> の物は、<物> と同じキーで同じセルを指してよい
-# （ex_donors.dat の分岐の追加画像の提供用の物。ex_graft.py・blender/ami_dat.py の DONOR_SUFFIX）
-SHARE_SUFFIX = "__ex_donor"
+# （ex_donors.dat の分岐の追加画像の提供用の物。SHARE_SUFFIX は ex_graft.py の DONOR_SUFFIX。icons.py は ex_donors.dat を書かず、
+# 提供用の物のアイコン・カーソルは <物> のセルをそのまま使う）
 
 # 背景色を、dat の waytype でなく別の種類の色で描く物（名前 → 色を借りる waytype）。理由はそれぞれの行に書く
 BG_BORROW = {
@@ -37,7 +39,8 @@ BG_BORROW = {
     "ami_pier_road": "road",  # 道路の下に立てる橋脚なので道路の色（#25）
     "ami_sidewalk": "road",  # 歩道は water の way だが、道路の脇に敷く物なので道路の色（#25）
 }
-HUE_MIN_DIFF = 20  # waytype の違う物どうしの、背景の色相の差の下限（度）。線路 150・路面軌道 43・道路 218・高速道路 234
+HUE_MIN_DIFF = 20  # waytype の違う物どうしの、背景の色相の差の下限（度）。今の値は線路 149〜150・路面軌道 44・道路 219・高速道路 230。
+# 組は dat の waytype なので、道路と高速道路（どちらも road）は比べない
 SATURATION_MIN = 60  # 色相を見る画素の、RGB の最大と最小の差の下限（文字の白・影・絵の灰色を除く）
 
 
@@ -47,7 +50,9 @@ def read_dats(src):
     objs = []
     for path in sorted(glob.glob(os.path.join(src, "*.dat"))):
         block = {}
-        for line in list(open(path, encoding="utf8")) + ["---"]:
+        with open(path, encoding="utf8") as f:
+            lines = f.read().splitlines()
+        for line in lines + ["---"]:
             line = line.strip()
             if line.startswith("-"):
                 if block:
@@ -74,7 +79,8 @@ def fmt(cell):
 # ---------------------------------------------------------------- png（8bit RGB・インターレースなしだけ）
 def read_rows(path, nrows):
     """PNG の上から nrows 行を、行ごとの bytearray（RGB）で返す。幅・高さも返す"""
-    data = open(path, "rb").read()
+    with open(path, "rb") as f:
+        data = f.read()
     if data[:8] != b"\x89PNG\r\n\x1a\n":
         raise SystemExit(f"PNG でない: {path}")
     pos, idat, w, h = 8, [], 0, 0
@@ -240,7 +246,8 @@ def main(src):
             if wa != wb and hue_diff(ha, hb) < HUE_MIN_DIFF:
                 clash.setdefault(tuple(sorted((wa, wb))), []).append((a, ha, b, hb))
     for (wa, wb), pairs in sorted(clash.items()):
-        a, ha, b, hb = pairs[0]
+        # 例は、借りた色（BG_BORROW）でない物どうしの組を先に出す
+        a, ha, b, hb = min(pairs, key=lambda p: (p[0] in BG_BORROW) + (p[2] in BG_BORROW))
         errors.append(f"waytype {wa} と {wb} のアイコンの背景の色相が近い（{len(pairs)} 組。例: {a} {ha:.0f} 度・{b} {hb:.0f} 度。"
                       f"差の下限 {HUE_MIN_DIFF} 度）。意図して借りる色なら check_icons.py の BG_BORROW に書く")
 
