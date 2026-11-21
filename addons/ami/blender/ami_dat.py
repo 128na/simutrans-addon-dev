@@ -160,6 +160,8 @@ WALLS = {f"ami_wall_rail_{_v}": f"ami_wall_rail_{_v}" for _v in BASE_VARIANTS}
 WALL_FRONT_ROW = 4  # 壁のシートの手前の絵の行（sheetlib の WALL_FRONT_ROW と同じ）
 WAYOBJ_KEYS = {"image": "image", "imageup": "imageup", "imageup2": "imageup2", "diagonal": "diagonal"}  # way のキー → way-object の back/front の後ろ
 # 近い斜めの分け合うタイル用: 斜めの向きごとに、タイルの角の側の壁を持つ版のシート（back は nw・sw、front は ne・se。README の「壁の敷き方」）
+# 壁だけの twin のアイコン・カーソルのセル（back の版のシートの、どの dat も指さないセル。icons.py が書く。#25）
+TWIN_ICON_CELLS = ("0.4", "1.4")
 TWIN_FROM = {"[nw]": "ami_wall_rail_back", "[sw]": "ami_wall_rail_back", "[ne]": "ami_wall_rail_front", "[se]": "ami_wall_rail_front"}
 
 # ---------------------------------------------------------------- 道路の壁の way-object（#22）
@@ -302,6 +304,8 @@ def wall_dat_text(name, sheet, twin=False, catenary=False, road=False, donor=Fal
     架線つき（twin を除く）は、分岐の追加画像（EX_WAYOBJS）のために 1・2 の 10 枚のキーも書く: 通常は T字・十字と同じセル（本体が way-object の
     分岐の絵を選ぶ処理に入るが、絵は変わらない）、donor（提供用の物。名前 + DONOR_SUFFIX）は EX_CELLS"""
     v = CATENARY_VALUES if catenary else WALL_VALUES
+    # 壁だけの twin は back の版のシートを借りるので、アイコン・カーソルは back の版のセル（0.0・0.1）でなく、使っていないセルに置く（#25）
+    icon_cell, cursor_cell = TWIN_ICON_CELLS if twin and not catenary else ("0.0", "0.1")
     twin_from = TWIN_FROM_CATENARY if catenary else ROAD_TWIN_FROM if road else TWIN_FROM
     kind = "道路の壁" if road else "線路の壁の way-object（架線つき（電化））" if catenary else "線路の壁の way-object（壁だけ、架線なし）"
     wt = "road" if road else "track"
@@ -320,8 +324,8 @@ def wall_dat_text(name, sheet, twin=False, catenary=False, road=False, donor=Fal
         f"cost={v['cost']}",
         f"maintenance={v['maintenance']}",
         f"topspeed={(CATENARY_TWIN_TOPSPEED if catenary else WALL_TWIN_TOPSPEED) if twin else v['topspeed']}",
-        f"icon=> {sheet}.0.0",
-        f"cursor={sheet}.0.1,-64,-32",
+        f"icon=> {sheet}.{icon_cell}",
+        f"cursor={sheet}.{cursor_cell},-64,-32",
     ]
     ex = name in EX_WAYOBJS or donor
     cell = {(key, idx): (row, col) for key, idx, row, col in IMAGES}

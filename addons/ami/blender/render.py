@@ -577,3 +577,8 @@ SHEETS[catalog.SIDEWALK] = lambda: R.sidewalk_sheet(catalog.SIDEWALK, label=SIDE
 
 if __name__ == "__main__":
     R.run_targets(SHEETS, list(SHEETS))
+    # アイコン・カーソル（#25）: 描いたシートの絵から作り、シートのセルに書く（blender/icons.py）。LAYOUT・ONLY の出力（work/）には書かない
+    if not (R.LAYOUT or R.ONLY):
+        import icons
+        _args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+        icons.run_in_new_blender([a for a in _args if a in SHEETS] or list(SHEETS))
