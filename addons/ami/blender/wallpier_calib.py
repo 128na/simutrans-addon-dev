@@ -12,6 +12,8 @@
 描いた絵は work/wallpier/<段>/src/。pak は work/wallpier/<段>/build/dist/ami.pak で、dist/ami.pak と同じ名前の物だけを持つ（違いは壁・橋脚の絵だけ）。
 壁のシートは基盤の版の対象（ami_rail_ballast_base_<版>）が書くので、その way のシートも work/wallpier/<段>/src/ に描かれる（pak には入れない。
 src/ と同じになるかを確かめる）。AMI_WALLPIER=0 で描くと差し替えなし（src/ とバイト単位で同じになるかを確かめる）。
+ユーザーが段 2 にそろえると決め、render.py の TRACK_WALL_SKIN・TRACK_PIER_SKIN・TRACK_GATE_SKIN に入れた（2026-11-21、#83）。その後は、
+AMI_WALLPIER=0 でも基盤の版の表（TRACK_MAT_SKIN）に wall が入っているので、壁のシートは段 2 で描かれる（決める前の今の絵は main の 9533558 の src/）。
 """
 import glob
 import os

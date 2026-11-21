@@ -1453,10 +1453,11 @@ TUNNEL_HOOD = (TILE / 2, 2 * H)         # 躯体の半幅と高さ
 TUNNEL_RISE = 36      # 躯体の高さ（画面の px。持ち分を上へ広げる行数）
 
 
-def tunnel_sheet(kind="track", profile="new", sheet=None, label="100", road_profile="expressway"):
-    """坑口のシート（中身は _tunnel_sheet）。道路の坑口は、描くあいだだけ道路の描き分けの "mat_skin"（無くてよい）で材質を名前で差し替える"""
+def tunnel_sheet(kind="track", profile="new", sheet=None, label="100", road_profile="expressway", mat_skin=None):
+    """坑口のシート（中身は _tunnel_sheet）。道路の坑口は、描くあいだだけ道路の描き分けの "mat_skin"（無くてよい）で材質を名前で差し替える。
+    線路の坑口は引数 mat_skin（無くてよい）で差し替える（線路の描き分けの mat_skin は基盤の板の材質も替えるので使わない。#83）"""
     rp = (ROAD_PROFILES[road_profile] if isinstance(road_profile, str) else road_profile) if kind == "expressway" else {}
-    with named_materials(rp.get("mat_skin")):
+    with named_materials(rp.get("mat_skin") if kind == "expressway" else mat_skin):
         _tunnel_sheet(kind, profile, sheet, label, road_profile)
 
 

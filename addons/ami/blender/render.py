@@ -371,17 +371,36 @@ for _t in catalog.TRACKS:
 # 道路一式のコンクリート ROAD_CONCRETE と同じ振れ幅）に、約 30px の大きなしみで最大 15% 暗くする。模様はタイルの 1 辺を周期にしてあり、
 # タイルの辺で切れない（sheetlib の tiled_concrete_material）。継ぎ目の線は描かない。段 0〜3 と継ぎ目の案を見比べ、ユーザーが段 2・継ぎ目なしに
 # 決めた（2026-11-21。橋もそろえることも同じ日にユーザーが決めた。比べた案は blender/surface_calib.py、記録 docs/records/2026-11-21_ami-surface-detail.md）。
-# 線路の基盤・高架の版と橋（床と桁。高架の single と同じ作りで、高架とつながる）に渡す。壁・橋脚・坑口は今のまま（橋の柱は材質 pier で、
-# 差し替えない）。雪の絵では基盤の上面は雪の材質のまま
+# 線路の基盤・高架の版と橋（床と桁。高架の single と同じ作りで、高架とつながる）に渡す。雪の絵では基盤の上面は雪の材質のまま。
+# 線路の壁（材質 wall）・橋脚（pier。門型は柱 pier_post_<角>・梁 pier_beam_<辺>）・橋の柱（pier）・坑口の躯体（wall）も同じ段 2 にする
+# （#83。今の絵と並べて見比べ、ユーザーがそろえると決めた。2026-11-21。比べた案は blender/wallpier_calib.py、
+# 記録 docs/records/2026-11-21_ami-wall-pier-surface.md）。壁の way-object のシートは基盤の版の対象が書くので、基盤の版の表に wall を入れる
+# （way のシートの壁は基盤を削るためだけに置くので、way の絵は変わらない）。道路の壁・橋脚は道路一式のコンクリート（ROAD_MAT_SKIN）のまま
 TRACK_SURFACE = dict(amp=0.12, grain=2.5, stain=0.15, stain_scale=0.35)
-TRACK_MAT_SKIN = {
-    spec[0]: (lambda nm=spec[0], rgb=spec[1]: R.tiled_concrete_material(f"ami_track_concrete_{nm}", rgb, **TRACK_SURFACE))
-    for spec in (R._M_BASE, R._M_ELEV_BODY)}
+
+
+def _track_concrete(nm, rgb):
+    return lambda: R.tiled_concrete_material(f"ami_track_concrete_{nm}", rgb, **TRACK_SURFACE)
+
+
+TRACK_WALL_SKIN = {R._M_WALL[0]: _track_concrete(*R._M_WALL)}
+TRACK_PIER_SKIN = {R._M_PIER[0]: _track_concrete(*R._M_PIER)}
+# 門型の橋脚の柱と梁の材質の名前（sheetlib の _gate_parts の角・辺。斜めの片持ちの梁は角の名前）
+TRACK_GATE_SKIN = {f"{spec[0]}_{k}": _track_concrete(f"{spec[0]}_{k}", spec[1])
+                   for spec, keys in ((R._M_PIER_POST, ("c", "ne", "nw", "se", "sw")),
+                                      (R._M_PIER_BEAM, ("n", "s", "e", "w", "ne", "nw", "se", "sw")))
+                   for k in keys}
+TRACK_MAT_SKIN = {spec[0]: _track_concrete(*spec) for spec in (R._M_BASE, R._M_ELEV_BODY)} | TRACK_WALL_SKIN | TRACK_PIER_SKIN
 for _t in catalog.TRACKS:
     for _v in BASE_VARIANTS:
         for _name in (_t.base(_v), _t.elev(_v)):
             R.TRACK_PROFILES[_p(_name)]["mat_skin"] = TRACK_MAT_SKIN
     R.TRACK_PROFILES[_p(_t.bridge)]["mat_skin"] = TRACK_MAT_SKIN
+# 架線つきの壁は基盤の版の描き分けを上で写したもの（mat_skin を持たない）なので、壁の表を渡す
+for _v in BASE_VARIANTS:
+    R.TRACK_PROFILES[f"{_p(_WT.base(_v))}_catenary"]["mat_skin"] = TRACK_WALL_SKIN
+for _v in TWIN_FROM:
+    R.TRACK_PROFILES[f"{_p(_WT.base(_v))}_twin_catenary"]["mat_skin"] = TRACK_WALL_SKIN
 
 # ---------------------------------------------------------------- 道路 3 種の通常の版（#21）
 # 断面は blender-poc の高速道路（ROAD_PROFILES["expressway"]）と同じ: 片側 1 車線、タイル全面が路面、歩道なし、路側の白線は実線
@@ -512,7 +531,8 @@ def _track_target(profile):
 
 
 def _tunnel_target(track):
-    return lambda: R.tunnel_sheet("track", profile=track.key, sheet=track.tunnel, label=R.TRACK_PROFILES[track.key]["label"])
+    return lambda: R.tunnel_sheet("track", profile=track.key, sheet=track.tunnel, label=R.TRACK_PROFILES[track.key]["label"],
+                                  mat_skin=TRACK_WALL_SKIN)
 
 
 SHEETS = {_t.way: _track_target(_t.key) for _t in catalog.TRACKS}
@@ -527,8 +547,9 @@ for _v in TWIN_FROM:
 for _t in catalog.TRACKS:
     for _v in BASE_VARIANTS:
         SHEETS[_t.elev(_v)] = _track_target(_p(_t.elev(_v)))
-SHEETS["ami_pier_rail"] = lambda: R.pier_sheet("ami_pier_rail", _DATUMS, label=PIER_LABEL)
-SHEETS["ami_pier_rail_gate"] = lambda: R.pier_gate_sheet("ami_pier_rail_gate", _DATUMS, label=PIER_GATE_LABEL)
+SHEETS["ami_pier_rail"] = lambda: R.pier_sheet("ami_pier_rail", _DATUMS, label=PIER_LABEL, mat_skin=TRACK_PIER_SKIN)
+SHEETS["ami_pier_rail_gate"] = lambda: R.pier_gate_sheet("ami_pier_rail_gate", _DATUMS, label=PIER_GATE_LABEL,
+                                                         mat_skin=TRACK_GATE_SKIN)
 for _t in catalog.TRACKS:
     SHEETS[_t.bridge] = _track_target(_p(_t.bridge))
     SHEETS[_t.tunnel] = _tunnel_target(_t)
