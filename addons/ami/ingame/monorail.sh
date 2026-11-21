@@ -1,0 +1,78 @@
+#!/bin/bash
+# 跨座式モノレールの見本（#113）。ingame/monorail.nut を流す。
+# ゲームは work/monorail_game/<PORT>/ の写し（GAME_DIR の exe・dll・設定・pak128・addons と保存データ）に AMI の pak を足して起動する。
+# GAME_DIR には書き込まない。EXTRA_PAKS（空白区切り）の pak は写しの addons/pak128/ にだけ入れる（動作の確かめに借りた車両など。
+# リポジトリにも GAME_DIR にも置かない）。敷いた後はゲームを開いたままにする（撮るのは CAPTURE=1）。
+# 使い方（アドオンのディレクトリで。python -X utf8 build.py で dist/ami.pak を作っておく）:
+#   GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe PORT=47400 EXTRA_PAKS="a.pak b.pak" bash ingame/monorail.sh  … 起動して敷く
+#   PORT=47400 SNOW=1 bash ingame/monorail.sh                         … 動いているゲームの降雪側（x+256）に同じ見本を敷く
+#   PORT=47400 CAPTURE=1 OUT=work/monorail/shots bash ingame/monorail.sh  … 区画ごとに撮る（SNOW=1 を足すと降雪側。名前の先頭に snow_）
+#   PORT=47400 STOP=1 bash ingame/monorail.sh                         … 閉じて写しを消す
+# ZOOM は gui.set_zoom の値（3 が等倍）
+PORT=${PORT:?PORT を指定する}
+source "$(dirname "$0")/mcp_client.sh"
+M="python $MCP_CLIENT --port $PORT"
+WORK="work/monorail_game/$PORT"
+OX=20; OY=20
+[ "$SNOW" = 1 ] && OX=$((OX + 256))
+NUT_SED="s/^local OX = 20;/local OX = $OX;/"
+PRE=""; [ "$SNOW" = 1 ] && PRE="snow_"
+# 撮る所: 名前 x y（monorail.nut の区画の原点からのずれ）
+SPOTS="ground 8 5
+ground_diag 21 5
+elev_front 9 16
+elev_front_r 23 16
+elev_center 9 26
+elev_center_r 23 26
+elev_back 9 36
+elev_back_r 23 36
+pair 8 46
+tunnel 4 52"
+
+stop_game() {
+  local win; win=$(cd "$WORK" 2> /dev/null && pwd -W) || return 0
+  powershell.exe -NoProfile -Command "\$d = '$win'.Replace('/', '\') + '\'; Get-Process | Where-Object { \$_.Path -and \$_.Path.StartsWith(\$d, 'OrdinalIgnoreCase') } | Stop-Process -Force" > /dev/null 2>&1
+  sleep 1
+  rm -rf "$WORK"
+}
+
+if [ "$STOP" = 1 ]; then stop_game; echo "[monorail] stopped"; exit 0; fi
+
+run_nut() { $M --run-squirrel "$(sed -e "$NUT_SED" -e 's/^[[:space:]]*//' -e '/^\/\//d' -e '/^$/d' ingame/monorail.nut)" --timeout 300; }
+
+if [ "$SNOW" = 1 ] && [ "$CAPTURE" != 1 ]; then run_nut; exit 0; fi
+
+if [ "$CAPTURE" = 1 ]; then
+  OUT=${OUT:-work/monorail/shots}
+  mkdir -p "$OUT"
+  echo "$SPOTS" | while read -r name dx dy; do
+    if [ -z "$ONLY" ] || [[ " $ONLY " == *" $name "* ]]; then
+      $M --run-squirrel "gui.close_all_windows(); gui.set_zoom(${ZOOM:-3}); gui.jump(coord3d($((OX + dx)),$((OY + dy)),0)); return 1;" > /dev/null 2>&1
+      sleep 1
+      $M --capture "$OUT/${PRE}$name.png" > /dev/null 2>&1 && echo "[capture] $OUT/${PRE}$name.png"
+    fi
+  done
+  exit 0
+fi
+
+GAME_DIR=${GAME_DIR:?GAME_DIR に検証用のフォルダを指定する}
+EXE=${EXE:?EXE を指定する（例: OTRPv64_3.exe）}
+SAVE=${SAVE:-flat_512}
+PAK=${PAK:-dist/ami.pak}
+
+$M --run-squirrel "return 1;" > /dev/null 2>&1 && { echo "[monorail] ポート $PORT で既にゲームが動いている"; exit 1; }
+rm -rf "$WORK"
+mkdir -p "$WORK/save"
+cp "$GAME_DIR/$EXE" "$GAME_DIR"/*.dll "$WORK/" || exit 1
+for d in config font themes text script music pak128 addons; do
+  [ -d "$GAME_DIR/$d" ] && { cp -r "$GAME_DIR/$d" "$WORK/" || exit 1; }
+done
+cp "$GAME_DIR/save/$SAVE.sve" "$WORK/save/" || exit 1
+[ -f "$GAME_DIR/settings.xml" ] && { cp "$GAME_DIR/settings.xml" "$WORK/settings.xml"; chmod u+w "$WORK/settings.xml"; }
+mkdir -p "$WORK/addons/pak128"
+cp "$PAK" "$WORK/addons/pak128/ami.pak" || exit 1
+for p in $EXTRA_PAKS; do cp "$p" "$WORK/addons/pak128/" || exit 1; done
+(cd "$WORK" && "./$EXE" -objects pak128/ -addons -load "$SAVE" -mcp-port "$PORT" > /dev/null 2>&1 &)
+for i in $(seq 1 60); do $M --run-squirrel "return 1;" > /dev/null 2>&1 && break; sleep 2; done
+run_nut
+$M --run-squirrel "gui.close_all_windows(); gui.set_zoom(3); gui.jump(coord3d($((OX + 8)), $((OY + 5)), 0)); return 1;" > /dev/null

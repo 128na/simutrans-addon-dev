@@ -38,6 +38,7 @@ way 系アドオンを作るときに、既存のアドオンや本家のどこ�
 | トンネル | `../refs/iss/src/tunnel/rail/tunnel.dat`、`../refs/iss/src/tunnel/rail/under_way.dat`、`../refs/pak128/infrastructure/rail_tunnels/rail_100_tunnel.dat` | 坑口と地下の way | iss は地下用の way を別に作る |
 | 道路 | `../refs/iss/src/way/road/ground.dat`・`elevated.dat`、`../refs/pak128/infrastructure/roads/road_030.dat`、`../refs/sis/road/Local_Street/`・`Expressway/`、`../refs/rtx/workspace/road/` | 速度別の種類、高架、路面 | iss は `ns`・`ew` で way を分ける種類がある |
 | 歩道 | `../refs/iss/src/util/sidewalk/ground.dat`・`elevated.dat`・`ground_road.dat`、`../refs/rtx/workspace/side/` | 別の waytype を歩道に流用する作り | iss は `water` を使う |
+| 跨座式モノレール | `../refs/iss/src/way/monorail/straddle.dat`、`../refs/iss/src/tunnel/monorail/tunnel.dat`、`../refs/iss/src/building/depot/depot.dat` | 地上・高架の版の並び（高架は front・center・back）、カーブが斜めの絵を指すこと、トンネルと車庫のキー | iss の跨座式には雪の絵・近い斜め・橋が無い。動作の確かめの車両は pak128.japan の跨座式（ユーザーが渡した物。リポジトリに入れない） |
 | 路面軌道 | `../refs/iss/src/way/rail/tram.dat`、`../refs/pak128/infrastructure/tram_tracks/tram_track_050_a.dat` | waytype の持たせ方 | iss は `tram_track`、pak128 は `track` と `system_type=7` |
 | アイコン・カーソル | `../refs/iss/src/icon_way1.png`〜`icon_way3.png`・`icon_bridge.png`、`../refs/pak128/base/misc_GUI/` | 共有シートとシート内蔵の違い | 位置の値は資料ごとに違う |
 
