@@ -64,6 +64,10 @@ class Road:
     def tunnel(self):
         return f"{self.way}_tunnel"
 
+    def lane(self, n):
+        """路面表示の版（#121）の名前（ami_road_<種類>_lane<n>）"""
+        return f"{self.way}_lane{n}"
+
 
 RAIL_BALLAST = Track("rail_ballast")  # 在来線（バラスト軌道）
 RAIL_SLAB = Track("rail_slab")  # 高速線（スラブ軌道）
@@ -80,6 +84,19 @@ ROAD_LOCAL = Road("road_local")  # 生活道路（40 km/h、中央線なし）
 ROAD_GENERAL = Road("road_general")  # 一般道路（120 km/h、中央線は白の実線）
 ROAD_EXPRESSWAY = Road("road_expressway")  # 高速道路（360 km/h、中央線は白の破線）
 ROADS = (ROAD_LOCAL, ROAD_GENERAL, ROAD_EXPRESSWAY)
+# 路面表示の版（ami_road_<種類>_lane<n>。#121。2026-11-21、ユーザーの決定）: 地上の通常の版の白線を、並べて敷いた多車線の線に替えた way。
+# n → (奥の境, 真ん中, 手前の境) の線。edge は今の路側線、center は中央線（実線）、lane は車線の境（破線）。境の線はタイルの辺で、隣と半分ずつ描く。
+# 生活道路は中央線が無く、多車線にしないので作らない
+LANE_ROADS = (ROAD_GENERAL, ROAD_EXPRESSWAY)
+LANES = {
+    1: ("edge", "lane", "center"),  # 4 車線の奥
+    2: ("center", "lane", "edge"),  # 4 車線の手前
+    3: ("edge", "lane", "lane"),    # 6・8 車線の奥
+    4: ("lane", "center", "lane"),  # 6 車線の真ん中
+    5: ("lane", "lane", "edge"),    # 6・8 車線の手前
+    6: ("lane", "lane", "center"),  # 8 車線の内側の奥
+    7: ("center", "lane", "lane"),  # 8 車線の内側の手前
+}
 WALL_ROAD = ROAD_GENERAL  # 道路の壁のシートを描く元の道路（壁の形は 3 種で同じ。断面とカーブの作りが同じため）
 ROAD_WALL_VARIANTS = ("single", "back", "center", "front")  # 道路の壁の way-object の版（README の名前の表。center は行き止まりの端の壁だけ）
 # 近い斜めの分け合うタイル用の道路の壁（名前は 2026-11-19 にユーザーが確定。README の「道路の壁・高架・橋脚・橋・トンネルの作り」）

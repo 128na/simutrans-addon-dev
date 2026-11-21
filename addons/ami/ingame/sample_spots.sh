@@ -87,6 +87,13 @@ for v in GE:0 EX:16; do
   IFS=: read n dy <<< "$v"
   DIVIDER_SPOTS="$DIVIDER_SPOTS ${n}_P2:5:$((1 + dy)) ${n}_PN:13:$((4 + dy)) ${n}_P0:5:$((5 + dy)) ${n}_P3:5:$((9 + dy)) ${n}_PE:23:$((1 + dy)) ${n}_R:22:$((7 + dy)) ${n}_PD:35:$((3 + dy))"
 done
+# 路面表示の版の見本（ingame/lane_sample.nut。道路 2 種を 24 ずつ南へ）: L4・L6・L8 東西の 4・6・8 車線と十字、LN 南北の 4 車線、
+#   LW 分離帯とそろえた 4 車線、LD 近い斜め、LD6 近い斜めの 6 車線
+LANE_SPOTS=""
+for v in GE:0 EX:24; do
+  IFS=: read n dy <<< "$v"
+  LANE_SPOTS="$LANE_SPOTS ${n}_L4:5:$((1 + dy)) ${n}_L6:5:$((5 + dy)) ${n}_L8:5:$((10 + dy)) ${n}_LN:13:$((4 + dy)) ${n}_LW:5:$((17 + dy)) ${n}_LD:21:$((3 + dy)) ${n}_LD6:21:$((11 + dy))"
+done
 case "${NUT:-}" in
   *tram_sample.nut) SPOTS=${SPOTS:-$TRAM_SPOTS} ;;
   *road_sample.nut) SPOTS=${SPOTS:-$ROAD_SPOTS} ;;
@@ -95,5 +102,6 @@ case "${NUT:-}" in
   *sidewalk_sample.nut) SPOTS=${SPOTS:-$SIDEWALK_SPOTS} ;;
   *embankment_sample.nut) SPOTS=${SPOTS:-$EMBANKMENT_SPOTS} ;;
   *divider_sample.nut) SPOTS=${SPOTS:-$DIVIDER_SPOTS} ;;
+  *lane_sample.nut) SPOTS=${SPOTS:-$LANE_SPOTS} ;;
 esac
 SPOTS=${SPOTS:-"AFC:8:2 B:3:7 DE:14:7 G1:25:3 G2:25:15 I:5:14 H0:3:22 H1:11:22 H2:19:22 H3:27:22 H4:35:22 H5:43:22 H6:51:22 H7:59:22$WALLED_SPOTS W1:6:155 W2a:19:153 W2b:19:163 W3:2:163 WE1:6:305 WE2a:19:303 WE2b:19:313 WE3:2:313 $BT_SPOTS"}
