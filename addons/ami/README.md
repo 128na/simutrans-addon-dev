@@ -2,7 +2,7 @@
 
 pak128 用のインフラアドオン集。絵は Blender のスクリプトで描く（作り方は [blender-poc](../blender-poc/README.md) で確かめたもの）。
 
-> **ベータ版。** ロードマップ（[#61](https://github.com/128na/simutrans-addon-dev/issues/61)）の第 1 弾を、ベータ版として配る（[#91](https://github.com/128na/simutrans-addon-dev/issues/91)。基準は「多少課題があってもゲーム内で動作すれば OK」）。正式版までに、物の名前・値・見た目が変わることがある。既知の課題（ベータの後に回したもの）は [ACCEPTANCE.md の「ベータ版（第 1 弾）での扱い」](ACCEPTANCE.md#ベータ版第-1-弾での扱い)、遊ぶ人向けの説明は配る zip の `ami_readme.txt`（元は [release/readme.txt](release/readme.txt)）。
+> **ベータ版。** ロードマップ（[#61](https://github.com/128na/simutrans-addon-dev/issues/61)）の第 1 弾を、ベータ版として配る（[#91](https://github.com/128na/simutrans-addon-dev/issues/91)。基準は「多少課題があってもゲーム内で動作すれば OK」）。正式版までに、物の名前・値・見た目が変わることがある。既知の課題（ベータの後に回したもの）は [ACCEPTANCE.md の「ベータ版（第 1 弾）での扱い」](ACCEPTANCE.md#ベータ版第-1-弾での扱い)、遊ぶ人向けの説明は配る zip の `ami_readme.txt`（元は [release/readme.txt](release/readme.txt)。簡潔な説明・導入方法・注意点だけで、物の一覧は書かない。#137）。敷き方の説明は下の「[遊ぶ人向けの敷き方](#遊ぶ人向けの敷き方)」。
 
 **今あるのは在来線の通常の版（`ami_rail_ballast`）と、在来線の基盤の 4 版・壁だけの way-object・架線つきの壁の way-object（`ami_rail_ballast_base_*`・`ami_wall_rail_*`・`ami_wall_rail_*_catenary`）、高架の 4 版と橋脚の way（`ami_rail_ballast_elev_*`・`ami_pier_rail`・門型の `ami_pier_rail_gate`）、橋とトンネル（`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`）、高速線（スラブ軌道）の通常の版・基盤の 4 版・高架の 4 版・橋・トンネル（`ami_rail_slab`・`ami_rail_slab_base_*`・`ami_rail_slab_elev_*`・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`）、弾性まくらぎ直結軌道（コンクリート道床）とフローティング・ラダー軌道の同じ一式（`ami_rail_concrete`・`ami_rail_concrete_*`・`ami_rail_ladder`・`ami_rail_ladder_*`）、道路 3 種の通常の版（`ami_road_local`・`ami_road_general`・`ami_road_expressway`）と、道路の基盤の 4 版・高架の 4 版・橋・トンネル（`ami_road_*_base_*`・`ami_road_*_elev_*`・`ami_road_*_bridge`・`ami_road_*_tunnel`）、道路の壁の way-object（`ami_wall_road_*`）、道路用の橋脚（`ami_pier_road`）、路面軌道の通常の版（`ami_tram`）、歩道（`ami_sidewalk`）、線路×道路の踏切（`ami_crossing_*`）。** 描画から pak までの骨組み（[#14](https://github.com/128na/simutrans-addon-dev/issues/14)）の上に、在来線の壁の無い通常の版を仕上げ（[#15](https://github.com/128na/simutrans-addon-dev/issues/15)。全方位・分岐の絵・近い斜め・雪・汚れ）、基盤の版と壁を足した（[#16](https://github.com/128na/simutrans-addon-dev/issues/16)。下の「壁の敷き方」）。壁に架線を持たせた版を足した（[#17](https://github.com/128na/simutrans-addon-dev/issues/17)。下の「架線の作り」）。高架の 4 版と、高架の真下の地面に敷く橋脚の way を足した（[#18](https://github.com/128na/simutrans-addon-dev/issues/18)。下の「高架と橋脚の作り」）。橋とトンネルを足した（[#19](https://github.com/128na/simutrans-addon-dev/issues/19)。下の「橋とトンネルの作り」）。高速線を足した（[#20](https://github.com/128na/simutrans-addon-dev/issues/20)。下の「高速線の作り」）。道路 3 種の通常の版を足した（[#21](https://github.com/128na/simutrans-addon-dev/issues/21)。下の「道路の作り」）。道路の壁・基盤の版・高架・橋脚・橋・トンネルを足した（[#22](https://github.com/128na/simutrans-addon-dev/issues/22)。下の「道路の壁・高架・橋脚・橋・トンネルの作り」）。路面軌道を足した（[#23](https://github.com/128na/simutrans-addon-dev/issues/23)。下の「路面軌道の作り」）。歩道を足した（[#24](https://github.com/128na/simutrans-addon-dev/issues/24)。下の「歩道の作り」）。バリエーションの第 1 弾（[#61](https://github.com/128na/simutrans-addon-dev/issues/61)）として、弾性まくらぎ直結軌道を足した（[#62](https://github.com/128na/simutrans-addon-dev/issues/62)。下の「弾性まくらぎ直結軌道の作り」）。続けてフローティング・ラダー軌道を足した（[#67](https://github.com/128na/simutrans-addon-dev/issues/67)。下の「フローティング・ラダー軌道の作り」）。線路×道路の踏切を足した（[#111](https://github.com/128na/simutrans-addon-dev/issues/111)。下の「踏切の作り」）。下の表の残りは作る予定のもの（開発ステップの一覧は [#27](https://github.com/128na/simutrans-addon-dev/issues/27)）。範囲と作りを決めた理由は次の ADR にある。
 
@@ -268,7 +268,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 行き止まり: 側壁を閉じた側のタイルの端まで延ばし、端の壁をタイルの端に立てる（ユーザーの指摘、2026-11-17）。レールの終点と車止めは通常の版と同じ（`END_FROM_EDGE`）。`center` も端の壁はある
 - カーブ: 通常の版と同じく斜めの絵で表す。ただし基盤の版は、カーブのセルを斜めのタイルと別に描き、基盤の壁の無い側を削らない（複線の直角の曲がりで、内側の線の外側に草が三角に出たため。`curve_cells`）
 - 継ぎ目（ユーザーの指摘、2026-11-17）: 坂の壁は、上がった側の端の最後の 1 列が欠けて、坂の上の十字・T字の壁との間に 1px のすき間が出た。坂のセルだけ、壁をタイルの外へ長めに残し、持ち分を左右へ 1 列広げた。T字・十字では、斜めの部分の通り道が反対側の壁（直線の側の壁）の端まで削り、隣の直線との継ぎ目に 1px の縦線が出た。斜めの部分の通り道は、その部分がある側の壁だけを削り、斜めの部分の壁はタイルの辺で切る（`tools/blender/sheetlib` の `assemble`）
-- 奥と手前の決め方（POC の C5）: 版の「奥」「手前」は、南北の線なら西が奥・東が手前、東西の線なら北が奥・南が手前。カーブ・T字・十字のタイルは南北の線（T字は通り抜ける線）の版に合わせる。複線の輪では、角のタイルを南北の辺と同じ版で敷く（`sample.nut` の区画 W1）。画面で右と左に曲がる角では外の線と内の線の版が角の前後で入れ替わり、角のタイルを東西の辺の版にすると角に草の穴が開く（[#94](https://github.com/128na/simutrans-addon-dev/issues/94)、記録 [2026-11-21_ami-double-curve-base](../../docs/records/2026-11-21_ami-double-curve-base.md)）。way は東西の辺を先に敷いて南北の辺で角を上書きし、壁は南北の辺を先に敷く（同じ速さの壁を後から敷くと、前の版のまま向きだけ足される）。遊ぶ人向けの説明は `release/readme.txt` の「使い方」。斜めのタイルでは、奥の版は `nw`・`sw` の壁がタイルの角の側、`ne`・`se` の壁が中心の側に立つ（手前の版はその逆）
+- 奥と手前の決め方（POC の C5）: 版の「奥」「手前」は、南北の線なら西が奥・東が手前、東西の線なら北が奥・南が手前。カーブ・T字・十字のタイルは南北の線（T字は通り抜ける線）の版に合わせる。複線の輪では、角のタイルを南北の辺と同じ版で敷く（`sample.nut` の区画 W1）。画面で右と左に曲がる角では外の線と内の線の版が角の前後で入れ替わり、角のタイルを東西の辺の版にすると角に草の穴が開く（[#94](https://github.com/128na/simutrans-addon-dev/issues/94)、記録 [2026-11-21_ami-double-curve-base](../../docs/records/2026-11-21_ami-double-curve-base.md)）。way は東西の辺を先に敷いて南北の辺で角を上書きし、壁は南北の辺を先に敷く（同じ速さの壁を後から敷くと、前の版のまま向きだけ足される）。遊ぶ人向けの説明は下の「[遊ぶ人向けの敷き方](#遊ぶ人向けの敷き方)」。斜めのタイルでは、奥の版は `nw`・`sw` の壁がタイルの角の側、`ne`・`se` の壁が中心の側に立つ（手前の版はその逆）
 - 近い斜め（POC の C2）: 1 タイルに way-object は waytype ごとに 1 つなので、分け合うタイル（way が 2 本）には `back` と `front` を両方は置けない。分け合うタイルには、`back`・`front` を敷いた後に `ami_wall_rail_twin` を 1 タイルずつ重ねる。OTRP は分け合うタイルの way-object 1 つで 2 本の線を、それぞれの斜めの絵で描く（`../simutrans` の `obj/wayobj.cc` の `two_legs`）。`ami_wall_rail_twin` は `nw`・`sw` の線に `back` の壁、`ne`・`se` の線に `front` の壁の絵を使うので、近い斜めの複線は西の線（x の小さい方）を `back`、東の線を `front` にする。速さの値を `back`・`front` より 1 大きくしてあり、後から重ねると置き換わる（同じ速さの way-object を重ねても、前の版のまま向きだけ足される。`obj/wayobj.cc` の `extend_wayobj`）。置き換えると、隣のタイルの壁が分け合うタイルの側へつながらなくなる（前の way-object が消えるときに隣の向きを外し、新しい方はつなぎ直さない。`~wayobj_t`）。`twin` を置いた後に、`back`・`front` を同じ経路にもう一度敷く（`twin` の方が速いので、分け合うタイルは `twin` のまま）
 - 名前（2026-11-18）: ユーザーの指定で、`single` より後ろに来る `twin` にした。ゲームの道具の一覧は waytype・速さ・名前の順に並ぶ（`../simutrans` の `obj/wayobj.cc` の `compare_wayobj_desc`）ので、`back`・`center`・`front`・`single`（1000）・`twin`（1001）、続いて架線つきの 4 版（1100）・`twin_catenary`（1101）の順になる
 - 値（仮）: 壁の way-object は費用 3000・維持費 60・登場 1900、速さ 1000（`blender/ami_dat.py` の `WALL_VALUES`）。架線ではない（`own_waytype=track`）ので、速さの値は列車の速さを縛らない
@@ -471,6 +471,18 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 - Simutrans 本家 125.0.1 と OTRP（pak128）。OTRP だけの絵（分岐の絵・近い斜め・分岐の追加画像）は本家では使われないだけで、本家用の pak は分けない（ベータで決めた。2026-11-21、ユーザーの決定）
 - 画像は 256px セル（`pak256` で切り出し、ゲームは pak128）
+
+## 遊ぶ人向けの敷き方
+
+配る readme（`release/readme.txt`）に書いていた「使い方」を、ここへ移した（#137。readme は説明・導入方法・注意点だけにした）。
+
+- 導入: zip の中の `pak128` フォルダを、Simutrans の `addons` フォルダ（無ければ作る）に入れ、アドオンを読む設定（`-addons`）で起動する
+- 線路・道路は「版」を選んで敷く。single（単線・1 本）、back・center・front（複線・3 線の奥・中・手前）。基盤・高架の版と壁は、アイコンの右下の漢字（単・後・中・前。近い斜め用の壁は 双）で版を見分ける。通常の版（壁を重ねない地上の線路・道路）には札が無い
+- 基盤の版の線路・道路に、同じ版の壁（way-object）を重ねると、壁つきの線路・道路になる。架線は「架線つきの壁」（壁の無い center の版は架線だけ）
+- 版の奥・手前は、南北の線なら西が back・東が front、東西の線なら北が back・南が front。複線のカーブで画面の右と左に曲がる角では、外の線と内の線の版（back・front）が角の前後で入れ替わる。角のタイルは南北の辺と同じ版にする。線路は東西の辺を先に敷き、南北の辺を角のタイルまで後から敷く。壁は逆に、南北の辺を角のタイルまで先に敷き、東西の辺を後から敷く（同じ速さの壁は、後から敷いても前の版のままになるため。作りは「壁の敷き方」）
+- 高架の下の地面には、橋脚の way を敷く。橋脚は路面軌道のメニューにある（線路の高架の下を地上の線路が横切るタイルには敷かない。敷くと線路とつながるか、線路が切れる。「高架と橋脚の作り」）
+- 歩道は船のメニューにある（waytype が `water`）。道路の隣のタイルに敷く
+- ベータの既知の課題は [ACCEPTANCE.md の「ベータ版（第 1 弾）での扱い」](ACCEPTANCE.md#ベータ版第-1-弾での扱い)
 
 ## ライセンス
 

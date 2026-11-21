@@ -4,7 +4,7 @@
 
 zip（work/release/ami-<版>.zip）の中身:
     pak128/<pak>.pak   --paks で選んだ dist/ の pak（名前は拡張子なし）。ゲームの addons/ に展開すると addons/pak128/ に入る
-    ami_readme.txt     release/readme.txt の {version} を版の名前に置き換えたもの（遊ぶ人向けの説明・ベータの注意・既知の課題）
+    ami_readme.txt     release/readme.txt の {version} を版の名前に置き換えたもの（遊ぶ人向けの簡潔な説明・導入方法・注意点。#137）
     ami_license.txt    release/license.txt（CC BY 4.0 と帰属）
     thumbnail.png      docs/thumbnail.png があれば入れる（#96）
 pak の名前が dist/ に無いとき、--paks に ami（全部入り）と種類別を混ぜたとき（同じ物を二重に読む）は止まる。
