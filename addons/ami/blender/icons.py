@@ -14,6 +14,7 @@
 - 絵と札の中身は dat から読む（名前・obj・waytype・topspeed と、image[ns] などのキーが指すセル）。dat の icon・cursor が指すセルに書く
 """
 import glob
+import hashlib
 import os
 import re
 import subprocess
@@ -320,12 +321,31 @@ def make_cursor(info, pic):
     return cur
 
 
-def icon_picture(d, info, dats):
+def icon_source(d, info, dats):
+    """アイコンの絵にする dat とキーの候補。トンネルは中の way の絵"""
     if info["kind"] == "tunnel":
-        d = dats[d["way"]]  # 中の way の絵
-        keys = picture_keys(d, "way", False)
-    else:
-        keys = picture_keys(d, info["kind"], False)
+        d = dats[d["way"]]
+        return d, picture_keys(d, "way", False)
+    return d, picture_keys(d, info["kind"], False)
+
+
+def used_cells(d, keys):
+    """layers が使う組（絵のある最初の組）のセル"""
+    for group in keys:
+        cells = [ref(d[k]) for k in group if k in d]
+        if any(cell_rgba(*c)[..., 3].any() for c in cells):
+            return cells
+    return []
+
+
+def cell_digest(sheet, r, c):
+    """セルの RGB の sha256（行を上から。check_icons.py の source_digest と同じ並び）"""
+    x = load_sheet(sheet)[r * CELL:(r + 1) * CELL, c * CELL:(c + 1) * CELL, :3]
+    return hashlib.sha256(np.ascontiguousarray(x, dtype=np.uint8).tobytes()).hexdigest()
+
+
+def icon_picture(d, info, dats):
+    d, keys = icon_source(d, info, dats)
     if info["kind"] == "sidewalk":  # 敷石はタイル全面なので、つなげず、タイル 1 枚を 1/4 にして菱形を見せる
         return down(center_crop(layers(d, keys), 4 * ICON), 4)
     return down(center_crop(layers(d, keys, extend=True), 2 * ICON), 2)
@@ -356,10 +376,19 @@ def main(targets=None):
             continue  # 踏切（obj=crossing。#111）は道具が無く、アイコン・カーソルを持たない
         isheet, ir, ic_ = ref(d["icon"])
         csheet, cr, cc = ref(d["cursor"])
-        if targets and isheet not in targets and csheet not in targets:
-            continue
         info = describe(d)
-        icon = make_icon(info, icon_picture(d, info, dats))
+        # ほかのシートの絵から作るアイコン（トンネルは中の way の絵。#141）は、絵のシートを描き直したときにも作り直す
+        icells = used_cells(*icon_source(d, info, dats))
+        ccells = used_cells(d, picture_keys(d, info["kind"], True))
+        if targets and not ({isheet, csheet} | {c[0] for c in icells + ccells}) & set(targets):
+            continue
+        stamp = {isheet: [], csheet: []}
+        stamp[isheet] += [(name, "icon", *c, cell_digest(*c)) for c in icells if c[0] != isheet]
+        stamp[csheet] += [(name, "cursor", *c, cell_digest(*c)) for c in ccells if c[0] != csheet]
+        for sheet, rows in stamp.items():
+            stamps = load_stamps(sheet)
+            stamps[:] = [t for t in stamps if t[0] != name] + rows
+        icon =make_icon(info, icon_picture(d, info, dats))
         cell = np.zeros((CELL, CELL, 4), np.float32)
         cell[:ICON, :ICON] = icon
         cur = make_cursor(info, layers(d, picture_keys(d, info["kind"], True)))
@@ -371,6 +400,45 @@ def main(targets=None):
     for sheet in sorted(touched):
         R.save_rgb(os.path.join(SRC, sheet + ".png"), _sheets[sheet][..., :3])
         print(f"[icon] wrote {sheet}.png")
+        write_stamps(sheet, dats)
+
+
+# ---------------------------------------------------------------- ほかのシートの絵の控え（#141）
+# ほかのシートのセルから作ったアイコン・カーソル（トンネルのアイコンは中の way のシートの絵）について、そのセルの sha256 を、
+# アイコン・カーソルを書いたシートの横の控え（<シート>.icon_sources.txt）に書く。check_icons.py が今のシートと比べ、
+# 絵のシートを描き直してアイコンを作り直し忘れたことに気づく（check.sh は Blender を使わないので、絵を作って比べられない）。
+# 控えをシートごとに分けるのは、render_parallel.py で並べて描くとき、シートとその控えを同じプロセスが続けて書くようにするため
+STAMP_SUFFIX = ".icon_sources.txt"  # check_icons.py と同じ
+STAMP_HEADER = "# 物 icon|cursor 絵のシート 行 列 sha256（blender/icons.py が書き、check_icons.py が今のシートと比べる。#141）"
+_stamps = {}
+
+
+def load_stamps(sheet):
+    """シートの控えの行 [(物, icon|cursor, 絵のシート, 行, 列, sha256)]"""
+    if sheet not in _stamps:
+        path = os.path.join(SRC, sheet + STAMP_SUFFIX)
+        rows = []
+        if os.path.exists(path):
+            for line in open(path, encoding="utf8"):
+                t = line.split()
+                if len(t) == 6 and not line.startswith("#"):
+                    rows.append((t[0], t[1], t[2], int(t[3]), int(t[4]), t[5]))
+        _stamps[sheet] = rows
+    return _stamps[sheet]
+
+
+def write_stamps(sheet, dats):
+    """控えを書く（dat に無い物の行は落とす）。行が無ければ控えを消す"""
+    path = os.path.join(SRC, sheet + STAMP_SUFFIX)
+    rows = sorted(t for t in load_stamps(sheet) if t[0] in dats)
+    if not rows:
+        if os.path.exists(path):
+            os.remove(path)
+        return
+    with open(path, "w", encoding="utf8", newline="\n") as f:
+        f.write(STAMP_HEADER + "\n")
+        for t in rows:
+            f.write("%s %s %s %d %d %s\n" % t)
 
 
 def run_in_new_blender(targets):
