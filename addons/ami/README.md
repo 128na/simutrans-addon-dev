@@ -421,6 +421,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 別のシートの絵を読む物がある（トンネルのアイコンは中の way のシート、twin の壁は front のシートの斜め）。`render_parallel.py` で並列に描いたときと、way のシートだけを描き直したときは、全部描き終えてから `D:/bin/blender/blender.exe -b --factory-startup --python blender/icons.py` を 1 回流して全部を書き直す（引数にシートの名前を並べると、それだけを書く）
 - カーソルは、直線の絵（壁の `center` は行き止まりの端の壁、トンネルは坑口）の上に札を足したもの。前は道路とトンネルだけに札があり、線路・壁・橋脚には無かった。道路の壁の `center` はカーソルが空だった
 - 壁だけの twin（`ami_wall_rail_twin`・`ami_wall_road_twin`）は back の版のシートを借りるので、アイコン・カーソルは back の版のセル（0.0・0.1）を指していて、back と同じ「B」が出ていた。今は back の版のシートの使っていないセル（0.4・1.4。`blender/ami_dat.py` の `TWIN_ICON_CELLS`）に置く
+- 検査: `check.sh` が `check_icons.py` を回す（#97）。icon・cursor のセルをほかのキーが指していないか（重なると `icons.py` が書いたときに相手の絵が消えるか、同じアイコンになる）、icon の 32px とカーソルに絵があるか、waytype の違う物どうしでアイコンの背景の色相が 20 度以上離れているか、を見る（組は dat の waytype なので、どちらも `road` の道路と高速道路は比べない）。`icons.py` が dat の参照先に書いたかは、そのセルに絵があるかで見る（提供用の物 `__ex_donor` は `icons.py` が書かず、元の物のセルを使う）。色は `icons.py` の表を読まず、描かれた画素で比べる。意図して共有・借用するもの（提供用の物 `__ex_donor` のセル、橋脚・歩道の背景色）は、`check_icons.py` の `SHARE_SUFFIX`・`BG_BORROW` に理由と一緒に書く
 - 版の札の漢字は、等倍（13px の札に字の高さ 10px）では細部がつぶれるが、雰囲気で読める（2026-11-21、ユーザーの判断）
 - ゲームで撮るのは `GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> bash ingame/icon_capture.sh`（`work/icons/`。メニューの中の位置はスクリプトの `CURSORS`）
 
