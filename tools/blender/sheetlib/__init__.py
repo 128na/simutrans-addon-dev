@@ -9,7 +9,7 @@
     track_parts  線路の部品（道床・まくらぎ・レール・車止め・汚れ）
     slab_parts   スラブ軌道の部品（コンクリート道床・てん充層・スラブ・突起・締結装置。track_parts を import する）
     tram_parts   路面軌道の部品（コンクリートの床・縁の帯・レールの頭・溝・さび。track_parts を import する）
-    monorail_parts 跨座式モノレールの部品（軌道桁と、高架の柱・腕。track_parts を import する）
+    monorail_parts 跨座式・懸垂式モノレールの部品（軌道桁と、柱・腕。track_parts を import する）
     wall_parts   壁・基盤・橋・高架の橋脚（線路と道路で共通）
     catenary_parts 架線（柱・梁・吊り金具・トロリ線。線路の壁の way-object の電化の版）
     road_parts   道路の部品（路面・縁石・歩道・白線・車線・汚れ・雪）

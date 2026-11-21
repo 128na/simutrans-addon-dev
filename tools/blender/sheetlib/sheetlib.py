@@ -1092,7 +1092,7 @@ def _track_sheet(profile="new"):
                     wcells[(pos[0] + WALL_FRONT_ROW, pos[1])] = wfront
             elif any(ob.get("tall") for ob in obs):
                 cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, True, exits_of(name), mask_slope, cy,
-                                                                      prof["spill"], WALL_RISE, prof.get("solid", False),
+                                                                      prof["spill"], prof.get("rise", WALL_RISE), prof.get("solid", False),
                                                                       lower, frame=near_frame(name, paths, origin))
                 if front:
                     cells[(pos[0] + row0 + prof["front_row"], pos[1])] = front

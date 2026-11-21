@@ -77,6 +77,8 @@ VALUES = {
     "ami_monorail_straddle": dict(waytype="monorail_track", speed=150, cost=30000, maintenance=600, intro_year=1900),
     # 運河（#114）。値は #110 の一覧（速さは pak128 の船の最高 53 km/h が走れる値）
     "ami_canal": dict(waytype="water", speed=60, cost=25000, maintenance=500, intro_year=1900),
+    # 懸垂式モノレール（#116）。値は #110 の一覧（跨座式と同じ）。地上の 3 版の値（下で版ごとに写す）
+    "ami_monorail_suspended": dict(waytype="monorail_track", speed=150, cost=30000, maintenance=600, intro_year=1900),
 }
 
 # カーブを斜めの絵で表すシート（pak128 標準の線路と同じ。dat の image[sw]・[nw]・[ne]・[se] が diagonal と同じセルを指す。
@@ -85,9 +87,15 @@ DIAG_CURVES = {_t.way for _t in catalog.TRACKS} | {_r.way for _r in catalog.ROAD
 # 跨座式モノレール（#113）: 地上・高架の版とも、カーブは斜めの絵（手本の iss の跨座式の dat と同じ）
 DIAG_CURVES |= {catalog.MONORAIL, *catalog.MONORAIL_ELEVS}
 DIAG_CURVES.add(catalog.CANAL)  # 運河（#114）もカーブは斜めの絵
+DIAG_CURVES |= {*catalog.MONORAIL_SUSPENDEDS, *catalog.MONORAIL_SUSPENDED_ELEVS}  # 懸垂式（#116）も跨座式と同じ
 DIAG_CURVES |= {_r.lane(_n) for _r in catalog.LANE_ROADS for _n in catalog.LANES}  # 路面表示の版（#121）も通常の版と同じ
 CURVE_TO_DIAG = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
 
+# 手前の絵（frontimage など）を持つ way: シートは 奥の絵 4 行 → 手前の絵 4 行 → 雪の奥の絵 4 行 → 雪の手前の絵 4 行
+# （sheetlib の track_sheet の front_row。懸垂式モノレールの柱・梁。#116）。名前の集まり
+FRONT_WAYS = set()
+FRONT_ROW = 4  # sheetlib の TRACK_PROFILES の front_row と同じ
+FRONT_SNOW_ROWS = 8  # 手前の絵を持つ way の雪の絵の行のずらし（奥と手前の 8 行の下）
 # 絵を作った way（名前 → シート名）。dat と pak を作る
 BUILT = {}
 BASE_VARIANTS = catalog.VARIANTS
@@ -159,6 +167,19 @@ for _n in catalog.MONORAIL_ELEVS:
                       maintenance=VALUES[catalog.MONORAIL]["maintenance"] * ELEV_COST_K)
     NO_CLOSE.add(_n)
     ELEVATED.add(_n)
+# 懸垂式モノレール（#116）: 地上・高架とも柱の側で front・center・back の 3 版（iss の懸垂式と同じ）。柱と梁は way の絵に持たせ、
+# 手前の側の柱・梁は手前の絵（FRONT_WAYS）。並びは跨座式と同じ（近い斜め無し・分岐の絵あり）。高架の値の倍率は跨座式と同じ
+for _v in catalog.MONORAIL_SUSPENDED_VARIANTS:
+    for _elev in (False, True):
+        _n = catalog.monorail_suspended(_v, _elev)
+        _k = ELEV_COST_K if _elev else 1
+        _base = VALUES[catalog.MONORAIL_SUSPENDED]
+        BUILT[_n] = _n
+        VALUES[_n] = dict(_base, cost=_base["cost"] * _k, maintenance=_base["maintenance"] * _k)
+        NO_CLOSE.add(_n)
+        FRONT_WAYS.add(_n)
+        if _elev:
+            ELEVATED.add(_n)
 
 # ---------------------------------------------------------------- 運河（#114）
 # 地上の版だけ（iss の運河と同じ。2026-11-22、ユーザーの決定）。近い斜めの絵は持つ（壁の無い way と同じ）。分岐の絵（1・2）は持たない
@@ -320,6 +341,8 @@ def dat_text(name, sheet, donor=False):
         f"icon=> {sheet}.0.0",
         f"cursor={sheet}.0.1,-64,-32",
     ]
+    front = name in FRONT_WAYS
+    snow_rows = FRONT_SNOW_ROWS if front else SNOW_ROWS
     for season in (0, 1):
         for key, idx, row, col in IMAGES:
             if name in NO_CLOSE and idx.startswith("[close"):
@@ -334,7 +357,9 @@ def dat_text(name, sheet, donor=False):
                 row, col = CURVE_TO_DIAG[idx]
             if donor and key == "image" and idx in EX_CELLS:
                 row, col = EX_CELLS[idx]
-            out.append(f"{key}{idx}[{season}]={sheet}.{row + season * SNOW_ROWS}.{col},-64,-32")
+            out.append(f"{key}{idx}[{season}]={sheet}.{row + season * snow_rows}.{col},-64,-32")
+            if front:
+                out.append(f"front{key}{idx}[{season}]={sheet}.{row + FRONT_ROW + season * snow_rows}.{col},-64,-32")
     return NL.join(out) + NL
 
 
@@ -389,6 +414,43 @@ def wall_dat_text(name, sheet, twin=False, catenary=False, road=False, donor=Fal
             src = twin_from[idx]
         for side, dr in (("back", 0), ("front", WALL_FRONT_ROW)):
             out.append(f"{side}{WAYOBJ_KEYS[key]}{idx}={src}.{row + dr}.{col},-64,-32")
+    return NL.join(out) + NL
+
+
+# モノレールの電化の way-object（#116）: waytype=monorail_track・own_waytype=electrified_track。値は線路の架線つきの壁（CATENARY_VALUES）と同じ（仮。
+# #110 の一覧に無い）。topspeed は電化した編成の速さを縛る（本体の max_wayobj_speed）ので、モノレール（150 km/h）より大きい
+MONORAIL_POWER_VALUES = dict(CATENARY_VALUES)
+
+
+def monorail_power_dat_text(name, suspended):
+    """モノレールの電化の way-object の dat。シートは way-object の並び（奥の絵 0〜3 行・手前の絵 WALL_FRONT_ROW 下）で、
+    セルは跨座式の way と同じ位置。カーブは斜めのセル（跨座式と同じ）。分岐の絵・近い斜めは持たない"""
+    v = MONORAIL_POWER_VALUES
+    kind = "懸垂式モノレールの電化（桁の下面の給電レールと碍子）" if suspended else "跨座式モノレールの電化（桁の側面の給電レールと碍子）"
+    out = [
+        f"# AMI: {name}（CC BY 4.0）。{kind}の way-object。シートは blender/render.py が描く",
+        "obj=way-object",
+        f"name={name}",
+        "copyright=AMI (CC BY 4.0)",
+        f"intro_year={v['intro_year']}",
+        "intro_month=1",
+        "retire_year=2999",
+        "retire_month=1",
+        "waytype=monorail_track",
+        "own_waytype=electrified_track",
+        f"cost={v['cost']}",
+        f"maintenance={v['maintenance']}",
+        f"topspeed={v['topspeed']}",
+        f"icon=> {name}.0.0",
+        f"cursor={name}.0.1,-64,-32",
+    ]
+    for key, idx, row, col in IMAGES:
+        if key not in WAYOBJ_KEYS or idx.startswith("[close") or (key == "image" and idx in SWITCH_IDX):
+            continue
+        if key == "image" and idx in CURVE_TO_DIAG:
+            row, col = CURVE_TO_DIAG[idx]
+        for side, dr in (("back", 0), ("front", WALL_FRONT_ROW)):
+            out.append(f"{side}{WAYOBJ_KEYS[key]}{idx}={name}.{row + dr}.{col},-64,-32")
     return NL.join(out) + NL
 
 
@@ -755,6 +817,10 @@ def main():
     for name, sheet in CATENARY.items():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(wall_dat_text(name, sheet, catenary=True))
+        print(f"[dat] {name}.dat")
+    for name, suspended in catalog.MONORAIL_POWERS.items():
+        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
+            f.write(monorail_power_dat_text(name, suspended))
         print(f"[dat] {name}.dat")
     with open(os.path.join(SRC, "ami_wall_rail_twin_catenary.dat"), "w", encoding="utf8", newline=NL) as f:
         f.write(wall_dat_text("ami_wall_rail_twin_catenary", "ami_wall_rail_twin_catenary_back", twin=True, catenary=True))
