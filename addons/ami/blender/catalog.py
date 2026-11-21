@@ -89,6 +89,25 @@ SIDEWALK = "ami_sidewalk"  # 歩道の way（道路の隣のタイルに敷く�
 # 盛土の way（#123。ADR 0008 の景観 6）: 高架の脇の地面に敷く法面の楔。front は法面が手前（南・東）、back は奥（北・西）を向く
 EMBANKMENT_SIDES = ("front", "back")
 EMBANKMENTS = {f"{PREFIX}embankment_{_s}": _s for _s in EMBANKMENT_SIDES}
+# 歩道の種類（#119。ADR 0008 の ami_sidewalk_<舗装>）: 舗装の名前。ami_sidewalk（灰色の敷石）は名前を変えずに残す
+SIDEWALK_PAVINGS = ("asphalt", "brick", "tile")
+SIDEWALK_ELEV = "ami_sidewalk_elev"  # 高架の歩道（system_type=1。敷石は ami_sidewalk と同じ）
+SIDEWALK_WALL_VARIANTS = ("single", "back", "front")  # 歩道の柵（way-object）の版。center は柵が無くなるので作らない
+
+
+def sidewalk(paving):
+    """歩道の種類の名前（ami_sidewalk_<舗装>）"""
+    return f"{SIDEWALK}_{paving}"
+
+
+def sidewalk_wall(variant):
+    """歩道の柵の way-object の名前（ami_wall_sidewalk_<版>。build.py の ami_wall_ で付属の pak に入る）"""
+    return f"{PREFIX}wall_sidewalk_{variant}"
+
+
+# 歩道の way の全部（地上の種類と高架）。dat・シート・アイコンの決まりは同じ
+SIDEWALKS = (SIDEWALK,) + tuple(sidewalk(_p) for _p in SIDEWALK_PAVINGS) + (SIDEWALK_ELEV,)
+SIDEWALK_WALLS = tuple(sidewalk_wall(_v) for _v in SIDEWALK_WALL_VARIANTS)
 
 
 def crossing(track, road):

@@ -27,6 +27,9 @@
     src/ami_tram.png          路面軌道（tram_track）の通常の版。道路の上に重ねて敷く想定で、コンクリートの床・縁の帯・レールの頭・溝だけ（段も壁も無い）
     src/ami_sidewalk.png      歩道の way（道路の隣のタイルに敷く。敷石と、つながらない辺の縁石）
     src/ami_embankment_<front|back>.png  盛土の way（高架の脇の地面に敷く芝の法面の楔。#123）
+    src/ami_sidewalk_<舗装>.png  歩道の種類（asphalt・brick・tile。形は ami_sidewalk と同じで敷石の材質だけ違う。#119）
+    src/ami_sidewalk_elev.png  高架の歩道（板の下に道路の高架と同じ深さの基盤と躯体。#119）
+    src/ami_wall_sidewalk_<版>.png  歩道の柵の way-object（single・back・front。#119）
     work/                    セルごとの生の描画結果（確認用）
 """
 import dataclasses
@@ -580,6 +583,25 @@ SHEETS[catalog.PIER_ROAD] = lambda: R.pier_sheet(catalog.PIER_ROAD, R.FLAT, labe
 # 絵の位置・持ち分は道路と同じ（ROAD_CY）
 SIDEWALK_LABEL = "S"  # アイコンの文字（仮。アイコンはステップ 13 でまとめて作る）
 SHEETS[catalog.SIDEWALK] = lambda: R.sidewalk_sheet(catalog.SIDEWALK, label=SIDEWALK_LABEL, paving=SIDEWALK_PAVING, snow=ROAD_SNOW)
+# 歩道の種類（ami_sidewalk_<舗装>。#119）: 形は ami_sidewalk と同じで、敷石の材質だけが違う。目地の模様の違い（やはず張りなど）は
+# 敷石が約 6 x 3px の画面では見分けられないので、色と材質で分ける（2026-11-21、#119 で作業者が決めた。ユーザーが PR で確かめる）
+#   asphalt: アスファルト舗装（道路の路面より明るい灰色のまだら） / brick: 赤れんが色のインターロッキングブロック / tile: ベージュの平板（敷石が大きい）
+SIDEWALK_PAVINGS = {
+    "asphalt": lambda: R.noisy_material("ami_sidewalk_asphalt", (0.045, 0.046, 0.048), (0.085, 0.086, 0.088), scale=60, rough=0.9,
+                                        ramp=(0.47, 0.53)),
+    "brick": lambda: R.brick_material("ami_sidewalk_brick", (0.30, 0.10, 0.06), (0.11, 0.08, 0.07), 0.6),
+    "tile": lambda: R.brick_material("ami_sidewalk_tile", (0.44, 0.38, 0.28), (0.17, 0.15, 0.12), 0.35),
+}
+for _pv in catalog.SIDEWALK_PAVINGS:
+    SHEETS[catalog.sidewalk(_pv)] = (lambda pv: lambda: R.sidewalk_sheet(catalog.sidewalk(pv), label=SIDEWALK_LABEL,
+                                                                        paving=SIDEWALK_PAVINGS[pv], snow=ROAD_SNOW))(_pv)
+# 高架の歩道（ami_sidewalk_elev）: 敷石は ami_sidewalk と同じ。板の下に、道路の高架と同じ深さの基盤と躯体（材質も道路の高架と同じ）。
+# 柱は描かない（道路用の橋脚 ami_pier_road を真下に敷く。上端は道路の高架の躯体の下面で、深さが同じなので合う）
+SHEETS[catalog.SIDEWALK_ELEV] = lambda: R.sidewalk_sheet(catalog.SIDEWALK_ELEV, label=SIDEWALK_LABEL, paving=SIDEWALK_PAVING,
+                                                         snow=ROAD_SNOW, elevated=True, mat_skin=ROAD_MAT_SKIN)
+# 歩道の柵（ami_wall_sidewalk_<版>。#119）: 歩道の板の縁（つながらない辺）に立てる白い鋼の柵の way-object（sheetlib の sidewalk_fence_sheet）
+for _v in catalog.SIDEWALK_WALL_VARIANTS:
+    SHEETS[catalog.sidewalk_wall(_v)] = (lambda v: lambda: R.sidewalk_fence_sheet(catalog.sidewalk_wall(v), v))(_v)
 
 # 盛土の way（#123）: 高架の脇の地面に敷く法面の楔（sheetlib の embankment_sheet）。法面は芝の土（2026-11-21、ユーザーの決定。#123）。
 # 芝は 2 色のまだら（EMBANKMENT_GRASS の暗い色・明るい色・細かさ）、雪の絵は雪のまだら

@@ -84,7 +84,7 @@ def describe(d):
         info["way"] = "tram"
     elif name.startswith("ami_road_expressway"):
         info["way"] = "expwy"
-    elif "road" in name or name == "ami_sidewalk":
+    elif "road" in name or "sidewalk" in name:  # 歩道（ami_sidewalk*）と歩道の柵（ami_wall_sidewalk_*）は道路の色（#25・#119）
         info["way"] = "road"
     else:
         info["way"] = "rail"
@@ -92,8 +92,8 @@ def describe(d):
         info["kind"] = "catenary" if d.get("own_waytype") == "electrified_track" else "wall"
     elif name.startswith("ami_pier"):
         info.update(kind="pier", label="門" if name.endswith("_gate") else "脚", struct="elev")
-    elif name == "ami_sidewalk":
-        info.update(kind="sidewalk", label="歩")
+    elif name.startswith("ami_sidewalk"):  # 歩道の種類と高架の歩道（#119）も同じ決まり。高架は下の帯
+        info.update(kind="sidewalk", label="歩", struct="elev" if name.endswith("_elev") else None)
     elif obj == "building":  # 車庫（#112）。速度は無く、左上に「庫」
         info.update(kind="depot", label=DEPOT_LABEL)
     elif name.startswith("ami_embankment"):  # 盛土（#123）: 左上に「盛」、右下に版（前・後）

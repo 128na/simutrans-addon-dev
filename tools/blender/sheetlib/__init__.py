@@ -15,7 +15,7 @@
     assemble     部品を経路ごとに組み立てる
     cells        セルの描画・特殊色・シート化
     sheetlib     シートの組み立て（線路・道路・トンネル・アイコン）と run_targets
-    sidewalk     歩道の way のシート（sheetlib の render_icon を使う）
+    sidewalk     歩道の way（地上・高架）と歩道の柵の way-object のシート（sheetlib の render_icon を使う）
     crossing     踏切（線路 × 道路）のシート（道路の way のシートのセルを下地に写す）
     depot        車庫（building の depot）など 1 タイルの建物のシート（4 方向 × 奥・手前 × 夏・雪）
 

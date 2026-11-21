@@ -425,15 +425,25 @@ def embankment_dat_text(name, sheet):
 # 歩道の way（ami_sidewalk。#24）。waytype は iss の歩道（../refs/iss/src/util/sidewalk/ground.dat）と同じ water（README の「歩道の作り」）。
 # 値は仮（費用・維持費は橋脚と同じ考え方の小さい値。速さ 1 は橋脚と同じ）
 SIDEWALK_VALUES = dict(waytype="water", cost=1000, maintenance=20, intro_year=1900, topspeed=1)
+# 高架の歩道（ami_sidewalk_elev。#119）: 値は #110 の一覧（README の「歩道の作り」）。高架は地上の 2 倍
+SIDEWALK_ELEV_VALUES = dict(SIDEWALK_VALUES, cost=2000, maintenance=40)
+# 歩道の柵（ami_wall_sidewalk_<版>。#119）: water の way-object。値は #110 の一覧（壁と同じ。速さ 1000 は道路の壁と同じで、
+# 電柱（#120、同じ速さ）と重ねると先に置いた方が残る）
+SIDEWALK_WALL_VALUES = dict(cost=3000, maintenance=60, intro_year=1900, topspeed=1000)
+# 歩道の柵のセル（sheetlib の sidewalk_fence_sheet）: 歩道の way と同じ位置。カーブはシートのカーブのセル（行 2 の列 5〜8）で、斜めのキーは持たない
+SIDEWALK_WALL_KEYS = ("image", "imageup", "imageup2")
 # 歩道のシートにあるセル（sheetlib の sidewalk_sheet）。斜めの絵・分岐の絵は持たない（本体はカーブの絵を使う）
 SIDEWALK_KEYS = ("image", "imageup", "imageup2")
 
 
 def sidewalk_dat_text(name, sheet):
-    """歩道の way の dat。カーブはシートのカーブのセル（行 2 の列 5〜8）。雪の絵（[1]）は SNOW_ROWS 下の行"""
-    v = SIDEWALK_VALUES
+    """歩道の way の dat。カーブはシートのカーブのセル（行 2 の列 5〜8）。雪の絵（[1]）は SNOW_ROWS 下の行。
+    高架の歩道（catalog.SIDEWALK_ELEV）は system_type=1 と高架の値"""
+    elevated = name == catalog.SIDEWALK_ELEV
+    v = SIDEWALK_ELEV_VALUES if elevated else SIDEWALK_VALUES
     out = [
-        f"# AMI: {name}（CC BY 4.0）。道路の隣のタイルに敷く歩道の way。シートは blender/render.py が描く",
+        f"# AMI: {name}（CC BY 4.0）。{'高架の歩道の way（道路の高架の隣に敷く）' if elevated else '道路の隣のタイルに敷く歩道の way'}。"
+        "シートは blender/render.py が描く",
         "obj=way",
         f"name={name}",
         "copyright=AMI (CC BY 4.0)",
@@ -445,7 +455,7 @@ def sidewalk_dat_text(name, sheet):
         f"cost={v['cost']}",
         f"maintenance={v['maintenance']}",
         f"topspeed={v['topspeed']}",
-        "system_type=0",
+        f"system_type={1 if elevated else 0}",
         f"icon=> {sheet}.0.0",
         f"cursor={sheet}.0.1,-64,-32",
     ]
@@ -453,6 +463,35 @@ def sidewalk_dat_text(name, sheet):
         for key, idx, row, col in IMAGES:
             if key in SIDEWALK_KEYS and idx not in SWITCH_IDX:
                 out.append(f"{key}{idx}[{season}]={sheet}.{row + season * SNOW_ROWS}.{col},-64,-32")
+    return NL.join(out) + NL
+
+
+def sidewalk_wall_dat_text(name, sheet):
+    """歩道の柵の way-object の dat（waytype=water・own_waytype=water）。奥の絵は行 0〜3、手前の絵は WALL_FRONT_ROW 下の行。
+    カーブは歩道の way と同じくカーブのセル（斜めのキーは持たない。本体は斜めの絵の無い way-object にカーブの絵を使う）"""
+    v = SIDEWALK_WALL_VALUES
+    out = [
+        f"# AMI: {name}（CC BY 4.0）。歩道の柵（歩道の way に重ねる way-object）。シートは blender/render.py が描く",
+        "obj=way-object",
+        f"name={name}",
+        "copyright=AMI (CC BY 4.0)",
+        f"intro_year={v['intro_year']}",
+        "intro_month=1",
+        "retire_year=2999",
+        "retire_month=1",
+        "waytype=water",
+        "own_waytype=water",
+        f"cost={v['cost']}",
+        f"maintenance={v['maintenance']}",
+        f"topspeed={v['topspeed']}",
+        f"icon=> {sheet}.0.0",
+        f"cursor={sheet}.0.1,-64,-32",
+    ]
+    for key, idx, row, col in IMAGES:
+        if key not in SIDEWALK_WALL_KEYS or idx in SWITCH_IDX or idx.startswith("[close"):
+            continue
+        for side, dr in (("back", 0), ("front", WALL_FRONT_ROW)):
+            out.append(f"{side}{WAYOBJ_KEYS[key]}{idx}={sheet}.{row + dr}.{col},-64,-32")
     return NL.join(out) + NL
 
 
@@ -568,9 +607,14 @@ def main():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(pier_dat_text(name, sheet))
         print(f"[dat] {name}.dat")
-    with open(os.path.join(SRC, catalog.SIDEWALK + ".dat"), "w", encoding="utf8", newline=NL) as f:
-        f.write(sidewalk_dat_text(catalog.SIDEWALK, catalog.SIDEWALK))
-    print(f"[dat] {catalog.SIDEWALK}.dat")
+    for name in catalog.SIDEWALKS:
+        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
+            f.write(sidewalk_dat_text(name, name))
+        print(f"[dat] {name}.dat")
+    for name in catalog.SIDEWALK_WALLS:
+        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
+            f.write(sidewalk_wall_dat_text(name, name))
+        print(f"[dat] {name}.dat")
     for name in catalog.EMBANKMENTS:
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(embankment_dat_text(name, name))

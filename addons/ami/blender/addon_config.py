@@ -18,7 +18,7 @@ for _r in catalog.ROADS:
     SHEETS.update({_r.elev(v): _r.elev(v) for v in catalog.VARIANTS})
 SHEETS[catalog.PIER_ROAD] = catalog.PIER_ROAD
 SHEETS[catalog.TRAM] = catalog.TRAM
-SHEETS[catalog.SIDEWALK] = catalog.SIDEWALK
+SHEETS.update({_s: _s for _s in catalog.SIDEWALKS})
 SHEETS.update({_e: _e for _e in catalog.EMBANKMENTS})
 
 # カーブに斜めの絵を使うシート（道路 3 種も）。
