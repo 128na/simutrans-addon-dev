@@ -285,6 +285,25 @@ for _v in catalog.MONORAIL_ELEV_VARIANTS:
         track_parts=R.monorail_parts(R.MONO_BEAM_TOP - R.MONO_ELEV_BEAM_D), cell_fills=R.monorail_pier_fills(_v),
         lower=MONORAIL_ELEV_LOWER, band="elevated", badge=_v[0].upper())
 
+# ---------------------------------------------------------------- 懸垂式モノレール（ami_monorail_suspended。#116）
+# 物の並びは iss の懸垂式（地上・高架とも front・center・back）に合わせ、支柱は way の絵に持たせる（2026-11-22、進捗管理の決定・案 A）。
+# 部品は sheetlib の monorail_parts の suspended_*（空中の桁と、柱・梁）。どれも高さのある部品で、手前の側の柱・梁は手前の絵（シートの行 4〜7、
+# 雪は行 12〜15）、桁と奥の側の柱・梁は奥の絵（行 0〜3、雪は行 8〜11）。並び・斜めのカーブ・近い斜め無しは跨座式と同じ。
+# 高架の版は柱を高架の下の地面まで延ばし、持ち分も下へ広げる
+for _v in catalog.MONORAIL_SUSPENDED_VARIANTS:
+    for _elev in (False, True):
+        _n = catalog.monorail_suspended(_v, _elev)
+        R.TRACK_PROFILES[catalog.profile(_n)] = dict(
+            R.TRACK_PROFILES[MONORAIL_KEY], sheet=_n, track_parts=R.suspended_parts(), snow_skin=R.SUSP_SNOW_SKIN,
+            cell_fills=R.suspended_pier_fills(_v, _elev), front_row=4, rise=R.SUSP_RISE, badge=_v[0].upper(),
+            **(dict(lower=MONORAIL_ELEV_LOWER, band="elevated") if _elev else {}))
+# 電化の way-object（ami_monorail_power・ami_monorail_suspended_power。#116）: way-object のシート（奥の絵 4 行 → 手前の絵 4 行。雪の絵は無い）。
+# 給電レールと碍子だけを描き、桁は holdout で置いて奥のレールを隠す（sheetlib の monorail_parts の power_*）。並びは跨座式の way と同じ
+for _n, _susp in catalog.MONORAIL_POWERS.items():
+    R.TRACK_PROFILES[catalog.profile(_n)] = dict(
+        R.TRACK_PROFILES[MONORAIL_KEY], sheet=_n, track_parts=R.power_parts(_susp), cell_fills=R.power_insulator_fills(_susp),
+        front_row=4, rise=R.POWER_RISE, snow=False, snow_skin={}, label="E", badge="S" if _susp else None)
+
 # ---------------------------------------------------------------- 基盤の版と壁の way-object（ADR 0003。#16）
 # 基盤の版の way（ami_rail_ballast_base_<版>）は、通常の版の道床の下に基盤を敷き、基盤は壁の位置で止まる（壁の無い側はタイルの端まで）。
 # 壁そのものは way の絵に描かず、同じ版の壁の way-object（ami_wall_rail_<版>）のシートに描く（sheetlib の wall_sheet）。
@@ -584,6 +603,8 @@ SHEETS = {_t.way: _track_target(_t.key) for _t in catalog.TRACKS}
 SHEETS[catalog.TRAM] = _track_target(TRAM_KEY)
 SHEETS[catalog.MONORAIL] = _track_target(MONORAIL_KEY)
 for _n in catalog.MONORAIL_ELEVS:
+    SHEETS[_n] = _track_target(catalog.profile(_n))
+for _n in catalog.MONORAIL_SUSPENDEDS + catalog.MONORAIL_SUSPENDED_ELEVS + tuple(catalog.MONORAIL_POWERS):
     SHEETS[_n] = _track_target(catalog.profile(_n))
 SHEETS[catalog.MONORAIL_TUNNEL] = lambda: R.tunnel_sheet("track", profile=MONORAIL_KEY, sheet=catalog.MONORAIL_TUNNEL, label=MONORAIL_LABEL,
                                                           mat_skin=TRACK_WALL_SKIN)

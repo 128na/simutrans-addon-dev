@@ -94,6 +94,23 @@ def monorail_elev(variant):
 MONORAIL_ELEVS = tuple(monorail_elev(_v) for _v in MONORAIL_ELEV_VARIANTS)
 MONORAIL_TUNNEL = f"{MONORAIL}_tunnel"
 
+# 懸垂式モノレール（150 km/h、monorail_track。#116。名前は ADR 0008）。物の並びは iss の懸垂式に合わせる（2026-11-22、進捗管理の決定。
+# 支柱は way の絵に持たせる案 A）: 地上・高架とも柱の側で front・center・back の 3 版。トンネルは作らない（README の「懸垂式モノレールの作り」）
+MONORAIL_SUSPENDED = "ami_monorail_suspended"
+MONORAIL_SUSPENDED_VARIANTS = MONORAIL_ELEV_VARIANTS
+
+
+def monorail_suspended(variant, elevated=False):
+    """懸垂式モノレールの名前（地上は ami_monorail_suspended_<版>、高架は ami_monorail_suspended_elev_<版>）"""
+    return f"{MONORAIL_SUSPENDED}_{'elev_' if elevated else ''}{variant}"
+
+
+MONORAIL_SUSPENDEDS = tuple(monorail_suspended(_v) for _v in MONORAIL_SUSPENDED_VARIANTS)
+MONORAIL_SUSPENDED_ELEVS = tuple(monorail_suspended(_v, True) for _v in MONORAIL_SUSPENDED_VARIANTS)
+# モノレールの電化の way-object（own_waytype=electrified_track。#116）: 電車のモノレールの車両を走らせる。方式ごとに 2 つ
+# （2026-11-22、進捗管理の決定）。名前 → 懸垂式用か（絵の作りは sheetlib の monorail_parts の power_*）
+MONORAIL_POWERS = {f"{PREFIX}monorail_power": False, f"{PREFIX}monorail_suspended_power": True}
+
 # 運河（60 km/h、water。#114。名前は ADR 0008）。物の並びは iss の運河（地上だけ。高架・橋・トンネルは無い）に合わせる
 # （2026-11-22、ユーザーの決定）。歩道（ami_sidewalk）と同じ waytype なので、突き当てるとつながる（README の「運河の作り」）
 CANAL = "ami_canal"
