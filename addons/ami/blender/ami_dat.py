@@ -415,6 +415,44 @@ def sidewalk_dat_text(name, sheet):
     return NL.join(out) + NL
 
 
+# ---------------------------------------------------------------- 踏切（線路 × 道路。#111）
+# 線路 4 種 × 道路 3 種の 12 個（catalog.CROSSINGS）。本体は踏切を waytype の組と速さだけで選ぶ（dataobj/crossing_logic.cc の get_crossing。
+# way の名前は見ない）ので、組ごとに速さの合う踏切を置く。絵は道路の種類ごとのシート（catalog.crossing_sheet）で、線路の 4 種で同じ。
+# 値は仮（#110 で決める）: 速さは両方の way の最高速度（踏切で速度を落とさない）、登場年は 2 つの way の遅い方、音なし（iss と同じ sound=-1）。
+# シートの並び（sheetlib の crossing.py）: 列 = (道路の向き, 閉じた絵か)、行 0・1 が夏の奥・手前、行 2・3 が雪の奥・手前。
+# dat の [ns]・[ew] は waytype[0]（道路）の向き
+CROSSING_COLS = {("ns", False): 0, ("ns", True): 1, ("ew", False): 2, ("ew", True): 3}  # crossing.py の CROSSING_COLS と同じ
+CROSSING_SNOW_ROW = 2  # crossing.py の CROSSING_SNOW_ROW と同じ
+
+
+def crossing_dat_text(name, track, road):
+    t, r = VALUES[track.way], VALUES[road.way]
+    sheet = catalog.crossing_sheet(road)
+    out = [
+        f"# AMI: {name}（CC BY 4.0）。{track.way} × {road.way} の踏切。値は仮（#110）。シートは blender/render.py が描く",
+        "obj=crossing",
+        f"name={name}",
+        "copyright=AMI (CC BY 4.0)",
+        f"intro_year={max(t['intro_year'], r['intro_year'])}",
+        "intro_month=1",
+        "retire_year=2999",
+        "retire_month=1",
+        "sound=-1",
+        "waytype[0]=road",
+        f"speed[0]={r['speed']}",
+        "waytype[1]=track",
+        f"speed[1]={t['speed']}",
+    ]
+    for season in (0, 1):
+        row = season * CROSSING_SNOW_ROW
+        for d in ("ns", "ew"):
+            for closed, key in ((False, "openimage"), (True, "closedimage")):
+                col = CROSSING_COLS[(d, closed)]
+                out.append(f"{key}[{d}][{season}]={sheet}.{row}.{col},-64,-32")
+                out.append(f"front_{key}[{d}][{season}]={sheet}.{row + 1}.{col},-64,-32")
+    return NL.join(out) + NL
+
+
 def main():
     os.makedirs(SRC, exist_ok=True)
     for name, sheet in BUILT.items():
@@ -460,6 +498,10 @@ def main():
             with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
                 f.write(text(name, base, sheet))
             print(f"[dat] {name}.dat")
+    for name, (track, road) in catalog.CROSSINGS.items():
+        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
+            f.write(crossing_dat_text(name, track, road))
+        print(f"[dat] {name}.dat")
 
 
 if __name__ == "__main__":

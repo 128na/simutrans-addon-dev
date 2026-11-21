@@ -4,7 +4,7 @@ src/ の dat から、全部入りのまとめ（dist/ami.pak）と、種類別�
     dist/ami_rail.pak   線路（ami_rail_*）
     dist/ami_tram.pak   路面軌道（ami_tram*）
     dist/ami_road.pak   道路（ami_road_*）
-    dist/ami_extra.pak  付属（壁・橋脚・歩道: ami_wall_*・ami_pier_*・ami_sidewalk*）
+    dist/ami_extra.pak  付属（壁・橋脚・歩道・踏切: ami_wall_*・ami_pier_*・ami_sidewalk*・ami_crossing_*）
 dat が 1 つも無い種類の pak は作らない。makeobj の出力に WARNING か ERROR があれば、出力を見せて 1 で終わる（ACCEPTANCE 1-5）。
 作った後、分岐の追加画像（Y字分岐・三方分岐。絵の番号 26〜35）を継ぎ足す: src/ex_donors.dat（blender/ami_dat.py が書く提供用の物）を
 work/ex/donors.pak に作り、ex_graft.py で dist/ の各 pak の対象の物（線路・路面軌道の way と架線つきの壁）へ写す。提供用の物は dist/ に入らない。
@@ -30,7 +30,7 @@ KINDS = {
     "ami_rail.pak": ("ami_rail_",),
     "ami_tram.pak": ("ami_tram",),
     "ami_road.pak": ("ami_road_",),
-    "ami_extra.pak": ("ami_wall_", "ami_pier_", "ami_sidewalk"),
+    "ami_extra.pak": ("ami_wall_", "ami_pier_", "ami_sidewalk", "ami_crossing_"),  # 踏切（#111）は線路・道路と組で使うので付属に入れる
 }
 
 
