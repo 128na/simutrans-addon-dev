@@ -101,6 +101,8 @@ def kind_label(o):
         return f"踏切（{waytype(o.get('waytype[0]', ''))}×{waytype(o.get('waytype[1]', ''))}）"
     if t == "building" and o.get("type") == "depot":
         return f"{wt}の車庫"
+    if t == "building" and o.get("type") == "stop":
+        return f"{wt}の操車場"  # 荷を扱わない駅の建物（ami_rail_yard。#115）
     raise ValueError(f"{o.get('name')}: 知らない obj（{t} {o.get('type', '')}）。lineup.py の kind_label に足す")
 
 

@@ -642,6 +642,9 @@ SHEETS[catalog.PIER_ROAD] = lambda: R.pier_sheet(catalog.PIER_ROAD, R.FLAT, labe
 # 歩道の way（ami_sidewalk）: 道路の隣のタイルに敷く。絵は自分のつながりだけで決まる（sheetlib の sidewalk_sheet）。
 # 絵の位置・持ち分は道路と同じ（ROAD_CY）
 SIDEWALK_LABEL = "S"  # アイコンの文字（仮。アイコンはステップ 13 でまとめて作る）
+# 運河の way（ami_canal。#114）: 水面・護岸・笠石（sheetlib の canal_sheet）。カーブは斜めの絵
+CANAL_LABEL = "60"
+SHEETS[catalog.CANAL] = lambda: R.canal_sheet(catalog.CANAL, label=CANAL_LABEL)
 SHEETS[catalog.SIDEWALK] = lambda: R.sidewalk_sheet(catalog.SIDEWALK, label=SIDEWALK_LABEL, paving=SIDEWALK_PAVING, snow=ROAD_SNOW)
 # 歩道の種類（ami_sidewalk_<舗装>。#119）: 形は ami_sidewalk と同じで、敷石の材質だけが違う。目地の模様の違い（やはず張りなど）は
 # 敷石が約 6 x 3px の画面では見分けられないので、色と材質で分ける（2026-11-21、#119 で作業者が決めた。ユーザーが PR で確かめる）
@@ -682,6 +685,8 @@ for _r in catalog.ROADS:
 # 車庫（#112）: 種類ごとに 1 枚。形と寸法は sheetlib の depot.py（DEPOT_SHAPES）
 for _d in catalog.DEPOTS:
     SHEETS[_d.name] = (lambda d: lambda: R.depot_sheet(R.sheet_path(d.name + ".png"), d.kind, R.WORK))(_d)
+# 操車場（#115）: 線路の脇の構内通路。形と寸法は sheetlib の yard.py
+SHEETS[catalog.RAIL_YARD] = lambda: R.yard_sheet(R.sheet_path(catalog.RAIL_YARD + ".png"), R.WORK)
 
 if __name__ == "__main__":
     R.run_targets(SHEETS, list(SHEETS))

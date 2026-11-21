@@ -108,6 +108,10 @@ def monorail_suspended(variant, elevated=False):
 MONORAIL_SUSPENDEDS = tuple(monorail_suspended(_v) for _v in MONORAIL_SUSPENDED_VARIANTS)
 MONORAIL_SUSPENDED_ELEVS = tuple(monorail_suspended(_v, True) for _v in MONORAIL_SUSPENDED_VARIANTS)
 
+# 運河（60 km/h、water。#114。名前は ADR 0008）。物の並びは iss の運河（地上だけ。高架・橋・トンネルは無い）に合わせる
+# （2026-11-22、ユーザーの決定）。歩道（ami_sidewalk）と同じ waytype なので、突き当てるとつながる（README の「運河の作り」）
+CANAL = "ami_canal"
+
 ROAD_LOCAL = Road("road_local")  # 生活道路（40 km/h、中央線なし）
 ROAD_GENERAL = Road("road_general")  # 一般道路（120 km/h、中央線は白の実線）
 ROAD_EXPRESSWAY = Road("road_expressway")  # 高速道路（360 km/h、中央線は白の破線）
@@ -181,4 +185,9 @@ class Depot:
         self.name = f"{PREFIX}{kind}_depot"
 
 
-DEPOTS = (Depot("rail", "track"), Depot("tram", "tram_track"), Depot("road", "road"), Depot("monorail", "monorail_track"))
+DEPOTS = (Depot("rail", "track"), Depot("tram", "tram_track"), Depot("road", "road"), Depot("monorail", "monorail_track"),
+          Depot("canal", "water"))
+
+# 操車場（building の stop。#115。ADR 0008 の ami_rail_yard）: 荷を扱わない線路の駅の建物。線路の脇の構内通路（2026-11-22、ユーザーの決定）。
+# 名前の頭 ami_rail_ で、build.py が線路の pak（ami_rail.pak）に入れる
+RAIL_YARD = f"{PREFIX}rail_yard"

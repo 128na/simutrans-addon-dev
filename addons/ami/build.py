@@ -5,6 +5,7 @@ src/ の dat から、全部入りのまとめ（dist/ami.pak）と、種類別�
     dist/ami_tram.pak   路面軌道（ami_tram*）
     dist/ami_road.pak   道路（ami_road_*）
     dist/ami_monorail.pak モノレール（ami_monorail*。跨座式の way・高架・トンネルと車庫 ami_monorail_depot）
+    dist/ami_canal.pak    運河（ami_canal*。地上の way と船の車庫 ami_canal_depot）
     dist/ami_extra.pak  付属（壁・橋脚・歩道・歩道の柵・踏切: ami_wall_*（歩道の柵 ami_wall_sidewalk_* を含む）・ami_pier_*・ami_sidewalk*・ami_crossing_*）
     dist/ami_scenery.pak 景観（盛土: ami_embankment_*）
 dat が 1 つも無い種類の pak は作らない。makeobj の出力に WARNING か ERROR があれば、出力を見せて 1 で終わる（ACCEPTANCE 1-5）。
@@ -33,6 +34,7 @@ KINDS = {
     "ami_tram.pak": ("ami_tram",),
     "ami_road.pak": ("ami_road_",),
     "ami_monorail.pak": ("ami_monorail",),  # 跨座式モノレール（#113。ADR 0008）。車庫 ami_monorail_depot も入る
+    "ami_canal.pak": ("ami_canal",),  # 運河（#114。ADR 0008）。船の車庫 ami_canal_depot も入る
     "ami_extra.pak": ("ami_wall_", "ami_pier_", "ami_sidewalk", "ami_crossing_"),  # 踏切（#111）は線路・道路と組で使うので付属に入れる
     "ami_scenery.pak": ("ami_embankment_",),  # 景観（ADR 0008。盛土 #123。標識 #122 もここに入る）
 }
