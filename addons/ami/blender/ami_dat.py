@@ -621,6 +621,47 @@ def depot_dat_text(depot):
     return NL.join(out) + NL
 
 
+# 操車場（building の stop。#115）。シートの並びは sheetlib の yard.py（列 = layout 0〜7、行 0・1 が夏・雪の奥の絵、列 8 の行 0・1 が
+# アイコン・カーソル）。layout は線路の向きと、隣の駅の建物の有無（ビット 0 = 東西、2 = 南・東の端、4 = 北・西の端。本体の
+# hausbauer.cc の build_station_extension_depot。README の「操車場の作り」）。荷を扱わない（enables_* を書かない）。
+# 費用・維持費は省かず書く（#110。pak128 の cost_multiply_station 600 cr・maintenance_building 1800。dat の値は 1/100 cr）
+YARD_VALUES = dict(cost=60000, maintenance=1800, level=1)
+YARD_INTRO_YEAR = 1900
+YARD_LAYOUTS = 8
+YARD_SNOW_ROW = 1  # sheetlib の yard.YARD_SNOW_ROW と同じ
+YARD_ICON_CELL = f"0.{YARD_LAYOUTS}"  # sheetlib の yard.YARD_ICON_CELL と同じ
+YARD_CURSOR_CELL = f"1.{YARD_LAYOUTS}"
+
+
+def yard_dat_text(name):
+    v = YARD_VALUES
+    out = [
+        f"# AMI: {name}（CC BY 4.0）。操車場（荷を扱わない線路の駅の建物）。シートは blender/render.py が描く（sheetlib の yard.py）",
+        "obj=building",
+        f"name={name}",
+        "copyright=AMI (CC BY 4.0)",
+        "type=stop",
+        "waytype=track",
+        f"intro_year={YARD_INTRO_YEAR}",
+        "intro_month=1",
+        "retire_year=2999",
+        "retire_month=1",
+        f"cost={v['cost']}",
+        f"maintenance={v['maintenance']}",
+        f"level={v['level']}",
+        "noinfo=1",
+        "noconstruction=1",
+        f"dims=1,1,{YARD_LAYOUTS}",
+        "needs_ground=1",
+        f"icon=> {name}.{YARD_ICON_CELL}",
+        f"cursor={name}.{YARD_CURSOR_CELL}",
+    ]
+    for season in (0, 1):
+        for layout in range(YARD_LAYOUTS):
+            out.append(f"backimage[{layout}][0][0][0][0][{season}]={name}.{season * YARD_SNOW_ROW}.{layout},{DEPOT_OFFSET}")
+    return NL.join(out) + NL
+
+
 def main():
     os.makedirs(SRC, exist_ok=True)
     for name, sheet in BUILT.items():
@@ -691,6 +732,9 @@ def main():
         with open(os.path.join(SRC, depot.name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(depot_dat_text(depot))
         print(f"[dat] {depot.name}.dat")
+    with open(os.path.join(SRC, catalog.RAIL_YARD + ".dat"), "w", encoding="utf8", newline=NL) as f:
+        f.write(yard_dat_text(catalog.RAIL_YARD))
+    print(f"[dat] {catalog.RAIL_YARD}.dat")
 
 
 if __name__ == "__main__":

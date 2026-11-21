@@ -670,6 +670,8 @@ for _r in catalog.ROADS:
 # 車庫（#112）: 種類ごとに 1 枚。形と寸法は sheetlib の depot.py（DEPOT_SHAPES）
 for _d in catalog.DEPOTS:
     SHEETS[_d.name] = (lambda d: lambda: R.depot_sheet(R.sheet_path(d.name + ".png"), d.kind, R.WORK))(_d)
+# 操車場（#115）: 線路の脇の構内通路。形と寸法は sheetlib の yard.py
+SHEETS[catalog.RAIL_YARD] = lambda: R.yard_sheet(R.sheet_path(catalog.RAIL_YARD + ".png"), R.WORK)
 
 if __name__ == "__main__":
     R.run_targets(SHEETS, list(SHEETS))
