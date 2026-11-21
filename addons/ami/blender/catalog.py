@@ -86,3 +86,16 @@ ROAD_WALL_VARIANTS = ("single", "back", "center", "front")  # 道路の壁の wa
 ROAD_WALL_TWIN = "ami_wall_road_twin"
 PIER_ROAD = "ami_pier_road"  # 道路用の橋脚の way
 SIDEWALK = "ami_sidewalk"  # 歩道の way（道路の隣のタイルに敷く、別の waytype の way。ADR 0003）
+
+
+def crossing(track, road):
+    """線路 × 道路の踏切の名前（#111。ami_crossing_<線路>_<道路>。例 ami_crossing_rail_ballast_road_general）"""
+    return f"{PREFIX}crossing_{track.key}_{road.key}"
+
+
+def crossing_sheet(road):
+    """踏切のシートの名前。絵は道路の種類ごとに 1 枚で、線路の 4 種で同じ（踏切の中は道床が見えない。2026-11-21、#111 で進捗管理が決定）"""
+    return f"{PREFIX}crossing_{road.key}"
+
+
+CROSSINGS = {crossing(_t, _r): (_t, _r) for _t in TRACKS for _r in ROADS}  # 踏切の名前 → (線路, 道路)。12 個

@@ -352,6 +352,8 @@ def main(targets=None):
         dats[d["name"]] = d
     touched = set()
     for name, d in dats.items():
+        if "icon" not in d:
+            continue  # 踏切（obj=crossing。#111）は道具が無く、アイコン・カーソルを持たない
         isheet, ir, ic_ = ref(d["icon"])
         csheet, cr, cc = ref(d["cursor"])
         if targets and isheet not in targets and csheet not in targets:

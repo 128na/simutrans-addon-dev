@@ -1,6 +1,6 @@
 // 配る pak の読み込みの確認（#91）: pak に入っている全部の物（way・way-object・橋・トンネル）を、1 つずつ道具で敷けるかを確かめる。
 // ingame/beta_check.sh が src/*.dat から ITEMS の行を作って差し替え、flat_512 の温暖側に敷く。見た目は見ない（敷けたかと、敷いた物の名前だけ）。
-// ITEMS: [名前, obj（way・way-object・bridge・tunnel）, waytype（dat の値）, system_type（way だけ。1 は高架）]
+// ITEMS: [名前, obj（way・way-object・bridge・tunnel・crossing）, waytype（dat の値）, system_type（way だけ。1 は高架）]
 // 並べ方（原点 (OX, OY)。1 つの物に 1 行、ROW タイルずつ南へ）:
 //   way: (0)-(5) を東西に敷き、(2) のタイル（高架は 2 段上）の way の名前を読む
 //   way-object: 同じ waytype の運び手の way（CARRIER）を (0)-(5) に敷いてから重ね、(2) のタイルの way-object の名前を読む。架線つきは電化も読む
@@ -55,6 +55,22 @@ function check_bridge(n, x, y) {
   return got == n ? null : "tile has " + got;
 }
 
+// 踏切（#111）: 名前 ami_crossing_<線路>_<道路> の線路を (0)-(5) に東西に、道路を (2) の南北に (-1)-(1) で横切らせ、
+// (2) のタイルの両方の way が踏切になっているかを読む。どの踏切が選ばれたかは script から読めない（crossing_t の get_name は固定）
+function check_crossing(n, x, y) {
+  local rest = n.slice("ami_crossing_".len());
+  local cut = rest.find("_road_");
+  if (cut == null) return "name not ami_crossing_<track>_<road>";
+  local td = way_desc_x("ami_" + rest.slice(0, cut)), rd = way_desc_x("ami_" + rest.slice(cut + 1));
+  if (td == null || rd == null) return "way desc missing";
+  local e = err(command_x.build_way(pl, c(x, y), c(x + 5, y), td, true));
+  if (e == null) e = err(command_x.build_way(pl, c(x + 2, y - 1), c(x + 2, y + 1), rd, true));
+  if (e != null) return "build_way: " + e;
+  local t = at(x + 2, y), a = t.get_way(wt_rail), b = t.get_way(wt_road);
+  if (a == null || b == null) return "ways missing";
+  return a.is_crossing() && b.is_crossing() ? null : "no crossing";
+}
+
 function check_tunnel(n, x, y) {
   if (tunnel_desc_x(n) == null) return "desc missing";
   for (local k = 3; k <= 5; k++) for (local h = 0; h < 2; h++) {
@@ -82,6 +98,7 @@ foreach (it in ITEMS) {
       if (obj == "way") r = check_way(n, wt, st, OX, y);
       else if (obj == "way-object") r = check_wayobj(n, wt, OX, y);
       else if (obj == "bridge") r = check_bridge(n, OX, y);
+      else if (obj == "crossing") r = check_crossing(n, OX, y);
       else r = "unknown obj " + obj;
     }
   } catch (ex) { r = "exception: " + ex; }

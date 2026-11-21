@@ -169,6 +169,10 @@ def hue_diff(a, b):
 
 
 # ---------------------------------------------------------------- 検査
+# 道具が無く、アイコン・カーソルを持たない物の種類（踏切は way を交わらせると本体が置く。#111）
+NO_TOOL_OBJS = {"crossing"}
+
+
 def main(src):
     objs = read_dats(src)
     errors = []
@@ -186,6 +190,8 @@ def main(src):
     targets = []  # (物, キー, セル)
     reported = set()
     for o in objs:
+        if o["obj"] in NO_TOOL_OBJS:
+            continue
         for key in ("icon", "cursor"):
             if key not in o["keys"]:
                 errors.append(f"{o['name']}（{o['file']}）: {key} が無い")
