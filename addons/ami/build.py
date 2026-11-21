@@ -1,7 +1,7 @@
 """AMI の pak を作る（アドオンのディレクトリで `python -X utf8 build.py`）。
 
 src/ の dat から、全部入りのまとめ（dist/ami.pak）と、種類別の pak を makeobj で作る:
-    dist/ami_rail.pak   線路（ami_rail_*）
+    dist/ami_rail.pak   線路（ami_rail_*。車庫 ami_rail_depot を含む。路面軌道・道路の車庫も同じく種類の pak に入る）
     dist/ami_tram.pak   路面軌道（ami_tram*）
     dist/ami_road.pak   道路（ami_road_*）
     dist/ami_extra.pak  付属（壁・橋脚・歩道・踏切: ami_wall_*・ami_pier_*・ami_sidewalk*・ami_crossing_*）

@@ -424,6 +424,22 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 値（仮。#110 で決める）: 速さは両方の way の最高速度（踏切で速度を落とさない）、登場年は 2 つの way の遅い方、音なし（`sound=-1`。iss と同じ）。`blender/ami_dat.py` の `crossing_dat_text`
 - 見本は `ingame/crossing_sample.sh`（`ingame/crossing_sample.nut`・`crossing_train.nut`）。12 組を、道路が南北の向き（H 線）と東西の向き（V 線）で温暖・降雪に敷き、開いた絵と、列車を走らせて閉じた絵を撮る。撮った画面に AMI の踏切の絵が出ているかは `JUDGE=1` で判定する（`ingame/crossing_judge.py`。AMI の遮断機・警報機の黄色と、pak128 の踏切の標識の赤の画素を数え、どちらも無ければ踏切が写っていないとする。script からは踏切の名前が読めず、ほかの pak の踏切が選ばれても way の速さは変わらないため。#128）。撮った画面は `docs/crossing_<気候>_<線>_<開閉>.png`（左上から、行が道路 local・general・expressway、列が線路 ballast・concrete・ladder・slab）
 
+### 車庫の作り（#112）
+
+- 線路・路面軌道・道路の 3 つ（`ami_rail_depot`・`ami_tram_depot`・`ami_road_depot`。`blender/catalog.py` の `DEPOTS`）。[ADR 0008](../../docs/adr/0008-ami-scope-second-phase.md) の第 2 弾の物で、手本は blender-poc の料金所の作り（1 タイルの building に奥と手前の絵）
+- 大きさは、箱積み駅舎の箱 1 段（1 タイル × 高さ 2 段 = 32px。[#140](https://github.com/128na/simutrans-addon-dev/issues/140)）に収める（2026-11-21、ユーザーの決定）。屋根は平らで、笠木の上面がちょうど 2 段。軒・屋根・柱形・腰壁を含めて、奥の絵も手前の絵も、128px のセルの六角形 (64,32)(128,64)(128,96)(64,128)(0,96)(0,64) の中に描く。奥の絵の上端は y32 で、本体が絵から出す建物の高さは 2 段になり、高架（2 段）を上に引ける（下の「高架」）
+- 形: 壁の面はタイルの端から 0.1 内、壁の上に笠木、壁の中ほどに会社の色の帯（`player1` の色）、角と入口の脇に柱形、側壁と奥の壁に窓、足元に腰壁（タイルの端まで出し、地面より約 1px 下から立ち上げる）。入口の高さは 26px（pak128 の車両の車体はいちばん高いもので 25px。測り方は記録）。入口の幅は線路 3.4・路面軌道 3.2・道路 4.6（タイル 10）。寸法は `tools/blender/sheetlib/depot.py` の定数と `DEPOT_SHAPES`
+- 絵: 道の出る向き（layout 0〜3 が南・東・北・西。本体の決まりは [way-addon.md](../../docs/reference/way-addon.md) の 5 章）ごとに、奥の絵（北・西の壁と奥の壁の内側）と手前の絵（南・東の壁と屋根）。手前の絵は車両の後に描かれ、車庫に出入りする車両を隠す。雪の絵は屋根と笠木を白くした版（シートの 3・4 行目）。アイコンとカーソルはシートの 5 行目（`blender/icons.py` が layout 0 の絵から作る。札の字は「庫」）
+- 下の way の絵: 道路の行き止まりの絵はタイル全体を塗り、地面より 1px 下に描かれる。腰壁を 1px 下へ延ばして隠したが、2px にすると六角形の外へ出るので、建物の手前の下の縁に道路の端が 1px の点線で残る（`docs/depot_road_temperate.png` の右）。見た目はユーザーが見る
+- 路面軌道の車庫は、路面軌道だけの行き止まりに建つ（道路の上の路面軌道の行き止まりは way が 2 本のタイルなので建たない。本体の決まり）
+- 高架: AMI の高架の線路（`ami_rail_ballast_elev_single`）を、AMI の車庫と pak128 の `TrainDepot` の上（2 段上のタイル）に敷けた（`docs/depot_elevated.png`）。pak128 には高架の運河が無いので、箱の 2 段目の代わりに高架の線路で見た
+- 値: 費用 線路・路面軌道 850000・道路 700000、維持費 1800、登場年 1900、引退 2999 年（`blender/ami_dat.py` の `DEPOT_VALUES`。値の決め方は「第 2 弾の物の値」）。`noinfo=1`・`needs_ground=1`
+- pak は種類ごとの pak（`ami_rail.pak`・`ami_tram.pak`・`ami_road.pak`）に入る（`build.py` の `KINDS` の名前の頭）
+- 検査: `check.sh` が `check_depot.py` を回す。dat の building の絵の塗った画素が六角形の中か（画素の中心で判定）と、奥の絵の上端が y32 より下かを見る
+- 見本は `ingame/depot.sh`（`ingame/depot.nut`）。ゲームの写し（`work/depot_game/<PORT>/`）を起動し、AMI の車庫と pak128 の車庫（`TrainDepot`・`TramDepot`・`CarDepot`）を、AMI の way の上に 4 つの向きで並べ、壁の基盤の版と架線つきの壁の上にも建てる。`SNOW=1` で降雪側、`CAPTURE=1` で撮る、`CAPTURE=1 VEH=1` で車庫から編成を出して続けて撮る。使い方はスクリプトの冒頭
+  - 確認画像（2026-11-21、`OTRPv64_3.exe`、`flat_512.sve`）: `docs/depot_<種類>_<気候>.png`（左が pak128 の車庫、右が AMI の車庫。向きは 4 つ）、`depot_rail_wall_catenary.png`（壁の基盤の版と架線つきの壁の上）、`depot_vehicle.png`（降雪側で車庫から出る機関車と牛車。入口の中の車両が壁と屋根に隠れる）、`depot_elevated.png`
+  - 1930 年の路面軌道には電化の要らない車両が無いので、路面軌道の車庫から出る車両は見ていない
+
 ### アイコン・カーソル（#25）
 
 全部の way・way-object（線路 4 種・道路 3 種・路面軌道・歩道と、その基盤・高架の版、壁・架線・橋脚・橋・トンネル）で、同じ決まりで作る（2026-11-21、ユーザーの決定。#25 の案 A。版の字は漢字）。iss（背景色で構造、左上に版の漢字）と pak128 標準（左上に速度の標識、白い印で高架・橋・トンネル）を見比べて、way の一覧で 4 種の線路が並ぶ AMI では速度を大きく出すほうが見分けやすいとして決めた。案と見比べた画像は `docs/icons_compare_x2.png`・`icons_mock_A.png`・`icons_mock_B.png`、全部の dat のアイコンとカーソルの一覧は `docs/icons_all.png`、ゲームの道具のメニューとカーソルは `docs/icons_menu_<メニュー>.png`・`icons_cursor_<名前>.png`。
@@ -466,7 +482,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 ### 範囲に入れないもの
 
-- 建物（blender-poc の料金所 `bpoc_tollbooth` は移さない）
+- 車庫（#112）以外の建物（blender-poc の料金所 `bpoc_tollbooth` は移さない）
 
 ## 対象
 
@@ -638,8 +654,7 @@ GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe NUT=ingame/sidewalk_sample
 |---|---|---|---|
 | モノレール 跨座・懸垂（`ami_monorail_*`） | 150 km/h | 30000 | 600 |
 | 運河（`ami_canal`） | 60 km/h | 25000 | 500 |
-| 車庫 線路・路面軌道・モノレール（`ami_<種類>_depot`） | – | 850000 | 1800 |
-| 車庫 道路（`ami_road_depot`） | – | 700000 | 1800 |
+| 車庫 モノレール（`ami_monorail_depot`） | – | 850000 | 1800 |
 | 車庫 船（`ami_canal_depot`） | – | 900000 | 1800 |
 | 操車場（`ami_rail_yard`） | – | 60000 | 1800 |
 | 水路の踏切 | 運河の側は 60 km/h。線路・道路の側は、線路×道路の踏切（[#111](https://github.com/128na/simutrans-addon-dev/issues/111)）の作りに合わせる | キー無し | キー無し |
@@ -669,6 +684,7 @@ GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe NUT=ingame/sidewalk_sample
 - 近い斜めの壁は、西の線を `back`、東の線を `front` にした組だけ絵が合う。逆の組（西が `front`）の分け合うタイル用の way-object は作っていない
 - 路面軌道（#23）: 値は仮。路面軌道を走る車両との重なりは見ていない
 - 歩道（#24）: 見た目（敷石の色・縁石の高さ・雪で敷石も縁石も白くする作り）、値は、ユーザーが見る。色はバリエーションを増やすときにまとめて調整する（2026-11-20、ユーザーの判断）
+- 車庫（#112）: 見た目（形・色・入口の大きさ）と、道路の車庫の手前の下の縁に残る道路の端（「車庫の作り」）はユーザーが見る。路面軌道の車庫から出る車両は見ていない。本家 125 での読み込みは見ていない
 - 踏切（#111）: 見た目（踏板の色、遮断機・警報機の形と位置）はユーザーが見る。値は仮（#110）。列車・車と遮断機の重なりは、閉じた絵を撮ったときの列車でだけ見た（車は見ていない）。本家 125 での読み込みは見ていない
 - ベータの既知の課題と、後に回した issue は [ACCEPTANCE.md の「ベータ版（第 1 弾）での扱い」](ACCEPTANCE.md#ベータ版第-1-弾での扱い)
 - できたと言う条件は [ACCEPTANCE.md](ACCEPTANCE.md)

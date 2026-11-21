@@ -44,7 +44,7 @@ foreach (ri, row in ROWS) {
   }
 }
 
-// 車両: 道が南（layout 0）と東（layout 1）へ出る AMI の車庫に、それぞれ 1 編成。道は 8 タイル延ばし、出したら端と車庫の前を往復させる
+// 車両: 道が南（layout 0）と東（layout 1）へ出る AMI の車庫に、それぞれ 1 編成（電化の要らない、いちばん遅い車両。見本の道に架線は無い）。道は 8 タイル延ばし、出したら端と車庫の前を往復させる
 local VEH = [
   {name = "rail", way = "ami_rail_ballast", depot = "ami_rail_depot", wt = wt_rail},
   {name = "tram", way = "ami_tram", depot = "ami_tram_depot", wt = wt_tram},
@@ -54,7 +54,7 @@ local vy = OY + ROWS.len() * ROW_DY;
 foreach (vi, v in VEH) {
   local veh = null;
   foreach (e in vehicle_desc_x.get_available_vehicles(v.wt))
-    if (e.can_be_first() && e.can_be_last() && (e.get_power() > 0 || v.wt == wt_road) && (veh == null || e.get_topspeed() < veh.get_topspeed())) veh = e;
+    if (e.can_be_first() && e.can_be_last() && !e.needs_electrification() && (e.get_power() > 0 || v.wt == wt_road) && (veh == null || e.get_topspeed() < veh.get_topspeed())) veh = e;
   if (veh == null) { report += "no vehicle " + v.name + "\n"; continue; }
   foreach (di in [0, 1]) {
     local dir = DIRS[di];
