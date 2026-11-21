@@ -1,7 +1,7 @@
 // 列車の予約で分岐の絵が切り替わるかを見る見本（#88）。curve_switch_study.nut の区画の東（x = OX + 30〜）に、組ごとに敷く:
 //   y=5 back を x=30〜44、y=6 front を x=33〜44。x=36 で back↔front の渡り線（T字どうし）。車庫は (30,5)、駅は (32,5) と (42,6)
 //   編成 1 本が back から渡り線を通って front の駅へ往復する。渡り線の 2 タイルの絵の番号は curve_switch_study.sh の TRAIN=1 が読む
-// 使い方: ゲームを curve_switch_study.sh で起動したまま、NUT=ingame/curve_switch_train.nut を渡して流す（TRAIN=1 が流す）
+// 使い方: ゲームを curve_switch_study.sh で起動したまま、PORT=<ポート> TRAIN=1 bash ingame/curve_switch_study.sh が流す
 local SETS = [["iss", "iss_wtg_0240_back", "iss_wtg_0240_front"], ["ami", "ami_rail_ballast_base_back", "ami_rail_ballast_base_front"], ["amin", "ami_rail_ballast", "ami_rail_ballast"]];
 local OX = 180;
 local OY = 20;
