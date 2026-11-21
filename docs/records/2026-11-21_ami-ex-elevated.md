@@ -1,0 +1,59 @@
+# 作業ログ: 高架の版の分岐の追加画像を一度だけ確かめる（#82）
+
+（2026-11-21）
+
+## 目的 / 発端
+
+#57（PR #77）と #67（PR #81）で、線路の Y字分岐・三方分岐の追加画像（ex 26〜35）を入れた。見本 `addons/ami/ingame/ex_sample.nut` は絵の番号を地面のタイルから読むので、高架の版では、選ばれた番号を確かめられていなかった。
+
+ユーザーの決定（2026-11-21）: 高架の版は今回だけ確かめる。地上の版と同じなら、これからの種類では省く。
+
+## 分かったこと（事実）
+
+- 平地に高架の way を敷くと、way は 2 段上のタイルに乗る（`docs/reference/way-addon.md` の 5 章）。
+  - 地面のタイル（`get_ground_tile`）の `get_way(wt_rail)` は null になる。
+  - 前の見本は、読めないと -1 を返していた。自動の絵・固定の絵・通常の絵がそろって -1 になるので、`plain` と出ていた（#67 の記録）。
+- `square_x(x, y).get_tile_at_height(2)` から読むと、高架の way の絵の番号が読める。
+- 固定の道具（`tool_set_switch_image`）は、同じ高さの座標（z = 2）で使うと、高架の way に効いた。
+  - 確かめ方: 固定した絵が、通常の絵と違う番号になった。
+  - `sample.nut` の区画 I も、同じ使い方をしている。
+
+## 結果どうしたか
+
+- `ex_sample.nut` を直した。
+  - 名前に `_elev_` を含む way を、高架として扱う。固定の道具と絵の番号の読み出しは、2 段上のタイルで行う。
+  - 番号が読めない（-1）ときは、`plain` ではなく `missing` を出すようにした。
+  - 既定の `WAYS` には、高架を足していない（足すと区画が地図の南へはみ出す）。
+  - 高架を確かめるときは、`ex_check.sh` の `WAYS` で渡す。
+- `docs/reference/way-addon.md` の 9.4 に、結果と「これからの種類は、高架の版の確認を省いてよい」を書いた。
+- AMI の README と ACCEPTANCE の 1-3 にも、結果を書いた。
+
+## 確かめたこと
+
+- 環境: 検証用のフォルダの写し（`addons/ami/work/exgame`）、ポート 47312。`OTRPv64_3.exe`、`flat_512.sve`。
+- pak: PR #81 のマージ後の `dist/ami.pak`。
+- 敷いた組（`WAYS`。どれも way-object なし）:
+  - `ami_rail_ballast`・`ami_rail_ladder`（地上。比べる元）
+  - `ami_rail_ballast_elev_<single・back・center・front>`
+  - `ami_rail_ladder_elev_<single・back・center・front>`
+- 渡した `WAYS`（この並びで区画 0〜9。撮った区画 0・2・6 はこの番号）:
+
+  ```text
+  [["ami_rail_ballast", null], ["ami_rail_ladder", null], ["ami_rail_ballast_elev_single", null], ["ami_rail_ballast_elev_back", null], ["ami_rail_ballast_elev_center", null], ["ami_rail_ballast_elev_front", null], ["ami_rail_ladder_elev_single", null], ["ami_rail_ladder_elev_back", null], ["ami_rail_ladder_elev_center", null], ["ami_rail_ladder_elev_front", null]]
+  ```
+
+- 結果: 10 組とも、温暖・降雪とも、Y字分岐・三方分岐の根元 4 向きの全部が `ok`。出力の行の例: `[check] ami_rail_ladder_elev_front snow z=2 YE=ok 3WE=ok YW=ok 3WW=ok YN=ok 3WN=ok YS=ok 3WS=ok`（20 行とも同じ形）。
+  - `ok` は、自動で選ばれた絵が固定の T字の枠の絵（Y字は 26〜29、三方分岐は 31〜34）と同じで、通常の絵と違うこと。
+  - 高架の行には、`z=2` と出る。
+- 画面: `ex_capture.sh` で、区画 0・2・6（在来線の地上、在来線の高架 single、ラダーの高架 single）を撮った。
+  - 確認画像は `addons/ami/docs/ex_elev_temperate_E.png`。左上から、在来線の地上の Y字 東、在来線の高架 single の Y字 東、ラダーの高架 single の Y字 東、同じく三方分岐 東。
+  - 高架の Y字・三方分岐の絵が、地上と同じ形で出た。画面で見たのは温暖側の single だけで、back・center・front と降雪側は番号の一致だけを確かめた。
+  - 橋脚は敷いていないので、床だけが浮いて見える。
+
+## 推測・未確認事項
+
+- 高速線・直結軌道の高架の版は敷いていない。ex の入れ方（`ex_graft.py` の継ぎ足し）は種類によらず同じなので、同じ結果になると読んでいる。
+- 架線つきの壁を高架に重ねた組は、敷いていない。
+  - 見本は way-object を地面の座標で敷くが、高架では way-object を高架の高さの座標で敷く必要がある。
+  - way-object の絵の番号は、どのみちスクリプトで読めない。
+  - reference の「省いてよい」は way の絵の選ばれ方に限り、高架に重ねた架線つきの壁の見た目は対象に入れていない。
