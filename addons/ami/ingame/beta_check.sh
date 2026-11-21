@@ -6,7 +6,8 @@
 # 写しからは AMI の古い pak（addons/pak128/ami*.pak）を外し、PAKS（既定は dist/ の種類別の 4 つ。zip の中身と同じ）を入れる。
 # 敷く物は src/*.dat の obj・name・waytype・system_type から作る（提供用の ex_donors.dat は除く）。終わったらゲームを閉じて写しを消す。
 # 出力: 敷いた結果（先頭が ok なら全部敷けた）と、ゲームのログ（-log 1 -debug 3 の simu.log。work/beta_game/simu_<PORT>.log に残す）のうち、
-# 読んだ AMI の pak と、AMI の物の名前を含む警告・エラーの行（同じ物を二重に読むと「object way::<名前> is overlaid!」が出る）
+# 読んだ AMI の pak と、AMI の物の名前を含む警告・エラーの行（同じ物を二重に読むと「object way::<名前> is overlaid!」が出る）。
+# 全部敷けて警告が無ければ 0、どちらかが外れたら 1 で終わる
 GAME_DIR=${GAME_DIR:?GAME_DIR に検証用のフォルダを指定する}
 EXE=${EXE:?EXE を指定する（例: OTRPv64_3.exe）}
 PORT=${PORT:?PORT に MCP のポートを指定する}
@@ -50,14 +51,19 @@ ITEMS=$(for f in src/*.dat; do
     END{gsub(/\r/,"",o); gsub(/\r/,"",n); gsub(/\r/,"",w); gsub(/\r/,"",s); if (s=="") s=0; printf "[\"%s\",\"%s\",\"%s\",%s],", n, o, w, s}' "$f"
 done | sed 's/,$//')
 SQ=$(sed -e '/^[[:space:]]*\/\//d' -e '/^[[:space:]]*$/d' -e "s/^local ITEMS = .*/local ITEMS = [$ITEMS];/" "$NUT")
-python -X utf8 -c "import json,sys; print(json.load(sys.stdin).get('result'))" <<< "$($M --timeout 300 --run-squirrel "$SQ")"
+RESULT=$(python -X utf8 -c "import json,sys; print(json.load(sys.stdin).get('result'))" <<< "$($M --timeout 300 --run-squirrel "$SQ")")
+echo "$RESULT"
+fail=0
+[ "${RESULT#ok }" != "$RESULT" ] || fail=1
 # ログ（-debug 3 で警告と読み込みの行まで出す。段を下げると 1 行しか出ず、二重に読んだ物の overlaid の警告も出ない）
 LOG="work/beta_game/simu_$PORT.log"
 [ -f "$WORK/simu.log" ] && cp "$WORK/simu.log" "$LOG"  # 写しを消した後も読めるように
 if [ -f "$LOG" ] && grep -aq "obj_reader_t::read_file" "$LOG"; then
   echo "[beta] 読んだ AMI の pak: $(grep -aoE "addons/pak128/ami[a-z_]*\.pak" "$LOG" | sort -u | tr '\n' ' ')"
   echo "[beta] ログの警告・エラー（AMI の物の名前 ami_ を含む行。全体は $LOG）:"
-  grep -aiE "warning|error" "$LOG" | grep -aE "ami_" || echo "  なし"
+  if grep -aiE "warning|error" "$LOG" | grep -aE "ami_"; then fail=1; else echo "  なし"; fi
 else
   echo "[beta] ログに pak の読み込みの行が無い（ログを読めなかった。$LOG）"
+  fail=1
 fi
+exit $fail  # 敷けない物か、AMI の物の警告があれば 1（trap でゲームを閉じる）
