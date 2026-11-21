@@ -13,6 +13,7 @@ import argparse
 import glob
 import html
 import os
+import re
 import sys
 import unicodedata
 
@@ -83,6 +84,8 @@ def kind_label(o):
     if t == "way":
         if o.get("system_type") == "1":
             return wt + "（高架）"
+        if re.search(r"_lane\d$", name):
+            return wt + "（路面表示）"  # 道路の路面表示の版（ami_road_<種類>_lane<n>。#121）
         return wt + ("（基盤）" if "_base_" in o.get("name", "") else "")
     if t == "bridge":
         return f"{wt}の橋"
