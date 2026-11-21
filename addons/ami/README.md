@@ -600,9 +600,10 @@ GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe NUT=ingame/sidewalk_sample
 
 - way・way-object は、iss の値を基準にする。iss の補助の物は値が目印（費用 10、速度 65480 など）なので、第 1 弾の同じ種類（壁・歩道・橋脚）の値に合わせる。基準にした第 1 弾の値は、まだ仮のものを含む
 - 高架・橋・トンネルの版は、第 1 弾と同じ倍率にする（高架 ×2、橋・トンネル ×4）。モノレール・運河に版を作るかは、それぞれの issue で決める
-- 車庫・操車場（building）は、dat に `cost`・`maintenance`・`level` を書かない。値は pakset の `simuconf.tab` から決まる（本体の決まりは [way-addon.md](../../docs/reference/way-addon.md) の 5 章）。iss・pak128 も書いていない
-  - 車庫の費用は pak128 で、線路・路面軌道・モノレールが 8500 cr、道路が 7000 cr、船が 9000 cr。維持費は `maintenance_building`（pak128 は 1800）。
-  - 操車場は、費用も維持費も 0。下に敷く線路の費用は別にかかる。
+- 車庫・操車場（building）は、`cost`・`maintenance` を省いたり 0 にしたりせず、pak128 の既定値と同じ値を dat に明示する（2026-11-21、ユーザーの決定。省略や 0 は、考慮漏れでクラッシュすることがあるため）。書かないときの値の決まりは [way-addon.md](../../docs/reference/way-addon.md) の 5 章。iss・pak128 は書いていない
+  - dat の値は 1/100 cr。車庫の費用は pak128 の `cost_depot_<種類>`（線路・路面軌道・モノレールが 8500 cr、道路が 7000 cr、船が 9000 cr）。
+  - 操車場の費用は `cost_multiply_station`（600 cr。面積 1 タイル、level 1 のとき）。維持費は、どちらも `maintenance_building`（1800）。
+  - 操車場の下に敷く線路の費用は、別にかかる。
 - 登場年は 1900。路面表示つきの道路だけは、元の道路と同じにする
 - 新しい waytype の速さは、pak128 の車両が最高速度で走れる値にする（モノレールの車両は最高 150 km/h、船は 53 km/h）
 
@@ -610,8 +611,10 @@ GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe NUT=ingame/sidewalk_sample
 |---|---|---|---|
 | モノレール 跨座・懸垂（`ami_monorail_*`） | 150 km/h | 30000 | 600 |
 | 運河（`ami_canal`） | 60 km/h | 25000 | 500 |
-| 車庫 5 種（`ami_<種類>_depot`） | – | 書かない | 書かない |
-| 操車場（`ami_rail_yard`） | – | 書かない（0） | 書かない（0） |
+| 車庫 線路・路面軌道・モノレール（`ami_<種類>_depot`） | – | 850000 | 1800 |
+| 車庫 道路（`ami_road_depot`） | – | 700000 | 1800 |
+| 車庫 船（`ami_canal_depot`） | – | 900000 | 1800 |
+| 操車場（`ami_rail_yard`） | – | 60000 | 1800 |
 | 水路の踏切 | 運河の側は 60 km/h。線路・道路の側は、線路×道路の踏切（[#111](https://github.com/128na/simutrans-addon-dev/issues/111)）の作りに合わせる | キー無し | キー無し |
 | 分離帯・分離帯つきの壁（`ami_wall_road_<版>_divider`） | 1010 | 3000 | 60 |
 | 歩道の種類（`ami_sidewalk_<舗装>`） | 1 | 1000 | 20 |
