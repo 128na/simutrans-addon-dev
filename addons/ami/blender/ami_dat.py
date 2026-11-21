@@ -75,6 +75,8 @@ VALUES = {
     "ami_road_expressway": dict(waytype="road", speed=360, cost=20000, maintenance=500, intro_year=1990),
     # 跨座式モノレール（#113）。値は #110 の一覧（在来線の高架と同じ費用・維持費。速さは pak128 のモノレールの車両の最高 150）
     "ami_monorail_straddle": dict(waytype="monorail_track", speed=150, cost=30000, maintenance=600, intro_year=1900),
+    # 運河（#114）。値は #110 の一覧（速さは pak128 の船の最高 53 km/h が走れる値）
+    "ami_canal": dict(waytype="water", speed=60, cost=25000, maintenance=500, intro_year=1900),
 }
 
 # カーブを斜めの絵で表すシート（pak128 標準の線路と同じ。dat の image[sw]・[nw]・[ne]・[se] が diagonal と同じセルを指す。
@@ -82,6 +84,7 @@ VALUES = {
 DIAG_CURVES = {_t.way for _t in catalog.TRACKS} | {_r.way for _r in catalog.ROADS}  # 道路 3 種もカーブは斜めの絵（README の「道路の作り」）
 # 跨座式モノレール（#113）: 地上・高架の版とも、カーブは斜めの絵（手本の iss の跨座式の dat と同じ）
 DIAG_CURVES |= {catalog.MONORAIL, *catalog.MONORAIL_ELEVS}
+DIAG_CURVES.add(catalog.CANAL)  # 運河（#114）もカーブは斜めの絵
 DIAG_CURVES |= {_r.lane(_n) for _r in catalog.LANE_ROADS for _n in catalog.LANES}  # 路面表示の版（#121）も通常の版と同じ
 CURVE_TO_DIAG = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
 
@@ -156,6 +159,12 @@ for _n in catalog.MONORAIL_ELEVS:
                       maintenance=VALUES[catalog.MONORAIL]["maintenance"] * ELEV_COST_K)
     NO_CLOSE.add(_n)
     ELEVATED.add(_n)
+
+# ---------------------------------------------------------------- 運河（#114）
+# 地上の版だけ（iss の運河と同じ。2026-11-22、ユーザーの決定）。近い斜めの絵は持つ（壁の無い way と同じ）。分岐の絵（1・2）は持たない
+# （本体は water の way の分岐の絵を選ばない。boden/wege/weg.cc の calc_image は track_wt と road_wt だけ）
+BUILT[catalog.CANAL] = catalog.CANAL
+NO_SWITCH = {catalog.CANAL}  # 分岐の絵（image[nse1] など）を書かない way
 
 # ---------------------------------------------------------------- 橋脚の way（#18）
 # 高架の真下の地面のタイルに敷く。waytype は tram_track（iss と同じ。ユーザーの決定、2026-11-18。README の「高架と橋脚の作り」）。
@@ -318,6 +327,8 @@ def dat_text(name, sheet, donor=False):
             if key == "image" and idx in SWITCH_IDX and v["waytype"] == "road" and not ROAD_SWITCH_IMAGES:
                 continue
             if key == "image" and idx in SWITCH_IDX and name == catalog.TRAM and not TRAM_SWITCH_IMAGES:
+                continue
+            if key == "image" and idx in SWITCH_IDX and name in NO_SWITCH:
                 continue
             if key == "image" and sheet in DIAG_CURVES and idx in CURVE_TO_DIAG:
                 row, col = CURVE_TO_DIAG[idx]
@@ -576,7 +587,8 @@ def crossing_dat_text(name, track, road):
 # 列 4 の行 0・1 がアイコン・カーソル）。layout は道の出る向き（0 = 南・1 = 東・2 = 北・3 = 西。simtool.cc の tool_depot_aux）。
 # 費用・維持費は省かず pak128 の既定値を書く（README の「車庫の作り」。省いたり 0 にしたりしない）。dat の値は 1/100 cr
 DEPOT_VALUES = {"track": dict(cost=850000, maintenance=1800), "tram_track": dict(cost=850000, maintenance=1800),
-                "road": dict(cost=700000, maintenance=1800), "monorail_track": dict(cost=850000, maintenance=1800)}
+                "road": dict(cost=700000, maintenance=1800), "monorail_track": dict(cost=850000, maintenance=1800),
+                "water": dict(cost=900000, maintenance=1800)}  # 船の車庫（#114）
 DEPOT_INTRO_YEAR = 1900
 DEPOT_LAYOUTS = 4
 DEPOT_SNOW_ROW = 2  # sheetlib の depot.DEPOT_SNOW_ROW と同じ

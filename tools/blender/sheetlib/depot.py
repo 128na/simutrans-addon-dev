@@ -279,6 +279,7 @@ DEPOT_SHAPES = {
     "tram": DepotShape(door_w=3.2),
     "road": DepotShape(door_w=4.6),
     "monorail": DepotShape(door_w=3.4),  # 跨座式モノレール（#113）。入口は線路と同じ（車体の幅は線路の車両と同じくらい）
+    "canal": DepotShape(door_w=7.0),  # 船（#114）。pak128 の船は幅がタイルの大半あるので、入口を運河の水面に近い幅にする
 }
 
 

@@ -22,9 +22,11 @@ SHEETS[catalog.TRAM] = catalog.TRAM
 SHEETS.update({_s: _s for _s in catalog.SIDEWALKS})
 SHEETS.update({_e: _e for _e in catalog.EMBANKMENTS})
 SHEETS.update({_m: _m for _m in (catalog.MONORAIL, *catalog.MONORAIL_ELEVS)})  # 跨座式モノレール（#113）
+SHEETS[catalog.CANAL] = catalog.CANAL  # 運河（#114）
 
 # カーブに斜めの絵を使うシート（道路 3 種も）。
 # 基盤の版・高架の版（線路・道路）はカーブを斜めの形の別のセル（基盤の壁の無い側を削らない）に描くので、ここには入れない
 DIAG_CURVE_SHEETS = {_t.way for _t in catalog.TRACKS} | {_r.way for _r in catalog.ROADS}
 DIAG_CURVE_SHEETS |= {catalog.MONORAIL, *catalog.MONORAIL_ELEVS}  # 跨座式モノレールは高架の版もカーブを斜めの絵（#113）
+DIAG_CURVE_SHEETS.add(catalog.CANAL)  # 運河もカーブは斜めの絵（#114）
 DIAG_CURVE_SHEETS |= {_r.lane(_n) for _r in catalog.LANE_ROADS for _n in catalog.LANES}  # 路面表示の版（#121）
