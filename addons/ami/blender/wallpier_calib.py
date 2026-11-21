@@ -22,6 +22,8 @@ import sys
 _HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(_HERE)
 STEP = os.environ.get("AMI_WALLPIER", "2")   # 2: 段 2 にそろえる、0: 差し替えなし
+if STEP not in ("0", "2"):
+    sys.exit(f"[wallpier] AMI_WALLPIER は 0 か 2: {STEP}")
 WORK_DIR = os.path.join(ROOT, "work", "wallpier", STEP)
 TRACK = "ami_rail_ballast"   # catalog.WALL_TRACK（壁・架線のシートを描く元の軌道）
 VARIANTS = ("single", "back", "center", "front")
