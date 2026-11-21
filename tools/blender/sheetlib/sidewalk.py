@@ -253,3 +253,123 @@ def sidewalk_fence_sheet(sheet, variant, label="F", style="road"):
     cells[(0, 0)] = _s.render_icon(sheet + "_icon", 0.5, shift=(-0.14, 0.2), label=label, style=style)
     cells[(0, 1)] = cells.get((0, 2)) or cells.get((FENCE_FRONT_ROW, 2))
     make_sheet(cells, 2 * FENCE_FRONT_ROW, 10, os.path.join(_s.SRC, sheet + ".png"))
+
+
+# ---------------------------------------------------------------- 電柱（way-object。#120）
+# 歩道に立てる電柱と電線。毎タイルに柱を 1 本立て、つながる向きに電線を渡す（iss の電柱 ../refs/iss/src/util/road_misc/pole.dat と同じ考え方）。
+# 柵との同居（ami_wall_sidewalk_<版>_pole）は柵の版と同じ辺に柵を立て、柱を柵の側へ寄せる。柱の位置は版ごとに決まった点
+# （POLE_SHIFT）で、南北の辺を出る電線は x = 寄せ、東西の辺を出る電線は y = 寄せ の線を通るので、隣のタイルの電線と辺で合う。
+# 柱・腕木・電線は手前の絵（frontimage）に描く（iss と同じ。電線は歩行者の上を通る）。柵の奥の辺は奥の絵のまま。
+POLE_H = 5.5             # 柱の高さ（敷石の上面から。画面で約 43px。iss の電柱（../refs/iss/src/util/road_misc/pole.png）に合わせた。2026-11-22、ユーザーの指定）
+POLE_W = 0.32            # 柱の太さ（画面で約 2.5px。コンクリートの柱）
+POLE_TOP_W = 0.24        # 柱の上の太さ（上ほど細い柱を、上下 2 段の箱で表す）
+POLE_ARM = (1.9, 0.16, 0.18)  # 腕木の長さ（電線に直角）・厚み・高さ
+POLE_ARM_DOWN = 0.45     # 柱の上端から腕木の中心まで
+POLE_WIRE_X = (-0.75, 0.0, 0.75)  # 腕木の上の電線の位置（腕木に沿って）
+POLE_WIRE = (0.1, 0.14)  # 電線の幅・高さ（画面で約 1px。細いと縁の画素が捨てられて点線になる）
+POLE_CABLE_Z = 3.2       # 通信線の高さ（1 本。柱の脇を通る）
+POLE_CABLE_OFF = 0.3     # 通信線の柱からのずれ（腕木の向き）
+POLE_PAD = 0.6           # 隣のタイルへ続く電線をタイルの外へ延ばす量（持ち分で切る）
+POLE_RISE = 58           # 持ち分を上へ広げる行数（柱の高さ 約 43px と腕木・余り）
+POLE_IN = 0.6            # 柵つきの版で、柵の中心から柱の中心まで（歩道の内側へ）
+_M_SW_POLE = ("sidewalk_pole", (0.66, 0.66, 0.63), 0.7, 0.0)   # コンクリートの柱
+_M_SW_POLE_ARM = ("sidewalk_pole_arm", (0.30, 0.30, 0.31), 0.5, 0.3)  # 鋼の腕木
+_M_SW_POLE_WIRE = ("sidewalk_pole_wire", (0.10, 0.10, 0.11), 0.6, 0.0)  # 電線
+
+
+def pole_shift(variant):
+    """柱の位置（x, y）。back は北西へ、front は南東へ寄せる（柵の側。柵の無い版も同じ位置）。
+    タイルの中心に立てる版は作らない（歩道の中央に電柱は立たない。#120、2026-11-22 のユーザーの指定）"""
+    d = TILE / 2 - FENCE_IN - POLE_IN
+    return {"back": (-d, d), "front": (d, -d)}[variant]
+
+
+def _pole_parts(exits, slope, variant):
+    """柱・腕木・電線。exits はつながる辺（無ければ柱だけ）"""
+    half = TILE / 2
+    ox, oy = pole_shift(variant)
+    z0 = SIDEWALK_H + PAVING_TH
+    pole, arm, wire = (make_material(m, p) for m, p in ((_M_SW_POLE, "pole"), (_M_SW_POLE_ARM, "pole_arm"), (_M_SW_POLE_WIRE, "pole_wire")))
+    obs = []
+    low = POLE_H * 0.55
+    obs.append(mesh_object("pole_low", *box(ox, oy, z0 + low / 2, POLE_W, POLE_W, low), pole))
+    obs.append(mesh_object("pole_high", *box(ox, oy, z0 + low + (POLE_H - low) / 2, POLE_TOP_W, POLE_TOP_W, POLE_H - low), pole))
+    za = z0 + POLE_H - POLE_ARM_DOWN
+    ns = any(d in exits for d in "ns")
+    ew = any(d in exits for d in "ew")
+    # 腕木は電線に直角。南北の電線なら東西向き、東西の電線なら南北向き。両方（曲がり・T字・十字）なら 2 本の十字。つながりが無ければ東西
+    arms = ([("x", "ns")] if ns or not ew else []) + ([("y", "ew")] if ew else [])
+    L, T, AH = POLE_ARM
+    for axis, _ in arms:
+        sx, sy = (L, T) if axis == "x" else (T, L)
+        obs.append(mesh_object("pole_arm", *box(ox, oy, za, sx, sy, AH), arm))
+    zw = za + AH / 2 + POLE_WIRE[1] / 2
+    for d in exits:
+        sign = 1 if d in "ne" else -1
+        if d in "ns":
+            y0, y1 = oy, sign * (half + POLE_PAD)
+            lines = [(ox + w, zw) for w in POLE_WIRE_X] + [(ox + POLE_CABLE_OFF, z0 + POLE_CABLE_Z)]
+            for x, z in lines:
+                obs.append(mesh_object("pole_wire", *box(x, (y0 + y1) / 2, z, POLE_WIRE[0], abs(y1 - y0), POLE_WIRE[1]), wire))
+        else:
+            x0, x1 = ox, sign * (half + POLE_PAD)
+            lines = [(oy + w, zw) for w in POLE_WIRE_X] + [(oy + POLE_CABLE_OFF, z0 + POLE_CABLE_Z)]
+            for y, z in lines:
+                obs.append(mesh_object("pole_wire", *box((x0 + x1) / 2, y, z, abs(x1 - x0), POLE_WIRE[0], POLE_WIRE[1]), wire))
+    if slope:
+        for ob in obs:
+            apply_slope(ob, slope)
+    return obs
+
+
+def _pole_cell(cname, name, exits, slope, variant, fence):
+    """電柱 1 タイルの奥の絵と手前の絵。奥は柵の奥の辺（柵つきの版だけ）、手前は柵の手前の辺と柱・電線"""
+    sides = fence_sides(name, variant) if fence else ""
+    fmat = make_material(_M_FENCE, "fence")
+    out = []
+    for part in ("nw", "se"):
+        use = "".join(d for d in sides if d in part)
+        if part == "nw" and not use:
+            out.append(None)
+            continue
+        clear_models()
+        for d in use:
+            _fence_edge(d, sides, fmat, slope)
+        if part == "se":
+            _pole_parts(exits, slope, variant)
+        path = render_cell(f"{cname}_{part}")
+        im = load_rgba8(path).copy()
+        im[..., 3] = np.where(im[..., 3] >= FENCE_ALPHA, 255, 0)
+        m = _own(f"{cname}_{part}", slope, POLE_RISE if part == "se" else FENCE_RISE)
+        if slope:
+            wide = m.copy()  # 坂: 持ち分を左右へ 1 列広げる（柵と同じ）
+            wide[:, 1:] |= m[:, :-1]
+            wide[:, :-1] |= m[:, 1:]
+            own = wide.astype(np.uint8) * 255
+            save_rgba(os.path.join(_s.WORK, f"{cname}_{part}_own.png"), np.dstack([own, own, own, np.full_like(own, 255)]))
+        if not im[..., 3].any():
+            out.append(None)
+            continue
+        save_rgba(path, im)
+        out.append(path)
+    return out
+
+
+def sidewalk_pole_sheet(sheet, variant, fence=True, label="P", style="road"):
+    """電柱の way-object のシート（#120）。variant（back・front）は柱を寄せる側。fence が真ならその版の柵つき
+    （ami_wall_sidewalk_<版>_pole）、偽なら電柱だけ（ami_sidewalk_pole_<版>）。並びは柵のシート（sidewalk_fence_sheet）と同じ。
+    アイコン（0,0）・カーソル（0,1）は仮の絵（AMI は icons.py が描き直す）"""
+    set_anchor(ROAD_CY)
+    cells = {}
+    for (r, c), (name, exits, slope) in _jobs().items():
+        back, front = _pole_cell(f"{sheet}_{name}", name, exits, slope, variant, fence)
+        if back:
+            cells[(r, c)] = back
+        if front:
+            cells[(r + FENCE_FRONT_ROW, c)] = front
+    clear_models()
+    _build("ns", None, False, _M_PAVING, _SNOW, False)
+    _pole_parts("ns", None, variant)
+    cells[(0, 0)] = _s.render_icon(sheet + "_icon", 0.5, shift=(-0.14, 0.2), label=label, style=style)
+    cells[(0, 1)] = cells.get((FENCE_FRONT_ROW, 2))
+    make_sheet(cells, 2 * FENCE_FRONT_ROW, 10, os.path.join(_s.SRC, sheet + ".png"))
