@@ -188,7 +188,7 @@ def tiled_concrete_material(name, rgb, amp, grain, stain=0.0, stain_scale=0.35, 
     大きなしみ（stain_scale の細かさ、最大 stain だけ暗く）を掛ける。joint=(間隔, 幅, 色の倍率) を渡すと、x・y が間隔の半分ずれた所ごとに
     縦横の暗い線を引く（タイルの辺には置かない）。
     模様はタイルの 1 辺（TILE）を周期にし、タイルの辺で必ずつながる（x・y をそれぞれ円に巻いた 4 次元のノイズ。円の半径を TILE/2π にして、
-    ノイズの尺度を部品の座標と同じにする）。4 つ目の座標には高さも足し、縦の面も高さ方向に変わる。座標は Object（部品の原点はどれも 0）"""
+    ノイズの尺度を部品の座標と同じにする）。縦の面だけ、4 つ目の座標に高さも足し、高さ方向にも変わる（上を向いた面は x・y だけで決まり、坂の上の辺でもつながる）。座標は Object（部品の原点はどれも 0）"""
     if name in bpy.data.materials:
         return bpy.data.materials[name]
     m = bpy.data.materials.new(name)
@@ -218,9 +218,13 @@ def tiled_concrete_material(name, rgb, amp, grain, stain=0.0, stain_scale=0.35, 
     L.new(op("MULTIPLY", op("COSINE", ax), rad), comb.inputs["X"])
     L.new(op("MULTIPLY", op("SINE", ax), rad), comb.inputs["Y"])
     L.new(op("MULTIPLY", op("COSINE", ay), rad), comb.inputs["Z"])
-    # 4 つ目の座標に高さ（z）を足す: 縦の面（橋の端の坂の躯体など）が高さ方向にも変わる（足さないと縦の縞になった。#78）。
-    # x・y の周期は変わらない
-    w = op("ADD", op("MULTIPLY", op("SINE", ay), rad), sep.outputs["Z"])
+    # 縦の面（橋の端の坂の躯体など）だけ、4 つ目の座標に高さ（z）を足す（足さないと縦の縞になった。#78）。重みは 1 − 2|法線の z|
+    # （0 より下は 0）で、上を向いた面（平らな面と坂の面。法線の z は 0.9 より上）には足さない。坂の上の辺は隣の平らなタイルと
+    # 高さが違うので、上の面に足すと模様が辺で切れる。x・y の周期は変わらない
+    nsep = N.new("ShaderNodeSeparateXYZ")
+    L.new(N.new("ShaderNodeNewGeometry").outputs["Normal"], nsep.inputs["Vector"])
+    wz = op("MAXIMUM", op("SUBTRACT", 1.0, op("MULTIPLY", op("ABSOLUTE", nsep.outputs["Z"]), 2.0)), 0.0)
+    w = op("ADD", op("MULTIPLY", op("SINE", ay), rad), op("MULTIPLY", sep.outputs["Z"], wz))
 
     def noise(scale, detail):
         n = N.new("ShaderNodeTexNoise")
