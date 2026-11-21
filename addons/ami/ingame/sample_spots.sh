@@ -80,6 +80,13 @@ done
 # 盛土の見本（ingame/embankment_sample.nut。区画の原点は温暖側・降雪側の原点の 4 南）: A 線路の高架（東西）、B 線路の高架（南北）、R 道路の高架、
 #   M 台の輪、P 窪みの輪、S 坂、T 急坂、D 斜め、X 橋脚と同じタイル
 EMBANKMENT_SPOTS="A:8:8 B:20:9 R:8:14 M:28:7 P:36:7 S:45:8 T:51:8 D:58:7 X:37:13"
+# 中央分離帯の見本（ingame/divider_sample.nut。道路 2 種を 16 ずつ南へ。GE 一般道路・EX 高速道路）: P2 東西の 4 車線と十字、PN 南北の坂、
+#   P0 壁の無い 4 車線、P3 6 車線、PE 高架、R 4 車線の輪（カーブ）、PD 近い斜め
+DIVIDER_SPOTS=""
+for v in GE:0 EX:16; do
+  IFS=: read n dy <<< "$v"
+  DIVIDER_SPOTS="$DIVIDER_SPOTS ${n}_P2:5:$((1 + dy)) ${n}_PN:13:$((4 + dy)) ${n}_P0:5:$((5 + dy)) ${n}_P3:5:$((9 + dy)) ${n}_PE:23:$((1 + dy)) ${n}_R:22:$((7 + dy)) ${n}_PD:35:$((3 + dy))"
+done
 case "${NUT:-}" in
   *tram_sample.nut) SPOTS=${SPOTS:-$TRAM_SPOTS} ;;
   *road_sample.nut) SPOTS=${SPOTS:-$ROAD_SPOTS} ;;
@@ -87,5 +94,6 @@ case "${NUT:-}" in
   *road_struct_sample.nut) SPOTS=${SPOTS:-$STRUCT_SPOTS} ;;
   *sidewalk_sample.nut) SPOTS=${SPOTS:-$SIDEWALK_SPOTS} ;;
   *embankment_sample.nut) SPOTS=${SPOTS:-$EMBANKMENT_SPOTS} ;;
+  *divider_sample.nut) SPOTS=${SPOTS:-$DIVIDER_SPOTS} ;;
 esac
 SPOTS=${SPOTS:-"AFC:8:2 B:3:7 DE:14:7 G1:25:3 G2:25:15 I:5:14 H0:3:22 H1:11:22 H2:19:22 H3:27:22 H4:35:22 H5:43:22 H6:51:22 H7:59:22$WALLED_SPOTS W1:6:155 W2a:19:153 W2b:19:163 W3:2:163 WE1:6:305 WE2a:19:303 WE2b:19:313 WE3:2:313 $BT_SPOTS"}

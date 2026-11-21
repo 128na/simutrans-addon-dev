@@ -19,6 +19,7 @@
     src/ami_rail_ballast_tunnel.png  トンネルの坑口（覆いは blender-poc のトンネル、道床・レールは在来線の通常の版）
     src/ami_road_<種類>.png    道路の通常の版（local・general・expressway）。断面は blender-poc の高速道路で、中央線と路面の色が種類ごとに違う
     src/ami_wall_road_<版>.png  道路の壁の way-object（single・back・center・front。3 種で共有。center は行き止まりの端の壁だけ）。上 4 行が奥、下 4 行が手前の絵
+    src/ami_wall_road_<front|center>_divider.png  中央分離帯つきの壁の way-object（壁の版に、奥の側壁の位置の縁石の帯とガードレールを足した）
     src/ami_road_<種類>_base_<版>.png  道路の地上の基盤の版（4 版。2026-11-19 にユーザーが確定）。壁の外を削り、カーブを斜めの形のセルに描く
     src/ami_road_<種類>_elev_<版>.png  道路の高架の版（4 版）。床（路面と基盤）と躯体だけ（橋脚・壁は描かない）
     src/ami_road_<種類>_bridge.png  道路の橋（欄干なし。床の縁の下に青い桁を見せる）
@@ -492,6 +493,13 @@ for _v in catalog.ROAD_WALL_VARIANTS:
         R.ROAD_PROFILES[_WR.key], sheet=f"ami_wall_road_{_v}_way", prefix=f"ami_wall_road_{_v}_", walls=BASE_VARIANTS[_v],
         groups=R.ROAD_PROFILES[_WR.key]["groups"] + ("wall",), wall_sheet=f"ami_wall_road_{_v}", wall_only=True,
         wall_label=ROAD_WALL_LABEL)
+# 中央分離帯つきの壁（ami_wall_road_<front|center>_divider。#118）: 壁の way-object と同じ作りに、側壁の位置に立つ縁石の帯とガードレール
+# （sheetlib の road_parts の median_*）を足す。分離帯は奥の側の 1 本だけが残る（select_walls）。4 車線の手前のタイルに重ねる
+ROAD_DIVIDER_LABEL = "D"  # 描画のアイコンの文字（ゲームのアイコンは icons.py が書き直す）
+for _v, _name in catalog.ROAD_DIVIDERS.items():
+    R.ROAD_PROFILES[f"wall_road_{_v}_divider"] = dict(
+        R.ROAD_PROFILES[f"wall_road_{_v}"], sheet=f"{_name}_way", prefix=f"{_name}_",
+        groups=R.ROAD_PROFILES[f"wall_road_{_v}"]["groups"] + ("median",), wall_sheet=_name, wall_label=ROAD_DIVIDER_LABEL)
 
 # 地上の基盤の版（<道路>_base_<版>。2026-11-19 にユーザーが確定）: 通常の版の路面から壁の外を削り、カーブのセルを斜めの形で描いて
 # 壁の無い側をタイルの端まで延ばす（curve_cells。並べた車線の直角の曲がりで、内側の線との間に草の三角が出ない）。
@@ -568,6 +576,8 @@ for _r in catalog.ROADS:
     SHEETS[_r.way] = _road_target(_r.key)
 for _v in catalog.ROAD_WALL_VARIANTS:
     SHEETS[f"ami_wall_road_{_v}"] = _road_target(f"wall_road_{_v}")
+for _v, _name in catalog.ROAD_DIVIDERS.items():
+    SHEETS[_name] = _road_target(f"wall_road_{_v}_divider")
 for _r in catalog.ROADS:
     for _v in BASE_VARIANTS:
         SHEETS[_r.base(_v)] = _road_target(_p(_r.base(_v)))

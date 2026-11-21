@@ -170,6 +170,13 @@ TWIN_FROM = {"[nw]": "ami_wall_rail_back", "[sw]": "ami_wall_rail_back", "[ne]":
 # 近い斜めの分け合うタイル用の ami_wall_road_twin（名前は 2026-11-19 にユーザーが確定）は、線路の twin と同じ作りで、back・front の斜めのセルを指す
 ROAD_WALLS = {f"ami_wall_road_{_v}": f"ami_wall_road_{_v}" for _v in catalog.ROAD_WALL_VARIANTS}
 ROAD_TWIN_FROM = {k: v.replace("ami_wall_rail_", "ami_wall_road_") for k, v in TWIN_FROM.items()}
+# 中央分離帯つきの壁（#118）: 値は #110 で決めた一覧（README の「第 2 弾の物の値」）。速さは壁（1000）・twin（1001）より大きく、壁の上に
+# 重ねると分離帯つきに置き換わる。近い斜めの分け合うタイル用の twin_divider は 1 速くする（壁の twin と同じ理由）。
+# twin_divider の絵は、西の線（nw・sw）が back の壁、東の線（ne・se）が front_divider（4 車線の手前の線が東になる）
+DIVIDER_VALUES = dict(cost=3000, maintenance=60, intro_year=1900, topspeed=1010)
+DIVIDER_TWIN_TOPSPEED = DIVIDER_VALUES["topspeed"] + 1
+ROAD_DIVIDERS = {_n: _n for _n in catalog.ROAD_DIVIDERS.values()}
+ROAD_DIVIDER_TWIN_FROM = {k: (v if v.endswith("_back") else catalog.ROAD_DIVIDERS["front"]) for k, v in ROAD_TWIN_FROM.items()}
 
 # ---------------------------------------------------------------- 架線つきの壁の way-object（線路用、電化。#17）
 # 値は仮（README の「架線の作り」）。架線の way-object の topspeed は、電化した編成の速さを縛る（本体の max_wayobj_speed）ので、
@@ -296,18 +303,20 @@ def dat_text(name, sheet, donor=False):
     return NL.join(out) + NL
 
 
-def wall_dat_text(name, sheet, twin=False, catenary=False, road=False, donor=False):
+def wall_dat_text(name, sheet, twin=False, catenary=False, road=False, donor=False, divider=False):
     """壁の way-object の dat。セルは way と同じ位置（分岐の絵・近い斜めは持たない。壁は通常の T字・十字と同じ）。
     カーブは way と同じく斜めのセルを指す。twin は近い斜めの分け合うタイル用（斜めとカーブのキーだけ、TWIN_FROM のシートを指す）。
     catenary は架線つき（電化。own_waytype=electrified_track、値は CATENARY_VALUES。twin は TWIN_FROM_CATENARY のシート）。
-    road は道路の壁（waytype=road・own_waytype=road。twin は ROAD_TWIN_FROM のシート）。
+    road は道路の壁（waytype=road・own_waytype=road。twin は ROAD_TWIN_FROM のシート）。divider は道路の中央分離帯つきの壁（road と一緒に
+    渡す。値は DIVIDER_VALUES、twin は ROAD_DIVIDER_TWIN_FROM のシート）。
     架線つき（twin を除く）は、分岐の追加画像（EX_WAYOBJS）のために 1・2 の 10 枚のキーも書く: 通常は T字・十字と同じセル（本体が way-object の
     分岐の絵を選ぶ処理に入るが、絵は変わらない）、donor（提供用の物。名前 + DONOR_SUFFIX）は EX_CELLS"""
-    v = CATENARY_VALUES if catenary else WALL_VALUES
+    v = CATENARY_VALUES if catenary else DIVIDER_VALUES if divider else WALL_VALUES
     # 壁だけの twin は back の版のシートを借りるので、アイコン・カーソルは back の版のセル（0.0・0.1）でなく、使っていないセルに置く（#25）
     icon_cell, cursor_cell = TWIN_ICON_CELLS if twin and not catenary else ("0.0", "0.1")
-    twin_from = TWIN_FROM_CATENARY if catenary else ROAD_TWIN_FROM if road else TWIN_FROM
-    kind = "道路の壁" if road else "線路の壁の way-object（架線つき（電化））" if catenary else "線路の壁の way-object（壁だけ、架線なし）"
+    twin_from = (TWIN_FROM_CATENARY if catenary else ROAD_DIVIDER_TWIN_FROM if divider else ROAD_TWIN_FROM if road
+                 else TWIN_FROM)
+    kind = "道路の中央分離帯つきの壁" if divider else "道路の壁" if road else "線路の壁の way-object（架線つき（電化））" if catenary else "線路の壁の way-object（壁だけ、架線なし）"
     wt = "road" if road else "track"
     out = [
         f"# AMI: {name}（CC BY 4.0）。{kind}。シートは blender/render.py が描く"
@@ -323,7 +332,7 @@ def wall_dat_text(name, sheet, twin=False, catenary=False, road=False, donor=Fal
         f"own_waytype={'electrified_track' if catenary else wt}",
         f"cost={v['cost']}",
         f"maintenance={v['maintenance']}",
-        f"topspeed={(CATENARY_TWIN_TOPSPEED if catenary else WALL_TWIN_TOPSPEED) if twin else v['topspeed']}",
+        f"topspeed={(CATENARY_TWIN_TOPSPEED if catenary else DIVIDER_TWIN_TOPSPEED if divider else WALL_TWIN_TOPSPEED) if twin else v['topspeed']}",
         f"icon=> {sheet}.{icon_cell}",
         f"cursor={sheet}.{cursor_cell},-64,-32",
     ]
@@ -635,6 +644,14 @@ def main():
     with open(os.path.join(SRC, catalog.ROAD_WALL_TWIN + ".dat"), "w", encoding="utf8", newline=NL) as f:
         f.write(wall_dat_text(catalog.ROAD_WALL_TWIN, "ami_wall_road_back", twin=True, road=True))
     print(f"[dat] {catalog.ROAD_WALL_TWIN}.dat")
+    for name, sheet in ROAD_DIVIDERS.items():
+        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
+            f.write(wall_dat_text(name, sheet, road=True, divider=True))
+        print(f"[dat] {name}.dat")
+    # twin_divider のアイコン・カーソルは front_divider のシートの、どの dat も指さないセル（TWIN_ICON_CELLS。壁の twin は back のシートの同じセル）
+    with open(os.path.join(SRC, catalog.ROAD_DIVIDER_TWIN + ".dat"), "w", encoding="utf8", newline=NL) as f:
+        f.write(wall_dat_text(catalog.ROAD_DIVIDER_TWIN, catalog.ROAD_DIVIDERS["front"], twin=True, road=True, divider=True))
+    print(f"[dat] {catalog.ROAD_DIVIDER_TWIN}.dat")
     for name, sheet in PIERS.items():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(pier_dat_text(name, sheet))

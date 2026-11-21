@@ -84,6 +84,10 @@ WALL_ROAD = ROAD_GENERAL  # 道路の壁のシートを描く元の道路（壁�
 ROAD_WALL_VARIANTS = ("single", "back", "center", "front")  # 道路の壁の way-object の版（README の名前の表。center は行き止まりの端の壁だけ）
 # 近い斜めの分け合うタイル用の道路の壁（名前は 2026-11-19 にユーザーが確定。README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
 ROAD_WALL_TWIN = "ami_wall_road_twin"
+# 中央分離帯つきの壁（#118。ADR 0008）: 4 車線（道路を 2 タイル並べる）の手前のタイルに重ね、奥の側壁の位置に縁石の帯とガードレールを立てる。
+# front_divider は手前の側壁つき、center_divider は側壁なし（行き止まりの端の壁は持つ）。奥のタイルは今の ami_wall_road_back のまま
+ROAD_DIVIDERS = {_v: f"ami_wall_road_{_v}_divider" for _v in ("front", "center")}
+ROAD_DIVIDER_TWIN = "ami_wall_road_twin_divider"  # 近い斜めの分け合うタイル用（西の線は back の壁、東の線は front_divider の絵）
 PIER_ROAD = "ami_pier_road"  # 道路用の橋脚の way
 SIDEWALK = "ami_sidewalk"  # 歩道の way（道路の隣のタイルに敷く、別の waytype の way。ADR 0003）
 # 盛土の way（#123。ADR 0008 の景観 6）: 高架の脇の地面に敷く法面の楔。front は法面が手前（南・東）、back は奥（北・西）を向く
