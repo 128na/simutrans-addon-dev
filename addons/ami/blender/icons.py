@@ -104,7 +104,8 @@ def picture_keys(d, kind, for_cursor):
         return [["backimage[ns][0]"]]
     if kind in ("wall", "catenary"):
         # 近い斜めの分け合うタイル用（twin）は直線を持たないので、平行な 2 つの斜め（nw・se）を重ねる
-        return [[f"back{k}", f"front{k}"] for k in ("image[ns]", "image[s]", "image[n]")] +             [["backdiagonal[nw]", "frontdiagonal[nw]", "backdiagonal[se]", "frontdiagonal[se]"]]
+        return [[f"back{k}", f"front{k}"] for k in ("image[ns]", "image[s]", "image[n]")] + \
+            [["backdiagonal[nw]", "frontdiagonal[nw]", "backdiagonal[se]", "frontdiagonal[se]"]]
     return [["image[ns][0]", "frontimage[ns][0]"]]
 
 

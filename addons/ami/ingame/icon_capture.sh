@@ -26,6 +26,7 @@ stop_game() {
 }
 rm -rf "$WORK"
 mkdir -p "$WORK/save" "$OUT"
+rm -f "$OUT"/menu_*.png "$OUT"/cursor_*.png  # 前回の画像が残って、撮れなかったのに通らないように
 WORK_WIN=$(cd "$WORK" && pwd -W)
 trap stop_game EXIT
 trap 'exit 130' INT TERM
