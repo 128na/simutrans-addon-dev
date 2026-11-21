@@ -15,6 +15,7 @@
 dat の [ns]・[ew] は waytype[0]（道路）の向き（本体は waytype[1] の線路が南北のとき [ew] の絵を使う。crossing_desc.h の get_background と
 boden/grund.cc の crossing_t の作り方）。
 """
+import hashlib
 import math
 import os
 
@@ -185,10 +186,20 @@ def _over(dst, src):
     return (out + 0.5).astype(np.uint8)
 
 
-def _road_cell(road_png, row, col):
-    """道路の way のシート（src/ の完成した RGB のシート）の 1 セルを RGBA で。透過色（#E7FFFF）を透明にする"""
+# 踏切のシートの横に書く、写した道路のセルの控え（#130）。行ごとに「道路のシート 行 列 sha256」。
+# sha256 は、セルの画素を上の行から RGB の 3 バイトずつ並べたもの。道路のシートを描き直して踏切を描き直し忘れると、
+# アドオンの検査（addons/ami の check_crossing.py）が今の道路のシートと合わないことで見つける
+ROAD_STAMP_SUFFIX = ".road_cells.txt"
+
+
+def _road_cell(road_png, row, col, stamp=None):
+    """道路の way のシート（src/ の完成した RGB のシート）の 1 セルを RGBA で。透過色（#E7FFFF）を透明にする。
+    stamp（list）を渡すと、写したセルの控えの行を足す"""
     sheet = load_rgba8(road_png)
     cell = sheet[row * CELL:(row + 1) * CELL, col * CELL:(col + 1) * CELL].copy()
+    if stamp is not None:
+        digest = hashlib.sha256(np.ascontiguousarray(cell[..., :3]).tobytes()).hexdigest()
+        stamp.append(f"{os.path.basename(road_png)} {row} {col} {digest}")
     clear = np.all(cell[..., :3] == np.array(TRANSPARENT, np.uint8), axis=-1)
     cell[..., 3] = np.where(clear, 0, 255)
     return cell
@@ -209,13 +220,14 @@ def crossing_sheet(sheet, road_sheet, datums, rail=(RAIL_IN, RAIL_OUT, RAIL_Z1),
     set_anchor(GROUND_CY)  # 線路の way と同じ（dat のオフセット -64,-32）。道路のセルは同じオフセットなので画素をそのまま写す
     deck_mask = _ground_mask(None, cy=ROAD_CY)  # 踏板は道路の路面と同じ持ち分
     cells = {}
+    stamp = []
     for snow in (False, True):
         for road_dir, (ends, assemblies) in _ASSEMBLIES.items():
             if _core.ONLY and road_dir not in _core.ONLY:
                 continue
             track_path = straight(Vector(_TILE_EDGE[ends[0]]), Vector(_TILE_EDGE[ends[1]]), PATH_EXT)
             r, c = road_cells[road_dir]
-            base = _road_cell(road_png, r + (road_snow_rows if snow else 0), c)
+            base = _road_cell(road_png, r + (road_snow_rows if snow else 0), c, stamp)
             for closed in (False, True):
                 clear_models()
                 deck = _deck(track_path, snow, datums, rail)
@@ -233,3 +245,5 @@ def crossing_sheet(sheet, road_sheet, datums, rail=(RAIL_IN, RAIL_OUT, RAIL_Z1),
                     save_rgba(path, img)
                     cells[(row + dr, col)] = path
     make_sheet(cells, 2 * CROSSING_SNOW_ROW, 4, os.path.join(_s.SRC, sheet + ".png"))
+    with open(os.path.join(_s.SRC, sheet + ROAD_STAMP_SUFFIX), "w", encoding="utf8", newline="\n") as f:
+        f.write("".join(line + "\n" for line in stamp))
