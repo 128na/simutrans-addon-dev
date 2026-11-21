@@ -587,6 +587,10 @@ for _r in catalog.ROADS:
     SHEETS[catalog.crossing_sheet(_r)] = (lambda r: lambda: R.crossing_sheet(catalog.crossing_sheet(r), r.way + ".png", _DATUMS,
                                                                                     rail=(RAIL_IN, RAIL_OUT, RAIL_Z1)))(_r)
 
+# 車庫（#112）: 種類ごとに 1 枚。形と寸法は sheetlib の depot.py（DEPOT_SHAPES）
+for _d in catalog.DEPOTS:
+    SHEETS[_d.name] = (lambda d: lambda: R.depot_sheet(R.sheet_path(d.name + ".png"), d.kind, R.WORK))(_d)
+
 if __name__ == "__main__":
     R.run_targets(SHEETS, list(SHEETS))
     # アイコン・カーソル（#25）: 描いたシートの絵から作り、シートのセルに書く（blender/icons.py）。LAYOUT・ONLY の出力（work/）には書かない

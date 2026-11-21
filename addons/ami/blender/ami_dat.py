@@ -453,6 +453,49 @@ def crossing_dat_text(name, track, road):
     return NL.join(out) + NL
 
 
+# 車庫（building の depot。#112）。シートの並びは sheetlib の depot.py（列 = layout 0〜3、行 0・1 が夏の奥・手前、行 2・3 が雪の奥・手前、
+# 列 4 の行 0・1 がアイコン・カーソル）。layout は道の出る向き（0 = 南・1 = 東・2 = 北・3 = 西。simtool.cc の tool_depot_aux）。
+# 費用・維持費は省かず pak128 の既定値を書く（README の「車庫の作り」。省いたり 0 にしたりしない）。dat の値は 1/100 cr
+DEPOT_VALUES = {"track": dict(cost=850000, maintenance=1800), "tram_track": dict(cost=850000, maintenance=1800),
+                "road": dict(cost=700000, maintenance=1800)}
+DEPOT_INTRO_YEAR = 1900
+DEPOT_LAYOUTS = 4
+DEPOT_SNOW_ROW = 2  # sheetlib の depot.DEPOT_SNOW_ROW と同じ
+DEPOT_ICON_CELL = "0.4"  # sheetlib の depot.DEPOT_ICON_CELL と同じ
+DEPOT_CURSOR_CELL = "1.4"  # sheetlib の depot.DEPOT_CURSOR_CELL と同じ
+DEPOT_OFFSET = "-64,-96"  # sheetlib の depot.BUILDING_OFFSET と同じ
+
+
+def depot_dat_text(depot):
+    v = DEPOT_VALUES[depot.waytype]
+    sheet = depot.name
+    out = [
+        f"# AMI: {depot.name}（CC BY 4.0）。車庫。シートは blender/render.py が描く（sheetlib の depot.py）",
+        "obj=building",
+        f"name={depot.name}",
+        "copyright=AMI (CC BY 4.0)",
+        "type=depot",
+        f"waytype={depot.waytype}",
+        f"intro_year={DEPOT_INTRO_YEAR}",
+        "intro_month=1",
+        "retire_year=2999",
+        "retire_month=1",
+        f"cost={v['cost']}",
+        f"maintenance={v['maintenance']}",
+        "noinfo=1",
+        f"dims=1,1,{DEPOT_LAYOUTS}",
+        "needs_ground=1",
+        f"icon=> {sheet}.{DEPOT_ICON_CELL}",
+        f"cursor={sheet}.{DEPOT_CURSOR_CELL}",
+    ]
+    for season in (0, 1):
+        for layout in range(DEPOT_LAYOUTS):
+            row = season * DEPOT_SNOW_ROW
+            out.append(f"backimage[{layout}][0][0][0][0][{season}]={sheet}.{row}.{layout},{DEPOT_OFFSET}")
+            out.append(f"frontimage[{layout}][0][0][0][0][{season}]={sheet}.{row + 1}.{layout},{DEPOT_OFFSET}")
+    return NL.join(out) + NL
+
+
 def main():
     os.makedirs(SRC, exist_ok=True)
     for name, sheet in BUILT.items():
@@ -502,6 +545,10 @@ def main():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(crossing_dat_text(name, track, road))
         print(f"[dat] {name}.dat")
+    for depot in catalog.DEPOTS:
+        with open(os.path.join(SRC, depot.name + ".dat"), "w", encoding="utf8", newline=NL) as f:
+            f.write(depot_dat_text(depot))
+        print(f"[dat] {depot.name}.dat")
 
 
 if __name__ == "__main__":

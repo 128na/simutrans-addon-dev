@@ -17,6 +17,7 @@
     sheetlib     シートの組み立て（線路・道路・トンネル・アイコン）と run_targets
     sidewalk     歩道の way のシート（sheetlib の render_icon を使う）
     crossing     踏切（線路 × 道路）のシート（道路の way のシートのセルを下地に写す）
+    depot        車庫（building の depot）など 1 タイルの建物のシート（4 方向 × 奥・手前 × 夏・雪）
 
 アドオンの入口と判定の道具からは `import sheetlib as R` で、どのモジュールの名前も `R.名前` で引ける（下で全部をここに出す）。
 """
@@ -24,6 +25,7 @@ from . import core, wall_parts, catenary_parts, track_parts, slab_parts, tram_pa
 from . import sheetlib as _sheets
 from . import sidewalk
 from . import crossing
+from . import depot
 
-for _m in (core, track_parts, slab_parts, tram_parts, wall_parts, catenary_parts, road_parts, assemble, cells, _sheets, sidewalk, crossing):
+for _m in (core, track_parts, slab_parts, tram_parts, wall_parts, catenary_parts, road_parts, assemble, cells, _sheets, sidewalk, crossing, depot):
     globals().update({_k: _v for _k, _v in vars(_m).items() if not _k.startswith("__")})

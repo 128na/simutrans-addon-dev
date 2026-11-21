@@ -99,3 +99,15 @@ def crossing_sheet(road):
 
 
 CROSSINGS = {crossing(_t, _r): (_t, _r) for _t in TRACKS for _r in ROADS}  # 踏切の名前 → (線路, 道路)。12 個
+
+
+class Depot:
+    """車庫（building の depot。#112）。名前は ami_<種類>_depot（ADR 0008）で、build.py の名前の頭の振り分けでその waytype の pak に入る。
+    kind は sheetlib の depot.DEPOT_SHAPES のキー（寸法）、waytype は dat の waytype"""
+
+    def __init__(self, kind, waytype):
+        self.kind, self.waytype = kind, waytype
+        self.name = f"{PREFIX}{kind}_depot"
+
+
+DEPOTS = (Depot("rail", "track"), Depot("tram", "tram_track"), Depot("road", "road"))
