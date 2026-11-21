@@ -454,7 +454,8 @@ def build_base(walls, paths, k, datum, slope, div, mat, clip=True, extra_cut=Non
 
 def build_start_body(path, ground, datum, mat, u=None):
     """坂のタイルから始まる橋の端（Start）の躯体: 平らな基盤の下を、坂の地面まで埋める。
-    ground(x, y) は基盤の面から見た地面の高さ（0 以下）。"""
+    ground(x, y) は基盤の面から見た地面の高さ（0 以下）。経路（タイルの辺から辺へ、軸に平行）に沿って一次式であること
+    （地面が基盤の下面の高さを横切る点を 1 つだけ足すため）。"""
     d = (path[-1] - path[0]).normalized()
     half = TILE / 2
     # タイルの辺に頂点を置く（辺の外は地面の高さを辺のまま延ばす）
