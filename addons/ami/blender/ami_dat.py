@@ -466,6 +466,43 @@ def embankment_dat_text(name, sheet):
             out.append(f"{key}{idx}[{season}]={sheet}.{row + season * EMBANKMENT_SNOW_ROWS}.{col},-64,-32")
     return NL.join(out) + NL
 
+# 交差点の路面表示の way（#156。ADR 0009）: 道路に重ねて敷く白線だけの way。waytype は橋脚・盛土と同じ tram_track、速さ 1
+# （路面軌道・線路とつながっても速く走れない。車の速さは変わらない）。値は橋脚・盛土と同じ（2026-11-22、ユーザーの決定。#156）
+MARKING_VALUES = dict(waytype="tram_track", cost=1000, maintenance=100, intro_year=1900, topspeed=1)
+# 口の絵のある形（行き止まり）→ セル。シートを描く側の tools/blender/sheetlib/marking.py の MARKING_CELLS と同じ並び
+MARKING_CELLS = {"[s]": (0, 5), "[w]": (0, 6), "[n]": (0, 7), "[e]": (0, 8)}
+# 交差点のタイルの形（直線・曲がり・T字・十字・1 タイル）は空のセル（marking.py の MARKING_EMPTY_CELL）。坂・斜め・分岐の絵は持たない
+MARKING_EMPTY = ("[ns]", "[ew]", "[-]", "[sw]", "[nw]", "[ne]", "[se]", "[nse]", "[new]", "[nsw]", "[sew]", "[nsew]")
+MARKING_EMPTY_CELL = (0, 9)
+
+
+def marking_dat_text(name, sheet):
+    """交差点の路面表示の way の dat。雪の絵（[1]）は夏と同じセル（道路は車道を除雪した想定で、白線は夏と同じ）"""
+    v = MARKING_VALUES
+    out = [
+        f"# AMI: {name}（CC BY 4.0）。道路に重ねて敷く交差点の路面表示の way。行き止まりの形が交差点へ入る口。シートは blender/render.py が描く",
+        "obj=way",
+        f"name={name}",
+        "copyright=AMI (CC BY 4.0)",
+        f"intro_year={v['intro_year']}",
+        "intro_month=1",
+        "retire_year=2999",
+        "retire_month=1",
+        f"waytype={v['waytype']}",
+        f"cost={v['cost']}",
+        f"maintenance={v['maintenance']}",
+        f"topspeed={v['topspeed']}",
+        "system_type=0",
+        f"icon=> {sheet}.0.0",
+        f"cursor={sheet}.0.1,-64,-32",
+    ]
+    for season in (0, 1):
+        for idx, (row, col) in MARKING_CELLS.items():
+            out.append(f"image{idx}[{season}]={sheet}.{row}.{col},-64,-32")
+        for idx in MARKING_EMPTY:
+            out.append(f"image{idx}[{season}]={sheet}.{MARKING_EMPTY_CELL[0]}.{MARKING_EMPTY_CELL[1]},-64,-32")
+    return NL.join(out) + NL
+
 # 歩道の way（ami_sidewalk。#24）。waytype は iss の歩道（../refs/iss/src/util/sidewalk/ground.dat）と同じ water（README の「歩道の作り」）。
 # 値は仮（費用・維持費は橋脚と同じ考え方の小さい値。速さ 1 は橋脚と同じ）
 SIDEWALK_VALUES = dict(waytype="water", cost=1000, maintenance=20, intro_year=1900, topspeed=1)
@@ -712,6 +749,10 @@ def main():
     for name in catalog.EMBANKMENTS:
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(embankment_dat_text(name, name))
+        print(f"[dat] {name}.dat")
+    for name in catalog.MARKINGS:
+        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
+            f.write(marking_dat_text(name, name))
         print(f"[dat] {name}.dat")
     # 分岐の追加画像の提供用の物（build.py が別の pak に作り、ex_graft.py で写す）。1 つの dat に --- で区切って並べる
     donors = [dat_text(n, BUILT[n], donor=True) for n in EX_WAYS]

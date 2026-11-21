@@ -29,6 +29,7 @@
     src/ami_tram.png          路面軌道（tram_track）の通常の版。道路の上に重ねて敷く想定で、コンクリートの床・縁の帯・レールの頭・溝だけ（段も壁も無い）
     src/ami_sidewalk.png      歩道の way（道路の隣のタイルに敷く。敷石と、つながらない辺の縁石）
     src/ami_embankment_<front|back>.png  盛土の way（高架の脇の地面に敷く芝の法面の楔。#123）
+    src/ami_mark_<種類>.png  交差点の路面表示の way（道路に重ねる停止線・横断歩道。#156）
     src/ami_sidewalk_<舗装>.png  歩道の種類（asphalt・brick・tile。形は ami_sidewalk と同じで敷石の材質だけ違う。#119）
     src/ami_sidewalk_elev.png  高架の歩道（板の下に道路の高架と同じ深さの基盤と躯体。#119）
     src/ami_wall_sidewalk_<版>.png  歩道の柵の way-object（single・back・front。#119）
@@ -659,6 +660,11 @@ _emb_skin = lambda nm, spec: {R.EMBANKMENT_MAT[0]: lambda: R.noisy_material(nm, 
 for _name, _side in catalog.EMBANKMENTS.items():
     SHEETS[_name] = (lambda n, s: lambda: R.embankment_sheet(n, s, mat_skin=_emb_skin("ami_embankment_grass", EMBANKMENT_GRASS),
                                                              snow_skin=_emb_skin("ami_embankment_snow", EMBANKMENT_SNOW)))(_name, _side)
+
+# 交差点の路面表示の way（#156。ADR 0009）: 道路に重ねて敷く白線だけの way（sheetlib の marking_sheet）。行き止まりの形が交差点へ入る口
+MARKING_LABEL = "M"  # 描画のアイコンの文字（ゲームのアイコンは icons.py が書き直す）
+for _name, _kind in catalog.MARKINGS.items():
+    SHEETS[_name] = (lambda n, k: lambda: R.marking_sheet(n, k, label=MARKING_LABEL))(_name, _kind)
 
 # 踏切（#111）: 道路の種類ごとに 1 枚（線路の 4 種で共有）。奥の絵の下地に、その道路の直線のセルを写すので、道路のシートの後に描く
 # （SHEETS の登録順に描く。別の Blender で並べて描くときは、道路のシートを先に描き終えておく）。

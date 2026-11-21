@@ -21,6 +21,7 @@ SHEETS[catalog.PIER_ROAD] = catalog.PIER_ROAD
 SHEETS[catalog.TRAM] = catalog.TRAM
 SHEETS.update({_s: _s for _s in catalog.SIDEWALKS})
 SHEETS.update({_e: _e for _e in catalog.EMBANKMENTS})
+SHEETS.update({_m: _m for _m in catalog.MARKINGS})
 SHEETS.update({_m: _m for _m in (catalog.MONORAIL, *catalog.MONORAIL_ELEVS)})  # 跨座式モノレール（#113）
 SHEETS[catalog.CANAL] = catalog.CANAL  # 運河（#114）
 

@@ -128,6 +128,9 @@ SIDEWALK = "ami_sidewalk"  # 歩道の way（道路の隣のタイルに敷く�
 # 盛土の way（#123。ADR 0008 の景観 6）: 高架の脇の地面に敷く法面の楔。front は法面が手前（南・東）、back は奥（北・西）を向く
 EMBANKMENT_SIDES = ("front", "back")
 EMBANKMENTS = {f"{PREFIX}embankment_{_s}": _s for _s in EMBANKMENT_SIDES}
+# 交差点の路面表示の way（#156。ADR 0009）: 道路に重ねて敷く tram_track の way。名前 → 種類（sheetlib の marking の MARKING_KINDS）。
+# stop は 2 車線の道路の口（停止線と横断歩道）、stop_wide は 4 車線以上の入る側、crosswalk_wide は 4 車線以上の出る側（横断歩道だけ）
+MARKINGS = {f"{PREFIX}mark_{_k}": _k for _k in ("stop", "stop_wide", "crosswalk_wide")}
 # 歩道の種類（#119。ADR 0008 の ami_sidewalk_<舗装>）: 舗装の名前。ami_sidewalk（灰色の敷石）は名前を変えずに残す
 SIDEWALK_PAVINGS = ("asphalt", "brick", "tile")
 SIDEWALK_ELEV = "ami_sidewalk_elev"  # 高架の歩道（system_type=1。敷石は ami_sidewalk と同じ）
