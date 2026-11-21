@@ -171,6 +171,46 @@ _CONC_BED = R.track_noise("ami_conc_bed", *CONC_BED_RGB, CONC_BED_GRAIN)
 _CONC_REPLACE = dict(_BALLAST_REPLACE, ballast=dataclasses.replace(_old["ballast"], shape=R.bed_to_edge(_CONC_SECTION)))
 _CONC_SKIN = dict(_BALLAST_SKIN, ballast=_CONC_BED, ballast_fill=_CONC_BED)
 
+# ---- フローティング・ラダー軌道（ami_rail_ladder。#67）。路盤は弾性まくらぎ直結軌道のコンクリートの道床（形・塗りの範囲は在来線と同じ）。
+# 横に並ぶまくらぎの代わりに、レールの下に PC の縦梁を 2 本通し、梁の間を暗い帯（路盤が低く見える所）にし、鋼管の継材を
+# タイル 1 辺に 4 本（LADDER_TIE_PITCH。タイルの継ぎ目でそろう）渡す。在来線・直結軌道（まくらぎ 18 本）とは、途切れない 2 本の梁と梁の間の
+# 暗い帯で、スラブ（幅の広い板と黒い締結装置）とは梁の細さで見分ける（2026-11-21、ユーザーの決定）。本物の梁の幅・継材の間隔は
+# 確かめていない（鉄道総研のページの本文に無い）ので、画面の見え方から決めた（docs/reference/way-addon.md の 12 章: 1 単位 ≈ 7.2px）。
+# 本物で 1px 未満の継材は太らせる。T字・十字・分岐の絵の斜めの部分（分岐の側）は、梁ではなく在来線のまくらぎにする（LADDER_DIAG）。
+# 雪の絵は在来線・直結軌道と同じく、積もったばかりの雪（梁・継材も雪）で、雪では見分けない（#70 の決定に合わせる）
+LADDER_BEAM = (0.23, 0.73)    # 縦梁の、経路の中心からの横の範囲（レールの中心 0.48 から ±0.25。幅約 3.6px、梁の間は約 3.3px）
+LADDER_TIE_PITCH = 2.5        # 継材の間隔（タイル 1 辺 10 に 4 本）
+LADDER_TIE_FIRST = (R.PATH_EXT + LADDER_TIE_PITCH / 2) % LADDER_TIE_PITCH
+LADDER_TIE_W = 0.2            # 継材の線路に沿う幅（約 1.4px。本物の鋼管は 1px 未満）
+LADDER_TIE_RGB = ((0.50, 0.50, 0.50), (0.58, 0.58, 0.58))  # 継材（鋼管の灰）。暗い帯の上で明るく見える
+LADDER_GAP_RGB = ((0.10, 0.10, 0.10), (0.16, 0.16, 0.16))  # 梁の間の暗い帯（赤みを足さない）
+_BEAM_Z0, _BEAM_Z1 = R.SLEEPER_Z - R.SLEEPER_H / 2, R.SLEEPER_Z + R.SLEEPER_H / 2  # まくらぎと同じ高さ（上面にレールが載る）
+_GAP_Z = OIL_Z + EMBED_TOP - R.BALLAST_H  # 梁の間の帯は、在来線の油の帯と同じ高さ（汚れの帯より上）
+
+
+def _beam_shape(path, k):
+    a, b = LADDER_BEAM[0] * k, LADDER_BEAM[1] * k
+    return R.merge([R.sweep(path, [(s * a, _BEAM_Z0), (s * b, _BEAM_Z0), (s * b, _BEAM_Z1), (s * a, _BEAM_Z1)][::s]) for s in (1, -1)])
+
+
+def _tie_shape(path, k):
+    z0 = _GAP_Z + 0.0015  # 暗い帯の上から梁の上面まで
+    boxes = [R.box(p.x, p.y, (z0 + _BEAM_Z1) / 2, LADDER_TIE_W, (LADDER_BEAM[0] + 0.05) * 2 * k, _BEAM_Z1 - z0, rot=ang)
+             for p, ang in R.along(path, LADDER_TIE_PITCH, LADDER_TIE_FIRST)]
+    return R.merge(boxes) if boxes else None
+
+
+# 部品の名前は在来線のもの（sleeper・sleeper_rust・oil）を使い、雪の差し替え（_BALLAST_SNOW_SKIN）がそのまま効くようにする
+_LADDER_REPLACE = dict(
+    _CONC_REPLACE,
+    sleeper=dataclasses.replace(_old["sleeper"], shape=_beam_shape),
+    sleeper_rust=dataclasses.replace(_old["sleeper_rust"], material=R.track_noise("ami_ladder_tie", *LADDER_TIE_RGB, 5.0), shape=_tie_shape),
+    oil=dataclasses.replace(_old["oil"], material=R.track_noise("ami_ladder_gap", *LADDER_GAP_RGB, 3.0),
+                            shape=R.centre_strip_shape(LADDER_BEAM[0] + 0.02, _GAP_Z, 0.001)),
+)
+LADDER_DIAG = {n: _BALLAST_REPLACE[n] for n in ("sleeper", "sleeper_rust", "oil")}  # 分岐の側（斜めの部分）は在来線のまくらぎ
+_LADDER_SKIN = _CONC_SKIN  # 路盤は直結軌道の道床、梁は PC でまくらぎと同じ色
+
 # 行き止まりのレールの終点（車止めの位置）: 閉じた側のタイルの端から、タイル 1 辺のこの割合の所（ユーザーの指摘、2026-11-17。
 # blender-poc はタイルの中心 = 0.5）。道床はタイルの端まで
 END_FROM_EDGE = 0.25
@@ -184,6 +224,8 @@ TRACK_SETTINGS = {
                                "parts": _BALLAST_PARTS},
     catalog.RAIL_CONCRETE.key: {"label": "240", "skin": _CONC_SKIN, "snow_skin": _BALLAST_SNOW_SKIN, "replace": _CONC_REPLACE,
                                 "parts": _BALLAST_PARTS},
+    catalog.RAIL_LADDER.key: {"label": "360", "skin": _LADDER_SKIN, "snow_skin": _BALLAST_SNOW_SKIN, "replace": _LADDER_REPLACE,
+                              "parts": _BALLAST_PARTS, "diag_replace": LADDER_DIAG},
     # 高速線（スラブ軌道）: 部品は sheetlib の slab_parts。レール・基準面・カーブや行き止まりの作りは在来線と同じ
     catalog.RAIL_SLAB.key: {"label": "480", "datums": _SLAB_DATUMS, "track_parts": R.SLAB_TRACK_PARTS, "bed_fills": R.SLAB_BED_FILLS,
                             "replace": R.SLAB_WEAR_REPLACE, "snow_skin": R.SLAB_SNOW_SKIN},
@@ -241,6 +283,7 @@ def _stop_at_end_wall(datum):
 _EDGE_BED = {
     catalog.RAIL_BALLAST.key: {"ballast": dataclasses.replace(_old["ballast"], shape=R.bed_to_edge(_BALLAST_SECTION, _stop_at_end_wall(_DATUMS["bed"])))},
     catalog.RAIL_CONCRETE.key: {"ballast": dataclasses.replace(_old["ballast"], shape=R.bed_to_edge(_CONC_SECTION, _stop_at_end_wall(_DATUMS["bed"])))},
+    catalog.RAIL_LADDER.key: {"ballast": dataclasses.replace(_old["ballast"], shape=R.bed_to_edge(_CONC_SECTION, _stop_at_end_wall(_DATUMS["bed"])))},
     catalog.RAIL_SLAB.key: {"slab_bed": dataclasses.replace(next(p for p in R.SLAB_TRACK_PARTS if p.name == "slab_bed"),
                                                         shape=R.slab_bed_shape(_stop_at_end_wall(_SLAB_DATUMS["slab_bed"])))},
 }

@@ -921,7 +921,8 @@ def track_sheet(profile="new"):
 
             def build(ps, pths):
                 # diag_curves の斜めの部分は、斜めのセルと同じ幅・下げ幅で組む（同じ assemble の中で、経路ごとに変える）
-                opts = {i: (DIAG_WIDTHS, 2 if diag_of[id(p)] in ("diag_nw", "diag_se") else 1)
+                # prof["diag_replace"]（無くてよい）: 斜めの部分だけ部品を差し替える（部品の名前 → 部品。ラダー軌道の分岐の側のまくらぎ。AMI #67）
+                opts = {i: (DIAG_WIDTHS, 2 if diag_of[id(p)] in ("diag_nw", "diag_se") else 1, prof.get("diag_replace", {}))
                         for i, p in enumerate(pths) if id(p) in diag_of}
                 out = assemble(ps, pths, prof["datums"], slope, **dict(kw, path_opts=opts or None))
                 # prof["cell_fills"]（無くてよい）: セルの経路全部から作る部品。(部品, make) の組で、make(経路の一覧) が形（path, k → 形）か
