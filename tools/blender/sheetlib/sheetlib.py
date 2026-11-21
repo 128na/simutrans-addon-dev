@@ -675,9 +675,10 @@ def select_walls(obs, name, paths, side, wall_names=None, origin=None):
     keep = {"both": lambda ob: True, "center": lambda ob: False,
             "front": lambda ob: ob in near, "back": lambda ob: ob not in near}[side]
     # 中央分離帯（road_parts の median_*。AMI #118）は側壁ではない: 版に関わらず奥の側の 1 本だけを残し、残した壁（基盤・端の壁の
-    # 削りに使う）にも数えない。手前の側の分は消す（手前のタイルの、奥の側壁の位置に立つ）
+    # 削りに使う）にも数えない。手前の側の分は消す（手前のタイルの、奥の側壁の位置に立つ）。1 タイル（single のセル）は十字と同じ経路で
+    # 作るので、通り道で削った角の切れ端が点で残った。1 タイルには分離帯を立てない
     medians = [ob for ob in obs if is_median(ob)]
-    for ob in [ob for ob in medians if ob in near]:
+    for ob in [ob for ob in medians if ob in near or name == "single"]:
         obs.remove(ob)
         bpy.data.objects.remove(ob, do_unlink=True)
     walls = [ob for ob in obs if ob.get("tall") and not is_catenary(ob) and not is_median(ob)]

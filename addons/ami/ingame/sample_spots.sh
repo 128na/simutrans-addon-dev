@@ -81,11 +81,11 @@ done
 #   M 台の輪、P 窪みの輪、S 坂、T 急坂、D 斜め、X 橋脚と同じタイル
 EMBANKMENT_SPOTS="A:8:8 B:20:9 R:8:14 M:28:7 P:36:7 S:45:8 T:51:8 D:58:7 X:37:13"
 # 中央分離帯の見本（ingame/divider_sample.nut。道路 2 種を 16 ずつ南へ。GE 一般道路・EX 高速道路）: P2 東西の 4 車線と十字、PN 南北の坂、
-#   P0 壁の無い 4 車線、P3 6 車線、PE 高架、PD 近い斜め
+#   P0 壁の無い 4 車線、P3 6 車線、PE 高架、R 4 車線の輪（カーブ）、PD 近い斜め
 DIVIDER_SPOTS=""
 for v in GE:0 EX:16; do
   IFS=: read n dy <<< "$v"
-  DIVIDER_SPOTS="$DIVIDER_SPOTS ${n}_P2:5:$((1 + dy)) ${n}_PN:13:$((4 + dy)) ${n}_P0:5:$((5 + dy)) ${n}_P3:5:$((9 + dy)) ${n}_PE:23:$((1 + dy)) ${n}_PD:35:$((3 + dy))"
+  DIVIDER_SPOTS="$DIVIDER_SPOTS ${n}_P2:5:$((1 + dy)) ${n}_PN:13:$((4 + dy)) ${n}_P0:5:$((5 + dy)) ${n}_P3:5:$((9 + dy)) ${n}_PE:23:$((1 + dy)) ${n}_R:22:$((7 + dy)) ${n}_PD:35:$((3 + dy))"
 done
 case "${NUT:-}" in
   *tram_sample.nut) SPOTS=${SPOTS:-$TRAM_SPOTS} ;;

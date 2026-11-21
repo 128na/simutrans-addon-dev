@@ -11,6 +11,9 @@
 //   P0 壁の無い 4 車線: y=4・5 に基盤の版 center、y=5 に center_divider（x=0〜10）
 //   P3 6 車線: y=8・9・10 に基盤の版 back・center・front。壁 back・center_divider・front_divider（x=0〜10）
 //   PE 高架の 4 車線: y=0・1 に高架の版 back・front と、壁 back・front_divider（x=18〜28）
+//   R  4 車線の輪（カーブ）: 外の輪 (18,4)-(26,10)、内の輪 (19,5)-(25,9)。北・西の辺は外が back・内が front、南・東の辺は外が front・内が back。
+//      README の「遊ぶ人向けの敷き方」のとおり、way は東西の辺を先に・南北の辺を角まで後から、壁は南北の辺を角まで先に・東西の辺を後から敷く。
+//      ただし front_divider の東西の辺は、角が back の所（外の南西・内の北東）の 1 つ手前で止める（速いので角を置き換えるため）
 //   PD 近い斜め: (32,0) から南東へ 5 段、奥の線に back と壁 back、1 タイル東の手前の線に front と front_divider。
 //      分け合うタイル（way 2 本）の way-object を twin_divider に置き換え、壁を敷き直す（road_struct_sample.nut の W2 と同じ敷き方）
 local ROADS = ["ami_road_general", "ami_road_expressway"];
@@ -91,13 +94,14 @@ function lay(name, ox, oy) {
     if (od[v] == null) return "ami_wall_road_" + v + " desc=[missing]\n";
   }
   local c = function(x, y, z = 0) { return coord3d(ox + x, oy + y, z); };
-  local s = r(name + " label", marker.work(pl, c(0, -3), name + ": P2 ew / PN ns slope / P0 no walls / P3 6 lanes / PE elevated / PD close diagonal"));
+  local s = r(name + " label", marker.work(pl, c(0, -3), name + ": P2 ew / PN ns slope / P0 no walls / P3 6 lanes / PE elevated / R ring / PD close diagonal"));
   // P2
   s += r("P2 back", way2(bd["back"], od["back"], c(0, 0), c(10, 0)));
   s += r("P2 front", way2(bd["front"], od["front_divider"], c(0, 1), c(10, 1)));
   s += r("P2 cross", way2(w, null, c(5, -2), c(5, 4)));
   s += expect(name + " P2 (2,1)", ox + 2, oy + 1, "ami_wall_road_front_divider");
   s += expect(name + " P2 (5,1)", ox + 5, oy + 1, "ami_wall_road_front_divider");
+  s += expect(name + " P2 (5,0)", ox + 5, oy, "ami_wall_road_back");
   // PN（坂）
   for (local x = 12; x <= 15; x++) {
     s += r("PN raise", set_slope_kept(c(x, 4), slope.all_up_slope));
@@ -107,6 +111,7 @@ function lay(name, ox, oy) {
   s += r("PN back", way2(bd["back"], od["back"], c(13, 0), c(13, 8)));
   s += r("PN front", way2(bd["front"], od["front_divider"], c(14, 0), c(14, 8)));
   s += expect(name + " PN (14,3)", ox + 14, oy + 3, "ami_wall_road_front_divider");
+  s += expect(name + " PN (13,4)", ox + 13, oy + 4, "ami_wall_road_back", false, 1);
   // P0（壁なし）
   s += r("P0 back", way2(bd["center"], null, c(0, 4), c(10, 4)));
   s += r("P0 front", way2(bd["center"], od["center_divider"], c(0, 5), c(10, 5)));
@@ -115,10 +120,28 @@ function lay(name, ox, oy) {
   s += r("P3 back", way2(bd["back"], od["back"], c(0, 8), c(10, 8)));
   s += r("P3 center", way2(bd["center"], od["center_divider"], c(0, 9), c(10, 9)));
   s += r("P3 front", way2(bd["front"], od["front_divider"], c(0, 10), c(10, 10)));
+  s += expect(name + " P3 (3,9)", ox + 3, oy + 9, "ami_wall_road_center_divider");
+  s += expect(name + " P3 (3,10)", ox + 3, oy + 10, "ami_wall_road_front_divider");
   // PE（高架）
   s += r("PE back", way2(ed["back"], od["back"], c(18, 0), c(28, 0), ELEV_UP));
   s += r("PE front", way2(ed["front"], od["front_divider"], c(18, 1), c(28, 1), ELEV_UP));
   s += expect(name + " PE (23,1)", ox + 23, oy + 1, "ami_wall_road_front_divider", false, ELEV_UP);
+  s += expect(name + " PE (23,0)", ox + 23, oy, "ami_wall_road_back", false, ELEV_UP);
+  // R（輪）: 辺ごとに [x0, y0, x1, y1, 版]。版が front の辺に front_divider、back の辺に壁 back を重ねる
+  local ew = [[18, 4, 26, 4, "back"], [18, 10, 26, 10, "front"], [19, 5, 25, 5, "front"], [19, 9, 25, 9, "back"]];
+  // 壁の東西の辺: front_divider（1010）は壁 back（1000）より速く、角の back を置き換えるので、角が back の辺（外の南西・内の北東）の手前で止める
+  local ew_wo = [[18, 4, 26, 4, "back"], [19, 10, 26, 10, "front"], [19, 5, 24, 5, "front"], [19, 9, 25, 9, "back"]];
+  local ns = [[18, 4, 18, 10, "back"], [26, 4, 26, 10, "front"], [19, 5, 19, 9, "front"], [25, 5, 25, 9, "back"]];
+  local wo_of = function(v) { return v == "front" ? od["front_divider"] : od["back"]; };
+  foreach (e in ew) s += r("R way ew", command_x.build_way(pl, c(e[0], e[1]), c(e[2], e[3]), bd[e[4]], true));
+  foreach (e in ns) s += r("R way ns", command_x.build_way(pl, c(e[0], e[1]), c(e[2], e[3]), bd[e[4]], true));
+  foreach (e in ns) s += r("R wall ns", command_x.build_wayobj(pl, c(e[0], e[1]), c(e[2], e[3]), wo_of(e[4])));
+  foreach (e in ew_wo) s += r("R wall ew", command_x.build_wayobj(pl, c(e[0], e[1]), c(e[2], e[3]), wo_of(e[4])));
+  // 角は南北の辺の版（外の輪: 北西・南西が back、北東・南東が front_divider。内の輪は逆）
+  s += expect(name + " R nw", ox + 18, oy + 4, "ami_wall_road_back") + expect(name + " R ne", ox + 26, oy + 4, "ami_wall_road_front_divider");
+  s += expect(name + " R sw", ox + 18, oy + 10, "ami_wall_road_back") + expect(name + " R se", ox + 26, oy + 10, "ami_wall_road_front_divider");
+  s += expect(name + " R inner nw", ox + 19, oy + 5, "ami_wall_road_front_divider") + expect(name + " R inner se", ox + 25, oy + 9, "ami_wall_road_back");
+  s += expect(name + " R inner ne", ox + 25, oy + 5, "ami_wall_road_back") + expect(name + " R inner sw", ox + 19, oy + 9, "ami_wall_road_front_divider");
   // PD（近い斜め）
   local dx = 32;
   s += r("PD back", stair(bd["back"], ox + dx, oy, 5));
@@ -133,7 +156,10 @@ function lay(name, ox, oy) {
   s += r("PD back wall again", stair_wo(od["back"], ox + dx, oy, 5));
   s += r("PD front wall again", stair_wo(od["front_divider"], ox + dx + 1, oy, 5));
   // 敷き直した後も、分け合うタイル（way 2 本）は twin_divider（1011）のまま残る
-  for (local k = 1; k <= 4; k++)
+  // 分け合わないタイルは、敷き直した後も back・front_divider
+  s += expect(name + " PD (" + dx + ",1)", ox + dx, oy + 1, "ami_wall_road_back");
+  s += expect(name + " PD (" + (dx + 1) + ",0)", ox + dx + 1, oy, "ami_wall_road_front_divider");
+  for (local k = 1; k <= 5; k++)
     s += expect(name + " PD (" + (dx + k) + "," + k + ")", ox + dx + k, oy + k, "ami_wall_road_twin_divider", true);
   return s;
 }
