@@ -62,6 +62,7 @@ way 系アドオンを作るときに、既存のアドオンや本家のどこ�
 | 探しているもの | 見る所 |
 |---|---|
 | 箱積み（箱積み駅舎）の寸法と作り。車庫・景観パーツの高さの決まり | refs には無い（「箱積」で検索、2026-11-21）。[hakozumi.md](hakozumi.md) |
+| 景観アドオン（交差点の標示・歩道・街路樹・箱積みの駅ビル）の作りと敷き方 | ISS は `../refs/iss/src/util/road_misc/`、SIS は `../refs/sis/road/`。ほかのアドオンのソースは無い（2026-11-22）。[cityscape.md](cityscape.md) |
 | `diagonal[close1]`・`[close2]` などの OTRP の新しいキーの実例 | refs には無い。`../simutrans/descriptor/` と [way-addon.md](way-addon.md) |
 | 車止めの専用の dat | 見つからない（`buffer`・`bumper`・`車止` で検索）。形は `../refs/image/` の写真から起こす |
 | 新描画位置の pak128 標準の線路 | pak128 は新描画位置ではない。新描画位置の手本は iss |
