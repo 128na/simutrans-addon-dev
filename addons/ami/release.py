@@ -8,7 +8,7 @@ zip（work/release/ami-<版>.zip）の中身:
     ami_readme.txt     release/readme.txt の {version} を版の名前に置き換えたもの（遊ぶ人向けの簡潔な説明・導入方法・注意点。#137）
     ami_license.txt    release/license.txt（CC BY 4.0 と帰属）
     ami_lineup.txt     --paks で選んだ pak に入る物の一覧。src/ の dat から lineup.py が作る（#138）
-    thumbnail.png      docs/thumbnail.png があれば入れる（#96）
+    thumbnail.png      docs/thumbnail/thumbnail.png があれば入れる（#96）
     pak128/text/ja_ami.tab  release/text/ja_ami.tab（日本語の名前。今は道路標識の 6 種。#122）。ゲームの addons/pak128/text/ に入り、
                        本体はファイル名の先頭 2 文字で言語を決める（dataobj/translator.cc）。読んでいない pak の物の訳は使われないだけ
 pak の名前が dist/ に無いとき、--paks に ami（全部入り）と種類別を混ぜたとき（同じ物を二重に読む）は止まる。
@@ -27,7 +27,7 @@ DIST = os.path.join(HERE, "dist")
 OUT = os.path.join(HERE, "work", "release")
 TEMPLATE = os.path.join(HERE, "release")
 TEXTS = os.path.join(TEMPLATE, "text")
-THUMBNAIL = os.path.join(HERE, "docs", "thumbnail.png")
+THUMBNAIL = os.path.join(HERE, "docs", "thumbnail", "thumbnail.png")
 KINDS = ("ami_rail", "ami_road", "ami_tram", "ami_monorail", "ami_canal", "ami_extra", "ami_scenery", "ami_rail_old")  # build.py の KINDS と同じ
 
 
@@ -35,6 +35,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--version", required=True, help="版の名前（zip の名前と readme に入る）")
     ap.add_argument("--paks", nargs="+", required=True, help="入れる dist/ の pak の名前（拡張子なし）")
+    ap.add_argument("--readme", default=os.path.join(TEMPLATE, "readme.txt"), help="readme の元（既定 release/readme.txt。旧描画位置の zip は release/readme_old.txt）")
+    ap.add_argument("--no-thumbnail", action="store_true", help="thumbnail.png を入れない")
     ap.add_argument("--extract", action="store_true", help="work/release/ami-<版>/ にも展開する")
     a = ap.parse_args()
 
@@ -50,7 +52,7 @@ def main():
     name = f"ami-{a.version}"
     os.makedirs(OUT, exist_ok=True)
     zpath = os.path.join(OUT, name + ".zip")
-    with open(os.path.join(TEMPLATE, "readme.txt"), encoding="utf8") as f:
+    with open(a.readme, encoding="utf8") as f:
         readme = f.read().replace("{version}", a.version)
     try:
         listing = lineup.lineup(a.paks, a.version)
@@ -66,7 +68,7 @@ def main():
         z.writestr("ami_lineup.txt", "﻿" + listing.replace("\r\n", "\n").replace("\n", "\r\n"))
         for t in sorted(os.listdir(TEXTS)) if os.path.isdir(TEXTS) else ():  # 訳は手を加えずそのまま（先頭の § を残す）
             z.write(os.path.join(TEXTS, t), "pak128/text/" + t)
-        if os.path.isfile(THUMBNAIL):
+        if os.path.isfile(THUMBNAIL) and not a.no_thumbnail:
             z.write(THUMBNAIL, "thumbnail.png")
     with zipfile.ZipFile(zpath) as z:
         for i in z.infolist():
