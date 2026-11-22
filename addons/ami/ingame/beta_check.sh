@@ -3,8 +3,9 @@
 # 使い方（アドオンのディレクトリで。python -X utf8 build.py で dist/ を作っておく）:
 #   GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe PORT=47400 bash ingame/beta_check.sh
 # ゲームは work/beta_game/<PORT>/ の写し（GAME_DIR の exe・dll・設定・pak128・addons と保存データ）で起動し、GAME_DIR には書き込まない。
-# 写しからは AMI の古い pak（addons/pak128/ami*.pak）を外し、PAKS（既定は dist/ の種類別の 4 つ。zip の中身と同じ）を入れる。
-# 敷く物は src/*.dat の obj・name・waytype・system_type から作る（提供用の ex_donors.dat は除く）。終わったらゲームを閉じて写しを消す。
+# 写しからは AMI の古い pak（addons/pak128/ami*.pak）を外し、PAKS（既定は dist/ の種類別の 5 つ。zip の中身と同じ）を入れる。
+# 敷く物は src/*.dat のうち PAKS に入る物（build.py の belongs）の obj・name・waytype・system_type から作る（提供用の ex_donors.dat は除く）。
+# 旧描画位置の物（#26）は PAKS=dist/ami_rail_old.pak で確かめる。終わったらゲームを閉じて写しを消す。
 # 出力: 敷いた結果（先頭が ok なら全部敷けた）と、ゲームのログ（-log 1 -debug 3 の simu.log。work/beta_game/simu_<PORT>.log に残す）のうち、
 # 読んだ AMI の pak と、AMI の物の名前を含む警告・エラーの行（同じ物を二重に読むと「object way::<名前> is overlaid!」が出る）。
 # 全部敷けて警告が無ければ 0、どちらかが外れたら 1 で終わる
@@ -44,9 +45,19 @@ for r in $(seq 1 120); do timeout 10 $M --timeout 5 --run-squirrel "return 1;" >
 [ -n "$up" ] || { echo "[beta] ゲームが起動しなかった"; exit 1; }
 sleep 3
 
-# 敷く物の一覧: [名前, obj, waytype, system_type]
+# 敷く物の一覧: [名前, obj, waytype, system_type]。PAKS の pak に入る物だけ（build.py の belongs。旧描画位置の物は ami_rail_old.pak だけに入る。#26）
+KEEP=" $(python -X utf8 -c "
+import os, sys
+sys.path.insert(0, '.')
+import build
+paks = [os.path.basename(p) for p in sys.argv[1:]]
+for f in sorted(os.listdir('src')):
+    if f.endswith('.dat') and f != 'ex_donors.dat' and any(build.belongs(p, f[:-4]) for p in paks):
+        print(f[:-4], end=' ')
+" $PAKS)"
 ITEMS=$(for f in src/*.dat; do
   case $f in *ex_donors.dat) continue ;; esac
+  case $KEEP in *" $(basename "$f" .dat) "*) ;; *) continue ;; esac
   awk -F= 'tolower($1)=="obj"{o=$2} tolower($1)=="name"{n=$2} tolower($1)=="waytype"{w=$2} tolower($1)=="system_type"{s=$2}
     END{gsub(/\r/,"",o); gsub(/\r/,"",n); gsub(/\r/,"",w); gsub(/\r/,"",s); if (s=="") s=0; printf "[\"%s\",\"%s\",\"%s\",%s],", n, o, w, s}' "$f"
 done | sed 's/,$//')

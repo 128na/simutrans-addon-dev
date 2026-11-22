@@ -56,7 +56,9 @@ def count_objects() -> int:
     """ゲームに入る物（way・way-object・橋・トンネル）の数。src/ の ami_*.dat（build.py が pak にするもの）の obj= の行を数える。
     ex_donors.dat は分岐の追加画像の提供用で、ゲームには入らないので数えない（build.py）。"""
     n = 0
-    for p in (HERE / "src").glob("ami_*.dat"):  # build.py が pak にする dat と同じ選び方
+    for p in (HERE / "src").glob("ami_*.dat"):  # build.py が pak にする dat と同じ選び方（旧描画位置の物 _old は ami_rail_old.pak だけで、数えない。#26）
+        if "_old" in p.name:
+            continue
         n += sum(1 for line in p.read_text(encoding="utf-8", errors="replace").splitlines() if line.strip().startswith("obj="))
     return n
 

@@ -49,7 +49,7 @@ import sheetlib as R  # noqa: E402
 _p = catalog.profile  # way・シートの名前 → TRACK_PROFILES の名前
 
 # ---------------------------------------------------------------- 線路の描き分け
-# 新描画位置（レールが低い。今の pak128・iss）。旧描画位置は、新で全部を作り終えてから別の PR で作る（ADR 0002）。
+# 新描画位置（レールが低い。今の pak128・iss）。旧描画位置（SIS に合う）は、catalog.OLD_TRACKS の名前で、下の TRACK_SETTINGS が新の設定から導く（#26。ADR 0011）。
 # datums: 基準面ごとの下げ幅。決め方は blender-poc の README の「描画位置の描き分け」。label はアイコンの最高速度の数字
 _DATUMS = {"bed": R.Datum(2, 1), "rail": R.Datum(4, 1)}
 
@@ -334,7 +334,7 @@ def _stop_at_end_wall(datum, ref=None):
     来るよう、動きの差の分だけずらす（カメラの側を向く端では内へ、奥を向く端では外へ）"""
     def beyond(d):
         out = lambda m: m.to_2d().dot(-d.to_2d()) if m is not None else 0.0  # 動きのうち、タイルの外向きの分
-        return -R.WALL_W + out(R.datum_move(ref or _DATUMS["bed"])) - out(R.datum_move(datum))
+        return -R.WALL_W + out(R.datum_move(_DATUMS["bed"] if ref is None else ref)) - out(R.datum_move(datum))
     return beyond
 
 

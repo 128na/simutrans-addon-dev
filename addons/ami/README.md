@@ -62,7 +62,7 @@ dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）�
 - pak: 旧の物は `ami.pak` と種類別の pak に入れず、`dist/ami_rail_old.pak` にまとめる（`build.py` の `belongs`）。SIS と並べて使う人だけが読み込む。道具のメニューでは、アイコンの左下に「旧」が付く。一覧（`lineup.py`）の種類の欄には「（旧位置）」が付く
 - 速さ・費用・維持費・登場年は新と同じ。新の線路・踏切とつなぐと数 px ずれる。旧の線路への踏切は作らない
 - 確かめ方: `ingame/seam_slope_check.sh` に `TRACKS_LIST`・`REF` を渡すと、SIS の線路との継ぎ目を `seam_judge.py` で測る（ACCEPTANCE の 10-1）。新と並べた画像は `bash ingame/old_seam.sh`（`ingame/old_seam.nut`）で撮り、`docs/old_seam/<種類>.png` に書く
-- 測った結果（2026-11-22、`OTRPv64_3.exe`、`flat_512.sve` の温暖側）: 旧は東西・南北・斜めの継ぎ目が 4 種とも OK（継ぎ目の草 0px）。坂の継ぎ目は在来線・直結で NG（模様のずれ +1.0・+1.1px。しきい値 1.0px）、ラダー・スラブは OK。坂の十字のレールの寄りは、新と同じく平地との差が 0.5px を超えるタイルがある（急坂の十字の合格: 在来線・直結 0/4、ラダー 4/4、スラブ 2/4。新は 1/4・1/4・2/4・2/4）。新は SIS とつなぐとレールが数 px 下にずれて見える
+- 測った結果と、確かめていないこと: [記録](../../docs/records/2026-11-22_ami-old-draw-position-seam.md)。新と旧を並べた画像は `docs/old_seam/<種類>.png`（SIS の線路との継ぎ目）と `docs/old_base.png`（基盤・壁・架線つきの壁。`bash ingame/old_base.sh`）
 
 #### 在来線の手本（blender-poc の線路）
 
@@ -787,7 +787,7 @@ python -X utf8 blender/ami_dat.py                                              #
 python -X utf8 build.py                                                        # makeobj で dist/ へ
 ```
 
-- `build.py` は、全部入りのまとめ `dist/ami.pak` と、種類別の `ami_rail.pak`（線路）・`ami_tram.pak`（路面軌道）・`ami_road.pak`（道路）・`ami_monorail.pak`（モノレール）・`ami_canal.pak`（運河）・`ami_extra.pak`（付属）・`ami_scenery.pak`（景観）を作る。dat が無い種類は作らない。makeobj の出力に警告かエラーがあれば止まる
+- `build.py` は、全部入りのまとめ `dist/ami.pak` と、種類別の `ami_rail.pak`（線路）・`ami_tram.pak`（路面軌道）・`ami_road.pak`（道路）・`ami_monorail.pak`（モノレール）・`ami_canal.pak`（運河）・`ami_extra.pak`（付属）・`ami_scenery.pak`（景観）と、旧描画位置の物（#26）だけを集めた `ami_rail_old.pak` を作る。旧の物は `ami.pak` と種類別の pak（旧の `ami_rail_old.pak` 以外）に入らない（`build.py` の `belongs`）。dat が無い種類は作らない。makeobj の出力に警告かエラーがあれば止まる
 - `build.py` は続けて、`src/ex_donors.dat` から提供用の pak（`work/ex/donors.pak`）を作り、各 pak の線路・路面軌道・架線つきの壁へ ex 画像を継ぎ足す（上の「分岐の追加画像」）。継ぎ足した数を出し、pak ごとに名前で当たる提供用の物が全部写ったことと、継ぎ足した絵（26〜29・31〜34 番が空でなく、通常の T字・十字と違うこと、30・35 番が通常の十字と同じこと）を確かめ、違えば止まる。pak の中の ex 画像の数は `python -X utf8 ex_graft.py --list dist/ami.pak` で見られる
 - シートを複数描くときは `python -X utf8 ..\..\tools\blender\render_parallel.py <対象>...`。レイアウト検証用モードは `SHEET_LAYOUT=1`（`work/layout/` に書く）
 - レイアウト検証用モードの pak は `SHEET_LAYOUT=1` で描いた後、`SHEET_LAYOUT=1 python -X utf8 build.py`（`work/layout/dist/` に作る）

@@ -38,7 +38,7 @@ def main():
     ap.add_argument("--extract", action="store_true", help="work/release/ami-<版>/ にも展開する")
     a = ap.parse_args()
 
-    if "ami" in a.paks and any(p in KINDS for p in a.paks):
+    if "ami" in a.paks and any(p in KINDS and p != "ami_rail_old" for p in a.paks):  # 旧描画位置（#26）の pak は ami に入らないので、一緒に入れてよい
         sys.exit("[release] 全部入りの ami と種類別の pak を同時に入れると、同じ物を二重に読む")
     paks = []
     for p in a.paks:

@@ -102,9 +102,8 @@ AMI の初版を「できた」と言うための条件。blender-poc の [ACCEP
 
 | # | 条件 | 状態 | 確かめ方 |
 |---|---|---|---|
-| 10-1 | 旧の 4 種（`ami_rail_<種類>_old`）の通常の版が、SIS の線路（`SIS_ST_TGbl_E01-999B`）と、東西・南北の直線・斜め・坂の継ぎ目でつながる（草 0px・レールの段なし） | △（東西・南北・斜めは `seam_judge` が OK、継ぎ目の草 0px。坂の継ぎ目は在来線・直結で模様のずれ +1.0〜1.1px の NG。画面では段が見えない。ユーザーの確認待ち） | `GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> PAK=dist/ami_rail_old.pak TRACKS_LIST="ami_rail_ballast_old ami_rail_concrete_old ami_rail_ladder_old ami_rail_slab_old" REF=SIS_ST_TGbl_E01-999B bash ingame/seam_slope_check.sh`。画像は `bash ingame/old_seam.sh`（新と旧を同じ位置で並べる。`docs/old_seam/`） |
-| 10-2 | 旧の基盤 4 版・旧用の壁・架線つきの壁が、旧の通常の版と継ぎ目でずれない。高架・橋・トンネル・橋脚も同じ（2 本目） | 基盤・壁・架線は△（シートは描いた。ゲームで旧の通常の版との継ぎ目と壁の足元を見るのは 1 本目の確認）。高架・橋脚・橋・トンネルは×（2 本目） | `ingame/sample_parallel.sh` の見本を旧の名前で。2 本目で足す |
-| 10-3 | 新の絵・新の dat が 1 画素・1 文字も変わらない。dat のキー・名前の付け方が新と同じ | ○（新のシートの `git status` に差分なし。旧の dat は新の dat の名前だけが違う） | `git status`・`tools/blender/sheet_diff.py` |
-| 10-4 | makeobj が警告なしで通り、`ami_rail_old.pak` だけを入れて旧の物が道具で敷ける。`ami.pak`・種類別の pak に旧が入らない | ○（`build.py` が通る。`lineup.py --check` が全部の物を一度ずつ数える）。道具で敷けるかは 10-1 の見本で確認 | `python -X utf8 build.py`・`python -X utf8 lineup.py --check` |
-| 10-5 | 夏と雪の絵があり、ユーザーが SIS と並べた画面で承認する | ×（ユーザーの確認待ち） | PR の画像（`docs/old_seam/`）と、`ingame/old_seam.nut` の区画 |
-
+| 10-1 | 旧の 4 種（`ami_rail_<種類>_old`）の通常の版が、SIS の線路（`SIS_ST_TGbl_E01-999B`）と、東西・南北の直線・斜め・坂の継ぎ目でつながる（草 0px・レールの段なし） | ？（東西・南北・斜めはゲームで `seam_judge` が OK、継ぎ目の草 0px。坂の継ぎ目は在来線・直結が NG（模様のずれ +1.0・+1.1px、しきい値 1.0px）で、原因は未確認。ユーザーの確認待ち） | `GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> PAK=dist/ami_rail_old.pak TRACKS_LIST="ami_rail_ballast_old ami_rail_concrete_old ami_rail_ladder_old ami_rail_slab_old" REF=SIS_ST_TGbl_E01-999B bash ingame/seam_slope_check.sh`。画像は `bash ingame/old_seam.sh`（新と旧を同じ位置で並べる。`docs/old_seam/`） |
+| 10-2 | 旧の基盤 4 版・旧用の壁・架線つきの壁が、旧の通常の版と継ぎ目でずれない。高架・橋・トンネル・橋脚も同じ（2 本目） | ？（基盤・壁・架線は、ゲームで敷いて新と並べた画像を撮っただけで、足元の 1〜2px の合い方は見ていない。高架・橋脚・橋・トンネルは未作成。2 本目） | `bash ingame/old_base.sh`（`docs/old_base.png`）。2 本目で `ingame/sample_parallel.sh` の見本を旧の名前で |
+| 10-3 | 新の絵・新の dat が 1 画素・1 文字も変わらない。dat のキー・名前の付け方が新と同じ | △（新のシートは描き直しておらず、`git status` に差分なし。新の dat は `ami_dat.py` を流して変わらず、`check.sh` の「dat の書き忘れ」が通る。新のシートを描き直して `sheet_diff.py` で 0 差分を見るのは未確認） | `git status`・`bash addons/ami/check.sh`・`tools/blender/sheet_diff.py` |
+| 10-4 | makeobj が警告なしで通り、`ami_rail_old.pak` だけを入れて旧の物が道具で敷ける。`ami.pak`・種類別の pak に旧が入らない | ○（旧の 30 個が `PAKS=dist/ami_rail_old.pak` の `beta_check.sh` で全部敷けた。ログに AMI の警告なし。`build.py` が警告なしで通り、`lineup.py --check` が通る） | `GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> PAKS=dist/ami_rail_old.pak bash ingame/beta_check.sh`・`python -X utf8 build.py`・`python -X utf8 lineup.py --check` |
+| 10-5 | 夏と雪の絵があり、ユーザーが SIS と並べた画面で承認する | ×（夏の側だけ確かめた。雪の側は未確認。ユーザーの確認待ち） | PR の画像（`docs/old_seam/`・`docs/old_base.png`）と、`ingame/old_seam.nut`・`ingame/old_base.nut` の区画 |

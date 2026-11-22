@@ -4,7 +4,7 @@
     python -X utf8 lineup.py --paks ami_rail ami_road -o work/lineup.txt
     python -X utf8 lineup.py --format html -o work/lineup.html
 
-手で書かず dat から作るので、一覧は dat と必ず一致する。どの dat がどの pak に入るかは build.py の KINDS（名前の頭）。
+手で書かず dat から作るので、一覧は dat と必ず一致する。どの dat がどの pak に入るかは build.py の KINDS（名前の頭）と belongs（旧描画位置の物は ami_rail_old.pak だけ。#26）。
 release.py は zip を作るときに、選んだ pak の分の一覧（txt）を ami_lineup.txt として入れる。
 列: 名前・種類・最高速度（km/h）・購入費（cr）・維持費（cr/月）・登場年。dat の cost・maintenance は 1/100 cr なので 100 で割る（roadsign の cost は cr 単位なのでそのまま。#122）。
 知らない obj があれば止まる（新しい種類を足したら KIND_LABELS を直す）。

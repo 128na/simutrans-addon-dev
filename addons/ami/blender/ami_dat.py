@@ -1,6 +1,7 @@
 """AMI の dat を書き出す（Blender は使わない。アドオンのディレクトリで `python -X utf8 blender/ami_dat.py`）。
 
 値（速度・費用・維持費・登場年）は VALUES が持つ。README の「値の一覧」と同じにする。
+旧描画位置（SIS に合う。#26）の線路は catalog.OLD_TRACKS。名前（ami_rail_<種類>_old…・ami_wall_rail_old_…）と絵のシートが違うだけで、dat の並び・値は新と同じ。
 まだ絵を作っていない way は BUILT に入れない（dat も pak も作らない）。シートの行の並びは
     夏の絵 4 行（奥の絵）→ 雪の絵 4 行
 で、無壁の線路の並び。カーブは斜めの絵（DIAG_CURVES）を指す。
