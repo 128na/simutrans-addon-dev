@@ -12,6 +12,10 @@
   junction4_in:  4 車線の腕の入る側。行き止まり = 2 マス目（導流帯の三角）、T字 = 1 マス目（矢印・停止線・横断歩道）、曲がり = 中心（角の縁石）
   junction4_out: 4 車線の腕の出る側。行き止まり = 2 マス目、T字 = 1 マス目、曲がり = 中心のスクランブル（中心の 4 タイルの対角線に沿う X の横断歩道。
                  iss の intersection2-2 と同じ）
+  lane6_m:       6 車線（#189。3 タイル）の真ん中のタイル（分離帯）の直線。外のタイルの直線は lane4、中心の角は junction4_in の曲がりを使う
+  junction6_in・junction6_out: 6 車線の腕の入る側・出る側の外の列。行き止まり = 2 マス目、T字 = 1 マス目（欠ける向きが外の側）
+  junction6_m:   6 車線の腕の真ん中の列（右折車線）。行き止まり = 2 マス目、T字 = 1 マス目（欠ける向きが交差点の側）
+  junction6_c:   6 車線の中心 3×3 の角を除く 5 枚（辺の 4 枚 = 行き止まり、中央 = 十字）。タイル全面の路面だけ（線は無い）
 4 車線の腕は 2 マス（iss の 2-1・2-2 と同じ）。右折車線は、2 タイルの境をはさむ 2 本の路側線のあいだの帯をそのまま使い、
 通る車線の線は動かさない。腕の 2 列（入る側・出る側）は、2 タイル共通の横位置 V（境が 0、入る側のタイルの中心が +5）で描き、
 タイルごとに切り抜く（右折の矢印・停止線・導流帯がタイルの境をまたぐ）。2 車線の腕は 1 マスで、路側線のあいだを 3 等分し直し、
@@ -85,7 +89,16 @@ MARKING_SCRAMBLE_GAP = 1.9    # 内の端の、交差点の中心からの距離
 MARKING_SCRAMBLE_OUT = 4.6    # 縞を置く外の限り（タイルの中心からの距離。対角線の上。角の円弧の中ほどは約 5.1）。
 # 外の端の縞は、路面で覆わない角の四角（MARKING_PAVE_IN より外）にかかる（降雪では下の道路のまだらの雪の上に乗る）
 
-MARKING_KINDS = ("lane4", "junction2", "junction2_t", "junction4_in", "junction4_out")
+# 6 車線（#189。3 タイル。腕の座標は 4 車線と同じく V: 真ん中のタイルの中心が 0、入る側の外のタイルの中心が +10、出る側が -10）
+MARKING_W6_TILE = 2 * MARKING_HALF                 # 10 外のタイルの中心（V）
+MARKING_W6_EDGE = MARKING_W6_TILE + EDGE_LINE      # 13.37 外の路側線
+MARKING_W6_INNER = MARKING_W6_TILE - EDGE_LINE     # 6.63 外のタイルの内の線（B と境の帯 C のあいだ）
+MARKING_W6_MEDIAN = EDGE_LINE                      # 3.37 境の帯 C と分離帯のあいだの路側線
+MARKING_W6_CURB = EDGE_LINE / 2                    # 1.685 分離帯の縁（真ん中のタイルの直線）
+MARKING_W6_POCKET = (0.0, MARKING_W6_MEDIAN)       # 右折車線（分離帯のタイルの入る側の半分）。出る側の半分は空き
+
+MARKING_KINDS = ("lane4", "junction2", "junction2_t", "junction4_in", "junction4_out",
+                 "lane6_m", "junction6_in", "junction6_out", "junction6_m", "junction6_c")
 _DIRS = {"n": (0, 1), "e": (1, 0), "s": (0, -1), "w": (-1, 0)}
 # セル（行, 列）→ 形。位置は ami_dat.py の IMAGES と同じ（iss・blender-poc の線路の並び）
 MARKING_DEADENDS = {(0, 5): "s", (0, 6): "w", (0, 7): "n", (0, 8): "e"}       # 行き止まり → つながる向き
@@ -411,6 +424,64 @@ def _scramble(plan, curve):
         c += MARKING_STRIPE_PERIOD
 
 
+def _lane6_m(plan):
+    """6 車線の真ん中のタイルの直線（向き a の座標）: 路側線 ±MARKING_W6_MEDIAN（外のタイルの内の線と合わせて、境の帯 C が走行車線）と、
+    分離帯の縁 ±MARKING_W6_CURB（実線。中は飾りを置く）。路面は lane4 と同じ ±MARKING_PAVE_IN（下の中央線を隠す）。
+    外のタイルは lane4 を再利用する（左右対称。内の線は実線。案 Q。地図を回しても崩れない）"""
+    h, P = MARKING_HALF, MARKING_PAVE_IN
+    for v in (-MARKING_W6_MEDIAN, -MARKING_W6_CURB, MARKING_W6_CURB, MARKING_W6_MEDIAN):
+        plan.line(v, -h, h)
+    plan.pave(-h, h, -P, P)
+
+
+def _arm6_pave(plan):
+    """6 車線の腕の路面（3 タイル共通の V）: 外の路側線の内 MARKING_PAVE_GAP まで。真ん中のタイルも全部覆う（下の中央線・内の路側線を隠す）"""
+    w = MARKING_W6_EDGE - MARKING_PAVE_GAP
+    plan.pave(-MARKING_HALF, MARKING_HALF, -w, w)
+
+
+def _arm6_first(plan):
+    """6 車線の腕の 1 マス目（3 タイル共通の V）: 線は実線で停止線まで、矢印（A 直進・左、B 直進、C 直進、右折車線 右折）、停止線、
+    横断歩道（全幅）。右折車線は分離帯のタイルの入る側の半分 MARKING_W6_POCKET"""
+    h, stop = MARKING_HALF, MARKING_STOP_U
+    E, I, T, M = MARKING_W6_EDGE, MARKING_W6_INNER, MARKING_W6_TILE, MARKING_W6_MEDIAN
+    for v in (-E, E):
+        plan.line(v, -h, h)
+    for v in (T, I, M, 0.0):                               # 入る側: 停止線の手前まで
+        plan.line(v, -h, stop[0])
+    for v in (-T, -I, -M):                                 # 出る側: 停止線の向こうの縁まで
+        plan.line(v, -h, stop[1])
+    plan.quad(stop[0], stop[1], -MARKING_E, E - MARKING_E)
+    plan.arrow((T + E) / 2, "straight_left")
+    plan.arrow((I + T) / 2, "straight")
+    plan.arrow((M + I) / 2, "straight")
+    plan.arrow(M / 2, "right")
+    plan.crosswalk([i + 0.5 for i in range(-13, 13)])      # -12.5〜12.5（分離帯の真ん中 0 は縞のあいだ）
+    _arm6_pave(plan)
+
+
+def _arm6_second(plan):
+    """6 車線の腕の 2 マス目（3 タイル共通の V）: 通る車線の境（A|B・B|C）は破線、右折車線の入る側の縁（C との境）は破線、
+    右折車線の出る側の縁は実線。右折車線の外の端に導流帯の三角（4 車線の _arm4_second と同じ向き）。出る側の C の内の線も破線"""
+    h, e = MARKING_HALF, MARKING_E
+    E, I, T, M = MARKING_W6_EDGE, MARKING_W6_INNER, MARKING_W6_TILE, MARKING_W6_MEDIAN
+    for v in (-E, E, 0.0, -M):
+        plan.line(v, -h, h)
+    for v in (T, I, M, -T, -I):
+        plan.dashed(v)
+    top, bot, tip = (-h, M), (-h, 0.0), (MARKING_W4_TRI_U, 0.0)
+    plan.seg(top, tip)
+    plan.seg((-h + e, bot[1]), (-h + e, top[1]))
+    plan.zebra([top, bot, tip])
+    _arm6_pave(plan)
+
+
+def _center6_pave(plan):
+    """6 車線の交差点の中心 3×3 の、角を除く 5 枚（辺の 4 枚と中央）: タイルの全面を路面で覆う（下の道路の十字の弧・線を隠す）。線は無い"""
+    h = MARKING_HALF
+    plan.pave(-h, h, -h, h)
+
+
 # ---------------------------------------------------------------- 種類と形 → 絵
 def _tile_v(inbound):
     """4 車線の腕の、入る側（inbound）か出る側のタイルへの横位置のずらし（タイルの中心の V）"""
@@ -436,6 +507,29 @@ def marking_jobs(kind):
             jobs[rc] = (_arm2, d(c), 0.0, None)
         for rc, m in MARKING_TEES.items():
             jobs[rc] = (_tee(m, kind == "junction2_t"), None, 0.0, None)
+        return jobs
+    if kind == "lane6_m":
+        for rc, axis in MARKING_STRAIGHTS.items():
+            jobs[rc] = (_lane6_m, d(axis[1]), 0.0, None)
+        for rc, c in MARKING_DEADENDS.items():
+            jobs[rc] = (_lane6_m, d(c), 0.0, None)
+        for rc, (axis, slope) in MARKING_SLOPES.items():
+            jobs[rc] = (_lane6_m, d(axis[1]), 0.0, slope)
+        return jobs
+    if kind == "junction6_c":
+        for rc in list(MARKING_DEADENDS) + [MARKING_CROSS_CELL]:
+            jobs[rc] = (_center6_pave, None, 0.0, None)
+        return jobs
+    if kind in ("junction6_in", "junction6_out", "junction6_m"):
+        # 3 つの列（入る側の外・分離帯・出る側の外）。つながる形が向きを決める: 行き止まり = 2 マス目（つながる向きが交差点）、
+        # T字 = 1 マス目。外の列の T字は欠ける向きが外の側（4 車線と同じ）。分離帯の T字は、左右の列へつなぎ外へつないで、欠ける向きが交差点の側
+        v6 = {"junction6_in": MARKING_W6_TILE, "junction6_out": -MARKING_W6_TILE, "junction6_m": 0.0}[kind]
+        for rc, c in MARKING_DEADENDS.items():
+            jobs[rc] = (_arm6_second, d(c), v6, None)
+        for rc, m in MARKING_TEES.items():
+            mx, my = d(m)
+            a = {"junction6_in": (my, -mx), "junction6_out": (-my, mx), "junction6_m": (mx, my)}[kind]
+            jobs[rc] = (_arm6_first, a, v6, None)
         return jobs
     inbound = kind == "junction4_in"
     for rc, c in MARKING_DEADENDS.items():
@@ -509,4 +603,5 @@ def marking_sheet(sheet, kind, label="M", paving=None):
 
 
 # カーソルの絵のセル: 北南の直線、北へ向かう 2 車線の腕（行き止まり [n]）、北へ向かう 4 車線の腕の 1 マス目（入る側は T字 [nse]、出る側は [nsw]）
-MARKING_CURSOR = {"lane4": (0, 2), "junction2": (0, 7), "junction2_t": (0, 7), "junction4_in": (3, 5), "junction4_out": (3, 7)}
+MARKING_CURSOR = {"lane4": (0, 2), "junction2": (0, 7), "junction2_t": (0, 7), "junction4_in": (3, 5), "junction4_out": (3, 7),
+                  "lane6_m": (0, 2), "junction6_in": (3, 5), "junction6_out": (3, 7), "junction6_m": (3, 5), "junction6_c": (3, 9)}

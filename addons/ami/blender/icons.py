@@ -83,9 +83,13 @@ def ref(v):
 
 # 路面表示（#187）の左上の字と、絵にするセル（北へ向かう腕・北南の直線・北が閉じた T字の中心）
 MARK_LABELS = {"ami_mark_lane4": "線", "ami_mark_junction2": "交", "ami_mark_junction2_t": "丁",
-               "ami_mark_junction4_in": "入", "ami_mark_junction4_out": "出"}
+               "ami_mark_junction4_in": "入", "ami_mark_junction4_out": "出",
+               "ami_mark_lane6_m": "分", "ami_mark_junction6_in": "入", "ami_mark_junction6_out": "出", "ami_mark_junction6_m": "中",
+               "ami_mark_junction6_c": "心"}
 MARK_PICTURE = {"ami_mark_lane4": "image[ns][0]", "ami_mark_junction2": "image[n][0]", "ami_mark_junction2_t": "image[sew][0]",
-                "ami_mark_junction4_in": "image[nse][0]", "ami_mark_junction4_out": "image[nsw][0]"}
+                "ami_mark_junction4_in": "image[nse][0]", "ami_mark_junction4_out": "image[nsw][0]",
+                "ami_mark_lane6_m": "image[ns][0]", "ami_mark_junction6_in": "image[nse][0]", "ami_mark_junction6_out": "image[nsw][0]",
+                "ami_mark_junction6_m": "image[nse][0]", "ami_mark_junction6_c": "image[nsew][0]"}
 
 
 def describe(d):
