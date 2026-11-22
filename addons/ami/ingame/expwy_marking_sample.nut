@@ -1,7 +1,7 @@
 // AMI の高速道路の分岐・合流の路面表示（ami_mark_diverge_*・ami_mark_merge_*。#188）の見本。高速道路（ami_road_expressway）を敷き、表示を重ねる。
 // 検証用の flat_512.sve に、温暖側 (20,20) と降雪側 (276,20) の 2 か所へ同じ並びで敷き、降雪側は一帯を降雪に塗り直す。
 // 使い方（アドオンのディレクトリで）: sample_parallel.sh に NUT=ingame/expwy_marking_sample.nut を付ける（撮る場所は sample_spots.sh の EXPWY_MARKING_SPOTS）。
-// 返り値の先頭が ok なら全部敷けて、[check] で比べた名前とつながる向きも期待どおり。違えば先頭が check で、「名前 場所=[…]」が続く。最後に [check] の行が続く。
+// 返り値の先頭が ok なら全部敷けて、[check] で比べた名前と、表示のつながる向き（README の形の表から導いた値）も期待どおり。違えば先頭が check で、「名前 場所=[…]」が続く。最後に [check] の行が続く。
 // 敷き方は README の「高速道路の分岐・合流の路面表示の作り」と同じ（f は進む向き、l は左。本線の列が l=0、ランプの列が l=1）:
 //   分岐: 1. 本線を高速道路で敷く（反対の車道も l=-1 に） 2. ランプの道路を、分かれのマス（f=L）の本線から横の l=1 へ、そこから進む向き（直線か斜め）へ
 //         3. 本線の列の f=0〜L を diverge_main で区間 4. ランプの列の f=0〜L を diverge_ramp で区間
@@ -31,12 +31,15 @@ function way(tag, n, p0, p1) {
   if (w == null) { report += n + " desc=[missing]\n"; return; }
   report += r(tag + " " + n, command_x.build_way(pl, c(p0[0], p0[1]), c(p1[0], p1[1]), w, true));
 }
-function expect(tag, p, road, mark) {
+// 向き（地図の座標の単位ベクトル）を ribi（n=1, e=2, s=4, w=8）に
+function rb(v) { return v[1] < 0 ? 1 : v[0] > 0 ? 2 : v[1] > 0 ? 4 : 8; }
+function expect(tag, p, road, mark, dirs) {
   local t = square_x(OX + p[0], OY + p[1]).get_ground_tile();
   local w = t.get_way(wt_road), m = t.get_way(wt_rail);
   local rn = w == null ? "-" : w.get_desc().get_name(), mn = m == null ? "-" : m.get_desc().get_name();
   checks += "[check] " + tag + " (" + p[0] + "," + p[1] + ") " + rn + "/d" + (w == null ? "-" : w.get_dirs()) + " + " + mn + "/d" + (m == null ? "-" : m.get_dirs()) + "\n";
   if (rn != road || mn != mark) report += tag + " (" + p[0] + "," + p[1] + ") want=[" + road + " + " + mark + "] got=[" + rn + " + " + mn + "]\n";
+  else if (dirs != null && m.get_dirs() != dirs) report += tag + " (" + p[0] + "," + p[1] + ") want=[d" + dirs + "] got=[d" + m.get_dirs() + "]\n";
 }
 
 // 分岐か合流を 1 つ。中心 (cx, cy)、進む向き d、平行のマスの数 npar、ランプが斜めなら diag
@@ -67,12 +70,15 @@ function lay(tag, cx, cy, d, merge, npar, diag) {
   local f0 = merge ? 0 : 1, f1 = merge ? L - 1 : L;   // 横につなぐマス（テーパーのマスを除く）
   for (local f = f0; f <= f1; f++) way(tag + " link", ramp, P(f, 0), P(f, 1));
   for (local f = f0; f <= f1; f++) way(tag + " relay", main, P(f, 0), P(f, 0));
+  // 表示のつながる向き（README の形の表）: 前後のマスへ（区間の端は片側だけ）と、横につないだマスは本線の列が左・ランプの列が右
+  local bk = rb([-FV[0], -FV[1]]), fw = rb(FV), lf = rb(LV), rt = rb([-LV[0], -LV[1]]);
   for (local f = 0; f <= L; f++) {
-    expect(tag + " main", P(f, 0), X, main);
-    expect(tag + " ramp", P(f, 1), f == split ? X : "-", ramp);
+    local dd = (f > 0 ? bk : 0) | (f < L ? fw : 0), linked = f >= f0 && f <= f1;
+    expect(tag + " main", P(f, 0), X, main, dd | (linked ? lf : 0));
+    expect(tag + " ramp", P(f, 1), f == split ? X : "-", ramp, dd | (linked ? rt : 0));
   }
-  expect(tag + " before", P(-1, 0), X, "-");
-  expect(tag + " after", P(L + 1, 0), X, "-");
+  expect(tag + " before", P(-1, 0), X, "-", null);
+  expect(tag + " after", P(L + 1, 0), X, "-", null);
 }
 
 foreach (n, o in ORIGINS) {
