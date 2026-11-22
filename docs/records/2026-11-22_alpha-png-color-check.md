@@ -106,3 +106,4 @@ dat が引いている PNG を数えた（このリポジトリの `addons/`・`
 ## 結果どうしたか
 
 決まりを [pak-image-color.md](../reference/pak-image-color.md) にまとめた（#191）。
+半透明の会社の色の不具合は、本体の [128na/simutrans#17](https://github.com/128na/simutrans/issues/17) に起票した。
