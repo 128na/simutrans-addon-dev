@@ -183,14 +183,22 @@ def brick_material(name, rgb, mortar, scale):
     return m
 
 
-def tiled_concrete_material(name, rgb, amp, grain, stain=0.0, stain_scale=0.35, joint=None, rough=0.8):
+def tiled_concrete_material(name, rgb, amp, grain, stain=0.0, stain_scale=0.35, joint=None, rough=0.8,
+                            tint=None, streak=0.0, streak_scale=3.0, streak_stretch=0.12, grime=0.0, grime_z=(0.0, 1.0)):
     """コンクリートの面の材質（AMI の線路の基盤・高架の躯体。#78）: rgb を中心に ±amp のまだら（grain は部品の座標 1 単位あたりの細かさ）に、
     大きなしみ（stain_scale の細かさ、最大 stain だけ暗く）を掛ける。joint=(間隔, 幅, 色の倍率) を渡すと、x・y が間隔の半分ずれた所ごとに
     縦横の暗い線を引く（タイルの辺には置かない）。
     模様はタイルの 1 辺（TILE）を周期にし、タイルの辺で必ずつながる（x・y をそれぞれ円に巻いた 4 次元のノイズ。円の半径を TILE/2π にして、
-    ノイズの尺度を部品の座標と同じにする）。縦の面だけ、4 つ目の座標に高さも足し、高さ方向にも変わる（上を向いた面は x・y だけで決まり、坂の上の辺でもつながる）。座標は Object（部品の原点はどれも 0）"""
+    ノイズの尺度を部品の座標と同じにする）。縦の面だけ、4 つ目の座標に高さも足し、高さ方向にも変わる（上を向いた面は x・y だけで決まり、坂の上の辺でもつながる）。座標は Object（部品の原点はどれも 0）
+    汚し（ウェザリング。#154）: 既定では掛けない。
+      tint: 色に掛ける倍率 (r, g, b)。素材の色味を物ごとに少しずらす
+      streak: 雨だれ。縦の面だけ、縦に長い筋（横は streak_scale の細かさ、縦はその streak_stretch 倍に伸ばす）で最大 streak だけ暗くする。
+        筋も x・y はタイルの 1 辺を周期にするので、タイルの辺でつながる
+      grime: 地際の汚れ。高さ（Object の z）が grime_z=(下, 上) の上から下へ行くほど暗くし、下の端で 1 − grime 倍"""
     if name in bpy.data.materials:
         return bpy.data.materials[name]
+    if tint is not None:
+        rgb = tuple(x * t for x, t in zip(rgb, tint))
     m = bpy.data.materials.new(name)
     m.use_nodes = True
     nt = m.node_tree
@@ -226,13 +234,13 @@ def tiled_concrete_material(name, rgb, amp, grain, stain=0.0, stain_scale=0.35, 
     wz = op("MAXIMUM", op("SUBTRACT", 1.0, op("MULTIPLY", op("ABSOLUTE", nsep.outputs["Z"]), 2.0)), 0.0)
     w = op("ADD", op("MULTIPLY", op("SINE", ay), rad), op("MULTIPLY", sep.outputs["Z"], wz))
 
-    def noise(scale, detail):
+    def noise(scale, detail, w_in=None):
         n = N.new("ShaderNodeTexNoise")
         n.noise_dimensions = "4D"
         n.inputs["Scale"].default_value = scale
         n.inputs["Detail"].default_value = detail
         L.new(comb.outputs["Vector"], n.inputs["Vector"])
-        L.new(w, n.inputs["W"])
+        L.new(w if w_in is None else w_in, n.inputs["W"])
         return n.outputs["Fac"]
 
     ramp = N.new("ShaderNodeValToRGB")
@@ -256,6 +264,17 @@ def tiled_concrete_material(name, rgb, amp, grain, stain=0.0, stain_scale=0.35, 
         on = op("MAXIMUM", line(sep.outputs["X"]), line(sep.outputs["Y"]))
         jk = op("SUBTRACT", 1.0, op("MULTIPLY", on, 1 - dark))
         k = jk if k is None else op("MULTIPLY", k, jk)
+    if streak:
+        # 雨だれ: 4 つ目の座標の高さを streak_stretch 倍に縮めたノイズ（縦に長い筋）。0.5 より上の所ほど暗く（0.62 で 1 − streak）。重みは縦の面だけ（wz）
+        ws = op("ADD", op("MULTIPLY", op("SINE", ay), rad), op("MULTIPLY", sep.outputs["Z"], streak_stretch))
+        t = op("MINIMUM", op("MULTIPLY", op("MAXIMUM", op("SUBTRACT", noise(streak_scale, 0.0, ws), 0.5), 0.0), 1 / 0.12), 1.0)
+        sk = op("SUBTRACT", 1.0, op("MULTIPLY", op("MULTIPLY", t, wz), streak))
+        k = sk if k is None else op("MULTIPLY", k, sk)
+    if grime:
+        lo, hi = grime_z
+        g = op("MINIMUM", op("MAXIMUM", op("DIVIDE", op("SUBTRACT", hi, sep.outputs["Z"]), hi - lo), 0.0), 1.0)
+        gk = op("SUBTRACT", 1.0, op("MULTIPLY", g, grime))
+        k = gk if k is None else op("MULTIPLY", k, gk)
     if k is not None:
         mix = N.new("ShaderNodeMix")
         mix.data_type = "RGBA"
