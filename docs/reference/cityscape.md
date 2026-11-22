@@ -129,30 +129,41 @@ SIS は CC BY-NC-SA 4.0 なので、画像と dat は AMI に入れない（[ref
 
 ### 6.1 本体の決まり（`../simutrans/obj/roadsign.cc` の `roadsign_t::calc_image`）
 
-- 道路の標識は、左側通行の設定（`drive_left`）が入っていて、かつ dat の `offset_left` が 0 でないときだけ、左側用の置き方になる。`offset_left` を書かない dat は 14 になる（`descriptor/writer/roadsign_writer.cc`）。
-- 左側用の置き方では、絵を横に `2×offset_left`、縦に `offset_left` だけずらし、車両の奥に描くか手前に描くかも入れ替える。1 方向だけの標識では次のとおり。
+- 道路の標識は、左側通行の設定（`drive_left`）が入っていて、かつ標識の `offset_left` が 0 でないときだけ、左側用の置き方になる。
+- `offset_left` の値は pak の形式の版で決まる（`descriptor/reader/roadsign_reader.cc`）。
+  - 版 4 以降: dat に書いた値。書かなければ 14（`descriptor/writer/roadsign_writer.cc`）。
+  - 版 3 以前: 14 に固定。ただし経路の選択の標識とプレーヤー専用の標識は 0。
+- 左側用の置き方では、絵を横に `2×offset_left`、縦に `offset_left` だけずらす（pak128 の画面では 2 倍になり、14 なら横 56px・縦 28px。`simconst.h` の `tile_raster_scale_x`）。あわせて、車両の奥に描くか手前に描くかも入れ替える。1 方向の絵ごとに次のとおり。
 
-| 標識の向き | 左側用でない | 左側用 |
+| 絵の向き | 左側用でない | 左側用 |
 |---|---|---|
 | 東 | 手前 | 奥 |
 | 北 | 手前 | 奥 |
 | 西 | 奥 | 手前 |
 | 南 | 奥 | 手前 |
 
-- 「手前」の絵は同じタイルの車両の後に、「奥」の絵は前に描かれる（`boden/grund.cc` の `display_obj_vh` の後に `display_obj_fg`）。OTRP は、1 方向だけの標識に手前の絵（`frontimage`）を別に持たせられ、そのときは上の表によらない。`no_foreground=1` はすべてを奥に描く。
-- dat の `offset_left`（2026-11-22 に確かめた）: ISS の標識はすべて 0。SIS の標識（`../refs/sis/road/Local_Street/Signal/`）は書いていない（14）。pak128 標準の参照のソース（`../refs/pak128/infrastructure/road_signs/`）は、速度・経路の選択・信号が書いておらず、高速道路の出入口・進入禁止・通行止めが 0。
+- 「手前」の絵は同じタイルの車両の後に、「奥」の絵は前に描かれる（`boden/grund.cc` の `display_obj_vh` の後に `display_obj_fg`）。両方向の標識（一方通行でないもの）は、2 つの向きの絵を同時に出すので、片方は必ず「手前」になる。
+- OTRP は、1 方向だけの標識に手前の絵（`frontimage`）や左側用の絵を別に持たせられ、そのときは上の表によらない。`no_foreground=1` はすべてを奥に描く。
+- 同じ名前の標識が 2 つ読み込まれると、後から読んだ方が残る（`roadsign_t::register_desc`）。
 
 ### 6.2 ゲームで確かめたこと（2026-11-22、OTRP v64.3）
 
-左側通行だけが違う 2 つの地図（`flat_512_left` と `flat_512`）に同じ手順で標識を建て、絵の範囲を比べた。
+入っている pak の標識を読んだ値（pak ファイルの標識の節を直接読んだ）:
 
-- 位置が変わった: SIS の門型の案内標識（`SIS_E_RSgs_E01BF`）・SIS の信号（`SIS_L_RSsg_E01S_f`・`_b`）、pak128 の `Minimum100`・`RoadClosed`・`NoEntry`・`autobahn_classic_entrance`。ずれは画面で横 56px・縦 28px 前後（道路のおよそ反対側）。
-- 位置が変わらなかった: ISS の `iss_sr_min_speed_0050`・`iss_sr_crosswalk`・`iss_sr_direction_info_1`、tku の路面の標示（`tku_style_road_z0sign_01a`・`01b`）、pak128 の `choose_point`。
-- pak128 の `RoadClosed`・`NoEntry`・`autobahn_classic_entrance` は、参照のソースでは `offset_left=0` なのに位置が変わった。入っている pak の dat は参照のソースと違うと推測している。種類ごとの `offset_left` は、ゲームで建てて確かめる。
-- 左側通行なしの地図では、SIS の門型の標識は道路の外の草地に立つか、柱が車線の中に立ち、SIS の信号の柱は道路の反対側に立った。配置例 `cityscape_demo.sve`（左側通行なし）の (63,24) の門型も、草地に立っている。SIS を使うときは左側通行の設定にする。
-- 車両との重なり（バスを停留所の満載待ちで標識の上に並ばせて撮った）:
-  - 左側通行ありでは、SIS の門型の板と信号の柱は、下を通るバスの手前に描かれた。
-  - tku の路面の標示は、どちらの設定でも、上に止まったバスに重なって描かれた（路面の標示がバスの上に見える）。路面の標示を車線の上に置くと、車両の上に出る。
+| 標識 | 入っている pak | 版 | `offset_left` |
+|---|---|---|---|
+| ISS（`iss_sr_*`） | `iss_road_sign.pak` | 6 | 0 |
+| tku の路面の標示（`tku_style_road_z0sign_*`） | addons の `all.pak` | 5 | 0 |
+| SIS（`SIS_E_RSgs_*`・`SIS_L_RSsg_*`） | addons の `all.pak` | 3 | 14 |
+| pak128 標準（`Minimum100`・`RoadClosed`・`NoEntry`・`autobahn_*` など） | pakset の `infrastructure.road_signs.all.pak`（版 6、`RoadClosed`・`NoEntry`・`autobahn_*` は 0）と、addons の `all.pak`（版 3） | 3 が残る | 14（`choose_point` などの経路の選択は 0） |
+
+- 景観アドオンを多く入れた検証用のフォルダでは、addons の `all.pak` に pak128 標準の標識の古い形式の写しが入っていて、後から読まれる。このため、pakset では 0 の `RoadClosed` なども 14 として動く。標識の左のずれは、dat のソースではなく、入っている pak の版と値で決まる。
+- 左側通行だけが違う 2 つの地図（`flat_512_left` と `flat_512`）に同じ手順で標識を建て、絵の範囲を比べた。`offset_left` が 14 の標識（SIS、pak128 の `Minimum100`・`RoadClosed`・`NoEntry`・`autobahn_classic_entrance`）は、横 56px・縦 28px 前後ずれた。0 の標識（ISS・tku・`choose_point`）は変わらなかった。上の表どおり。
+- 左側通行なしでは、SIS の門型の標識（`SIS_E_RSgs_E01BF`）は道路の外の草地に立つか柱が車線の中に立ち、SIS の信号（`SIS_L_RSsg_E01S_f`・`_b`）の柱は道路の反対側に立った。配置例 `cityscape_demo.sve`（左側通行なし）の (63,24) の門型も、草地に立っている。SIS を使うときは左側通行の設定にする。
+- 標識の形: ISS の `iss_sr_crosswalk`（横断歩道）・`iss_sr_min_speed_0050`（最低速度）と tku の 2 つは、路面に描く標示。ISS の `iss_sr_direction_info_1` は柱に付いた案内板。SIS の `SIS_E_RSgs_E01BF` は道路をまたぐ門型。
+- 車両との重なり（南北の道路で、バスを停留所の満載待ちで標識の上に並ばせて撮った）:
+  - 路面の標示（ISS の横断歩道・tku）は、北行き・南行き、左側通行のあり・なしのどれでも、上に止まったバスに重なって描かれた。両方向の標識で `offset_left` が 0 なので、北向きの絵がいつも「手前」になる（上の表と合う）。路面の標示を車線の上に置くと、車両の上に出る。
+  - SIS の門型（一方通行）は、左側通行ありで、1 回建てた（北向き）ものは「奥」になり、南行きのバスが門型の手前に描かれた。2 回建てた（南向き）ものは「手前」になり、北行きのバスの上に板が描かれた。向きによって、門型が車両の上に出るか下に隠れるかが変わる。
   - 車両自身も左側通行の設定で走る車線が変わるので、標識と車両の位置関係は設定ごとに確かめる。
-- 一方通行の標識（SIS の門型など）を 1 回だけ建てると、南北の道路では北行きの車両が通れなかった（車庫から出なかった）。もう一度建てて向きを反対にすると通れた。景観に使うときも、車両の通る向きと標識の向きを合わせる。
-
+  - 東西の道路と、柱の標識（ISS の案内板・pak128 の柱）とバスの重なりは撮っていない。
+- 一方通行の標識を南北の道路に 1 回だけ建てると、北向きになり、北行きの車両が通れなかった（車庫から出なかった）。もう一度建てて南向きにすると通れた。景観に使うときも、車両の通る向きと標識の向きを合わせる。
