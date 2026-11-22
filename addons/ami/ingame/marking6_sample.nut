@@ -23,11 +23,14 @@ function way(tag, n, x0, y0, x1, y1) {
   report += r(tag + " " + n, command_x.build_way(pl, c(x0, y0), c(x1, y1), w, true));
 }
 function one(tag, n, x, y) { way(tag, n, x, y, x, y); }
-function expect(tag, x, y, road, mark) {
+// d は表示のつながる向き（北 1・東 2・南 4・西 8 の和）。null なら比べない。絵はつながる向きで決まる（README の「路面表示の作り」）ので、
+// 向きの取り違え（分離帯の T字が交差点の辺とつながるなど）も、ここで見つける
+function expect(tag, x, y, road, mark, d) {
   local t = square_x(OX + x, OY + y).get_ground_tile();
   local w = t.get_way(wt_road), m = t.get_way(wt_rail);
   local rn = w == null ? "-" : w.get_desc().get_name(), mn = m == null ? "-" : m.get_desc().get_name();
   checks += "[check] " + tag + " (" + x + "," + y + ") " + rn + "/d" + (w == null ? "-" : w.get_dirs()) + " + " + mn + "/d" + (m == null ? "-" : m.get_dirs()) + "\n";
+  if (d != null && (m == null ? -1 : m.get_dirs()) != d) report += tag + " (" + x + "," + y + ") want dirs=[" + d + "] got=[" + (m == null ? "-" : m.get_dirs()) + "]\n";
   if (rn != road || mn != mark) report += tag + " (" + x + "," + y + ") want=[" + road + " + " + mark + "] got=[" + rn + " + " + mn + "]\n";
 }
 
@@ -48,20 +51,23 @@ function x6(tag) {
   foreach (k in [[7, 8, 7, 10], [11, 8, 11, 10], [8, 7, 10, 7], [8, 11, 10, 11], [6, 9, 7, 9], [12, 9, 11, 9], [9, 6, 9, 7], [9, 12, 9, 11]])
     way(tag + " link", JM, k[0], k[1], k[2], k[3]);
   // 入る側・出る側の外の列の 2 マスを、1 マスずつ敷き直す（向きはそのままで名前だけが置き換わる）
-  local ins = [[6, 8], [7, 8], [12, 10], [11, 10], [10, 6], [10, 7], [8, 12], [8, 11]];
-  local outs = [[6, 10], [7, 10], [12, 8], [11, 8], [8, 6], [8, 7], [10, 12], [10, 11]];
+  local ins = [[6, 8, 2], [7, 8, 14], [12, 10, 8], [11, 10, 11], [10, 6, 4], [10, 7, 13], [8, 12, 1], [8, 11, 7]];
+  local outs = [[6, 10, 2], [7, 10, 11], [12, 8, 8], [11, 8, 14], [8, 6, 4], [8, 7, 7], [10, 12, 1], [10, 11, 13]];
+  local mids = [[7, 9, 13], [6, 9, 2], [11, 9, 7], [12, 9, 8], [9, 7, 11], [9, 6, 4], [9, 11, 14], [9, 12, 1]];
+  local corners = [[8, 8, 9], [10, 8, 3], [8, 10, 12], [10, 10, 6]];
+  local centers = [[9, 8, 4], [8, 9, 2], [9, 9, 15], [10, 9, 8], [9, 10, 1]];
   foreach (p in ins) one(tag + " in", JI, p[0], p[1]);
   foreach (p in outs) one(tag + " out", JO, p[0], p[1]);
   // 中心 3×3 の角を除く 5 枚（辺の 4 枚と中央）
   way(tag + " center", JC, 9, 8, 9, 10);
   way(tag + " center", JC, 8, 9, 10, 9);
-  foreach (p in ins) expect(tag + " in", p[0], p[1], G, JI);
-  foreach (p in outs) expect(tag + " out", p[0], p[1], G, JO);
-  foreach (p in [[7, 9], [6, 9], [11, 9], [12, 9], [9, 7], [9, 6], [9, 11], [9, 12]]) expect(tag + " mid", p[0], p[1], G, JM);
-  foreach (p in [[8, 8], [10, 8], [8, 10], [10, 10]]) expect(tag + " corner", p[0], p[1], G, JI4);
-  foreach (p in [[9, 8], [8, 9], [9, 9], [10, 9], [9, 10]]) expect(tag + " center", p[0], p[1], G, JC);
-  foreach (p in [[3, 8], [3, 10], [8, 3], [10, 3]]) expect(tag + " lane4", p[0], p[1], G, L4);
-  foreach (p in [[3, 9], [9, 3]]) expect(tag + " lane6_m", p[0], p[1], G, LM);
+  foreach (p in ins) expect(tag + " in", p[0], p[1], G, JI, p[2]);
+  foreach (p in outs) expect(tag + " out", p[0], p[1], G, JO, p[2]);
+  foreach (p in mids) expect(tag + " mid", p[0], p[1], G, JM, p[2]);
+  foreach (p in corners) expect(tag + " corner", p[0], p[1], G, JI4, p[2]);
+  foreach (p in centers) expect(tag + " center", p[0], p[1], G, JC, p[2]);
+  foreach (p in [[3, 8], [3, 10], [8, 3], [10, 3]]) expect(tag + " lane4", p[0], p[1], G, L4, null);
+  foreach (p in [[3, 9], [9, 3]]) expect(tag + " lane6_m", p[0], p[1], G, LM, null);
 }
 
 foreach (n, o in ORIGINS) {

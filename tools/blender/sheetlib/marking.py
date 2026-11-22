@@ -22,7 +22,7 @@
 腕の外の端の中央線の一点から 2 本に分けて、あいだに楔の導流帯を置く（iss の intersection1 と同じ）。2 車線の交差点の路面は、
 腕の 3 車線の幅の区間と中心を路側線まで覆う（MARKING_W2_PAVE。_wide_pave）。
 位置と幅は道路の白線（road_parts の EDGE_LINE・LINE_W・LINE_TOP・EDGE_CORNER_R・CENTER_DASHES）に合わせる。停止線（MARKING_STOP_U）は横断歩道の手前に置く。
-雪の絵は持たない（車道は除雪した想定で、路面・白線は夏と同じ。路肩の雪は下の道路の絵。dat は雪の絵に夏のセルを使う）。坂は lane4 だけ、斜めは持たない
+雪の絵は持たない（車道は除雪した想定で、路面・白線は夏と同じ。路肩の雪は下の道路の絵。dat は雪の絵に夏のセルを使う）。坂は lane4・lane6_m だけ、斜めは持たない
 """
 import math
 import os
@@ -95,7 +95,6 @@ MARKING_W6_EDGE = MARKING_W6_TILE + EDGE_LINE      # 13.37 外の路側線
 MARKING_W6_INNER = MARKING_W6_TILE - EDGE_LINE     # 6.63 外のタイルの内の線（B と境の帯 C のあいだ）
 MARKING_W6_MEDIAN = EDGE_LINE                      # 3.37 境の帯 C と分離帯のあいだの路側線
 MARKING_W6_CURB = EDGE_LINE / 2                    # 1.685 分離帯の縁（真ん中のタイルの直線）
-MARKING_W6_POCKET = (0.0, MARKING_W6_MEDIAN)       # 右折車線（分離帯のタイルの入る側の半分）。出る側の半分は空き
 
 MARKING_KINDS = ("lane4", "junction2", "junction2_t", "junction4_in", "junction4_out",
                  "lane6_m", "junction6_in", "junction6_out", "junction6_m", "junction6_c")
@@ -442,7 +441,7 @@ def _arm6_pave(plan):
 
 def _arm6_first(plan):
     """6 車線の腕の 1 マス目（3 タイル共通の V）: 線は実線で停止線まで、矢印（A 直進・左、B 直進、C 直進、右折車線 右折）、停止線、
-    横断歩道（全幅）。右折車線は分離帯のタイルの入る側の半分 MARKING_W6_POCKET"""
+    横断歩道（全幅）。右折車線は分離帯のタイルの入る側の半分（V = 0〜MARKING_W6_MEDIAN）"""
     h, stop = MARKING_HALF, MARKING_STOP_U
     E, I, T, M = MARKING_W6_EDGE, MARKING_W6_INNER, MARKING_W6_TILE, MARKING_W6_MEDIAN
     for v in (-E, E):
@@ -462,7 +461,7 @@ def _arm6_first(plan):
 
 def _arm6_second(plan):
     """6 車線の腕の 2 マス目（3 タイル共通の V）: 通る車線の境（A|B・B|C）は破線、右折車線の入る側の縁（C との境）は破線、
-    右折車線の出る側の縁は実線。右折車線の外の端に導流帯の三角（4 車線の _arm4_second と同じ向き）。出る側の C の内の線も破線"""
+    右折車線の出る側の縁（V=0）と、出る側の C の内の線（V=-MARKING_W6_MEDIAN）は実線。右折車線の外の端に導流帯の三角（4 車線の _arm4_second と同じ向き）。出る側の外の列の車線の境（-T・-I）は破線。A は一番外の車線、C は分離帯に近い車線"""
     h, e = MARKING_HALF, MARKING_E
     E, I, T, M = MARKING_W6_EDGE, MARKING_W6_INNER, MARKING_W6_TILE, MARKING_W6_MEDIAN
     for v in (-E, E, 0.0, -M):
