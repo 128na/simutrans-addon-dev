@@ -18,7 +18,7 @@
 タイルごとに切り抜く（右折の矢印・停止線・導流帯がタイルの境をまたぐ）。2 車線の腕は 1 マスで、路側線のあいだを 3 等分し直し、
 腕の外の端の中央線の一点から 2 本に分けて、あいだに楔の導流帯を置く（iss の intersection1 と同じ）。
 位置と幅は道路の白線（road_parts の EDGE_LINE・LINE_W・LINE_TOP・EDGE_CORNER_R・CENTER_DASHES）に合わせる。停止線（MARKING_STOP_U）は横断歩道の手前に置く。
-雪の絵は持たない（車道は除雪した想定で、路面・白線は夏と同じ。路肩の雪は下の道路の絵。dat は雪の絵に夏のセルを使う）。坂は lane4 だけ、斜めは持たない
+雪の絵は持たない（車道は除雪した想定で、路面・白線は夏と同じ。路肩の雪は下の道路の絵。dat は雪の絵に夏のセルを使う）。坂は lane4_b・lane4_f だけ、斜めは持たない
 """
 import math
 import os
@@ -46,6 +46,7 @@ MARKING_LINE = ("marking_line", (0.80, 0.80, 0.82), 0.6, 0.0, 0.35)
 MARKING_STOP_U = (0.43, 0.77)
 MARKING_CROSSWALK_U = (1.5, 4.5)
 MARKING_STRIPE_W = 0.5
+MARKING_STRIPE_PERIOD = 1.0
 # 中央の破線: 道路の中央線の破線と同じ周期と位置（タイルの辺がすき間の中ほど）
 MARKING_DASHES = CENTER_DASHES[0]
 MARKING_DASH_FRAC = CENTER_DASH_FRAC
@@ -75,7 +76,8 @@ MARKING_W2_SOLID_U = -1.6
 # 置き、交差点の中心の角から約 1.8 あけていた（2 本の帯が中心で重ならない）。幅は腕の横断歩道（MARKING_CROSSWALK_U）とそろえて 3.0 にし、
 # 外の端は角の円弧（路側線）の内に収める。縞は幅 MARKING_STRIPE_W・周期 1.0 で、帯に直角
 MARKING_SCRAMBLE_GAP = 1.9    # 内の端の、交差点の中心からの距離（対角線の上）
-MARKING_SCRAMBLE_OUT = 4.6    # 外の端の、タイルの中心からの距離（対角線の上。角の円弧の中ほどは約 5.1）
+MARKING_SCRAMBLE_OUT = 4.6    # 縞を置く外の限り（タイルの中心からの距離。対角線の上。角の円弧の中ほどは約 5.1）。
+# 外の端の縞は、路面で覆わない角の四角（MARKING_PAVE_IN より外）にかかる（降雪では下の道路のまだらの雪の上に乗る）
 
 MARKING_KINDS = ("lane4_b", "lane4_f", "junction2", "junction2_t", "junction4_in", "junction4_out")
 # lane4 の列 → 外の路肩の向き（南北の道の向き, 東西の道の向き）
@@ -367,7 +369,7 @@ def _scramble(plan, curve):
     c = -(MARKING_HALF * r2 - MARKING_SCRAMBLE_GAP) + sw
     while c + sw <= MARKING_SCRAMBLE_OUT + 1e-9:
         plan.poly([pt(c - sw, -w), pt(c + sw, -w), pt(c + sw, w), pt(c - sw, w)])
-        c += 1.0
+        c += MARKING_STRIPE_PERIOD
 
 
 # ---------------------------------------------------------------- 種類と形 → 絵
