@@ -16,7 +16,8 @@
 4 車線の腕は 2 マス（iss の 2-1・2-2 と同じ）。右折車線は、2 タイルの境をはさむ 2 本の路側線のあいだの帯をそのまま使い、
 通る車線の線は動かさない。腕の 2 列（入る側・出る側）は、2 タイル共通の横位置 V（境が 0、入る側のタイルの中心が +5）で描き、
 タイルごとに切り抜く（右折の矢印・停止線・導流帯がタイルの境をまたぐ）。2 車線の腕は 1 マスで、路側線のあいだを 3 等分し直し、
-腕の外の端の中央線の一点から 2 本に分けて、あいだに楔の導流帯を置く（iss の intersection1 と同じ）。
+腕の外の端の中央線の一点から 2 本に分けて、あいだに楔の導流帯を置く（iss の intersection1 と同じ）。2 車線の交差点の路面は、
+腕の 3 車線の幅の区間と中心を路側線まで覆う（MARKING_W2_PAVE。_wide_pave）。
 位置と幅は道路の白線（road_parts の EDGE_LINE・LINE_W・LINE_TOP・EDGE_CORNER_R・CENTER_DASHES）に合わせる。停止線（MARKING_STOP_U）は横断歩道の手前に置く。
 雪の絵は持たない（車道は除雪した想定で、路面・白線は夏と同じ。路肩の雪は下の道路の絵。dat は雪の絵に夏のセルを使う）。坂は lane4_b・lane4_f だけ、斜めは持たない
 """
@@ -42,7 +43,7 @@ MARKING_PAVE_GAP = EDGE_LINE - MARKING_PAVE_IN     # 0.9
 MARKING_TEE_MOUTH_COVER = EDGE_LINE + 0.2          # junction2_t の T字の、枝の側の角の内を覆う四角の外の端（下の道路の口の点線の端の外）
 # 白の材質: 道路の白線と同じ明るさに見えるよう、面で描く表示は色と発光を落とす（#156 の作業でゲームの画面の画素を比べて決めた値。ADR 0012）
 MARKING_LINE = ("marking_line", (0.80, 0.80, 0.82), 0.6, 0.0, 0.35)
-# 停止線（u）と横断歩道の帯（u）。縞は幅 0.5・周期 1.0 で、どれも路側線（±EDGE_LINE）の内に収める
+# 4 車線の腕の停止線（u）と横断歩道の帯（u）。縞は幅 0.5・周期 1.0 で、どれも路側線（±EDGE_LINE）の内に収める。2 車線の腕は MARKING_W2_*
 MARKING_STOP_U = (0.43, 0.77)
 MARKING_CROSSWALK_U = (1.5, 4.5)
 MARKING_STRIPE_W = 0.5
@@ -58,22 +59,28 @@ MARKING_ZEBRA_MIN = 0.2
 # 2 車線の腕（1 マス）は、楔の導流帯の先から停止線の手前に収まるよう、交差点の側へ du だけずらす
 MARKING_ARROW = dict(shaft_w=0.3, u0=-4.4, head_base=-2.6, head_tip=-1.4, head_w=1.0,
                      turn_u=-3.2, turn_len=0.5, turn_head=0.5, turn_head_w=0.9, shift=0.3)
-MARKING_ARROW_DU2 = 1.4
+MARKING_ARROW_DU2 = 3.0
 
 # 4 車線の腕（2 タイル共通の V。境 0、入る側のタイルの中心 +5、出る側 -5）
 MARKING_W4_EDGE = MARKING_HALF + EDGE_LINE       # 8.37 外の路側線
 MARKING_W4_LANE = MARKING_HALF                   # 5 通る車線の境（2 マス目は破線、1 マス目は実線）
 MARKING_W4_BAND = MARKING_HALF - EDGE_LINE       # 1.63 中央の帯（右折車線）の縁 = 内の路側線
 MARKING_W4_TRI_U = -1.0                          # 導流帯の三角の、帯の出る側の線の上の先（u）。縦の辺は 2 マス目の外の端
-# 2 車線の腕（1 マス）: 路側線のあいだを 3 等分し、入る側 2 車線・出る側 1 車線にする
+# 2 車線の腕（1 マス）: 路側線のあいだを 3 等分し、入る側 2 車線・出る側 1 車線にする。横断歩道は 4 車線の腕の半分ほどの幅で
+# 交差点の側の辺に寄せ、停止線もその手前へ寄せて、楔の後の 3 車線の区間（右折車線）を長くとる
 MARKING_W2_THIRD = EDGE_LINE / 3  # 1.123 入る側 2 車線の境 = +、寄せた中央線 = -
-MARKING_W2_SPLIT_U = (-MARKING_HALF, -3.0)       # 楔の導流帯: 中央線の一点（外の端）から、分かれ終わる所まで
-MARKING_W2_DASH = ((-2.6, -2.0),)                # 入る側 2 車線の境の破線（楔の先から）。この先は実線
-MARKING_W2_SOLID_U = -1.6
+MARKING_W2_SPLIT_U = (-MARKING_HALF, -3.4)       # 楔の導流帯: 中央線の一点（外の端）から、分かれ終わる所まで
+MARKING_W2_DASH = ((-3.0, -2.4), (-2.0, -1.4))   # 入る側 2 車線の境の破線（楔の先から）。この先は実線
+MARKING_W2_SOLID_U = -1.0
+MARKING_W2_CROSSWALK_U = (3.2, 4.7)
+MARKING_W2_STOP_U = (2.13, 2.47)
+# 3 車線の幅の区間の路面は、路側線まで覆う（下の道路の路側のまだらの雪を隠し、路肩の寄りまで除雪された見え方にする）。
+# 楔の区間で、外の端の MARKING_PAVE_IN から路側線まで広げる。中心のタイルでは、2 車線の腕の両側の角も路側線（角の円弧）まで覆う
+MARKING_W2_PAVE = EDGE_LINE
 
 # スクランブル（junction4_out の曲がり）: 中心のタイルの、交差点の中心の角から外の角への対角線に沿う横断歩道（4 枚で X）。
 # iss の intersection2-2 の曲がりの絵（release の intersection_kt.png の 8 行目）を測ると、帯の幅は約 3.4、長さは約 10.5 で、タイルの中心に
-# 置き、交差点の中心の角から約 1.8 あけていた（2 本の帯が中心で重ならない）。幅は腕の横断歩道（MARKING_CROSSWALK_U）とそろえて 3.0 にし、
+# 置き、交差点の中心の角から約 1.8 あけていた（2 本の帯が中心で重ならない）。幅は 4 車線の腕の横断歩道（MARKING_CROSSWALK_U）とそろえて 3.0 にし、
 # 外の端は角の円弧（路側線）の内に収める。縞は幅 MARKING_STRIPE_W・周期 1.0 で、帯に直角
 MARKING_SCRAMBLE_GAP = 1.9    # 内の端の、交差点の中心からの距離（対角線の上）
 MARKING_SCRAMBLE_OUT = 4.6    # 縞を置く外の限り（タイルの中心からの距離。対角線の上。角の円弧の中ほどは約 5.1）。
@@ -205,10 +212,14 @@ class _Plan:
             hw = A["turn_head_w"] / 2
             self.poly([(A["turn_u"] - hw, v_end), (A["turn_u"], v_end + side * A["turn_head"]), (A["turn_u"] + hw, v_end)])
 
-    def crosswalk(self, centers):
+    def crosswalk(self, centers, span=MARKING_CROSSWALK_U):
         w = MARKING_STRIPE_W / 2
         for c in centers:
-            self.quad(*MARKING_CROSSWALK_U, c - w, c + w)
+            self.quad(*span, c - w, c + w)
+
+    def pave_poly(self, pts):
+        """路面の板（凸の多角形）"""
+        self.paves.append(list(pts))
 
     def emit(self, a, mat, voff=0.0, pave_mat=None):
         """向き a（単位ベクトル。None なら (u, v) をそのまま (x, y) とする）のタイルへ、横位置を voff だけずらして
@@ -297,8 +308,8 @@ def _arm4_second(plan):
 
 def _arm2(plan):
     """2 車線の腕（1 マス。向き a の座標）: 路側線、中央線の一点から分かれる 2 本（入る側 2 車線の境と、寄せた中央線）、楔の導流帯、
-    矢印・停止線・横断歩道"""
-    h, e, stop = MARKING_HALF, MARKING_E, MARKING_STOP_U
+    矢印・停止線・横断歩道。路面は、外の端の MARKING_PAVE_IN から楔に沿って広げ、3 車線の区間は MARKING_W2_PAVE まで"""
+    h, e, stop = MARKING_HALF, MARKING_E, MARKING_W2_STOP_U
     t = MARKING_W2_THIRD
     u0, u1 = MARKING_W2_SPLIT_U
     for v in (-EDGE_LINE, EDGE_LINE):
@@ -314,8 +325,9 @@ def _arm2(plan):
     plan.quad(stop[0], stop[1], -t - e, EDGE_LINE - e)
     plan.arrow((t + EDGE_LINE) / 2, "straight_left", MARKING_ARROW_DU2)
     plan.arrow(0.0, "right", MARKING_ARROW_DU2)
-    plan.crosswalk([i - 3.0 for i in range(7)])
-    plan.pave(-h, h, -MARKING_PAVE_IN, MARKING_PAVE_IN)
+    plan.crosswalk([i - 3.0 for i in range(7)], MARKING_W2_CROSSWALK_U)
+    P, W = MARKING_PAVE_IN, MARKING_W2_PAVE
+    plan.pave_poly([(u0, -P), (u1, -W), (h, -W), (h, W), (u1, W), (u0, P)])
 
 
 def _corner(plan, a, b):
@@ -332,10 +344,40 @@ def _corner(plan, a, b):
         plan.seg((x[0] * (E_ + r) + y[0] * E_, x[1] * (E_ + r) + y[1] * E_), (x[0] * h + y[0] * E_, x[1] * h + y[1] * E_))
 
 
-def _center(plan, arms_pairs, closed=()):
+def _center(plan, arms_pairs, closed=(), wide=()):
     for a, b in arms_pairs:
         _corner(plan, _DIRS[a], _DIRS[b])
     _center_pave(plan, arms_pairs, closed)
+    _wide_pave(plan, arms_pairs, closed, wide)
+
+
+def _wide_pave(plan, corners, closed, wide):
+    """中心のタイル（(x, y) の座標）の、2 車線の腕（wide の向き）の側を MARKING_W2_PAVE まで広げる路面（_center_pave に足す）。
+    角（a, b）の両方の腕が広いなら、角の四角の路側線の内（角の円弧まで）を全部覆う。片方だけなら、広い腕の辺の MARKING_W2_PAVE から、
+    交差点の中心の側の MARKING_PAVE_IN の角へ斜めに狭める（相方の腕の路面の端に合わせる）。閉じた側（closed）は、2 車線の T字路の
+    閉じた側の路側線まで覆う"""
+    if not wide:
+        return
+    P, W, h, r = MARKING_PAVE_IN, MARKING_W2_PAVE, MARKING_HALF, EDGE_CORNER_R
+    for a, b in corners:
+        A, B = _DIRS[a], _DIRS[b]
+        xy = lambda d, l: (A[0] * d + B[0] * l, A[1] * d + B[1] * l)   # d: 腕 a の向き、l: 腕 b の向き
+        wa, wb = a in wide, b in wide
+        if wa and wb:
+            plan.pave_poly([xy(P, P), xy(h, P), xy(h, W), xy(P, W)])
+            plan.pave_poly([xy(P, P), xy(W, P), xy(W, h), xy(P, h)])
+            c, n = W + r, 12
+            arc = [(c - r * math.sin(t), c - r * math.cos(t)) for t in (math.pi / 2 * i / n for i in range(n + 1))]
+            for p, q in zip(arc, arc[1:]):
+                plan.pave_poly([xy(W, W), xy(*p), xy(*q)])
+        elif wa or wb:
+            sw = (lambda d, l: xy(d, l)) if wa else (lambda d, l: xy(l, d))
+            plan.pave_poly([sw(P, P), sw(h, P), sw(h, W), sw(W + r, W)])
+    for m in closed:
+        mx, my = _DIRS[m]
+        px, py = -my, mx
+        pts = [(mx * s + px * t, my * s + py * t) for s, t in ((P, -h), (W, -h), (W, h), (P, h))]
+        plan.pave_poly(pts)
 
 
 def _center_pave(plan, corners, closed=()):
@@ -396,7 +438,7 @@ def marking_jobs(kind):
             jobs[rc] = (lane(d(axis[1])), d(axis[1]), 0.0, slope)
         return jobs
     if kind in ("junction2", "junction2_t"):
-        four = lambda p: _center(p, (("n", "e"), ("e", "s"), ("s", "w"), ("w", "n")))
+        four = lambda p: _center(p, (("n", "e"), ("e", "s"), ("s", "w"), ("w", "n")), (), "nesw")
         jobs[MARKING_CROSS_CELL] = jobs[MARKING_SINGLE_CELL] = (four, None, 0.0, None)
         for rc, c in MARKING_DEADENDS.items():
             jobs[rc] = (_arm2, d(c), 0.0, None)
@@ -423,7 +465,9 @@ def _tee(m, closed_edge):
     sides = [c for c in "nesw" if c not in (m, opp)]
 
     def draw(plan):
-        _center(plan, ((opp, sides[0]), (opp, sides[1])), (m,) if closed_edge else ())
+        # 広げる腕: 2 車線の T字路は 3 本とも、4 車線 × 2 車線の中心は 2 車線の腕（opp）だけ
+        _center(plan, ((opp, sides[0]), (opp, sides[1])), (m,) if closed_edge else (),
+                (opp, *sides) if closed_edge else (opp,))
         if closed_edge:
             # 下の一般道路の T字は、枝の口を点線で渡す（sheetlib の mouth_dash。太さ 0.3 で口の端 ±EDGE_LINE まで）。点線の端が、路面で
             # 覆わない角の四角（MARKING_PAVE_IN より外）に 1 画素ずつ出るので、枝の側の角の内の小さな四角も路面で覆う
