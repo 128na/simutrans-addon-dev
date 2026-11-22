@@ -136,6 +136,7 @@
 - 線路の汚れ（色だけの薄い帯。2026-11-15、`blender-poc` で確認）: レールの周りの汚れは走行面（レールと同じ基準面）に乗せる。新描画位置では走行面が路盤より約 2px 手前にずれるので、
   路盤に乗せると汚れがレールとずれる。そのずれのため、行き止まりでは帯の端を少し詰めないと道床の外へはみ出す。
   雪の絵では汚れを消さず、雪の上の汚れ（灰色）にした（道床が雪に埋もれるので、汚れも雪の上に出す）
+- 汚し（ウェザリング。2026-11-22、#154）: コンクリートの材質 `sheetlib` の `tiled_concrete_material` に、`tint`（色の倍率）・`streak`（縦の面に縦の筋の雨だれ）・`grime`（`grime_z` の高さの範囲で下ほど暗くする地際の汚れ）がある。既定では掛からない。模様はタイルの 1 辺を周期にするので、タイルの辺でつながる。同じ灰色の物どうしは、色味（`tint`）の差がいちばん等倍で見分けやすかった。雨だれは等倍では細かいざらつきに見えた。AMI のモノレールは、暖かい灰と地際の汚れで第 1 弾の高架・橋脚と見分ける（ユーザーの決定。[記録](../records/2026-11-22_ami-monorail-weathering.md)）
 - 部品の位置は、部品ごとに足し引きせず、乗る基準面（路盤・走行面）に持たせる
   （レールと道床を別々のやり方で動かして、急坂でまくらぎが道床に埋もれた）
 
@@ -185,6 +186,9 @@
 - 描画: 雪のような明るい青みの色は、まだらや発光で明るい粒が透明色（231,255,255）に近づき、`sheet_audit.py` の透明色に近い画素（near_key）の候補になる。雪の色は赤を緑より上にして透明色から離す（AMI の道路の雪は 0.88・0.86・0.97。0.86・0.86・0.97 では歩道のセルに候補が 3 つ出た。`docs/records/2026-11-20_ami-road-refine-round3.md`、2026-11-20）
 - シェル: 標準入力で Python に日本語を流すと cp932 で壊れる。heredoc で `\\n` を含む文字列を書くと改行が壊れることがある
 - ゲームのスクリプト（Squirrel）: **`get_current_cash()` は 32 ビットの浮動小数で返る（本体 `player/simplay.cc` 947 行が `get_account_balance()/100.0` を返し、`script/api/api_player.cc` 280 行が登録する。Squirrel の float は 32 ビット（`squirrel/sqconfig.h`））。残高の絶対値が大きいと、差を取っても建設費が測れない**。`flat_512` は残高が約 -6.55×10^8 cr で、5.4×10^8〜1.07×10^9 の範囲は 1 刻みが 64 cr。操車場（`cost=60000`、600 cr）の建設費は 640 cr・576 cr（64 の倍数）に見え、乗客の駅も同じく 640 cr、車庫（850000）は 8512 cr（= 133×64）に見えた。費用は `get_current_net_wealth()`（1/100 cr の整数）の差で測ると、60000（= 600 cr）で毎回同じだった（`OTRPv64_3.exe`、`flat_512`、2026-11-22、#160、`addons/ami/ingame/cost_probe.sh`）。建設費の確認は純資産の差で行う
+- ゲームのスクリプト（Squirrel）: `base` は予約語で、`local base = ...` と書くと「Error compiling string buffer」でスクリプト全体が通らない（MCP の `run_squirrel`、`OTRPv64_3.exe`、2026-11-22、#154）
+- ゲームのスクリプト（Squirrel）: `way_desc_x(名前)`・`wayobj_desc_x`・`building_desc_x` は、無い名前でも null を返さず、インスタンスを返す。有るかは `is_valid()` で確かめる（本体 `script/api/api_obj_desc.cc` の `export_is_valid`。2026-11-22、#154。`addons/ami/ingame/weathering_lineup.nut` の `ok`）
+- 描画（Python）: `sheetlib/__init__.py` は部品の関数を、モジュールと同じ名前で出す（`monorail_parts` など）。`import sheetlib.monorail_parts as MP` はモジュールでなく関数を返し、`MP._M_MONO_BEAM = ...` は黙って関数の属性になる。モジュールは `sys.modules["sheetlib.monorail_parts"]` から引く（2026-11-22、#154。[記録](../records/2026-11-22_ami-monorail-weathering.md)）
 - ゲームのスクリプト（Squirrel）: `local a = d[1], b = d[2];` のように 1 つの `local` で 2 つ以上を宣言すると、2 つ目以降に違う値が入った（`b` が 2 になった。MCP の `run_squirrel`、`OTRPv64_3.exe`、2026-11-21）。`local` は 1 つずつ書く
 
 ### 8.3 画像を読んで判定するときの限界（2026-11-19）

@@ -1,4 +1,8 @@
-"""汚し（ウェザリング）の案を、モノレールの高架で見比べる試作（#154）。
+"""汚し（ウェザリング）の案を、モノレールの高架で見比べる試作（#154）。決定済みの履歴で、今は流さない。
+
+再実行しても当時の案は再現できない: 案 0 は src/ の絵（案を入れた後の絵）を写し、柱の差し替え（_M_MONO_PIER・_M_SUSP_PIER）は
+monorail_parts から定数が消えたので効かない。当時の案の絵は、コミット済みの rounds/ami_weather_calib.pak にある。
+流すと止まる。それでも流すときは WEATHER_CALIB_FORCE=1 を付ける。
 
 跨座式・懸垂式の高架の center 版（ami_monorail_straddle_elev_center・ami_monorail_suspended_elev_center）だけを、案ごとに別の名前で描く。
 変えるのは桁（mono_beam・mono_top・susp_beam・susp_top）と柱・腕（mono_pier・susp_pier）の材質だけで、形は今のまま。
@@ -16,7 +20,7 @@
     0  今の版: 桁 0.56〜0.64、柱 0.50〜0.58 の 2 色のまだら（タイルの辺で周期にならない track_noise）
     A  色味: 桁・柱の色を少し暖かい灰（赤 +4%、青 −8%）にし、柱を桁より 1 段暗くする（第 1 弾の打ち放しは中性の灰のまま）
     B  雨だれ: 縦の面に縦に長い暗い筋（最大 30% 暗く。横の細かさ 6、縦はその 0.04 倍）
-    C  地際の汚れ: 柱の下ほど暗く（地面で 45% 暗く、地面から 3.5 単位で 0）。桁は今の色
+    C  地際の汚れ: 柱の下ほど暗く（柱の下端で 45% 暗く、下端から 3.5 単位で 0）。桁は今の色
 A〜C は、まだらを tiled_concrete_material（タイルの 1 辺を周期にした模様）で作り直す。まだらの振れ幅と粒は今の版に合わせる。
 
 ユーザーが A＋C・モノレールだけ・第 1 弾は変えない、を選び（2026-11-22）、sheetlib の monorail_parts に入れた（mono_concrete）。
@@ -118,6 +122,8 @@ def _pack():
 
 
 if __name__ == "__main__":
+    if os.environ.get("WEATHER_CALIB_FORCE") != "1":
+        sys.exit("[weather] 決定済みの履歴（先頭の説明）。流すときは WEATHER_CALIB_FORCE=1 を付ける")
     try:
         import bpy  # noqa: F401
     except ImportError:

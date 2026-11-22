@@ -30,7 +30,7 @@ MONO_ARM_EMBED = 0.1      # 腕の上面を桁の下面より上へ食い込ま�
 # 第 1 弾の高架の躯体・橋脚・壁（中性の灰 0.56〜0.60）と見分けるため、汚し（#154）を掛ける。ユーザーが案 A＋C を選んだ（2026-11-22。
 # 見比べた案は addons/ami/blender/weather_calib.py）:
 #   A 色味: 桁と柱を少し暖かい灰（MONO_TINT）にし、柱を桁より 8% 暗くする
-#   C 地際の汚れ: 柱・腕を、柱の下端（地面）から MONO_GRIME_SPAN の高さまで、下ほど暗くする（下端で 1 − MONO_GRIME 倍）
+#   C 地際の汚れ: 柱・腕を、柱の下端（地面より PIER_FOOT 下）から MONO_GRIME_SPAN の高さまで、下ほど暗くする（下端で 1 − MONO_GRIME 倍）
 # まだら（±MONO_AMP、粒 MONO_GRAIN）は sheetlib の tiled_concrete_material（タイルの 1 辺を周期にした模様）で作る
 MONO_BEAM_RGB = (0.60, 0.60, 0.58)
 MONO_PIER_RGB = (0.497, 0.497, 0.478)   # 前の柱（0.54）の 0.92 倍
@@ -38,7 +38,7 @@ MONO_TINT = (1.04, 1.00, 0.92)
 MONO_AMP = 0.067
 MONO_GRAIN = 4.0
 MONO_GRIME = 0.45
-MONO_GRIME_SPAN = 3.5   # 部品の座標（高さ 1 単位 ≈ 7.8px。約 27px）
+MONO_GRIME_SPAN = 3.5   # 部品の座標（高さ 1 単位 ≈ 7.8px）
 MONO_SNOW_RGB = (0.92, 0.94, 0.97)
 
 

@@ -599,7 +599,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 高架の柱: 桁がタイルを出入りする辺ごとに、その辺の角に柱を立て、柱の頭から辺の中点の桁の下へ腕を渡す（iss と同じ並び）。版は柱を立てる側で、`front` は手前（南北の線は東、東西の線は南）、`back` は奥、`center` は両側。行き止まりは桁の端にも同じ柱と腕。iss は柱をタイルの角ちょうどに立てるが、AMI はタイルの内側に面を合わせて立て、隣のタイルの柱と背中合わせにする（門型の橋脚と同じ。角に立てると、絵がタイルの持ち分で切られて柱が半分になる）。複線は、西（北）の線を `back`・東（南）の線を `front` にすると、柱が外側に並ぶ（`docs/monorail_elev_pair.png`）
 - 絵の並び: 線路の通常の版と同じシート（`sheetlib` の `track_sheet`。部品は `tools/blender/sheetlib/monorail_parts.py`）。カーブは斜めの絵（iss と同じく、dat の `image[sw]` などが斜めのセルを指す）。近い斜めの絵は無い（iss の dat にキーが無い）。分岐の絵（`image[nse1]` などの 1・2）は iss と同じく入れたが、本体は `monorail_track` では自動で選ばない（[way-addon.md](../../docs/reference/way-addon.md) の 9.2）。分岐の追加画像（ex 画像）は無い
 - 雪の絵: 桁の上面だけを白くする（iss の跨座式は雪の絵を持たない。AMI のほかの way にそろえて足した）。柱は夏と同じ
-- 色と汚し（#154）: 第 1 弾の高架の躯体・橋脚・壁（中性の灰）と見分けるため、桁と柱を少し暖かい灰にし、柱を桁より 8% 暗くした。柱と腕は下ほど暗くする（地際の汚れ。地面で 45%、地面から約 27px で 0）。懸垂式も同じ。値は `sheetlib/monorail_parts.py` の `MONO_*`、作りは `tiled_concrete_material` の汚しの引数。ユーザーが案 A＋C を選んだ（2026-11-22。案の比べは `docs/weather_cases_*.png`、直す前と直した後は `docs/weather_before_after_*.png`。見本は `ingame/weathering_lineup.nut`）
+- 色と汚し（#154）: 第 1 弾の高架の躯体・橋脚・壁（中性の灰）と見分けるため、桁と柱を少し暖かい灰にし、柱を桁より 8% 暗くした。柱と腕は下ほど暗くする（地際の汚れ。柱の下端〔地面より 0.5 単位下〕で 45%、下端から 3.5 単位で 0。地面の高さでは約 39%）。懸垂式も同じ。値は `sheetlib/monorail_parts.py` の `MONO_*`、作りは `tiled_concrete_material` の汚しの引数。ユーザーが案 A＋C を選んだ（2026-11-22。案の比べは `docs/weather_cases_*.png`、直す前と直した後は `docs/weather_before_after_*.png`。見本は `ingame/weathering_lineup.nut`）
 - アイコン: 背景は紫（モノレール。`blender/icons.py` の `WAY_BG`）。高架の版は右下に版の札（前・中・後）と下の帯
 - 値: 150 km/h、地上 30000・600、高架 60000・1200（地上の 2 倍）、トンネル 120000・2400（4 倍）、登場 1900（#110 の一覧。`blender/ami_dat.py` の `VALUES`）
 - pak は `ami_monorail.pak`（`build.py` の `KINDS`。車庫も入る）
