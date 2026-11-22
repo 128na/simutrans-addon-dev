@@ -683,7 +683,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 検査: `check.sh` が `check_depot.py` を回す（車庫と同じく、絵が六角形の中か、奥の絵の上端が y32 より下か）
 - 見本は `ingame/yard_sample.nut`（撮る場所は `sample_spots.sh` の `YARD_SPOTS`）。`sample_parallel.sh` に `NUT=ingame/yard_sample.nut` を付けて流す。区画は 1 タイルと 3 タイル（南北・東西）、乗客の駅の隣、並べた留置線、壁つきの線路、列車（車庫から出して操車場で止める）、斜め・坂・高架の試し。駅になること・乗客と郵便を扱わないこと・隣の駅とつながることを `[check]` で返す
   - 確認画像（2026-11-22、`OTRPv64_3.exe`、`flat_512.sve`）: `docs/yard115_temperate_Y1.png`（南北の 1 タイルと 3 タイル）、`yard115_snow_YE.png`（東西）、`yard115_pax_snow_zoom.png`（乗客の駅の隣。通路が駅の側へ続き、階段は反対の端だけ）、`yard115_pax_edge_zoom.png`（乗客の駅との境の拡大。プラットフォームと通路の線路の側の縁がそろう）、`yard115_temperate_YG.png`（並べた留置線）、`yard115_temperate_YW.png`（壁つきの線路）、`yard115_train_zoom.png`（止まった機関車が通路の上に描かれる）、`yard115_elevated_zoom.png`（高架の上）
-  - 建てたときに引かれた額は 576 cr と 640 cr（2 か所）。本体は dat の `cost` をそのまま使う（[way-addon.md](../../docs/reference/way-addon.md) の 5 章）。600 cr からずれた原因は分かっていない（本体の式 `simtool.cc` の 5816 行付近では 600 cr。[#160](https://github.com/128na/simutrans-addon-dev/issues/160)）
+  - 建てたときに引かれた額は 576 cr と 640 cr（2 か所）。本体は dat の `cost` をそのまま使う（[way-addon.md](../../docs/reference/way-addon.md) の 5 章）。600 cr からのずれは測り方の問題で、建設費はずれていない（スクリプトの所持金が 32 ビット float で、残高が大きく負の `flat_512` では 64 cr 刻みに丸められる。純資産の差は 60000。記録 [2026-11-22_ami-yard-cost-float32.md](../../docs/records/2026-11-22_ami-yard-cost-float32.md)、[#160](https://github.com/128na/simutrans-addon-dev/issues/160)）
 
 ### アイコン・カーソル（#25）
 

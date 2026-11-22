@@ -3,7 +3,7 @@
 # 使い方（アドオンのディレクトリで。python -X utf8 build.py で dist/ami.pak を作っておく）:
 #   PORT=47300 bash ingame/cost_probe.sh   （GAME_DIR の既定は F:/Simutrans/addon_check、EXE の既定は OTRPv64_3.exe）
 # 建てる前後の所持金（float）の差と、純資産（整数）の差を並べて出す。
-GAME_DIR=F:/Simutrans/addon_check; EXE=${EXE:-OTRPv64_3.exe}; PORT=${PORT:-47300}; SAVE=${SAVE:-flat_512}
+GAME_DIR=${GAME_DIR:-F:/Simutrans/addon_check}; EXE=${EXE:-OTRPv64_3.exe}; PORT=${PORT:-47300}; SAVE=${SAVE:-flat_512}
 source ingame/mcp_client.sh
 W=work/cost/$PORT; rm -rf $W; mkdir -p $W/save
 cp $GAME_DIR/$EXE $GAME_DIR/*.dll $W/
