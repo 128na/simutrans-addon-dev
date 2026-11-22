@@ -1,19 +1,24 @@
 """多車線と交差点の路面表示の way（waytype=tram_track。AMI #187。ADR 0012）のシート（共通の描画の道具 sheetlib の一部。tools/README.md）。
 
-道路に重ねて敷く路面軌道の way の絵で、白線だけを描く（路面は描かない。下の道路の絵が見える。iss の intersection と同じ draw_as_ding=0）。
-下の道路は白線の無い道路（AMI の ami_road_general_blank。sheetlib の no_lines）にし、白線はすべてこの way が描く。
+道路に重ねて敷く路面軌道の way の絵で、白線と、その下の路面（アスファルト。marking_sheet の paving）を描く（SIS 式。路面ごと描いて下の道路の
+線と雪を覆う）。路面は、下の道路の路側の雪のまだら（road_parts の SNOW_LAYERS の slush0）が始まる所より内だけに敷き、外の路肩は下の道路の
+絵（夏の路面・雪）をそのまま見せる。下の道路は白線のある一般道路のままでよい（その中央線・内の路側線・交差点の中の線は路面が覆い、外の路側線・
+角の円弧は表示と同じ位置）。絵はタイルの内に収まるので、draw_as_ding は付けない（0。docs/reference/cityscape.md の 2.1）。
 種類（marking_sheet の kind）と、つながる形ごとの絵（左側通行。右側通行の版は作らない）:
-  lane4:         4 車線の直線の 1 タイル（2 タイル並べて使う。どちらも同じ絵）。直線・坂・行き止まり（直線と同じ絵）
+  lane4_b:       4 車線の直線の、奥の列（南北の道は西、東西の道は北）の 1 タイル。直線・坂・行き止まり（直線と同じ絵）
+  lane4_f:       同じく手前の列（南北の道は東、東西の道は南）。2 つの列のあいだの帯は路面で覆い、外の路肩は覆わないので、列で絵が違う
+                 （SIS の B・F と同じ分け方）
   junction2:     2 車線の腕（行き止まり）、2 車線どうしの中心（十字・1 タイル）、4 車線 × 2 車線の中心（T字。欠ける向きが相方のタイル）
   junction2_t:   2 車線の腕（行き止まり）、2 車線の T字路の中心（T字。欠ける向きの側に路側線）、十字・1 タイルは junction2 と同じ
   junction4_in:  4 車線の腕の入る側。行き止まり = 2 マス目（導流帯の三角）、T字 = 1 マス目（矢印・停止線・横断歩道）、曲がり = 中心（角の縁石）
-  junction4_out: 4 車線の腕の出る側。行き止まり = 2 マス目、T字 = 1 マス目、曲がり = 中心のスクランブル（交差点の中心線に沿う + の帯）
+  junction4_out: 4 車線の腕の出る側。行き止まり = 2 マス目、T字 = 1 マス目、曲がり = 中心のスクランブル（中心の 4 タイルの対角線に沿う X の横断歩道。
+                 iss の intersection2-2 と同じ）
 4 車線の腕は 2 マス（iss の 2-1・2-2 と同じ）。右折車線は、2 タイルの境をはさむ 2 本の路側線のあいだの帯をそのまま使い、
 通る車線の線は動かさない。腕の 2 列（入る側・出る側）は、2 タイル共通の横位置 V（境が 0、入る側のタイルの中心が +5）で描き、
 タイルごとに切り抜く（右折の矢印・停止線・導流帯がタイルの境をまたぐ）。2 車線の腕は 1 マスで、路側線のあいだを 3 等分し直し、
 腕の外の端の中央線の一点から 2 本に分けて、あいだに楔の導流帯を置く（iss の intersection1 と同じ）。
 位置と幅は道路の白線（road_parts の EDGE_LINE・LINE_W・LINE_TOP・EDGE_CORNER_R・CENTER_DASHES）に合わせる。停止線（MARKING_STOP_U）は横断歩道の手前に置く。
-雪の絵は持たない（車道は除雪した想定で、白線は夏と同じ。dat は雪の絵に夏のセルを使う）。坂は lane4 だけ、斜めは持たない
+雪の絵は持たない（車道は除雪した想定で、路面・白線は夏と同じ。路肩の雪は下の道路の絵。dat は雪の絵に夏のセルを使う）。坂は lane4 だけ、斜めは持たない
 """
 import math
 import os
@@ -23,13 +28,18 @@ import bpy
 from . import sheetlib as _s
 from .cells import ROAD_CY, make_sheet, render_cell
 from .core import H, TILE, apply_slope, clear_models, material, mesh_object, set_anchor
-from .road_parts import CENTER_DASHES, CENTER_DASH_FRAC, EDGE_CORNER_R, EDGE_LINE, LINE_TOP, LINE_W
+from .road_parts import CENTER_DASHES, CENTER_DASH_FRAC, EDGE_CORNER_R, EDGE_LINE, LINE_TOP, LINE_W, SNOW_LAYERS
 
 # ---------------------------------------------------------------- 寸法（部品の 1 単位 ≈ 1 m。タイル 1 辺 10）
 # 腕の位置は、交差点の向き a の座標で、u（a の向き。タイルの中心が 0、交差点の側の辺が +5）と v（a の左を正。左側通行で入る側）で表す
 MARKING_HALF = TILE / 2
 MARKING_E = LINE_W / 2         # 線の半幅（線の縁に合わせるとき）
 MARKING_Z = (0.0, LINE_TOP + 0.004)  # 白線の下面・上面（道路の白線より少しだけ上）
+# 路面の板: 白線より下。敷くのは、路側線から MARKING_PAVE_GAP だけ内まで（下の道路の路側の雪のまだらの始まり。そこから外は下の道路の絵）
+MARKING_PAVE_Z = (-0.002, 0.008)
+MARKING_PAVE_IN = SNOW_LAYERS[0][1]                # 2.47（2 車線の道路の中心からの半幅）
+MARKING_PAVE_GAP = EDGE_LINE - MARKING_PAVE_IN     # 0.9
+MARKING_TEE_MOUTH_COVER = EDGE_LINE + 0.2          # junction2_t の T字の、枝の側の角の内を覆う四角の外の端（下の道路の口の点線の端の外）
 # 白の材質: 道路の白線と同じ明るさに見えるよう、面で描く表示は色と発光を落とす（#156 の作業でゲームの画面の画素を比べて決めた値。ADR 0012）
 MARKING_LINE = ("marking_line", (0.80, 0.80, 0.82), 0.6, 0.0, 0.35)
 # 停止線（u）と横断歩道の帯（u）。縞は幅 0.5・周期 1.0 で、どれも路側線（±EDGE_LINE）の内に収める
@@ -60,10 +70,16 @@ MARKING_W2_SPLIT_U = (-MARKING_HALF, -3.0)       # 楔の導流帯: 中央線の
 MARKING_W2_DASH = ((-2.6, -2.0),)                # 入る側 2 車線の境の破線（楔の先から）。この先は実線
 MARKING_W2_SOLID_U = -1.6
 
-# スクランブル（junction4_out の曲がり）: 交差点の中心線（中心の 4 タイルの内の辺）に沿う横断歩道の帯の、片側の幅
-MARKING_SCRAMBLE_W = 1.5
+# スクランブル（junction4_out の曲がり）: 中心のタイルの、交差点の中心の角から外の角への対角線に沿う横断歩道（4 枚で X）。
+# iss の intersection2-2 の曲がりの絵（release の intersection_kt.png の 8 行目）を測ると、帯の幅は約 3.4、長さは約 10.5 で、タイルの中心に
+# 置き、交差点の中心の角から約 1.8 あけていた（2 本の帯が中心で重ならない）。幅は腕の横断歩道（MARKING_CROSSWALK_U）とそろえて 3.0 にし、
+# 外の端は角の円弧（路側線）の内に収める。縞は幅 MARKING_STRIPE_W・周期 1.0 で、帯に直角
+MARKING_SCRAMBLE_GAP = 1.9    # 内の端の、交差点の中心からの距離（対角線の上）
+MARKING_SCRAMBLE_OUT = 4.6    # 外の端の、タイルの中心からの距離（対角線の上。角の円弧の中ほどは約 5.1）
 
-MARKING_KINDS = ("lane4", "junction2", "junction2_t", "junction4_in", "junction4_out")
+MARKING_KINDS = ("lane4_b", "lane4_f", "junction2", "junction2_t", "junction4_in", "junction4_out")
+# lane4 の列 → 外の路肩の向き（南北の道の向き, 東西の道の向き）
+MARKING_LANE4_OUTER = {"lane4_b": ("w", "n"), "lane4_f": ("e", "s")}
 _DIRS = {"n": (0, 1), "e": (1, 0), "s": (0, -1), "w": (-1, 0)}
 # セル（行, 列）→ 形。位置は ami_dat.py の IMAGES と同じ（iss・blender-poc の線路の並び）
 MARKING_DEADENDS = {(0, 5): "s", (0, 6): "w", (0, 7): "n", (0, 8): "e"}       # 行き止まり → つながる向き
@@ -123,6 +139,11 @@ class _Plan:
 
     def __init__(self):
         self.polys = []
+        self.paves = []
+
+    def pave(self, u0, u1, v0, v1):
+        """路面の板（長方形）"""
+        self.paves.append([(u0, v0), (u1, v0), (u1, v1), (u0, v1)])
 
     def poly(self, pts):
         self.polys.append(list(pts))
@@ -187,18 +208,22 @@ class _Plan:
         for c in centers:
             self.quad(*MARKING_CROSSWALK_U, c - w, c + w)
 
-    def emit(self, a, mat, voff=0.0):
+    def emit(self, a, mat, voff=0.0, pave_mat=None):
         """向き a（単位ベクトル。None なら (u, v) をそのまま (x, y) とする）のタイルへ、横位置を voff だけずらして
-        （タイルの v = V - voff）、タイルの範囲で切り抜いて板にする"""
+        （タイルの v = V - voff）、タイルの範囲で切り抜いて板にする。pave_mat が有れば路面の板も作る"""
         box = (((1, 0), MARKING_HALF), ((-1, 0), MARKING_HALF), ((0, 1), MARKING_HALF), ((0, -1), MARKING_HALF))
-        for i, pts in enumerate(self.polys):
-            pts = [(u, v - voff) for u, v in pts]
-            for n, c in box:
-                pts = _clip(pts, n, c)
-                if len(pts) < 3:
-                    break
-            if len(pts) >= 3 and abs(_area(pts)) > 1e-4:
-                _prism(f"marking{i}", a, pts, mat)
+        layers = [("marking", self.polys, mat, MARKING_Z)]
+        if pave_mat is not None:
+            layers.append(("marking_pave", self.paves, pave_mat, MARKING_PAVE_Z))
+        for tag, polys, m, z in layers:
+            for i, pts in enumerate(polys):
+                pts = [(u, v - voff) for u, v in pts]
+                for n, c in box:
+                    pts = _clip(pts, n, c)
+                    if len(pts) < 3:
+                        break
+                if len(pts) >= 3 and abs(_area(pts)) > 1e-4:
+                    _prism(f"{tag}{i}", a, pts, m, z)
 
 
 def _prism(name, a, pts, mat, z=MARKING_Z):
@@ -220,11 +245,20 @@ def _prism(name, a, pts, mat, z=MARKING_Z):
 
 
 # ---------------------------------------------------------------- 絵（どれも 1 タイル 1 枚。_Plan に集めて emit する）
-def _lane4(plan):
-    """4 車線の直線の 1 タイル（向き a の座標）: 両側の路側線（実線）と、中ほどの車線の境（破線）"""
+def _lane4(plan, side):
+    """4 車線の直線の 1 タイル（向き a の座標）: 両側の路側線（実線）と、中ほどの車線の境（破線）。路面は、外の路肩（side が +1 なら
+    v の正、-1 なら負の側）の MARKING_PAVE_IN より外を除く全面（帯の側はタイルの端まで覆い、下の道路の中央線も覆う）"""
+    h, P = MARKING_HALF, MARKING_PAVE_IN
     for v in (-EDGE_LINE, EDGE_LINE):
-        plan.line(v, -MARKING_HALF, MARKING_HALF)
+        plan.line(v, -h, h)
     plan.dashed(0.0)
+    plan.pave(-h, h, -h if side > 0 else -P, P if side > 0 else h)
+
+
+def _arm4_pave(plan):
+    """4 車線の腕の路面（2 タイル共通の V）: 外の路側線の内 MARKING_PAVE_GAP まで。帯（2 タイルの境）は全部覆う"""
+    w = MARKING_W4_EDGE - MARKING_PAVE_GAP
+    plan.pave(-MARKING_HALF, MARKING_HALF, -w, w)
 
 
 def _arm4_first(plan):
@@ -241,6 +275,7 @@ def _arm4_first(plan):
     plan.arrow((MARKING_W4_BAND + MARKING_W4_LANE) / 2, "straight")
     plan.arrow(0.0, "right")
     plan.crosswalk([i + 0.5 for i in range(-8, 8)])        # -7.5〜7.5（境 0 は縞のあいだ）
+    _arm4_pave(plan)
 
 
 def _arm4_second(plan):
@@ -255,6 +290,7 @@ def _arm4_second(plan):
     plan.seg(top, tip)
     plan.seg((-h + e, bot[1]), (-h + e, top[1]))
     plan.zebra([top, bot, tip])
+    _arm4_pave(plan)
 
 
 def _arm2(plan):
@@ -277,6 +313,7 @@ def _arm2(plan):
     plan.arrow((t + EDGE_LINE) / 2, "straight_left", MARKING_ARROW_DU2)
     plan.arrow(0.0, "right", MARKING_ARROW_DU2)
     plan.crosswalk([i - 3.0 for i in range(7)])
+    plan.pave(-h, h, -MARKING_PAVE_IN, MARKING_PAVE_IN)
 
 
 def _corner(plan, a, b):
@@ -293,26 +330,44 @@ def _corner(plan, a, b):
         plan.seg((x[0] * (E_ + r) + y[0] * E_, x[1] * (E_ + r) + y[1] * E_), (x[0] * h + y[0] * E_, x[1] * h + y[1] * E_))
 
 
-def _center(plan, arms_pairs):
+def _center(plan, arms_pairs, closed=()):
     for a, b in arms_pairs:
         _corner(plan, _DIRS[a], _DIRS[b])
+    _center_pave(plan, arms_pairs, closed)
+
+
+def _center_pave(plan, corners, closed=()):
+    """中心のタイル（(x, y) の座標）の路面: タイルの全面から、角（corners の腕の組）の MARKING_PAVE_IN より外の四角と、
+    閉じた側（closed の向き）の MARKING_PAVE_IN より外の帯を除く（下の道路の、角・閉じた側の雪のまだらの始まり）。
+    4 つの象限を、|x|・|y| が MARKING_PAVE_IN の内か外かで 4 つに分けて敷く"""
+    P, h = MARKING_PAVE_IN, MARKING_HALF
+    outer = {(_DIRS[a][0] + _DIRS[b][0], _DIRS[a][1] + _DIRS[b][1]) for a, b in corners}
+    shut = {_DIRS[c] for c in closed}
+    for sx in (1, -1):
+        for sy in (1, -1):
+            xo, yo = (sx, 0) in shut, (0, sy) in shut
+            for ix, iy, keep in (((0, P), (0, P), True), ((P, h), (0, P), not xo), ((0, P), (P, h), not yo),
+                                 ((P, h), (P, h), not (xo or yo or (sx, sy) in outer))):
+                if keep:
+                    xs = sorted((sx * ix[0], sx * ix[1]))
+                    ys = sorted((sy * iy[0], sy * iy[1]))
+                    plan.pave(xs[0], xs[1], ys[0], ys[1])
 
 
 def _scramble(plan, curve):
-    """曲がり curve の中心のタイル（4 車線どうしの交差点の 4 枚の 1 枚。外の角が curve）の、内の 2 辺に沿う横断歩道の帯
-    （4 枚で交差点の中心線に沿う + の帯になる）。縞は帯の向きに周期 1.0 で並ぶ。帯が交わる所は北南の帯が描く"""
+    """曲がり curve の中心のタイル（4 車線どうしの交差点の 4 枚の 1 枚。外の角が curve）の、交差点の中心の角から外の角への対角線に沿う
+    横断歩道（4 枚で X。iss の intersection2-2 と同じ）。縞は帯に直角で、内の端から周期 1.0 で並ぶ"""
     a, b = (_DIRS[c] for c in curve)
-    h, w, sw = MARKING_HALF, MARKING_SCRAMBLE_W, MARKING_STRIPE_W / 2
-    for along, across in ((a, b), (b, a)):
-        # 内の辺（-across の側）から across の向きへ幅 w の帯。座標 s（across の向き）・t（along の向き）は、どちらも内の辺が -h
-        start = -h if along[1] != 0 else -h + w + 0.25  # 東西の帯は、交わる所の先から
-        xy = lambda s_, t_: (across[0] * s_ + along[0] * t_, across[1] * s_ + along[1] * t_)
-        k = 0
-        while -h + 0.5 + k + sw <= h - 0.25:
-            c = -h + 0.5 + k
-            if c - sw >= start:
-                plan.poly([xy(-h, c - sw), xy(-h + w, c - sw), xy(-h + w, c + sw), xy(-h, c + sw)])
-            k += 1
+    r2 = math.sqrt(2)
+    g = ((a[0] + b[0]) / r2, (a[1] + b[1]) / r2)   # 対角線の向き（外の角へ）
+    p = (-g[1], g[0])
+    w = (MARKING_CROSSWALK_U[1] - MARKING_CROSSWALK_U[0]) / 2
+    sw = MARKING_STRIPE_W / 2
+    pt = lambda d, s: (g[0] * d + p[0] * s, g[1] * d + p[1] * s)
+    c = -(MARKING_HALF * r2 - MARKING_SCRAMBLE_GAP) + sw
+    while c + sw <= MARKING_SCRAMBLE_OUT + 1e-9:
+        plan.poly([pt(c - sw, -w), pt(c + sw, -w), pt(c + sw, w), pt(c - sw, w)])
+        c += 1.0
 
 
 # ---------------------------------------------------------------- 種類と形 → 絵
@@ -325,13 +380,18 @@ def marking_jobs(kind):
     """種類 → {セル: (描く関数, 向き a か None, 横位置のずらし, 坂)}"""
     jobs = {}
     d = lambda c: _DIRS[c]
-    if kind == "lane4":
+    if kind in MARKING_LANE4_OUTER:
+        def lane(a):
+            """向き a のタイルの絵: 外の路肩が a の左（v の正）なら +1"""
+            o = d(MARKING_LANE4_OUTER[kind][0 if a[0] == 0 else 1])
+            side = 1 if o[0] * -a[1] + o[1] * a[0] > 0 else -1
+            return lambda p: _lane4(p, side)
         for rc, axis in MARKING_STRAIGHTS.items():
-            jobs[rc] = (_lane4, d(axis[1]), 0.0, None)
+            jobs[rc] = (lane(d(axis[1])), d(axis[1]), 0.0, None)
         for rc, c in MARKING_DEADENDS.items():
-            jobs[rc] = (_lane4, d(c), 0.0, None)
+            jobs[rc] = (lane(d(c)), d(c), 0.0, None)
         for rc, (axis, slope) in MARKING_SLOPES.items():
-            jobs[rc] = (_lane4, d(axis[1]), 0.0, slope)
+            jobs[rc] = (lane(d(axis[1])), d(axis[1]), 0.0, slope)
         return jobs
     if kind in ("junction2", "junction2_t"):
         four = lambda p: _center(p, (("n", "e"), ("e", "s"), ("s", "w"), ("w", "n")))
@@ -361,8 +421,17 @@ def _tee(m, closed_edge):
     sides = [c for c in "nesw" if c not in (m, opp)]
 
     def draw(plan):
-        _center(plan, ((opp, sides[0]), (opp, sides[1])))
+        _center(plan, ((opp, sides[0]), (opp, sides[1])), (m,) if closed_edge else ())
         if closed_edge:
+            # 下の一般道路の T字は、枝の口を点線で渡す（sheetlib の mouth_dash。太さ 0.3 で口の端 ±EDGE_LINE まで）。点線の端が、路面で
+            # 覆わない角の四角（MARKING_PAVE_IN より外）に 1 画素ずつ出るので、枝の側の角の内の小さな四角も路面で覆う
+            ox, oy = _DIRS[opp]
+            w = MARKING_TEE_MOUTH_COVER
+            for sd in sides:
+                sx_, sy_ = _DIRS[sd]
+                xs = sorted((ox * MARKING_PAVE_IN + sx_ * MARKING_PAVE_IN, ox * w + sx_ * w))
+                ys = sorted((oy * MARKING_PAVE_IN + sy_ * MARKING_PAVE_IN, oy * w + sy_ * w))
+                plan.pave(xs[0], xs[1], ys[0], ys[1])
             mx, my = _DIRS[m]
             px, py = _DIRS[sides[0]]
             h = MARKING_HALF
@@ -370,19 +439,21 @@ def _tee(m, closed_edge):
     return draw
 
 
-def marking_sheet(sheet, kind, label="M"):
+def marking_sheet(sheet, kind, label="M", paving=None):
     """多車線と交差点の路面表示の way のシート（4 行 × 10 列）。種類ごとの形 → 絵は marking_jobs。絵の無い形のセル
-    （MARKING_EMPTY_CELL ほか）は空。アイコン（0,0）は仮の絵（AMI は icons.py が描き直す）、カーソル（0,1）は MARKING_CURSOR の絵"""
+    （MARKING_EMPTY_CELL ほか）は空。アイコン（0,0）は仮の絵（AMI は icons.py が描き直す）、カーソル（0,1）は MARKING_CURSOR の絵。
+    paving は路面の材質を返す関数（下の道路のアスファルトと同じ物。AMI は render.py の _road_asphalt_skin の "asphalt"）。無ければ白線だけ"""
     assert kind in MARKING_KINDS, kind
     set_anchor(ROAD_CY)  # 道路と同じ（dat のオフセット -64,-32）
     mat = material(*MARKING_LINE)
+    pave_mat = paving() if paving else None
     cells = {}
     jobs = marking_jobs(kind)
     for rc, (draw, a, voff, slope) in jobs.items():
         clear_models()
         plan = _Plan()
         draw(plan)
-        plan.emit(a, mat, voff)
+        plan.emit(a, mat, voff, pave_mat)
         if slope:
             for ob in list(bpy.context.scene.objects):
                 if ob.type == "MESH" and ob.name.startswith("marking"):
@@ -394,10 +465,10 @@ def marking_sheet(sheet, kind, label="M"):
     draw, a, voff, _ = jobs[cursor]
     plan = _Plan()
     draw(plan)
-    plan.emit(a, mat, voff)
+    plan.emit(a, mat, voff, pave_mat)
     cells[(0, 0)] = _s.render_icon(sheet + "_icon", 0.5, shift=(-0.14, 0.2), label=label, style="tram")
     make_sheet(cells, MARKING_ROWS, MARKING_COLS, os.path.join(_s.SRC, sheet + ".png"))
 
 
 # カーソルの絵のセル: 北南の直線、北へ向かう 2 車線の腕（行き止まり [n]）、北へ向かう 4 車線の腕の 1 マス目（入る側は T字 [nse]、出る側は [nsw]）
-MARKING_CURSOR = {"lane4": (0, 2), "junction2": (0, 7), "junction2_t": (0, 7), "junction4_in": (3, 5), "junction4_out": (3, 7)}
+MARKING_CURSOR = {"lane4_b": (0, 2), "lane4_f": (0, 2), "junction2": (0, 7), "junction2_t": (0, 7), "junction4_in": (3, 5), "junction4_out": (3, 7)}

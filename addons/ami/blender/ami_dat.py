@@ -93,7 +93,6 @@ DIAG_CURVES = {_t.way for _t in catalog.ALL_TRACKS} | {_r.way for _r in catalog.
 DIAG_CURVES |= {catalog.MONORAIL, *catalog.MONORAIL_ELEVS}
 DIAG_CURVES.add(catalog.CANAL)  # 運河（#114）もカーブは斜めの絵
 DIAG_CURVES |= {*catalog.MONORAIL_SUSPENDEDS, *catalog.MONORAIL_SUSPENDED_ELEVS}  # 懸垂式（#116）も跨座式と同じ
-DIAG_CURVES.add(catalog.ROAD_BLANK)  # 白線の無い一般道路（#187）は一般道路と同じ
 CURVE_TO_DIAG = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
 
 # 手前の絵（frontimage など）を持つ way: シートは 奥の絵 4 行 → 手前の絵 4 行 → 雪の奥の絵 4 行 → 雪の手前の絵 4 行
@@ -123,9 +122,6 @@ TRAM_SWITCH_IMAGES = True
 # 道路 3 種の通常の版（#21）。並びは線路の通常の版と同じ（近い斜め・分岐の絵を持つ）。waytype と値は VALUES
 for _r in catalog.ROADS:
     BUILT[_r.way] = _r.way
-# 白線の無い一般道路（#187。ADR 0012）: 並び・値は一般道路の通常の版と同じ（近い斜め・分岐の絵を持つ）。白線だけが無い
-BUILT[catalog.ROAD_BLANK] = catalog.ROAD_BLANK
-VALUES[catalog.ROAD_BLANK] = VALUES[catalog.ROAD_GENERAL.way]
 # 道路の地上の基盤の版（#22。2026-11-19 にユーザーが確定）: 線路の基盤の版と同じく近い斜めの絵を持たず、カーブはカーブのセル（斜めの形）。
 # 値は通常の版と同じ（README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
 for _r in catalog.ROADS:
@@ -533,14 +529,14 @@ def embankment_dat_text(name, sheet):
             out.append(f"{key}{idx}[{season}]={sheet}.{row + season * EMBANKMENT_SNOW_ROWS}.{col},-64,-32")
     return NL.join(out) + NL
 
-# 多車線と交差点の路面表示の way（#187。ADR 0012）: 道路に重ねて敷く白線だけの way。waytype は橋脚・盛土と同じ tram_track、速さ 1
+# 多車線と交差点の路面表示の way（#187。ADR 0012）: 道路に重ねて敷く白線と路面の way。waytype は橋脚・盛土と同じ tram_track、速さ 1
 # （路面軌道・線路とつながっても速く走れない。車の速さは変わらない）。値は橋脚・盛土と同じ（ADR 0012）
 MARKING_VALUES = dict(waytype="tram_track", cost=1000, maintenance=100, intro_year=1900, topspeed=1)
 # 種類 → 絵のあるセル（tools/blender/sheetlib/marking.py の marking_jobs と同じ）。ほかの形は空のセル（MARKING_EMPTY_CELL）
 _MARK_DEADENDS = {(0, 5), (0, 6), (0, 7), (0, 8)}
 _MARK_TEES = {(3, 5), (3, 6), (3, 7), (3, 8)}
 MARKING_CELLS = {
-    "lane4": {(0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (1, 5), (1, 6), (1, 7), (1, 8)} | _MARK_DEADENDS,
+    **{k: {(0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (1, 5), (1, 6), (1, 7), (1, 8)} | _MARK_DEADENDS for k in ("lane4_b", "lane4_f")},
     "junction2": _MARK_DEADENDS | _MARK_TEES | {(0, 9), (3, 9)},
     "junction2_t": _MARK_DEADENDS | _MARK_TEES | {(0, 9), (3, 9)},
     "junction4_in": _MARK_DEADENDS | _MARK_TEES | {(2, 5), (2, 6), (2, 7), (2, 8)},
@@ -551,11 +547,11 @@ MARKING_EMPTY_CELL = (0, 4)
 
 def marking_dat_text(name, kind):
     """路面表示の way の dat。曲がりは曲がりのセル（斜めの絵は持たない）、分岐の絵は T字・十字のセル（PIER_SWITCH）。
-    雪の絵（[1]）は夏と同じセル（車道は除雪した想定で、白線は夏と同じ。ADR 0012）"""
+    雪の絵（[1]）は夏と同じセル（車道は除雪した想定で、路面・白線は夏と同じ。路肩の雪は下の道路の絵。ADR 0012）"""
     v = MARKING_VALUES
     cell = {(key, idx): (row, col) for key, idx, row, col in IMAGES}
     out = [
-        f"# AMI: {name}（CC BY 4.0）。道路に重ねて敷く路面表示（白線だけ）の way。種類は {kind}。シートは blender/render.py が描く",
+        f"# AMI: {name}（CC BY 4.0）。道路に重ねて敷く路面表示（白線と路面）の way。種類は {kind}。シートは blender/render.py が描く",
         "obj=way",
         f"name={name}",
         "copyright=AMI (CC BY 4.0)",

@@ -15,7 +15,6 @@ SHEETS.update({_r.way: _r.way for _r in catalog.ROADS})
 for _r in catalog.ROADS:
     SHEETS.update({_r.base(v): _r.base(v) for v in catalog.VARIANTS})
     SHEETS.update({_r.elev(v): _r.elev(v) for v in catalog.VARIANTS})
-SHEETS[catalog.ROAD_BLANK] = catalog.ROAD_BLANK  # 白線の無い一般道路（#187）
 SHEETS.update({_m: _m for _m in catalog.MARKINGS})  # 路面表示の way（#187）
 SHEETS[catalog.PIER_ROAD] = catalog.PIER_ROAD
 SHEETS[catalog.TRAM] = catalog.TRAM
@@ -29,4 +28,3 @@ SHEETS[catalog.CANAL] = catalog.CANAL  # 運河（#114）
 DIAG_CURVE_SHEETS = {_t.way for _t in catalog.ALL_TRACKS} | {_r.way for _r in catalog.ROADS}
 DIAG_CURVE_SHEETS |= {catalog.MONORAIL, *catalog.MONORAIL_ELEVS}  # 跨座式モノレールは高架の版もカーブを斜めの絵（#113）
 DIAG_CURVE_SHEETS.add(catalog.CANAL)  # 運河もカーブは斜めの絵（#114）
-DIAG_CURVE_SHEETS.add(catalog.ROAD_BLANK)  # 白線の無い一般道路（#187）は一般道路と同じ

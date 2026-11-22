@@ -196,8 +196,6 @@ def _road_sheet(style="street"):
     elev_body: 基盤の下に躯体を足す（深さ body_d、壁のある側は壁の外の面から body_inset 内で止める、材質 body_mat。
         既定は高架の ELEV_BODY_D・ELEV_BODY_INSET・_M_ELEV_BODY。橋の桁は body_inset=0 と桁の材質）
     curve_cells: カーブのセル（2, 5〜8）も斜めの形で描き、タイルの半分で切らない（壁の無い側をタイルの端まで。地上の基盤の版・高架）
-    no_lines: 真なら白線を 1 本も描かない（路面・縁石・走行跡・雪はそのまま）。白線を路面軌道の景観の way で重ねて描く道路
-        （AMI の ami_road_general_blank。#187。iss の幹線タイル iss_wrg_1200_z_high と同じ考え方）
     lower と solid を両方持つ橋は、平らなセルだけ持ち分を下へ広げる（端の坂と坂から始まる端は広げない。track_sheet と同じ）"""
     prof = ROAD_PROFILES[style]
     expwy = prof.get("expressway", False)
@@ -220,7 +218,6 @@ def _road_sheet(style="street"):
         return [(p, u, "cdash")] if center_kind == "dash" else [(p, u)]
 
     both = lambda p: [(p, -EDGE_LINE)] + center(p) + [(p, EDGE_LINE)]  # 両側の白線と中央線
-    no_lines = prof.get("no_lines", False)
     # 行き止まり: 車道は奥の歩道の手前（両脇の歩道と同じ幅を残す）まで
     end = lambda d: [-Vector(d).normalized() * ROAD_HW, Vector(d) * 1.12]
     sides = lambda p: [(p, -EDGE_LINE), (p, EDGE_LINE)]
@@ -558,7 +555,7 @@ def _road_sheet(style="street"):
         for pos, (name, paths, lines, slope, *rest) in jobs.items():
             clear_models()
             # 壁を way-object に分ける版の坂: 壁をタイルの外へ長めに残す（track_sheet と同じ。坂の上がった側の端で壁の最後の列が欠ける）
-            obs = build_road(paths, [] if no_lines else lines, slope, corners=rest[0] if rest else (), ends=name in ("s", "w", "n", "e"),
+            obs = build_road(paths, lines, slope, corners=rest[0] if rest else (), ends=name in ("s", "w", "n", "e"),
                              wear_paths=wear.get(name, wear.get(_junction(name))),
                              tall_pad=SLOPE_WALL_PAD if wall_sheet and slope else None, **kw)
             shoot(pos, row0, cn(name), name, paths, slope, obs)
@@ -573,7 +570,7 @@ def _road_sheet(style="street"):
                 # 路側の白線も、経路（画素の行の境）からの距離を「整数 + 0.5」px に丸めて1行に収める（約 0.3px 内へ）。
                 # 縦向きの斜め（sw・ne）はそのままで列に収まる。両方を同時に収める EDGE_LINE は無い
                 e = (math.floor(EDGE_LINE * DIAG_EDGE * DIAG_PX) + 0.5) / DIAG_PX / ROAD_DIAG
-            lines = [] if no_lines else [(path, -e)] + center(path, c) + [(path, e)]
+            lines = [(path, -e)] + center(path, c) + [(path, e)]
             return build_road([path], lines, scale=ROAD_DIAG,
                               half=path if cut_half else None, hw=ROAD_HW * k, curb_w=CURB_W * DIAG_EDGE, half_over=over, **kw)
 

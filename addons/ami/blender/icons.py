@@ -50,7 +50,6 @@ WAY_BG = {"rail": ((0, 196, 96), (0, 112, 56)), "tram": ((214, 160, 0), (140, 92
           "monorail": ((168, 72, 200), (96, 32, 120)),  # モノレール（#113）は紫（色相 285。ほかの waytype と 20 度以上離す。check_icons.py）
           "canal": ((0, 170, 190), (0, 96, 112))}  # 運河（#114）は青緑（色相 186）
 VERSION_MARK = {"single": "単", "back": "後", "center": "中", "front": "前", "twin": "双"}
-VERSION_MARK["blank"] = "無"  # 白線の無い一般道路（ami_road_general_blank。#187）
 DECK = (215, 215, 220)  # 帯の床・柱の色
 BOLT = [(13, 1), (4, 15), (9, 15), (6, 26), (17, 10), (12, 10), (16, 1)]  # 稲妻（32px の座標）
 TRANSPARENT = np.array(R.TRANSPARENT)
@@ -83,16 +82,16 @@ def ref(v):
 
 
 # 路面表示（#187）の左上の字と、絵にするセル（北へ向かう腕・北南の直線・北が閉じた T字の中心）
-MARK_LABELS = {"ami_mark_lane4": "線", "ami_mark_junction2": "交", "ami_mark_junction2_t": "丁",
+MARK_LABELS = {"ami_mark_lane4_b": "奥", "ami_mark_lane4_f": "前", "ami_mark_junction2": "交", "ami_mark_junction2_t": "丁",
                "ami_mark_junction4_in": "入", "ami_mark_junction4_out": "出"}
-MARK_PICTURE = {"ami_mark_lane4": "image[ns][0]", "ami_mark_junction2": "image[n][0]", "ami_mark_junction2_t": "image[sew][0]",
+MARK_PICTURE = {"ami_mark_lane4_b": "image[ns][0]", "ami_mark_lane4_f": "image[ns][0]", "ami_mark_junction2": "image[n][0]", "ami_mark_junction2_t": "image[sew][0]",
                 "ami_mark_junction4_in": "image[nse][0]", "ami_mark_junction4_out": "image[nsw][0]"}
 
 
 def describe(d):
     """dat から、アイコンの決まりに使う中身を取る"""
     name, obj = d["name"], d["obj"]
-    m = re.search(r"_(single|back|center|front|twin|blank)(_catenary|_divider|_pole)?$", name)
+    m = re.search(r"_(single|back|center|front|twin)(_catenary|_divider|_pole)?$", name)
     info = dict(name=name, version=m.group(1) if m else None, speed=None, struct=None, label=None,
                 old=catalog.is_old(name))  # old: 旧描画位置（SIS に合う。#26）の物。アイコンの左下に「旧」
     if name.startswith(("ami_tram", "ami_embankment", "ami_mark_")):  # 盛土・路面表示は tram_track の way（路面軌道の道具の一覧に出る）

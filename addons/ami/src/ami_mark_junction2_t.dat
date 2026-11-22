@@ -1,4 +1,4 @@
-# AMI: ami_mark_junction2_t（CC BY 4.0）。道路に重ねて敷く路面表示（白線だけ）の way。種類は junction2_t。シートは blender/render.py が描く
+# AMI: ami_mark_junction2_t（CC BY 4.0）。道路に重ねて敷く路面表示（白線と路面）の way。種類は junction2_t。シートは blender/render.py が描く
 obj=way
 name=ami_mark_junction2_t
 copyright=AMI (CC BY 4.0)
