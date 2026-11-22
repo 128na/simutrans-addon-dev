@@ -129,7 +129,7 @@ SIS は CC BY-NC-SA 4.0 なので、画像と dat は AMI に入れない（[ref
 
 ### 6.1 本体の決まり（`../simutrans/obj/roadsign.cc` の `roadsign_t::calc_image`）
 
-- 道路の標識は、左側通行の設定（`drive_left`）が入っていて、かつ標識の `offset_left` が 0 でないときだけ、左側用の置き方になる。
+- 道路の標識の絵をずらし、車両の奥・手前を入れ替えるのは、左側通行の設定（`drive_left`）が入っていて、かつ標識の `offset_left` が 0 でないときだけ。左側用の絵を別に持つ標識（下の OTRP の項）は、`offset_left` によらずその絵に替わる。
 - `offset_left` の値は pak の形式の版で決まる（`descriptor/reader/roadsign_reader.cc`）。
   - 版 4 以降: dat に書いた値。書かなければ 14（`descriptor/writer/roadsign_writer.cc`）。
   - 版 3 以前: 14 に固定。ただし経路の選択の標識とプレーヤー専用の標識は 0。
@@ -155,7 +155,7 @@ SIS は CC BY-NC-SA 4.0 なので、画像と dat は AMI に入れない（[ref
 | ISS（`iss_sr_*`） | `iss_road_sign.pak` | 6 | 0 |
 | tku の路面の標示（`tku_style_road_z0sign_*`） | addons の `all.pak` | 5 | 0 |
 | SIS（`SIS_E_RSgs_*`・`SIS_L_RSsg_*`） | addons の `all.pak` | 3 | 14 |
-| pak128 標準（`Minimum100`・`RoadClosed`・`NoEntry`・`autobahn_*` など） | pakset の `infrastructure.road_signs.all.pak`（版 6、`RoadClosed`・`NoEntry`・`autobahn_*` は 0）と、addons の `all.pak`（版 3） | 3 が残る | 14（`choose_point` などの経路の選択は 0） |
+| pak128 標準（`Minimum100`・`RoadClosed`・`NoEntry`・`autobahn_*` など） | pakset の `infrastructure.road_signs.all.pak`（版 6、`RoadClosed`・`NoEntry`・`autobahn_*` は 0）と、addons の `all.pak`（版 3） | 3 が残る | 14（`choose_point` などの経路の選択は 0。版 3 は値を持たないので、読み込み側の決まりを当てた値） |
 
 - 景観アドオンを多く入れた検証用のフォルダでは、addons の `all.pak` に pak128 標準の標識の古い形式の写しが入っていて、後から読まれる。このため、pakset では 0 の `RoadClosed` なども 14 として動く。標識の左のずれは、dat のソースではなく、入っている pak の版と値で決まる。
 - 左側通行だけが違う 2 つの地図（`flat_512_left` と `flat_512`）に同じ手順で標識を建て、絵の範囲を比べた。`offset_left` が 14 の標識（SIS、pak128 の `Minimum100`・`RoadClosed`・`NoEntry`・`autobahn_classic_entrance`）は、横 56px・縦 28px 前後ずれた。0 の標識（ISS・tku・`choose_point`）は変わらなかった。上の表どおり。
@@ -165,5 +165,7 @@ SIS は CC BY-NC-SA 4.0 なので、画像と dat は AMI に入れない（[ref
   - 路面の標示（ISS の横断歩道・tku）は、北行き・南行き、左側通行のあり・なしのどれでも、上に止まったバスに重なって描かれた。両方向の標識で `offset_left` が 0 なので、北向きの絵がいつも「手前」になる（上の表と合う）。路面の標示を車線の上に置くと、車両の上に出る。
   - SIS の門型（一方通行）は、左側通行ありで、1 回建てた（北向き）ものは「奥」になり、南行きのバスが門型の手前に描かれた。2 回建てた（南向き）ものは「手前」になり、北行きのバスの上に板が描かれた。向きによって、門型が車両の上に出るか下に隠れるかが変わる。
   - 車両自身も左側通行の設定で走る車線が変わるので、標識と車両の位置関係は設定ごとに確かめる。
-  - 東西の道路と、柱の標識（ISS の案内板・pak128 の柱）とバスの重なりは撮っていない。
+  - 柱の標識も、手前になる絵は車両の上に描かれた。pak128 の `Minimum100`（両方向、`offset_left` 14）は、左側通行なしの北行きで表の円板が、ありの南行きで裏の円板と柱がバスの上に出た。ISS の案内板（`iss_sr_direction_info_1`、0）は、左側通行ありの南行きで柱がバスの上に出た。
+  - 2 車線の道路を 2 本並べた 4 車線では、内側の道路に建てた標識は、柱や裏の円板が 4 車線の真ん中の車線の間に立った（外側の道路に建てた場合は撮っていない）。
+  - 東西の道路の重なりは撮っていない。
 - 一方通行の標識を南北の道路に 1 回だけ建てると、北向きになり、北行きの車両が通れなかった（車庫から出なかった）。もう一度建てて南向きにすると通れた。景観に使うときも、車両の通る向きと標識の向きを合わせる。
