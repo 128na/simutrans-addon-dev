@@ -534,7 +534,7 @@ def embankment_dat_text(name, sheet):
     return NL.join(out) + NL
 
 # 多車線と交差点の路面表示の way（#187。ADR 0012）: 道路に重ねて敷く白線だけの way。waytype は橋脚・盛土と同じ tram_track、速さ 1
-# （路面軌道・線路とつながっても速く走れない。車の速さは変わらない）。値は #156 の決定（橋脚・盛土と同じ）を引き継ぐ
+# （路面軌道・線路とつながっても速く走れない。車の速さは変わらない）。値は橋脚・盛土と同じ（ADR 0012）
 MARKING_VALUES = dict(waytype="tram_track", cost=1000, maintenance=100, intro_year=1900, topspeed=1)
 # 種類 → 絵のあるセル（tools/blender/sheetlib/marking.py の marking_jobs と同じ）。ほかの形は空のセル（MARKING_EMPTY_CELL）
 _MARK_DEADENDS = {(0, 5), (0, 6), (0, 7), (0, 8)}
@@ -551,7 +551,7 @@ MARKING_EMPTY_CELL = (0, 4)
 
 def marking_dat_text(name, kind):
     """路面表示の way の dat。曲がりは曲がりのセル（斜めの絵は持たない）、分岐の絵は T字・十字のセル（PIER_SWITCH）。
-    雪の絵（[1]）は夏と同じセル（車道は除雪した想定で、白線は夏と同じ。#156 の決定）"""
+    雪の絵（[1]）は夏と同じセル（車道は除雪した想定で、白線は夏と同じ。ADR 0012）"""
     v = MARKING_VALUES
     cell = {(key, idx): (row, col) for key, idx, row, col in IMAGES}
     out = [

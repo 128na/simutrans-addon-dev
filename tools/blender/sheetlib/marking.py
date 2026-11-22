@@ -12,7 +12,7 @@
 通る車線の線は動かさない。腕の 2 列（入る側・出る側）は、2 タイル共通の横位置 V（境が 0、入る側のタイルの中心が +5）で描き、
 タイルごとに切り抜く（右折の矢印・停止線・導流帯がタイルの境をまたぐ）。2 車線の腕は 1 マスで、路側線のあいだを 3 等分し直し、
 腕の外の端の中央線の一点から 2 本に分けて、あいだに楔の導流帯を置く（iss の intersection1 と同じ）。
-位置と幅は道路の白線（road_parts の EDGE_LINE・LINE_W・LINE_TOP・STOP_LINE_W・EDGE_CORNER_R・CENTER_DASHES）に合わせる。
+位置と幅は道路の白線（road_parts の EDGE_LINE・LINE_W・LINE_TOP・EDGE_CORNER_R・CENTER_DASHES）に合わせる。停止線（MARKING_STOP_U）は横断歩道の手前に置く。
 雪の絵は持たない（車道は除雪した想定で、白線は夏と同じ。dat は雪の絵に夏のセルを使う）。坂は lane4 だけ、斜めは持たない
 """
 import math
@@ -23,15 +23,14 @@ import bpy
 from . import sheetlib as _s
 from .cells import ROAD_CY, make_sheet, render_cell
 from .core import H, TILE, apply_slope, clear_models, material, mesh_object, set_anchor
-from .road_parts import CENTER_DASHES, CENTER_DASH_FRAC, EDGE_CORNER_R, EDGE_LINE, LINE_TOP, LINE_W, STOP_LINE_W
+from .road_parts import CENTER_DASHES, CENTER_DASH_FRAC, EDGE_CORNER_R, EDGE_LINE, LINE_TOP, LINE_W
 
 # ---------------------------------------------------------------- 寸法（部品の 1 単位 ≈ 1 m。タイル 1 辺 10）
 # 腕の位置は、交差点の向き a の座標で、u（a の向き。タイルの中心が 0、交差点の側の辺が +5）と v（a の左を正。左側通行で入る側）で表す
 MARKING_HALF = TILE / 2
 MARKING_E = LINE_W / 2         # 線の半幅（線の縁に合わせるとき）
 MARKING_Z = (0.0, LINE_TOP + 0.004)  # 白線の下面・上面（道路の白線より少しだけ上）
-MARKING_DRIVE_LEFT = True      # 左側通行（日本）。右側通行の版は作らない（#156 の決定を引き継ぐ）
-# 白の材質: 道路の白線と同じ明るさに見えるよう、面で描く表示は色と発光を落とす（#156 でゲームの画面の画素を比べて決めた値）
+# 白の材質: 道路の白線と同じ明るさに見えるよう、面で描く表示は色と発光を落とす（#156 の作業でゲームの画面の画素を比べて決めた値。ADR 0012）
 MARKING_LINE = ("marking_line", (0.80, 0.80, 0.82), 0.6, 0.0, 0.35)
 # 停止線（u）と横断歩道の帯（u）。縞は幅 0.5・周期 1.0 で、どれも路側線（±EDGE_LINE）の内に収める
 MARKING_STOP_U = (0.43, 0.77)

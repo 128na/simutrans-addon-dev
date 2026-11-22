@@ -553,7 +553,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
   - `ami_mark_lane4`: 4 車線の直線の 1 タイル分の線（路側線 2 本と、真ん中の車線の境の破線）。道路を 2 本並べた 2 タイルに同じ物を敷く。2 タイルのあいだは空きの帯で、中央分離帯（#118）を置ける。直線・坂・行き止まり（直線と同じ絵）だけ
   - `ami_mark_junction2`: 2 車線の腕（行き止まりの形）と中心（十字・1 タイル）。4 車線 × 2 車線の十字の中心（T字の形。欠ける向きが相方のタイル）にも使う
   - `ami_mark_junction2_t`: 2 車線の T字路の中心（T字の形。閉じた側に路側線）。腕は `junction2` と同じ
-  - `ami_mark_junction4_in`・`ami_mark_junction4_out`: 4 車線の腕の入る側・出る側と、4 車線どうしの中心（曲がりの形。`_in` は角の縁石の弧だけ、`_out` はスクランブルの帯も）。iss の 2-1・2-2 に当たる
+  - `ami_mark_junction4_in`・`ami_mark_junction4_out`: 4 車線の腕の入る側・出る側と、4 車線どうしの中心（曲がりの形。`_in` は角の路側線の弧だけ、`_out` はスクランブルの帯も）。iss の 2-1・2-2 に当たる
 - 形と絵（つながる向きで絵が決まる。最後に敷いた way の名前がタイルに残り、つながる向きは足される。[cityscape.md](../../docs/reference/cityscape.md) の 3 章）:
 
 | way | 行き止まり | T字 | 曲がり | 十字・1 タイル | 直線・坂 |
@@ -571,9 +571,9 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
   - 2 車線の腕は 1 マス。路側線のあいだを 3 等分し直し、入る側 2 車線・出る側 1 車線にする。腕の外の端の中央線の一点から 2 本に分け（入る側 2 車線の境と、寄せた中央線）、あいだに楔の導流帯を置く（iss の intersection1 と同じ。2026-11-22、ユーザーの指摘）
   - 中心の角は、道路の交差点と同じ半径の弧（`road_parts.py` の `EDGE_CORNER_R`）で路側線をつなぐ
   - スクランブル（`junction4_out` の曲がり）は、中心の 4 タイルの内の辺に沿う横断歩道の帯（4 タイルで交差点の中心線に沿う + の帯）
-- 描き方は `tools/blender/sheetlib/marking.py`（`marking_sheet`。#188 の高速道路でも使う）。白の材質は #156 で道路の白線に合わせた値（`MARKING_LINE`）。表示は白線だけで、路面は描かない（`draw_as_ding=0`。下の道路の絵が見える）
-- 雪の絵は夏と同じセル（車道は除雪した想定で、白線は夏と同じ）。下の `ami_road_general_blank` の雪は一般道路と同じで、路側線の外の路肩に積もる。4 車線の中央の帯と、交差点の中心のタイルの角にも雪が残る
-- 値: 速さ 1・費用 1000・維持費 100・登場 1900（#156 の決定。橋脚・盛土と同じ）。`ami_road_general_blank` は一般道路と同じ。右側通行の版は作らない
+- 描き方は `tools/blender/sheetlib/marking.py`（`marking_sheet`。#188 の高速道路でも使う）。白の材質は、ゲームの画面で道路の白線と同じ明るさに見える値（`MARKING_LINE`。#156 の作業で画素を比べて決めた）。表示は白線だけで、路面は描かない（`draw_as_ding=0`。下の道路の絵が見える）
+- 雪の絵は夏と同じセル（車道は除雪した想定で、白線は夏と同じ）。下の `ami_road_general_blank` の雪は一般道路と同じで、路側線の外の路肩に積もる。4 車線の 2 タイルのあいだの帯（直線の中央の帯と、腕の右折車線）と、交差点の中心の 4 タイルの角にも雪が残り、帯の中の白線（右折の矢印・導流帯）は雪に埋もれる
+- 値: 速さ 1・費用 1000・維持費 100・登場 1900（橋脚・盛土と同じ。速さ 1 は路面軌道・線路とつながっても速く走れないため。ADR 0012）。`ami_road_general_blank` は一般道路と同じ。右側通行の版は作らない
 - pak は道路の `ami_road.pak`（と全部入りの `ami.pak`）。道具は路面軌道のメニュー（`tram_track`）にある。アイコンは路面軌道の色に左上の字（`lane4` は 線、`junction2` は 交、`junction2_t` は 丁、`junction4_in` は 入、`junction4_out` は 出）。`ami_road_general_blank` は一般道路のアイコンに右下の札 無
 - 形の範囲: 2 車線どうし（十字・T字）、4 車線どうし（十字。中心はふつう・スクランブル）、4 車線 × 2 車線（十字）。4 車線の T字と 6 車線は入れない。高速道路は #188、交差点でない所の横断歩道は #162
 - 敷く手順（`ingame/marking_sample.nut` と同じ）:
@@ -584,7 +584,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
   5. 4 車線 × 2 車線: 4 車線の 2 列を `junction4_in` で腕の外の端から反対の腕の外の端まで通して敷き、1 マス目を横につなぐ。2 車線の腕の外の端から中心へ `junction2` を敷き、4 車線の出る側の 2 マスを `junction4_out` で敷き直す
   6. 2 車線: 腕の外の端から反対の腕の外の端へ `junction2`（T字路は `junction2_t`）
 - 注意: 路面軌道・線路のタイルには置かない（表示が軌道とつながり、絵と軌道の向きが崩れる）。交差点の形と違う形に敷くと、その形の絵が無く、何も描かれない
-- 見本: `ingame/marking_sample.nut`（撮る場所は `ingame/sample_spots.sh` の `MARKING_SPOTS`）。4 車線どうしの十字（X4）とスクランブル（X4S）、4 車線 × 2 車線（X42）、2 車線の十字（X2）と T字路（T2）を、温暖側と降雪側に敷く。`[check]` の行で、道路と表示の名前と向きを確かめる
+- 見本: `ingame/marking_sample.nut`（撮る場所は `ingame/sample_spots.sh` の `MARKING_SPOTS`）。4 車線どうしの十字（X4）とスクランブル（X4S）、4 車線 × 2 車線（X42）、2 車線の十字（X2）と T字路（T2）を、温暖側と降雪側に敷く。`[check]` の行で、道路と表示の名前を期待と比べる（向きは行に出すだけで、比べない）。撮った画面は `docs/marking187_<温暖 temperate・降雪 snow>_<区画>.png`
 - 多車線の路面表示の版（#121 の `ami_road_general_lane<n>`・`ami_road_expressway_lane<n>` の 14 本）は、#187 で外した（[ADR 0012](../../docs/adr/0012-ami-lane-and-junction-marking-as-tram-way.md)。ベータ版 beta.2 で配った物で、名前が消える。[記録](../../docs/records/2026-11-22_ami-lane-and-junction-marking.md)）
 
 ### 踏切の作り（#111）
@@ -800,7 +800,7 @@ python -X utf8 blender/ami_dat.py                                              #
 python -X utf8 build.py                                                        # makeobj で dist/ へ
 ```
 
-- `build.py` は、全部入りのまとめ `dist/ami.pak` と、種類別の `ami_rail.pak`（線路）・`ami_tram.pak`（路面軌道）・`ami_road.pak`（道路）・`ami_monorail.pak`（モノレール）・`ami_canal.pak`（運河）・`ami_extra.pak`（付属）・`ami_scenery.pak`（景観）と、旧描画位置の物（#26）だけを集めた `ami_rail_old.pak` を作る。旧の物は `ami.pak` と種類別の pak（旧の `ami_rail_old.pak` 以外）に入らない（`build.py` の `belongs`）。dat が無い種類は作らない。makeobj の出力に警告かエラーがあれば止まる
+- `build.py` は、全部入りのまとめ `dist/ami.pak` と、種類別の `ami_rail.pak`（線路）・`ami_tram.pak`（路面軌道）・`ami_road.pak`（道路と路面表示 `ami_mark_*`）・`ami_monorail.pak`（モノレール）・`ami_canal.pak`（運河）・`ami_extra.pak`（付属）・`ami_scenery.pak`（景観）と、旧描画位置の物（#26）だけを集めた `ami_rail_old.pak` を作る。旧の物は `ami.pak` と種類別の pak（旧の `ami_rail_old.pak` 以外）に入らない（`build.py` の `belongs`）。dat が無い種類は作らない。makeobj の出力に警告かエラーがあれば止まる
 - `build.py` は続けて、`src/ex_donors.dat` から提供用の pak（`work/ex/donors.pak`）を作り、各 pak の線路・路面軌道・架線つきの壁へ ex 画像を継ぎ足す（上の「分岐の追加画像」）。継ぎ足した数を出し、pak ごとに名前で当たる提供用の物が全部写ったことと、継ぎ足した絵（26〜29・31〜34 番が空でなく、通常の T字・十字と違うこと、30・35 番が通常の十字と同じこと）を確かめ、違えば止まる。pak の中の ex 画像の数は `python -X utf8 ex_graft.py --list dist/ami.pak` で見られる
 - シートを複数描くときは `python -X utf8 ..\..\tools\blender\render_parallel.py <対象>...`。レイアウト検証用モードは `SHEET_LAYOUT=1`（`work/layout/` に書く）
 - レイアウト検証用モードの pak は `SHEET_LAYOUT=1` で描いた後、`SHEET_LAYOUT=1 python -X utf8 build.py`（`work/layout/dist/` に作る）
