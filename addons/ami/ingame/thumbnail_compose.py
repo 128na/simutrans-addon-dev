@@ -45,9 +45,9 @@ FONT_BODY = os.environ.get("FONT_BODY", str(FONTS / "YuGothB.ttc"))  # 游ゴシ
 TITLE = "AI Marunage Infrastructure"
 BODY = [
     "内容",
-    "　線路 4 種（バラスト・直結・ラダー・スラブ）",
-    "　道路 3 種、路面軌道、歩道",
-    "　高架・橋・トンネル・壁・架線",
+    "　線路・道路・路面軌道・歩道",
+    "　モノレール・運河・車庫・操車場",
+    "　高架・橋・トンネル・壁・電柱",
 ]
 COUNT = "約 {n} 種類"
 

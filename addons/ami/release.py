@@ -8,7 +8,7 @@ zip（work/release/ami-<版>.zip）の中身:
     ami_readme.txt     release/readme.txt の {version} を版の名前に置き換えたもの（遊ぶ人向けの簡潔な説明・導入方法・注意点。#137）
     ami_license.txt    release/license.txt（CC BY 4.0 と帰属）
     ami_lineup.txt     --paks で選んだ pak に入る物の一覧。src/ の dat から lineup.py が作る（#138）
-    thumbnail.png      docs/thumbnail.png があれば入れる（#96）
+    thumbnail.png      docs/thumbnail/thumbnail.png があれば入れる（#96）
     pak128/text/ja_ami.tab  release/text/ja_ami.tab（日本語の名前。今は道路標識の 6 種。#122）。ゲームの addons/pak128/text/ に入り、
                        本体はファイル名の先頭 2 文字で言語を決める（dataobj/translator.cc）。読んでいない pak の物の訳は使われないだけ
 pak の名前が dist/ に無いとき、--paks に ami（全部入り）と種類別を混ぜたとき（同じ物を二重に読む）は止まる。
@@ -27,7 +27,7 @@ DIST = os.path.join(HERE, "dist")
 OUT = os.path.join(HERE, "work", "release")
 TEMPLATE = os.path.join(HERE, "release")
 TEXTS = os.path.join(TEMPLATE, "text")
-THUMBNAIL = os.path.join(HERE, "docs", "thumbnail.png")
+THUMBNAIL = os.path.join(HERE, "docs", "thumbnail", "thumbnail.png")
 KINDS = ("ami_rail", "ami_road", "ami_tram", "ami_monorail", "ami_canal", "ami_extra", "ami_scenery", "ami_rail_old")  # build.py の KINDS と同じ
 
 
