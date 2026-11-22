@@ -59,9 +59,9 @@ function lay(ox, oy) {
   local s = "";
   // Y1
   s += way("Y1 a", c(0, 0), c(0, 8));
-  local cash = pl.get_current_cash();
+  local cash = pl.get_current_net_wealth() / 100.0;  // 所持金（get_current_cash）は 32 ビット float で、残高が大きいと 64 cr 刻みに丸められる（#160）
   s += build("Y1", 0, 3);
-  infos += "[info] Y1 (0,3) charged " + (cash - pl.get_current_cash()) + " cr\n";
+  infos += "[info] Y1 (0,3) charged " + (cash - pl.get_current_net_wealth() / 100.0) + " cr\n";
   s += way("Y1 b", c(3, 0), c(3, 8)) + build("Y1", 3, 2) + build("Y1", 3, 4) + build("Y1", 3, 3);
   s += expect_halt("Y1 (0,3)", ox, oy + 3) + expect_halt("Y1 (3,3)", ox + 3, oy + 3, [ox + 3, oy + 2]);
   // YP
