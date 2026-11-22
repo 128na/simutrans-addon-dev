@@ -13,7 +13,6 @@ import argparse
 import glob
 import html
 import os
-import re
 import sys
 import unicodedata
 
@@ -32,7 +31,7 @@ WAYTYPES = {
     "maglev_track": "リニア",
     "narrowgauge_track": "狭軌",
 }
-# 別の waytype を借りている物（橋脚・盛土は路面軌道、歩道と歩道の柵は運河。iss と同じ作り）。名前の頭で種類を出し、速度の欄は空ける。
+# 別の waytype を借りている物（橋脚・盛土・路面表示は路面軌道、歩道と歩道の柵は運河。iss と同じ作り）。名前の頭で種類を出し、速度の欄は空ける。
 # 高架（system_type=1）の way には「（高架）」を足す。上から順に当てる
 SPECIAL = {
     "ami_pier_rail": "線路の橋脚",
@@ -40,12 +39,13 @@ SPECIAL = {
     "ami_sidewalk": "歩道",
     "ami_wall_sidewalk_": "歩道の柵",
     "ami_embankment_": "盛土",
+    "ami_mark_": "路面表示",
 }
 OBJ_ORDER = ("way", "bridge", "tunnel", "way-object", "crossing", "building")
 COLUMNS = ("名前", "種類", "最高速度", "購入費", "維持費", "登場年")
 NOTE = (
     "この一覧はアドオンの定義（dat）から自動で作っています。最高速度は km/h、購入費は cr、維持費は cr/月です。"
-    "壁・柵・電柱・橋脚・歩道・盛土・車庫は速度の欄を空けています。踏切の最高速度は「道路/線路」の順です。"
+    "壁・柵・電柱・橋脚・歩道・盛土・路面表示・車庫は速度の欄を空けています。踏切の最高速度は「道路/線路」の順です。"
 )
 
 
@@ -97,8 +97,6 @@ def _kind_label(o):
     if t == "way":
         if o.get("system_type") == "1":
             return wt + "（高架）"
-        if re.search(r"_lane\d$", name):
-            return wt + "（路面表示）"  # 道路の路面表示の版（ami_road_<種類>_lane<n>。#121）
         return wt + ("（基盤）" if "_base_" in o.get("name", "") else "")
     if t == "bridge":
         return f"{wt}の橋"

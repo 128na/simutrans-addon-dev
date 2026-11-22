@@ -18,7 +18,8 @@
     src/ami_rail_ballast_bridge.png  橋（欄干なし。床はタイルの幅いっぱいで、壁は way-object を重ねる）。並びは blender-poc の橋と同じ
     src/ami_rail_ballast_tunnel.png  トンネルの坑口（覆いは blender-poc のトンネル、道床・レールは在来線の通常の版）
     src/ami_road_<種類>.png    道路の通常の版（local・general・expressway）。断面は blender-poc の高速道路で、中央線と路面の色が種類ごとに違う
-    src/ami_road_<種類>_lane<n>.png  道路の路面表示の版（#121。general・expressway の n = 1〜7）。白線だけを並べた多車線の線にし、交差点は線なし
+    src/ami_road_general_blank.png  白線の無い一般道路（#187。多車線の区間と交差点に敷き、白線は路面表示の way が描く）
+    src/ami_mark_<種類>.png  多車線と交差点の路面表示の way（道路に重ねる白線だけ。#187）
     src/ami_wall_road_<版>.png  道路の壁の way-object（single・back・center・front。3 種で共有。center は行き止まりの端の壁だけ）。上 4 行が奥、下 4 行が手前の絵
     src/ami_wall_road_<front|center>_divider.png  中央分離帯つきの壁の way-object（壁の版に、奥の側壁の位置の縁石の帯とガードレールを足した）
     src/ami_road_<種類>_base_<版>.png  道路の地上の基盤の版（4 版。2026-11-19 にユーザーが確定）。壁の外を削り、カーブを斜めの形のセルに描く
@@ -541,12 +542,10 @@ for _r in catalog.ROADS:
                                     "expressway": True, "switches": True, "switch_ruts": True,
                                     "priority_cross": True, "open_cross": True, "corner_arcs": True,
                                     "drive_left": DRIVE_LEFT}, **ROAD_SETTINGS[_r.key])
-# 路面表示の版（ami_road_<種類>_lane<n>。#121）: 通常の版と同じ設定で、白線だけを並べた多車線の線にする（sheetlib の road_sheet の lanes）。
-# 交差点（T字・十字・分岐の絵・1 タイル）は線なしの路面
-for _r in catalog.LANE_ROADS:
-    for _n, _lanes in catalog.LANES.items():
-        R.ROAD_PROFILES[f"{_r.key}_lane{_n}"] = dict(R.ROAD_PROFILES[_r.key], sheet=_r.lane(_n), prefix=_r.lane(_n) + "_",
-                                                     lanes=_lanes)
+# 白線の無い一般道路（ami_road_general_blank。#187。ADR 0012）: 一般道路と同じ設定で、白線を 1 本も描かない（sheetlib の road_sheet の no_lines）
+ROAD_BLANK_KEY = "road_general_blank"
+R.ROAD_PROFILES[ROAD_BLANK_KEY] = dict(R.ROAD_PROFILES[catalog.ROAD_GENERAL.key], sheet=catalog.ROAD_BLANK,
+                                       prefix=catalog.ROAD_BLANK + "_", no_lines=True)
 
 # ---------------------------------------------------------------- 道路の壁の way-object・高架の 4 版・橋・トンネル・道路用の橋脚（#22）
 # 道路の壁（ami_wall_road_<版>。single・back・center・front。center は側壁が無く、行き止まりの端の壁だけ）: blender-poc の高速道路の壁（sheetlib の road_parts の wallL・wallR・endw。
@@ -652,9 +651,11 @@ for _t in catalog.ALL_TRACKS:
 _road_target = lambda key: lambda: R.road_sheet(key)
 for _r in catalog.ROADS:
     SHEETS[_r.way] = _road_target(_r.key)
-for _r in catalog.LANE_ROADS:
-    for _n in catalog.LANES:
-        SHEETS[_r.lane(_n)] = _road_target(f"{_r.key}_lane{_n}")
+SHEETS[catalog.ROAD_BLANK] = _road_target(ROAD_BLANK_KEY)
+# 多車線と交差点の路面表示の way（#187。ADR 0012）: 道路に重ねて敷く白線の way（sheetlib の marking_sheet）
+MARKING_LABEL = "M"  # 描画のアイコンの文字（ゲームのアイコンは icons.py が書き直す）
+for _name, _kind in catalog.MARKINGS.items():
+    SHEETS[_name] = (lambda n, k: lambda: R.marking_sheet(n, k, label=MARKING_LABEL))(_name, _kind)
 for _v in catalog.ROAD_WALL_VARIANTS:
     SHEETS[f"ami_wall_road_{_v}"] = _road_target(f"wall_road_{_v}")
 for _v, _name in catalog.ROAD_DIVIDERS.items():

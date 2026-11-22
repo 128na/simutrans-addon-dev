@@ -35,7 +35,7 @@ D:\bin\blender\blender.exe -b --factory-startup --python ..\..\tools\blender\com
   - `priority_cross`: 十字の分岐の絵（`nsew1`・`nsew2`）を、優先道路のある十字にする（`nsew1` は南北、`nsew2` は東西が優先。従道路に停止線。`road_sheet` の `priority_lines`）
   - `drive_left`: `priority_cross` の停止線の通行の側。真（既定）は左側通行、偽は右側通行
   - `open_cross`: 通常の十字を、交差点の中に白線を通さない開いた十字にする。無ければ、東西の中央線と両側の点線（blender-poc の高速道路の十字）
-  - `lanes`: 多車線の路面表示の版（AMI の `ami_road_<種類>_lane<n>`。#121）。`(奥の境, 真ん中, 手前の境)` の線の種類で、`"edge"`（路側線）・`"center"`（中央線の実線）・`"lane"`（車線の境の破線）。境の線はタイルの辺に引き、交差点（T字・十字・分岐の絵・1 タイル）は線なし。描くのは `sheetlib.py` の `lane_lines`
+  - `no_lines`: 白線を 1 本も描かない道路（AMI の `ami_road_general_blank`。#187）。白線は路面軌道の景観の way（`marking.py`）で重ねて描く
   - `corner_arcs`: 分岐の絵（T字・十字・1・2・優先道路の十字）で、隣り合う腕の路側線を角で円弧（`road_parts.EDGE_CORNER_R`）でつなぐ
   - 壁を way-object に分ける版（AMI の道路の壁・基盤の版・高架・橋。#22）のキー。意味は線路の同じ名前のキーと同じ（下の「壁を way-object に分けるためのキー」「高架と橋脚」）: `wall_sheet`・`write_walls`・`wall_only`・`curve_cells`・`elev_body`（躯体の深さ `body_d`、壁の外の面から内へ止める幅 `body_inset`、材質 `body_mat`。既定は高架の `ELEV_BODY_D`・`ELEV_BODY_INSET`・`_M_ELEV_BODY`。橋の桁は `body_inset=0` と桁の材質）・`pier_box`（橋の柱。無ければ POC の橋の柱）。`wall_sheet` の坂のセルは、`build_road` の `tall_pad` で壁をタイルの外へ `SLOPE_WALL_PAD` だけ残す（線路と同じ）
   - `switches` 以外のこの 5 つは、AMI の道路の分岐の絵の作り（記録 [2026-11-20_ami-road-switch-design](../docs/records/2026-11-20_ami-road-switch-design.md)）。AMI は今、分岐の絵を dat に入れていないが、シートには描く

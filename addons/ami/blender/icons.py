@@ -10,7 +10,8 @@
   絵は、その物の直線のセルを北と南の隣のタイルの位置にもつないで、半分の大きさにしたもの（歩道はタイル 1 枚を 1/4 に）。
   等倍で真ん中を切ると、壁の single は片側しか入らず、橋脚は灰色の塊になって見分けにくかった。
   壁は版の札だけ（中央分離帯つきは左上に「分」、電柱と柵つきの電柱は左上に「柱」）、架線は左上に稲妻、橋脚は左上に「脚」「門」、歩道は左上に「歩」、車庫は左上に「庫」（絵は道が南へ出る向きの建物を 1/4 に）、
-  盛土は左上に「盛」と版の札（背景は路面軌道の色。tram_track の way）、道路標識は道路の色に標識の板を 2 倍にした絵だけ（#122）
+  盛土は左上に「盛」と版の札（背景は路面軌道の色。tram_track の way）、路面表示は左上に MARK_LABELS の字（背景は路面軌道の色。#187）、
+  白線の無い一般道路は右下に「無」（#187）、道路標識は道路の色に標識の板を 2 倍にした絵だけ（#122）
 - カーソル（256px のセル）: その物の直線の絵（トンネルは坑口）に、アイコンと同じ背景色の札で「速度 + 版」（例 160後）
 - 絵と札の中身は dat から読む（名前・obj・waytype・topspeed と、image[ns] などのキーが指すセル）。dat の icon・cursor が指すセルに書く
 - シート名を渡すと、そのシートに書くアイコン・カーソルと、そのシートの絵から作るアイコン・カーソル（トンネルは中の way の絵、
@@ -49,7 +50,7 @@ WAY_BG = {"rail": ((0, 196, 96), (0, 112, 56)), "tram": ((214, 160, 0), (140, 92
           "monorail": ((168, 72, 200), (96, 32, 120)),  # モノレール（#113）は紫（色相 285。ほかの waytype と 20 度以上離す。check_icons.py）
           "canal": ((0, 170, 190), (0, 96, 112))}  # 運河（#114）は青緑（色相 186）
 VERSION_MARK = {"single": "単", "back": "後", "center": "中", "front": "前", "twin": "双"}
-VERSION_MARK.update({f"lane{_n}": str(_n) for _n in range(1, 8)})  # 道路の路面表示の版（ami_road_<種類>_lane<n>。#121）: 右下に n
+VERSION_MARK["blank"] = "無"  # 白線の無い一般道路（ami_road_general_blank。#187）
 DECK = (215, 215, 220)  # 帯の床・柱の色
 BOLT = [(13, 1), (4, 15), (9, 15), (6, 26), (17, 10), (12, 10), (16, 1)]  # 稲妻（32px の座標）
 TRANSPARENT = np.array(R.TRANSPARENT)
@@ -81,13 +82,20 @@ def ref(v):
     return sheet, int(r), int(c)
 
 
+# 路面表示（#187）の左上の字と、絵にするセル（北へ向かう腕・北南の直線・北が閉じた T字の中心）
+MARK_LABELS = {"ami_mark_lane4": "線", "ami_mark_junction2": "交", "ami_mark_junction2_t": "丁",
+               "ami_mark_junction4_in": "入", "ami_mark_junction4_out": "出"}
+MARK_PICTURE = {"ami_mark_lane4": "image[ns][0]", "ami_mark_junction2": "image[n][0]", "ami_mark_junction2_t": "image[sew][0]",
+                "ami_mark_junction4_in": "image[nse][0]", "ami_mark_junction4_out": "image[nsw][0]"}
+
+
 def describe(d):
     """dat から、アイコンの決まりに使う中身を取る"""
     name, obj = d["name"], d["obj"]
-    m = re.search(r"_(single|back|center|front|twin|lane[1-7])(_catenary|_divider|_pole)?$", name)
+    m = re.search(r"_(single|back|center|front|twin|blank)(_catenary|_divider|_pole)?$", name)
     info = dict(name=name, version=m.group(1) if m else None, speed=None, struct=None, label=None,
                 old=catalog.is_old(name))  # old: 旧描画位置（SIS に合う。#26）の物。アイコンの左下に「旧」
-    if name.startswith(("ami_tram", "ami_embankment")):  # 盛土は tram_track の way（路面軌道の道具の一覧に出る）
+    if name.startswith(("ami_tram", "ami_embankment", "ami_mark_")):  # 盛土・路面表示は tram_track の way（路面軌道の道具の一覧に出る）
         info["way"] = "tram"
     elif name.startswith("ami_road_expressway"):
         info["way"] = "expwy"
@@ -119,6 +127,8 @@ def describe(d):
         info["kind"] = "sign"
     elif name.startswith("ami_embankment"):  # 盛土（#123）: 左上に「盛」、右下に版（前・後）
         info.update(kind="embankment", label="盛")
+    elif name.startswith("ami_mark_"):  # 路面表示（#187）: 左上に MARK_LABELS の字。速度は出さない
+        info.update(kind="marking", label=MARK_LABELS[name])
     else:
         info["kind"] = {"bridge": "bridge", "tunnel": "tunnel"}.get(obj, "way")
         info["speed"] = d["topspeed"]
@@ -140,6 +150,8 @@ def picture_keys(d, kind, for_cursor):
         return [["backimage[6][0][0][0][0][0]"]]
     if kind == "depot":  # 道が南へ出る向き（layout 0）の奥と手前の絵
         return [["backimage[0][0][0][0][0][0]", "frontimage[0][0][0][0][0][0]"]]
+    if kind == "marking":  # 路面表示（#187）: MARK_PICTURE のセル
+        return [[MARK_PICTURE[d["name"]]]]
     if kind == "sign":  # 北行きの絵（画面の右の角。表が見える）
         return [["image[0]"]]
     if kind in ("wall", "catenary"):
