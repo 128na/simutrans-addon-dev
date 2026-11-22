@@ -14,8 +14,7 @@ import math
 
 from mathutils import Vector
 
-from .core import H, TILE, Part, box, merge, sweep
-from .track_parts import track_noise
+from .core import H, TILE, Part, box, merge, sweep, tiled_concrete_material
 from .wall_parts import ELEV_STEPS, PIER_FOOT
 
 # ---------------------------------------------------------------- 寸法（部品の 1 単位 ≈ 9px。高さ 1 単位 ≈ 7.8px）
@@ -27,15 +26,30 @@ MONO_POST = 0.7           # 高架の柱の太さ（正方形の 1 辺）。隣�
 MONO_ARM_D = 0.6          # 腕（柱の頭から桁の下へ渡す梁）の深さ
 MONO_ARM_EMBED = 0.1      # 腕の上面を桁の下面より上へ食い込ませる高さ（桁に隠れる）
 
-# ---------------------------------------------------------------- 色（打ち放しのコンクリートのまだら）
-MONO_BEAM_LO, MONO_BEAM_HI = (0.56, 0.56, 0.54), (0.64, 0.64, 0.62)
-MONO_PIER_LO, MONO_PIER_HI = (0.50, 0.50, 0.48), (0.58, 0.58, 0.56)
+# ---------------------------------------------------------------- 色（打ち放しのコンクリートのまだらと汚し）
+# 第 1 弾の高架の躯体・橋脚・壁（中性の灰 0.56〜0.60）と見分けるため、汚し（#154）を掛ける。ユーザーが案 A＋C を選んだ（2026-11-22。
+# 見比べた案は addons/ami/blender/weather_calib.py）:
+#   A 色味: 桁と柱を少し暖かい灰（MONO_TINT）にし、柱を桁より 8% 暗くする
+#   C 地際の汚れ: 柱・腕を、柱の下端（地面）から MONO_GRIME_SPAN の高さまで、下ほど暗くする（下端で 1 − MONO_GRIME 倍）
+# まだら（±MONO_AMP、粒 MONO_GRAIN）は sheetlib の tiled_concrete_material（タイルの 1 辺を周期にした模様）で作る
+MONO_BEAM_RGB = (0.60, 0.60, 0.58)
+MONO_PIER_RGB = (0.497, 0.497, 0.478)   # 前の柱（0.54）の 0.92 倍
+MONO_TINT = (1.04, 1.00, 0.92)
+MONO_AMP = 0.067
 MONO_GRAIN = 4.0
+MONO_GRIME = 0.45
+MONO_GRIME_SPAN = 3.5   # 部品の座標（高さ 1 単位 ≈ 7.8px。約 27px）
 MONO_SNOW_RGB = (0.92, 0.94, 0.97)
 
-_M_MONO_BEAM = track_noise("mono_beam", MONO_BEAM_LO, MONO_BEAM_HI, MONO_GRAIN)
-_M_MONO_TOP = track_noise("mono_top", MONO_BEAM_LO, MONO_BEAM_HI, MONO_GRAIN)
-_M_MONO_PIER = track_noise("mono_pier", MONO_PIER_LO, MONO_PIER_HI, MONO_GRAIN)
+
+def mono_concrete(name, rgb, ground=None):
+    """モノレールのコンクリートの材質を返す関数。ground（柱の下端の高さ）を渡すと地際の汚れを掛ける"""
+    grime = {} if ground is None else dict(grime=MONO_GRIME, grime_z=(ground, ground + MONO_GRIME_SPAN))
+    return lambda: tiled_concrete_material(name, rgb, MONO_AMP, MONO_GRAIN, rough=0.9, tint=MONO_TINT, **grime)
+
+
+_M_MONO_BEAM = mono_concrete("mono_beam", MONO_BEAM_RGB)
+_M_MONO_TOP = mono_concrete("mono_top", MONO_BEAM_RGB)
 
 # 手前（画面の下）の向き。南（−y）と東（+x）が手前
 _FRONT = Vector((1, -1))
@@ -128,7 +142,8 @@ def monorail_pier_fills(side):
     def make(paths):
         geo = _pier_geometry(paths, side, z_beam)
         return None if geo is None else (lambda path, k: geo)
-    return ((Part("mono_pier", "rail", "gauge", _M_MONO_PIER, None), make),)
+    pier = mono_concrete("mono_pier", MONO_PIER_RGB, ground=-ELEV_STEPS * H - PIER_FOOT)   # 柱の下端（_pier_geometry の post_bot）
+    return ((Part("mono_pier", "rail", "gauge", pier, None), make),)
 
 
 # ================================================================ 懸垂式モノレール（#116）
@@ -148,9 +163,8 @@ SUSP_BEAM_W = MONO_BEAM_W  # 桁の幅（跨座式と同じ）
 SUSP_ARM_D = 0.6          # 梁の深さ（桁の上に載る。柱の頭は桁の上面 + これ − 食い込み。約 36px）
 SUSP_RISE = 50            # 持ち分を上へ広げる行数（柱の頭 約 39px と余り）
 
-_M_SUSP_BEAM = track_noise("susp_beam", MONO_BEAM_LO, MONO_BEAM_HI, MONO_GRAIN)
-_M_SUSP_TOP = track_noise("susp_top", MONO_BEAM_LO, MONO_BEAM_HI, MONO_GRAIN)
-_M_SUSP_PIER = track_noise("susp_pier", MONO_PIER_LO, MONO_PIER_HI, MONO_GRAIN)
+_M_SUSP_BEAM = mono_concrete("susp_beam", MONO_BEAM_RGB)
+_M_SUSP_TOP = mono_concrete("susp_top", MONO_BEAM_RGB)
 
 
 def _susp_beam_shape(path, k):
@@ -206,13 +220,15 @@ def suspended_pier_fills(side, elevated=False):
     """懸垂式の柱と梁（TRACK_PROFILES の "cell_fills"）。手前の側の分は Part.front（手前の絵）、奥の側の分は奥の絵。
     elevated なら、柱を高架の下の地面まで延ばす"""
     post_bot = (-ELEV_STEPS * H if elevated else 0.0) - PIER_FOOT
+    # 地上と高架で柱の下端が違うので、材質を分ける（地際の汚れの高さ）
+    pier = mono_concrete(f"susp_pier{'_elev' if elevated else ''}", MONO_PIER_RGB, ground=post_bot)
 
     def maker(near):
         def make(paths):
             geo = _susp_geometry(paths, side, post_bot, near)
             return None if geo is None else (lambda path, k: geo)
         return make
-    return tuple((Part(f"susp_pier_{'front' if near else 'back'}", "rail", "gauge", _M_SUSP_PIER, None, tall=True, front=near), maker(near))
+    return tuple((Part(f"susp_pier_{'front' if near else 'back'}", "rail", "gauge", pier, None, tall=True, front=near), maker(near))
                  for near in (False, True))
 
 
