@@ -1,0 +1,5 @@
+# 物 icon|cursor 絵のシート 行 列 sha256（blender/icons.py が書き、check_icons.py が今のシートと比べる。#141）
+ami_wall_rail_old_twin cursor ami_wall_rail_old_front 2 3 42a14df104fd68d3ffa57d6b9bff78aca70c024f01a29f86e83668f71259122b
+ami_wall_rail_old_twin cursor ami_wall_rail_old_front 6 3 c78663fd64c1b51e30be01cb18aaf51c6d9a2976ff72b303b8714e3732fe25fb
+ami_wall_rail_old_twin icon ami_wall_rail_old_front 2 3 42a14df104fd68d3ffa57d6b9bff78aca70c024f01a29f86e83668f71259122b
+ami_wall_rail_old_twin icon ami_wall_rail_old_front 6 3 c78663fd64c1b51e30be01cb18aaf51c6d9a2976ff72b303b8714e3732fe25fb

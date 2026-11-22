@@ -1,6 +1,7 @@
 """AMI の dat を書き出す（Blender は使わない。アドオンのディレクトリで `python -X utf8 blender/ami_dat.py`）。
 
 値（速度・費用・維持費・登場年）は VALUES が持つ。README の「値の一覧」と同じにする。
+旧描画位置（SIS に合う。#26）の線路は catalog.OLD_TRACKS。名前（ami_rail_<種類>_old…・ami_wall_rail_old_…）と絵のシートが違うだけで、dat の並び・値は新と同じ。
 まだ絵を作っていない way は BUILT に入れない（dat も pak も作らない）。シートの行の並びは
     夏の絵 4 行（奥の絵）→ 雪の絵 4 行
 で、無壁の線路の並び。カーブは斜めの絵（DIAG_CURVES）を指す。
@@ -81,9 +82,13 @@ VALUES = {
     "ami_monorail_suspended": dict(waytype="monorail_track", speed=150, cost=30000, maintenance=600, intro_year=1900),
 }
 
+# 旧描画位置（#26）の線路の値は新と同じ（速さ・費用・維持費・登場年）。名前が違うだけ
+for _t in catalog.OLD_TRACKS:
+    VALUES[_t.way] = VALUES[_t.way[:-len(catalog.OLD)]]
+
 # カーブを斜めの絵で表すシート（pak128 標準の線路と同じ。dat の image[sw]・[nw]・[ne]・[se] が diagonal と同じセルを指す。
 # シートのカーブのセル（行 2 の列 5〜8）は描かない。render.py の diag_curves と同じにする）
-DIAG_CURVES = {_t.way for _t in catalog.TRACKS} | {_r.way for _r in catalog.ROADS}  # 道路 3 種もカーブは斜めの絵（README の「道路の作り」）
+DIAG_CURVES = {_t.way for _t in catalog.ALL_TRACKS} | {_r.way for _r in catalog.ROADS}  # 道路 3 種もカーブは斜めの絵（README の「道路の作り」）
 # 跨座式モノレール（#113）: 地上・高架の版とも、カーブは斜めの絵（手本の iss の跨座式の dat と同じ）
 DIAG_CURVES |= {catalog.MONORAIL, *catalog.MONORAIL_ELEVS}
 DIAG_CURVES.add(catalog.CANAL)  # 運河（#114）もカーブは斜めの絵
@@ -100,7 +105,7 @@ FRONT_SNOW_ROWS = 8  # 手前の絵を持つ way の雪の絵の行のずらし�
 BUILT = {}
 BASE_VARIANTS = catalog.VARIANTS
 NO_CLOSE = set()  # 近い斜めの絵を持たない way
-for _t in catalog.TRACKS:
+for _t in catalog.ALL_TRACKS:
     BUILT[_t.way] = _t.way
     for _v in BASE_VARIANTS:
         # 基盤の版はカーブのセル（行 2 の列 5〜8）を斜めの形で描く（render.py の curve_cells）。斜めのセルとは基盤の削り方だけが違う:
@@ -209,7 +214,7 @@ PIER_SWITCH = {"[nse1]": "[nse]", "[nse2]": "[nse]", "[new1]": "[new]", "[new2]"
 WALL_VALUES = dict(cost=3000, maintenance=60, intro_year=1900, topspeed=1000)
 WALL_TWIN_TOPSPEED = WALL_VALUES["topspeed"] + 1
 # center は側壁が無く、行き止まりの端の壁だけ（ほかのキーの絵は空。架線つきの版で center も要るので 4 版にそろえる）
-WALLS = {f"ami_wall_rail_{_v}": f"ami_wall_rail_{_v}" for _v in BASE_VARIANTS}
+WALLS = {catalog.wall_rail(_v, _o): catalog.wall_rail(_v, _o) for _o in (False, True) for _v in BASE_VARIANTS}  # 新と旧（#26）
 WALL_FRONT_ROW = 4  # 壁のシートの手前の絵の行（sheetlib の WALL_FRONT_ROW と同じ）
 WAYOBJ_KEYS = {"image": "image", "imageup": "imageup", "imageup2": "imageup2", "diagonal": "diagonal"}  # way のキー → way-object の back/front の後ろ
 # 近い斜めの分け合うタイル用: 斜めの向きごとに、タイルの角の側の壁を持つ版のシート（back は nw・sw、front は ne・se。README の「壁の敷き方」）
@@ -238,7 +243,7 @@ ROAD_DIVIDER_TWIN_FROM = {k: (v if v.endswith("_back") else catalog.ROAD_DIVIDER
 # 壁だけの twin 1001 も置き換える）。twin の絵は、斜めの梁を短くした back・front の版のシート（render.py の TWIN_FROM）
 CATENARY_VALUES = dict(cost=4000, maintenance=100, intro_year=1900, topspeed=1100)
 CATENARY_TWIN_TOPSPEED = CATENARY_VALUES["topspeed"] + 1
-CATENARY = {f"ami_wall_rail_{_v}_catenary": f"ami_wall_rail_{_v}_catenary" for _v in BASE_VARIANTS}
+CATENARY = {f"{catalog.wall_rail(_v, _o)}_catenary": f"{catalog.wall_rail(_v, _o)}_catenary" for _o in (False, True) for _v in BASE_VARIANTS}
 TWIN_FROM_CATENARY = {k: v.replace("ami_wall_rail_", "ami_wall_rail_twin_catenary_") for k, v in TWIN_FROM.items()}
 
 # ---------------------------------------------------------------- 分岐の追加画像を継ぎ足す物（#57）
@@ -363,7 +368,7 @@ def dat_text(name, sheet, donor=False):
     return NL.join(out) + NL
 
 
-def wall_dat_text(name, sheet, twin=False, catenary=False, road=False, donor=False, divider=False):
+def wall_dat_text(name, sheet, twin=False, catenary=False, road=False, donor=False, divider=False, old=False):
     """壁の way-object の dat。セルは way と同じ位置（分岐の絵・近い斜めは持たない。壁は通常の T字・十字と同じ）。
     カーブは way と同じく斜めのセルを指す。twin は近い斜めの分け合うタイル用（斜めとカーブのキーだけ、TWIN_FROM のシートを指す）。
     catenary は架線つき（電化。own_waytype=electrified_track、値は CATENARY_VALUES。twin は TWIN_FROM_CATENARY のシート）。
@@ -376,6 +381,8 @@ def wall_dat_text(name, sheet, twin=False, catenary=False, road=False, donor=Fal
     icon_cell, cursor_cell = TWIN_ICON_CELLS if twin and not catenary else ("0.0", "0.1")
     twin_from = (TWIN_FROM_CATENARY if catenary else ROAD_DIVIDER_TWIN_FROM if divider else ROAD_TWIN_FROM if road
                  else TWIN_FROM)
+    if old:  # 旧描画位置（#26）の壁: twin が借りるシートも旧の物
+        twin_from = {k: s.replace("ami_wall_rail_", "ami_wall_rail_old_") for k, s in twin_from.items()}
     kind = "道路の中央分離帯つきの壁" if divider else "道路の壁" if road else "線路の壁の way-object（架線つき（電化））" if catenary else "線路の壁の way-object（壁だけ、架線なし）"
     wt = "road" if road else "track"
     out = [
@@ -804,22 +811,26 @@ def main():
         print(f"[dat] {name}.dat")
     for name, sheet in WALLS.items():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(wall_dat_text(name, sheet))
+            f.write(wall_dat_text(name, sheet, old=catalog.is_old(name)))
         print(f"[dat] {name}.dat")
-    with open(os.path.join(SRC, "ami_wall_rail_twin.dat"), "w", encoding="utf8", newline=NL) as f:
-        f.write(wall_dat_text("ami_wall_rail_twin", "ami_wall_rail_back", twin=True))
-    print("[dat] ami_wall_rail_twin.dat")
+    for _o in (False, True):  # 新と旧（#26）
+        _tw = f"ami_wall_rail_{'old_' if _o else ''}twin"
+        with open(os.path.join(SRC, _tw + ".dat"), "w", encoding="utf8", newline=NL) as f:
+            f.write(wall_dat_text(_tw, catalog.wall_rail("back", _o), twin=True, old=_o))
+        print(f"[dat] {_tw}.dat")
     for name, sheet in CATENARY.items():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(wall_dat_text(name, sheet, catenary=True))
+            f.write(wall_dat_text(name, sheet, catenary=True, old=catalog.is_old(name)))
         print(f"[dat] {name}.dat")
     for name, suspended in catalog.MONORAIL_POWERS.items():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(monorail_power_dat_text(name, suspended))
         print(f"[dat] {name}.dat")
-    with open(os.path.join(SRC, "ami_wall_rail_twin_catenary.dat"), "w", encoding="utf8", newline=NL) as f:
-        f.write(wall_dat_text("ami_wall_rail_twin_catenary", "ami_wall_rail_twin_catenary_back", twin=True, catenary=True))
-    print("[dat] ami_wall_rail_twin_catenary.dat")
+    for _o in (False, True):  # 新と旧（#26）
+        _tw = f"ami_wall_rail_{'old_' if _o else ''}twin_catenary"
+        with open(os.path.join(SRC, _tw + ".dat"), "w", encoding="utf8", newline=NL) as f:
+            f.write(wall_dat_text(_tw, _tw + "_back", twin=True, catenary=True, old=_o))
+        print(f"[dat] {_tw}.dat")
     for name, sheet in ROAD_WALLS.items():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(wall_dat_text(name, sheet, road=True))

@@ -35,7 +35,8 @@ function check_way(n, wt, st, x, y) {
 function check_wayobj(n, wt, x, y) {
   local d = wayobj_desc_x(n);
   if (d == null) return "desc missing";
-  local e = err(command_x.build_way(pl, c(x, y), c(x + 5, y), way_desc_x(CARRIER[wt]), true));
+  // 旧描画位置の壁（名前に _old。#26）は、旧の way（ami_rail_old.pak）に重ねる
+  local e = err(command_x.build_way(pl, c(x, y), c(x + 5, y), way_desc_x(CARRIER[wt] + (n.find("_old") != null ? "_old" : "")), true));
   if (e != null) return "carrier: " + e;
   e = err(command_x.build_wayobj(pl, c(x, y), c(x + 5, y), d));
   if (e != null) return "build_wayobj: " + e;

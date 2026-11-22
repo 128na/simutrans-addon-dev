@@ -54,6 +54,8 @@
 //   BT_ONLY を true にすると、橋とトンネルの区画だけを敷く（試すとき）
 // 見本に敷く軌道の種類（通常の版の way の名前。blender/catalog.py の Track.way）。ここだけを替えると、way・基盤・高架・橋・トンネルが替わる
 local TRACK = "ami_rail_ballast";
+// 壁・架線の way-object の名前の頭。旧描画位置の軌道（TRACK が ami_rail_<種類>_old。#26）は旧用の壁（ami_wall_rail_old_<版>）を重ねる
+local WALL = TRACK.find("_old") != null ? "ami_wall_rail_old_" : "ami_wall_rail_";
 // ラウンドの版（#56）: AMI の名前（ami_ で始まるもの）の末尾に付ける。例: "_round1"。空なら今の名前
 local SUFFIX = "";
 function wdx(n) { return way_desc_x(n.find("ami_") == 0 ? n + SUFFIX : n); }
@@ -64,9 +66,9 @@ local WAYS = [TRACK];
 // ELEVATED: 高架の 4 版（[高架の way, 壁の way-object]）
 local WALLED = [], CATENARY = [], ELEVATED = [];
 foreach (v in VARIANTS) {
-  WALLED.append([TRACK + "_base_" + v, "ami_wall_rail_" + v]);
-  CATENARY.append([TRACK + "_base_" + v, "ami_wall_rail_" + v + "_catenary"]);
-  ELEVATED.append([TRACK + "_elev_" + v, "ami_wall_rail_" + v]);
+  WALLED.append([TRACK + "_base_" + v, WALL + v]);
+  CATENARY.append([TRACK + "_base_" + v, WALL + v + "_catenary"]);
+  ELEVATED.append([TRACK + "_elev_" + v, WALL + v]);
 }
 local W_AREA = [24, 18];  // 区画 W の大きさ（降雪の塗り直しに使う）
 // 橋脚の way。ELEV_DX は地上の区画からの東へのずらし
@@ -234,8 +236,8 @@ function lay_pairs(ox, oy, suffix = "", kind = "base") {
   local wd = {}, od = {};
   foreach (v in VARIANTS) wd[v] <- wdx(TRACK + "_" + kind + "_" + v);
   foreach (v in ["single", "back", "center", "front", "twin"]) {
-    od[v] <- wodx("ami_wall_rail_" + v + suffix);
-    if (od[v] == null) return "ami_wall_rail_" + v + suffix + " desc=[missing]\n";
+    od[v] <- wodx(WALL + v + suffix);
+    if (od[v] == null) return WALL + v + suffix + " desc=[missing]\n";
   }
   local c = function(x, y) { return coord3d(ox + x, oy + y, 0); };
   local way = function(v, x0, y0, x1, y1) { return way2(wd[v], null, c(x0, y0), c(x1, y1)); };
@@ -286,7 +288,7 @@ function lay_pairs(ox, oy, suffix = "", kind = "base") {
 // 壁の way-object（single）は、高架と台の上を通して 1 本で敷く。橋脚は高架の下だけ
 function lay_join(ox, oy) {
   local e = wdx(TRACK + "_elev_single"), g = wdx(TRACK + "_base_single");
-  local wo = wodx("ami_wall_rail_single"), p = wdx(PIER);
+  local wo = wodx(WALL + "single"), p = wdx(PIER);
   local c = function(x, y, z = 0) { return coord3d(ox + x, oy + y, z); };
   local s = r("J label", marker.work(pl, c(0, -2), "elevated <-> ground"));
   for (local x = 8; x <= 12; x++)
@@ -347,9 +349,9 @@ function lay_bt(bx, by) {
   local wd = {}, od = {};
   foreach (v in VARIANTS) {
     wd[v] <- wdx(TRACK + "_base_" + v);
-    od[v] <- wodx("ami_wall_rail_" + v);
+    od[v] <- wodx(WALL + v);
   }
-  local ws = wodx("ami_wall_rail_single_catenary"), ev = wdx(ELEVATED[0][0]), pr = wdx(PIER);
+  local ws = wodx(WALL + "single_catenary"), ev = wdx(ELEVATED[0][0]), pr = wdx(PIER);
   local c = function(x, y, z = 0) { return coord3d(bx + x, by + y, z); };
   local s = r("BT label", marker.work(pl, c(0, -2), "bridge + tunnel"));
   // way を a から b へ敷き、壁を重ねる（橋は先に架けておく。way は橋の上も通して 1 本で敷く）
@@ -469,7 +471,7 @@ foreach (n, o in ORIGINS) {
   report += lay_pairs(ex, vy, "", "elev");
   report += lay_pairs(ex, vy + SPACING, "_catenary", "elev");
   // 高架に架線つきの壁（single）: 1 本ずつの区画と同じ並び。区画 WVE の後
-  report += lay(ELEVATED[0][0], "ami_wall_rail_single_catenary", ex, vy + 2 * SPACING);
+  report += lay(ELEVATED[0][0], WALL + "single_catenary", ex, vy + 2 * SPACING);
   mode.z = 0;
   mode.pier = null;
   report += lay_join(ex, vy + 3 * SPACING);

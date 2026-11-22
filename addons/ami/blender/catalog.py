@@ -4,6 +4,7 @@
 共有の壁・架線・橋脚（ami_wall_rail_*・ami_pier_rail*）は軌道の種類に属さないので、ここには持たない。
 道路の種類は ROADS に足し、render.py の ROAD_SETTINGS に描き分けを足す（線路の Track と同じ考え方）。
 """
+import re
 from dataclasses import dataclass
 
 PREFIX = "ami_"
@@ -75,6 +76,29 @@ RAIL_CONCRETE = Track("rail_concrete")  # 弾性まくらぎ直結軌道（240 k
 RAIL_LADDER = Track("rail_ladder")  # フローティング・ラダー軌道（360 km/h。#67）
 TRACKS = (RAIL_BALLAST, RAIL_CONCRETE, RAIL_LADDER, RAIL_SLAB)
 WALL_TRACK = RAIL_BALLAST  # 共有の壁・架線のシートを描く元の軌道（ほかの種類の基盤の版は、壁のシートを書かない）
+
+# 旧描画位置（SIS に合う。#26。ADR 0011）の線路: 新と同じ 4 種を、基準面を動かさない描き方で作る。名前は way・基盤・高架・橋・トンネルとも
+# 新の名前の種類の後に _old を入れる（ami_rail_ballast_old・ami_rail_ballast_old_base_<版>）。旧用の壁・架線・橋脚も同じ（wall_rail・pier_rail）。
+# 踏切（CROSSINGS）・水路の踏切は新の線路だけ（旧の線路には作らない）ので、TRACKS には旧を入れない
+OLD = "_old"
+OLD_TRACKS = tuple(Track(_t.key + OLD) for _t in TRACKS)
+ALL_TRACKS = TRACKS + OLD_TRACKS
+WALL_TRACK_OLD = Track(WALL_TRACK.key + OLD)  # 旧用の壁・架線のシートを描く元の軌道
+
+
+def is_old(name):
+    """名前（way・way-object・シート）が旧描画位置の物か。ami_rail_<種類>_old…・ami_wall_rail_old_…・ami_pier_rail_old…"""
+    return re.match(r"(rail_[a-z]+_old(_|$)|wall_rail_old_|pier_rail_old)", name[len(PREFIX):]) is not None
+
+
+def wall_rail(variant, old=False):
+    """線路の壁の way-object の名前（ami_wall_rail_<版>。旧は ami_wall_rail_old_<版>）"""
+    return f"{PREFIX}wall_rail_{'old_' if old else ''}{variant}"
+
+
+def pier_rail(gate=False, old=False):
+    """線路用の橋脚の way の名前（ami_pier_rail・ami_pier_rail_gate。旧は ami_pier_rail_old・ami_pier_rail_old_gate）"""
+    return f"{PREFIX}pier_rail{'_old' if old else ''}{'_gate' if gate else ''}"
 
 # 路面軌道（60 km/h、tram で道路に重ねる。ADR 0002）。通常の版だけ（壁・基盤・高架・橋・トンネルを作らない）ので、TRACKS に入れない
 # （TRACKS の種類は基盤・高架・橋・トンネルの名前を導き、カーブを斜めの絵にする。路面軌道のカーブは曲線のまま。README の「残っていること」）

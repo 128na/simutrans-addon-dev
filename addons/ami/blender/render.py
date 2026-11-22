@@ -49,7 +49,7 @@ import sheetlib as R  # noqa: E402
 _p = catalog.profile  # way・シートの名前 → TRACK_PROFILES の名前
 
 # ---------------------------------------------------------------- 線路の描き分け
-# 新描画位置（レールが低い。今の pak128・iss）。旧描画位置は、新で全部を作り終えてから別の PR で作る（ADR 0002）。
+# 新描画位置（レールが低い。今の pak128・iss）。旧描画位置（SIS に合う）は、catalog.OLD_TRACKS の名前で、下の TRACK_SETTINGS が新の設定から導く（#26。ADR 0011）。
 # datums: 基準面ごとの下げ幅。決め方は blender-poc の README の「描画位置の描き分け」。label はアイコンの最高速度の数字
 _DATUMS = {"bed": R.Datum(2, 1), "rail": R.Datum(4, 1)}
 
@@ -230,6 +230,10 @@ END_FROM_EDGE = 0.25
 # 高速線の基準面: bed・rail は在来線のまま（壁・架線・橋脚と噛み合う）。コンクリート道床（slab_bed）はレールと同じ下げ幅にする
 _SLAB_DATUMS = dict(_DATUMS, slab_bed=_DATUMS["rail"])
 
+# 旧描画位置（SIS に合う。#26。ADR 0011）: 基準面を動かさず（絵の位置 = 地面の位置）、持ち分を手前へはみ出させない。blender-poc の旧描画位置
+# （TRACK_PROFILES["old"]）と同じ。blender-poc は SIS の新幹線の線路と段なくつながることを確かめてある
+_OLD_DATUMS = R.FLAT
+
 # 軌道の種類ごとの描き分け（catalog.Track.key → TRACK_PROFILES のキー）。label はアイコンの最高速度の数字
 TRACK_SETTINGS = {
     catalog.RAIL_BALLAST.key: {"label": "160", "skin": _BALLAST_SKIN, "snow_skin": _BALLAST_SNOW_SKIN, "replace": _BALLAST_REPLACE,
@@ -243,9 +247,13 @@ TRACK_SETTINGS = {
                             "replace": R.SLAB_WEAR_REPLACE, "snow_skin": R.SLAB_SNOW_SKIN},
 }
 
+# 旧描画位置の線路（#26）: 新と同じ部品・材質・寸法で、基準面だけを動かさない（datums・spill を上書きする）
+for _t in catalog.OLD_TRACKS:
+    TRACK_SETTINGS[_t.key] = dict(TRACK_SETTINGS[_t.key[:-len(catalog.OLD)]], datums=_OLD_DATUMS, spill=0)
+
 # ex_switches: 分岐の追加画像（Y字分岐・三方分岐。sheetlib の track_sheet の ex_switches。#57）のセルを描く。基盤・高架の版と架線つきの壁も
 # この設定を引き継ぐ（dat は blender/ami_dat.py の EX_WAYS・EX_WAYOBJS、pak への継ぎ足しは ex_graft.py）
-for _t in catalog.TRACKS:
+for _t in catalog.ALL_TRACKS:
     # diag_curves: カーブを斜めの絵で表す（pak128 標準の線路と同じ。T字・十字・分岐の絵も斜めの直線）。buffer: 行き止まりの車止め
     R.TRACK_PROFILES[_t.key] = dict({"sheet": _t.way, "spill": 1, "datums": _DATUMS, "snow": True,
                                      "groups": ("body", "weathering", "buffer"), "diag_curves": True,
@@ -319,35 +327,44 @@ _EDGE_WALLS["endw"] = dataclasses.replace(next(p for p in R.TRACK_EXTRAS if p.na
                                           shape=R.end_wall_edge_shape())
 
 
-def _stop_at_end_wall(datum):
+def _stop_at_end_wall(datum, ref=None):
     """行き止まりの道床を、端の壁の内側の面で止める beyond（sheetlib の bed_to_edge・slab_bed_shape に渡す。d は経路の向き）。
     タイルの外まで延ばすと、基準面の分だけ手前へ動いた道床が、端の壁の外の面の下にのぞいた（#44 の 7 番。2026-11-20）。
     壁（bed）と道床（datum）の動きが違うと（高速線のコンクリート道床は壁の 2 倍下げる）、動いた後の道床の端が、動いた後の壁の内側の面に
     来るよう、動きの差の分だけずらす（カメラの側を向く端では内へ、奥を向く端では外へ）"""
     def beyond(d):
         out = lambda m: m.to_2d().dot(-d.to_2d()) if m is not None else 0.0  # 動きのうち、タイルの外向きの分
-        return -R.WALL_W + out(R.datum_move(_DATUMS["bed"])) - out(R.datum_move(datum))
+        return -R.WALL_W + out(R.datum_move(_DATUMS["bed"] if ref is None else ref)) - out(R.datum_move(datum))
     return beyond
 
 
 # 壁のある版（基盤・高架・橋）の行き止まりの道床
-_EDGE_BED = {
-    catalog.RAIL_BALLAST.key: {"ballast": dataclasses.replace(_old["ballast"], shape=R.bed_to_edge(_BALLAST_SECTION, _stop_at_end_wall(_DATUMS["bed"])))},
-    catalog.RAIL_CONCRETE.key: {"ballast": dataclasses.replace(_old["ballast"], shape=R.bed_to_edge(_CONC_SECTION, _stop_at_end_wall(_DATUMS["bed"])))},
-    catalog.RAIL_LADDER.key: {"ballast": dataclasses.replace(_old["ballast"], shape=R.bed_to_edge(_CONC_SECTION, _stop_at_end_wall(_DATUMS["bed"])))},
-    catalog.RAIL_SLAB.key: {"slab_bed": dataclasses.replace(next(p for p in R.SLAB_TRACK_PARTS if p.name == "slab_bed"),
-                                                        shape=R.slab_bed_shape(_stop_at_end_wall(_SLAB_DATUMS["slab_bed"])))},
-}
+def _edge_beds(stop, slab_stop):
+    """壁のある版の行き止まりの道床（軌道の種類ごと）。stop・slab_stop は _stop_at_end_wall の値（道床・コンクリート道床の基準面ごと）"""
+    return {
+        catalog.RAIL_BALLAST.key: {"ballast": dataclasses.replace(_old["ballast"], shape=R.bed_to_edge(_BALLAST_SECTION, stop))},
+        catalog.RAIL_CONCRETE.key: {"ballast": dataclasses.replace(_old["ballast"], shape=R.bed_to_edge(_CONC_SECTION, stop))},
+        catalog.RAIL_LADDER.key: {"ballast": dataclasses.replace(_old["ballast"], shape=R.bed_to_edge(_CONC_SECTION, stop))},
+        catalog.RAIL_SLAB.key: {"slab_bed": dataclasses.replace(next(p for p in R.SLAB_TRACK_PARTS if p.name == "slab_bed"),
+                                                            shape=R.slab_bed_shape(slab_stop))},
+    }
 
-for _t in catalog.TRACKS:
-    # 壁の way-object は軌道の種類に属さない共有の物なので、シートは catalog.WALL_TRACK の基盤の版だけが書く
-    _shared = {} if _t == catalog.WALL_TRACK else {"write_walls": False}
+
+_EDGE_BED = _edge_beds(_stop_at_end_wall(_DATUMS["bed"]), _stop_at_end_wall(_SLAB_DATUMS["slab_bed"]))
+# 旧: 道床も壁と同じ基準面（動かさない）なので、基準面の差は 0
+_OLD_STOP = _stop_at_end_wall(_OLD_DATUMS["bed"], _OLD_DATUMS["bed"])
+_EDGE_BED.update({_k + catalog.OLD: _v for _k, _v in _edge_beds(_OLD_STOP, _OLD_STOP).items()})
+
+for _t in catalog.ALL_TRACKS:
+    # 壁の way-object は軌道の種類に属さない共有の物なので、シートは catalog.WALL_TRACK（旧は WALL_TRACK_OLD）の基盤の版だけが書く
+    _is_old = _t.key.endswith(catalog.OLD)
+    _shared = {} if _t == (catalog.WALL_TRACK_OLD if _is_old else catalog.WALL_TRACK) else {"write_walls": False}
     for _v, _walls in BASE_VARIANTS.items():
         R.TRACK_PROFILES[_p(_t.base(_v))] = dict(
             R.TRACK_PROFILES[_t.key], sheet=_t.base(_v), walls=_walls,
             groups=("body", "base", "weathering", "buffer", "wall"),
             replace=dict(R.TRACK_PROFILES[_t.key].get("replace", {}), **_EDGE_WALLS,
-                         **_EDGE_BED.get(_t.key, {})), wall_sheet=f"ami_wall_rail_{_v}",
+                         **_EDGE_BED.get(_t.key, {})), wall_sheet=catalog.wall_rail(_v, _is_old),
             # カーブのセルを斜めの形で描き、基盤の壁の無い側を削らない（複線の直角の曲がりで、内側の線の外側半分を埋める）
             curve_cells=True,
             # 斜めのタイルの側壁は裏面を描かない。タイルの境で取った壁の切り口から壁の中（暗い）が見え、斜めの階段の下の端の角
@@ -361,22 +378,25 @@ for _t in catalog.TRACKS:
 # way は基盤の版の対象が書く）。sheet は作業ファイルの名前だけに使い、基盤の版と分ける（同時に描いても work/ のセルが混ざらない）
 CATENARY_LABEL = "E"  # 架線つきの壁のアイコンの文字（仮。アイコンはステップ 13 でまとめて作る）
 _WT = catalog.WALL_TRACK  # 壁・架線のシートを描く元の軌道
-for _v in BASE_VARIANTS:
-    _base = R.TRACK_PROFILES[_p(_WT.base(_v))]
-    R.TRACK_PROFILES[f"{_p(_WT.base(_v))}_catenary"] = dict(
-        _base, sheet=f"{_WT.base(_v)}_cat", wall_sheet=f"ami_wall_rail_{_v}_catenary",
-        groups=_base["groups"] + ("catenary", "catenary_support"), snow=False, wall_only=True, rise=R.CAT_RISE,
-        wall_label=CATENARY_LABEL)
+_WALL_TRACKS = ((catalog.WALL_TRACK, False), (catalog.WALL_TRACK_OLD, True))  # 新と旧（#26）
+for _w, _wold in _WALL_TRACKS:
+    for _v in BASE_VARIANTS:
+        _base = R.TRACK_PROFILES[_p(_w.base(_v))]
+        R.TRACK_PROFILES[f"{_p(_w.base(_v))}_catenary"] = dict(
+            _base, sheet=f"{_w.base(_v)}_cat", wall_sheet=catalog.wall_rail(_v, _wold) + "_catenary",
+            groups=_base["groups"] + ("catenary", "catenary_support"), snow=False, wall_only=True, rise=R.CAT_RISE,
+            wall_label=CATENARY_LABEL)
 
 # 近い斜めの分け合うタイル用の架線つきの壁（ami_wall_rail_twin_catenary）の絵。壁だけの twin と同じく、nw・sw の線は back、ne・se の線は
 # front の版の斜めのセルを使う。斜めの梁だけを短くした（CAT_BEAM_REACH_TWIN。分け合うタイルの隣の線の外の壁からはみ出さない）。
 # 通常の 4 版の梁は変えない（斜めの線を隣のタイルに並べた複線・3 本並びで、梁をタイルの角でつなぐため）。dat は斜めのキーだけを指す
 TWIN_FROM = ("back", "front")
-for _v in TWIN_FROM:
-    _cat = R.TRACK_PROFILES[f"{_p(_WT.base(_v))}_catenary"]
-    R.TRACK_PROFILES[f"{_p(_WT.base(_v))}_twin_catenary"] = dict(
-        _cat, sheet=f"{_WT.base(_v)}_twcat", wall_sheet=f"ami_wall_rail_twin_catenary_{_v}",
-        replace=dict(_cat["replace"], cat_beam=R.beam_part(R.CAT_BEAM_REACH_TWIN)), ex_switches=False)  # dat は斜めのキーだけ
+for _w, _wold in _WALL_TRACKS:
+    for _v in TWIN_FROM:
+        _cat = R.TRACK_PROFILES[f"{_p(_w.base(_v))}_catenary"]
+        R.TRACK_PROFILES[f"{_p(_w.base(_v))}_twin_catenary"] = dict(
+            _cat, sheet=f"{_w.base(_v)}_twcat", wall_sheet=f"ami_wall_rail_{'old_' if _wold else ''}twin_catenary_{_v}",
+            replace=dict(_cat["replace"], cat_beam=R.beam_part(R.CAT_BEAM_REACH_TWIN)), ex_switches=False)  # dat は斜めのキーだけ
 
 # ---------------------------------------------------------------- 高架の 4 版と橋脚の way（ADR 0003。#18）
 # 高架の版の way（ami_rail_ballast_elev_<版>、dat は system_type=1）は、基盤の版と同じ絵（道床・基盤。基盤は壁の位置で止まる）の下に、
@@ -447,11 +467,15 @@ for _t in catalog.TRACKS:
         for _name in (_t.base(_v), _t.elev(_v)):
             R.TRACK_PROFILES[_p(_name)]["mat_skin"] = TRACK_MAT_SKIN
     R.TRACK_PROFILES[_p(_t.bridge)]["mat_skin"] = TRACK_MAT_SKIN
+for _t in catalog.OLD_TRACKS:  # 旧（#26）の基盤の版
+    for _v in BASE_VARIANTS:
+        R.TRACK_PROFILES[_p(_t.base(_v))]["mat_skin"] = TRACK_MAT_SKIN
 # 架線つきの壁は基盤の版の描き分けを上で写したもの（mat_skin を持たない）なので、壁の表を渡す
-for _v in BASE_VARIANTS:
-    R.TRACK_PROFILES[f"{_p(_WT.base(_v))}_catenary"]["mat_skin"] = TRACK_WALL_SKIN
-for _v in TWIN_FROM:
-    R.TRACK_PROFILES[f"{_p(_WT.base(_v))}_twin_catenary"]["mat_skin"] = TRACK_WALL_SKIN
+for _w, _ in _WALL_TRACKS:
+    for _v in BASE_VARIANTS:
+        R.TRACK_PROFILES[f"{_p(_w.base(_v))}_catenary"]["mat_skin"] = TRACK_WALL_SKIN
+    for _v in TWIN_FROM:
+        R.TRACK_PROFILES[f"{_p(_w.base(_v))}_twin_catenary"]["mat_skin"] = TRACK_WALL_SKIN
 
 # ---------------------------------------------------------------- 道路 3 種の通常の版（#21）
 # 断面は blender-poc の高速道路（ROAD_PROFILES["expressway"]）と同じ: 片側 1 車線、タイル全面が路面、歩道なし、路側の白線は実線
@@ -599,7 +623,7 @@ def _tunnel_target(track):
                                   mat_skin=TRACK_WALL_SKIN)
 
 
-SHEETS = {_t.way: _track_target(_t.key) for _t in catalog.TRACKS}
+SHEETS = {_t.way: _track_target(_t.key) for _t in catalog.ALL_TRACKS}
 SHEETS[catalog.TRAM] = _track_target(TRAM_KEY)
 SHEETS[catalog.MONORAIL] = _track_target(MONORAIL_KEY)
 for _n in catalog.MONORAIL_ELEVS:
@@ -608,13 +632,14 @@ for _n in catalog.MONORAIL_SUSPENDEDS + catalog.MONORAIL_SUSPENDED_ELEVS + tuple
     SHEETS[_n] = _track_target(catalog.profile(_n))
 SHEETS[catalog.MONORAIL_TUNNEL] = lambda: R.tunnel_sheet("track", profile=MONORAIL_KEY, sheet=catalog.MONORAIL_TUNNEL, label=MONORAIL_LABEL,
                                                           mat_skin=TRACK_WALL_SKIN)
-for _t in catalog.TRACKS:
+for _t in catalog.ALL_TRACKS:
     for _v in BASE_VARIANTS:
         SHEETS[_t.base(_v)] = _track_target(_p(_t.base(_v)))
-for _v in BASE_VARIANTS:
-    SHEETS[f"ami_wall_rail_{_v}_catenary"] = _track_target(f"{_p(_WT.base(_v))}_catenary")
-for _v in TWIN_FROM:
-    SHEETS[f"ami_wall_rail_twin_catenary_{_v}"] = _track_target(f"{_p(_WT.base(_v))}_twin_catenary")
+for _w, _wold in _WALL_TRACKS:
+    for _v in BASE_VARIANTS:
+        SHEETS[catalog.wall_rail(_v, _wold) + "_catenary"] = _track_target(f"{_p(_w.base(_v))}_catenary")
+    for _v in TWIN_FROM:
+        SHEETS[f"ami_wall_rail_{'old_' if _wold else ''}twin_catenary_{_v}"] = _track_target(f"{_p(_w.base(_v))}_twin_catenary")
 for _t in catalog.TRACKS:
     for _v in BASE_VARIANTS:
         SHEETS[_t.elev(_v)] = _track_target(_p(_t.elev(_v)))
