@@ -541,6 +541,9 @@ MARKING_CELLS = {
     "junction2_t": _MARK_DEADENDS | _MARK_TEES | {(0, 9), (3, 9)},
     "junction4_in": _MARK_DEADENDS | _MARK_TEES | {(2, 5), (2, 6), (2, 7), (2, 8)},
     "junction4_out": _MARK_DEADENDS | _MARK_TEES | {(2, 5), (2, 6), (2, 7), (2, 8)},
+    # 高速道路の分岐・合流（#188）: 行き止まり = テーパー、T字 = 平行、曲がり = 分かれ
+    **{_k: _MARK_DEADENDS | _MARK_TEES | {(2, 5), (2, 6), (2, 7), (2, 8)}
+       for _k in ("diverge_main", "diverge_ramp", "merge_main", "merge_ramp")},
 }
 MARKING_EMPTY_CELL = (0, 4)
 
