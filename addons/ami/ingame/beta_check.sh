@@ -3,9 +3,9 @@
 # 使い方（アドオンのディレクトリで。python -X utf8 build.py で dist/ を作っておく）:
 #   GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe PORT=47400 bash ingame/beta_check.sh
 # ゲームは work/beta_game/<PORT>/ の写し（GAME_DIR の exe・dll・設定・pak128・addons と保存データ）で起動し、GAME_DIR には書き込まない。
-# 写しからは AMI の古い pak（addons/pak128/ami*.pak）を外し、PAKS（既定は dist/ の種類別の 5 つ。zip の中身と同じ）を入れる。
+# 写しからは AMI の古い pak（addons/pak128/ami*.pak）を外し、PAKS（既定は build.py の KINDS の種類別の pak 全部から旧描画位置の 1 本を除いたもの）を入れる。
 # 敷く物は src/*.dat のうち PAKS に入る物（build.py の belongs）の obj・name・waytype・system_type から作る（提供用の ex_donors.dat は除く）。
-# 旧描画位置の物（#26）は PAKS=dist/ami_rail_old.pak で確かめる。終わったらゲームを閉じて写しを消す。
+# 旧描画位置の物（#26）は新と同じ橋・高架に載る way が混ざる（ADR 0011）ので、既定には入れず PAKS=dist/ami_rail_old.pak で別に確かめる。終わったらゲームを閉じて写しを消す。
 # 出力: 敷いた結果（先頭が ok なら全部敷けた）と、ゲームのログ（-log 1 -debug 3 の simu.log。work/beta_game/simu_<PORT>.log に残す）のうち、
 # 読んだ AMI の pak と、AMI の物の名前を含む警告・エラーの行（同じ物を二重に読むと「object way::<名前> is overlaid!」が出る）。
 # 全部敷けて警告が無ければ 0、どちらかが外れたら 1 で終わる
@@ -13,7 +13,13 @@ GAME_DIR=${GAME_DIR:?GAME_DIR に検証用のフォルダを指定する}
 EXE=${EXE:?EXE を指定する（例: OTRPv64_3.exe）}
 PORT=${PORT:?PORT に MCP のポートを指定する}
 SAVE=${SAVE:-flat_512}
-PAKS=${PAKS:-"dist/ami_rail.pak dist/ami_road.pak dist/ami_tram.pak dist/ami_extra.pak dist/ami_scenery.pak"}
+# 既定の PAKS は build.py の KINDS の全部（旧描画位置の ami_rail_old.pak を除く）。ラインナップが増えても build.py に追従する（#177）
+PAKS=${PAKS:-$(python -X utf8 -c "
+import sys
+sys.path.insert(0, '.')
+import build
+print(' '.join('dist/' + k for k in build.KINDS if k != build.OLD_PAK))
+")}
 NUT=ingame/beta_check.nut
 source "$(dirname "$0")/mcp_client.sh"
 M="python -X utf8 $MCP_CLIENT --port $PORT"
@@ -58,8 +64,8 @@ for f in sorted(os.listdir('src')):
 ITEMS=$(for f in src/*.dat; do
   case $f in *ex_donors.dat) continue ;; esac
   case $KEEP in *" $(basename "$f" .dat) "*) ;; *) continue ;; esac
-  awk -F= 'tolower($1)=="obj"{o=$2} tolower($1)=="name"{n=$2} tolower($1)=="waytype"{w=$2} tolower($1)=="system_type"{s=$2}
-    END{gsub(/\r/,"",o); gsub(/\r/,"",n); gsub(/\r/,"",w); gsub(/\r/,"",s); if (s=="") s=0; printf "[\"%s\",\"%s\",\"%s\",%s],", n, o, w, s}' "$f"
+  awk -F= 'tolower($1)=="obj"{o=$2} tolower($1)=="name"{n=$2} tolower($1)=="waytype"{w=$2} tolower($1)=="system_type"{s=$2} tolower($1)=="type"{t=$2}
+    END{gsub(/\r/,"",o); gsub(/\r/,"",n); gsub(/\r/,"",w); gsub(/\r/,"",s); gsub(/\r/,"",t); if (s=="") s=0; printf "[\"%s\",\"%s\",\"%s\",%s,\"%s\"],", n, o, w, s, t}' "$f"
 done | sed 's/,$//')
 SQ=$(sed -e '/^[[:space:]]*\/\//d' -e '/^[[:space:]]*$/d' -e "s/^local ITEMS = .*/local ITEMS = [$ITEMS];/" "$NUT")
 RESULT=$(python -X utf8 -c "import json,sys; print(json.load(sys.stdin).get('result'))" <<< "$($M --timeout 300 --run-squirrel "$SQ")")
