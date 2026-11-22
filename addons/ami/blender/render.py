@@ -4,7 +4,7 @@
 
 描画の道具は tools/blender/sheetlib/。ここには AMI のシートの設定（描き分け・シート名）だけを置く
 （共通とアドオンの設定の分け方は tools/README.md）。dat は blender/ami_dat.py、pak は build.py。
-軌道の種類ごとの名前は blender/catalog.py から展開する。種類を足すときは catalog.TRACKS と、下の TRACK_SETTINGS に足す。
+軌道の種類ごとの名前は blender/catalog.py から展開する。種類を足すときは catalog.TRACKS と、下の TRACK_SETTINGS に足す（旧描画位置の版 catalog.OLD_TRACKS は TRACKS から導かれ、TRACK_SETTINGS も新の設定から導く）。
 
 出力（在来線の名前で書く。高速線 ami_rail_slab も、壁・架線・橋脚を除いて同じ並び）:
     src/ami_rail_ballast.png  在来線（バラスト軌道）の通常の版。形は blender-poc の線路と同じで、夏の道床を砕石のまだらにした

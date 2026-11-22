@@ -197,7 +197,7 @@ NO_SWITCH = {catalog.CANAL}  # 分岐の絵（image[nse1] など）を書かな�
 # 本体は track（system_type=7）として読むので、線路の網とつながり、線路の way-object（壁・架線）も載り、道路に重ねられる。
 # 値は仮（iss の橋脚と同じ費用・維持費）。topspeed は走らせる物ではないので 1
 PIER_VALUES = dict(waytype="tram_track", cost=1000, maintenance=100, intro_year=1900, topspeed=1)
-PIERS = {catalog.pier_rail(_g, _o): catalog.pier_rail(_g, _o) for _o in (False, True) for _g in (False, True)}  # 単柱と門型（旧描画位置は #26）（門型は #18 の追加）
+PIERS = {catalog.pier_rail(_g, _o): catalog.pier_rail(_g, _o) for _o in (False, True) for _g in (False, True)}  # 単柱と門型（門型は #18 の追加）。旧描画位置（#26）の橋脚も同じ並び
 # 道路用の橋脚（#22）: 線路用と同じ waytype（tram_track。2026-11-19 にユーザーが確定）と値（仮）。シートの並びは単柱の橋脚と同じ（README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
 PIERS[catalog.PIER_ROAD] = catalog.PIER_ROAD
 # 手前の絵（frontimage）を持つ橋脚: 名前 → 手前の絵の行のずらし。シートを描く側の tools/blender/sheetlib/sheetlib.py の
