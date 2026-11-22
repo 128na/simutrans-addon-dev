@@ -35,6 +35,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--version", required=True, help="版の名前（zip の名前と readme に入る）")
     ap.add_argument("--paks", nargs="+", required=True, help="入れる dist/ の pak の名前（拡張子なし）")
+    ap.add_argument("--readme", default=os.path.join(TEMPLATE, "readme.txt"), help="readme の元（既定 release/readme.txt。旧描画位置の zip は release/readme_old.txt）")
+    ap.add_argument("--no-thumbnail", action="store_true", help="thumbnail.png を入れない")
     ap.add_argument("--extract", action="store_true", help="work/release/ami-<版>/ にも展開する")
     a = ap.parse_args()
 
@@ -50,7 +52,7 @@ def main():
     name = f"ami-{a.version}"
     os.makedirs(OUT, exist_ok=True)
     zpath = os.path.join(OUT, name + ".zip")
-    with open(os.path.join(TEMPLATE, "readme.txt"), encoding="utf8") as f:
+    with open(a.readme, encoding="utf8") as f:
         readme = f.read().replace("{version}", a.version)
     try:
         listing = lineup.lineup(a.paks, a.version)
@@ -66,7 +68,7 @@ def main():
         z.writestr("ami_lineup.txt", "﻿" + listing.replace("\r\n", "\n").replace("\n", "\r\n"))
         for t in sorted(os.listdir(TEXTS)) if os.path.isdir(TEXTS) else ():  # 訳は手を加えずそのまま（先頭の § を残す）
             z.write(os.path.join(TEXTS, t), "pak128/text/" + t)
-        if os.path.isfile(THUMBNAIL):
+        if os.path.isfile(THUMBNAIL) and not a.no_thumbnail:
             z.write(THUMBNAIL, "thumbnail.png")
     with zipfile.ZipFile(zpath) as z:
         for i in z.infolist():

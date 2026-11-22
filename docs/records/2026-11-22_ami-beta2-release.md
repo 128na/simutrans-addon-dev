@@ -33,8 +33,15 @@
 - 文字（題名と内容の箇条書き）は `thumbnail_compose.py` の `BODY` を第 2 弾の物に合わせた。第 1 弾の `thumbnail.png`（ユーザーが手動で文字入れしたもの）は置き換わる（git の履歴に残る）
 - `release.py` は `docs/thumbnail.png` を探していて、画像が `docs/thumbnail/` に移った後は zip に入っていなかった。`docs/thumbnail/thumbnail.png` に直した
 
+## 旧描画位置の zip（ami-beta.2-old.zip）
+
+ユーザーの決定（進捗管理から、2026-11-22）で、`ami_rail_old.pak` は別の zip にして同じリリースに付ける。#178 は絵を直さずに閉じることになったので、pak の中身は今のまま。
+
+- 作り方: `python -X utf8 release.py --version beta.2-old --paks ami_rail_old --readme release/readme_old.txt --no-thumbnail`（`release.py` に `--readme`・`--no-thumbnail` を足した）。zip は約 3.9MB（`work/release/ami-beta.2-old.zip`）
+- 中身は `pak128/ami_rail_old.pak`・`ami_readme.txt`（旧用 `release/readme_old.txt`）・`ami_license.txt`・`ami_lineup.txt`（56 個）・`pak128/text/ja_ami.tab`（道路標識の訳。旧の pak には要らないが害は無い）
+- `ingame/beta_check.sh`（`PAKS=dist/ami_rail_old.pak`、ポート 47302）: `ok 56 items`、警告なし
+
 ## 未決（ユーザーの判断待ち）
 
 - サムネイルの出来（構図・文字の重なり。題名が高速道路の高架に、内容の文字が高架の高速線にかかる）。直す所があれば指示をもらう
-- 旧描画位置の `ami_rail_old.pak` は、#178 のマージを待って、同じリリースに別の zip（`ami-beta.2-old.zip`）で付ける（ユーザーの決定。進捗管理から、2026-11-22）
 - タグ `ami-beta.2` とプレリリースは、承認の後に出す
