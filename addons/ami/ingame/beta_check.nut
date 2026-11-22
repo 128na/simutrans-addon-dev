@@ -55,7 +55,7 @@ function check_wayobj(n, wt, x, y) {
   local t = at(x + 2, y);
   local got = name_of(t.find_object(mo_wayobj));
   if (got != n) return "tile has " + got;
-  if (n.find("_catenary") != null && !t.get_way(WT[wt]).is_electrified()) return "not electrified";
+  if ((n.find("_catenary") != null || n.find("_power") != null) && !t.get_way(WT[wt]).is_electrified()) return "not electrified";
   return null;
 }
 

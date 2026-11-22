@@ -24,6 +24,7 @@ NUT=ingame/beta_check.nut
 source "$(dirname "$0")/mcp_client.sh"
 M="python -X utf8 $MCP_CLIENT --port $PORT"
 WORK="work/beta_game/$PORT"
+[ -n "$PAKS" ] || { echo "[beta] PAKS が空（既定の組み立てに失敗した）"; exit 1; }
 for p in $PAKS; do [ -f "$p" ] || { echo "[beta] $p が無い"; exit 1; }; done
 $M --run-squirrel "return 1;" > /dev/null 2>&1 && { echo "[beta] ポート $PORT で既にゲームが動いている"; exit 1; }
 
@@ -75,6 +76,12 @@ fail=0
 # ログ（-debug 3 で警告と読み込みの行まで出す。段を下げると 1 行しか出ず、二重に読んだ物の overlaid の警告も出ない）
 LOG="work/beta_game/simu_$PORT.log"
 [ -f "$WORK/simu.log" ] && cp "$WORK/simu.log" "$LOG"  # 写しを消した後も読めるように
+# 踏切は名前が script から読めず、pak128 の踏切でも通るので、ログの登録の行（crossing_logic_t::register_desc）で AMI の踏切が全部読まれたかを見る（#177）
+if [ -f "$LOG" ]; then
+  for n in $(grep -o '"ami_crossing_[a-z_]*"' <<< "$ITEMS" | tr -d '"'); do
+    grep -aq "register_desc():.$n\$" "$LOG" || { echo "[beta] 踏切 $n がログに登録されていない"; fail=1; }
+  done
+fi
 if [ -f "$LOG" ] && grep -aq "obj_reader_t::read_file" "$LOG"; then
   echo "[beta] 読んだ AMI の pak: $(grep -aoE "addons/pak128/ami[a-z_]*\.pak" "$LOG" | sort -u | tr '\n' ' ')"
   echo "[beta] ログの警告・エラー（AMI の物の名前 ami_ を含む行。全体は $LOG）:"
