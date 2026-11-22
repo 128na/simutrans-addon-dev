@@ -1,0 +1,23 @@
+Closes #170 は、ベータ版を出した後にしたい（この PR はタグ・リリースを出さない）ので、関連のみ: #170
+
+## 利用者から見た変更
+- 配布 readme に `ami_monorail.pak`・`ami_canal.pak` の行を足した（zip は第 1 弾の 4 本に monorail・canal・scenery を足した 7 本）。ラインアップ一覧 `ami_lineup.txt` は dat から自動で作られる
+- 準備の記録 `docs/records/2026-11-22_ami-beta2-release.md`（本家 125.0.1 の確認手順と未決事項）
+
+## 対象
+AMI（`addons/ami`）
+
+## 検証
+- `build.py` → `release.py --version beta.2 --paks ami_rail ami_road ami_tram ami_extra ami_monorail ami_canal ami_scenery --extract`: zip 約 12MB（`work/release/ami-beta.2.zip`、git 管理外）
+- `ingame/beta_check.sh`（既定の PAKS、OTRP `addon_check`、ポート 47300）: `ok 172 items`、AMI の物の警告なし
+- 本家 125.0.1 での読み込み: ユーザーが確かめて動作 OK（記録に追記）。ローカルで `docs-lint` は設定ファイルが無く動かなかったので CI に任せる
+
+## 未決（ユーザーの判断待ち）
+- 旧描画位置の `ami_rail_old.pak` は #178 のマージを待って、別の zip（ami-beta.2-old.zip）で同じリリースに付ける（ユーザーの決定済み）
+- タグ `ami-beta.2` とプレリリースは承認の後
+
+## サムネイル
+撮り直さない（ユーザーの決定。レイアウトの自動作成は保留）。画像は main のまま。`release.py` の画像の場所の直しだけを残した。
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
