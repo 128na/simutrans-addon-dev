@@ -24,6 +24,7 @@
 位置と幅は道路の白線（road_parts の EDGE_LINE・LINE_W・LINE_TOP・EDGE_CORNER_R・CENTER_DASHES）に合わせる。停止線（MARKING_STOP_U）は横断歩道の手前に置く。
 雪の絵は持たない（車道は除雪した想定で、路面・白線は夏と同じ。路肩の雪は下の道路の絵。dat は雪の絵に夏のセルを使う）。坂は lane4・lane6_m だけ、斜めは持たない
 """
+import functools
 import math
 import os
 
@@ -41,6 +42,8 @@ MARKING_E = LINE_W / 2         # 線の半幅（線の縁に合わせるとき�
 MARKING_Z = (0.0, LINE_TOP + 0.004)  # 白線の下面・上面（道路の白線より少しだけ上）
 # 路面の板: 白線より下。敷くのは、路側線から MARKING_PAVE_GAP だけ内まで（下の道路の路側の雪のまだらの始まり。そこから外は下の道路の絵）
 MARKING_PAVE_Z = (-0.002, 0.008)
+MARKING_SNOW_Z = (0.0, 0.0115)          # 雪の板（下の道路の積もった雪 snowbank と同じ厚み。白線より薄い）
+MARKING_SNOW_KINDS = ("lane6_m",)       # 雪の絵（夏と別のセル）を持つ種類。シートは行を 2 倍にし、雪は MARKING_ROWS 行下
 MARKING_PAVE_IN = SNOW_LAYERS[0][1]                # 2.47（2 車線の道路の中心からの半幅）
 MARKING_PAVE_GAP = EDGE_LINE - MARKING_PAVE_IN     # 0.9
 MARKING_TEE_MOUTH_COVER = EDGE_LINE + 0.2          # junction2_t の T字の、枝の側の角の内を覆う四角の外の端（下の道路の口の点線の端の外）
@@ -97,7 +100,7 @@ MARKING_W6_MEDIAN = EDGE_LINE                      # 3.37 境の帯 C と分離�
 MARKING_W6_CURB = EDGE_LINE / 2                    # 1.685 分離帯の縁（真ん中のタイルの直線）
 
 MARKING_KINDS = ("lane4", "junction2", "junction2_t", "junction4_in", "junction4_out",
-                 "lane6_m", "junction6_in", "junction6_out", "junction6_m", "junction6_c")
+                 "lane6_a", "lane6_b", "lane6_m", "junction6_in", "junction6_out", "junction6_m", "junction6_c")
 _DIRS = {"n": (0, 1), "e": (1, 0), "s": (0, -1), "w": (-1, 0)}
 # セル（行, 列）→ 形。位置は ami_dat.py の IMAGES と同じ（iss・blender-poc の線路の並び）
 MARKING_DEADENDS = {(0, 5): "s", (0, 6): "w", (0, 7): "n", (0, 8): "e"}       # 行き止まり → つながる向き
@@ -158,6 +161,7 @@ class _Plan:
     def __init__(self):
         self.polys = []
         self.paves = []
+        self.snows = []
 
     def pave(self, u0, u1, v0, v1):
         """路面の板（長方形）"""
@@ -226,17 +230,23 @@ class _Plan:
         for c in centers:
             self.quad(*span, c - w, c + w)
 
+    def snow(self, u0, u1, v0, v1):
+        """雪の板（長方形。雪の絵だけ。下の道路の中央線を隠して雪を見せる）"""
+        self.snows.append([(u0, v0), (u1, v0), (u1, v1), (u0, v1)])
+
     def pave_poly(self, pts):
         """路面の板（凸の多角形）"""
         self.paves.append(list(pts))
 
-    def emit(self, a, mat, voff=0.0, pave_mat=None):
+    def emit(self, a, mat, voff=0.0, pave_mat=None, snow_mat=None):
         """向き a（単位ベクトル。None なら (u, v) をそのまま (x, y) とする）のタイルへ、横位置を voff だけずらして
         （タイルの v = V - voff）、タイルの範囲で切り抜いて板にする。pave_mat が有れば路面の板も作る"""
         box = (((1, 0), MARKING_HALF), ((-1, 0), MARKING_HALF), ((0, 1), MARKING_HALF), ((0, -1), MARKING_HALF))
         layers = [("marking", self.polys, mat, MARKING_Z)]
         if pave_mat is not None:
             layers.append(("marking_pave", self.paves, pave_mat, MARKING_PAVE_Z))
+        if snow_mat is not None and self.snows:
+            layers.append(("marking_snow", self.snows, snow_mat, MARKING_SNOW_Z))
         for tag, polys, m, z in layers:
             for i, pts in enumerate(polys):
                 pts = [(u, v - voff) for u, v in pts]
@@ -423,14 +433,41 @@ def _scramble(plan, curve):
         c += MARKING_STRIPE_PERIOD
 
 
-def _lane6_m(plan):
-    """6 車線の真ん中のタイルの直線（向き a の座標）: 路側線 ±MARKING_W6_MEDIAN（外のタイルの内の線と合わせて、境の帯 C が走行車線）と、
-    分離帯の縁 ±MARKING_W6_CURB（実線。中は飾りを置く）。路面は lane4 と同じ ±MARKING_PAVE_IN（下の中央線を隠す）。
-    外のタイルは lane4 を再利用する（左右対称。内の線は実線。案 Q。地図を回しても崩れない）"""
-    h, P = MARKING_HALF, MARKING_PAVE_IN
-    for v in (-MARKING_W6_MEDIAN, -MARKING_W6_CURB, MARKING_W6_CURB, MARKING_W6_MEDIAN):
+def _lane6_outer(plan, outer):
+    """6 車線の外のタイルの直線（向き a の座標。outer が +1 なら外の側が +v、-1 なら -v）: 外の路側線（実線）、車線の境（破線）、
+    内の線（B と境の帯 C のあいだ。破線）。路面は、外の側は下の道路の路肩の雪のまだらの始まり（MARKING_PAVE_IN）まで、内の側は
+    タイルの端まで覆う（C の外の半分を除雪し、下の道路の内の路側線を隠す）。左右非対称なので、地図を回すと外の側が逆になる（ADR 0013）"""
+    h, E, P = MARKING_HALF, EDGE_LINE, MARKING_PAVE_IN
+    plan.line(outer * E, -h, h)
+    plan.dashed(0.0)
+    plan.dashed(-outer * E)
+    if outer > 0:
+        plan.pave(-h, h, -h, P)
+    else:
+        plan.pave(-h, h, -P, h)
+
+
+def _lane6_a(plan):
+    _lane6_outer(plan, 1)
+
+
+def _lane6_b(plan):
+    _lane6_outer(plan, -1)
+
+
+def _lane6_m(plan, snow=False):
+    """6 車線の真ん中のタイルの直線（向き a の座標。左右対称）: 路側線 ±MARKING_W6_MEDIAN（外のタイルの内の線と合わせて、境の帯 C が走行車線）と、
+    分離帯の縁 ±MARKING_W6_CURB（実線。中は飾りを置く）。路面はタイルの全面（C の外の半分を除雪し、下の中央線を隠す）。
+    雪の絵（snow）は、分離帯の部分（縁のあいだ）に雪を見せる（下の中央線は雪で隠す）"""
+    h, C = MARKING_HALF, MARKING_W6_CURB
+    for v in (-MARKING_W6_MEDIAN, -C, C, MARKING_W6_MEDIAN):
         plan.line(v, -h, h)
-    plan.pave(-h, h, -P, P)
+    if snow:
+        plan.pave(-h, h, -h, -C)
+        plan.pave(-h, h, C, h)
+        plan.snow(-h, h, -C, C)
+    else:
+        plan.pave(-h, h, -h, h)
 
 
 def _arm6_pave(plan):
@@ -509,13 +546,16 @@ def marking_jobs(kind):
         for rc, m in MARKING_TEES.items():
             jobs[rc] = (_tee(m, kind == "junction2_t"), None, 0.0, None)
         return jobs
-    if kind == "lane6_m":
+    if kind in ("lane6_a", "lane6_b", "lane6_m"):
+        # 直線・坂・行き止まり。外のタイルは左右非対称なので、向きは南北の線なら南向き・東西の線なら西向きにそろえる（行き止まりも、
+        # つながる向きでなく線の向きで決める）。lane6_a は外の側が左（南北の線は東、東西の線は南）、lane6_b は右（西・北）
+        draw = {"lane6_a": _lane6_a, "lane6_b": _lane6_b, "lane6_m": _lane6_m}[kind]
         for rc, axis in MARKING_STRAIGHTS.items():
-            jobs[rc] = (_lane6_m, d(axis[1]), 0.0, None)
+            jobs[rc] = (draw, d(axis[1]), 0.0, None)
         for rc, c in MARKING_DEADENDS.items():
-            jobs[rc] = (_lane6_m, d(c), 0.0, None)
+            jobs[rc] = (draw, d("s" if c in "ns" else "w"), 0.0, None)
         for rc, (axis, slope) in MARKING_SLOPES.items():
-            jobs[rc] = (_lane6_m, d(axis[1]), 0.0, slope)
+            jobs[rc] = (draw, d(axis[1]), 0.0, slope)
         return jobs
     if kind == "junction6_c":
         for rc in list(MARKING_DEADENDS) + [MARKING_CROSS_CELL]:
@@ -572,7 +612,7 @@ def _tee(m, closed_edge):
     return draw
 
 
-def marking_sheet(sheet, kind, label="M", paving=None):
+def marking_sheet(sheet, kind, label="M", paving=None, snow=None):
     """多車線と交差点の路面表示の way のシート（4 行 × 10 列）。種類ごとの形 → 絵は marking_jobs。絵の無い形のセル
     （MARKING_EMPTY_CELL ほか）は空。アイコン（0,0）は仮の絵（AMI は icons.py が描き直す）、カーソル（0,1）は MARKING_CURSOR の絵。
     paving は路面の材質を返す関数（下の道路のアスファルトと同じ物。AMI は render.py の _road_asphalt_skin の "asphalt"）。無ければ白線だけ"""
@@ -580,18 +620,22 @@ def marking_sheet(sheet, kind, label="M", paving=None):
     set_anchor(ROAD_CY)  # 道路と同じ（dat のオフセット -64,-32）
     mat = material(*MARKING_LINE)
     pave_mat = paving() if paving else None
+    snow_mat = snow() if (snow and kind in MARKING_SNOW_KINDS) else None
+    seasons = (0, 1) if snow_mat is not None else (0,)
     cells = {}
     jobs = marking_jobs(kind)
-    for rc, (draw, a, voff, slope) in jobs.items():
-        clear_models()
-        plan = _Plan()
-        draw(plan)
-        plan.emit(a, mat, voff, pave_mat)
-        if slope:
-            for ob in list(bpy.context.scene.objects):
-                if ob.type == "MESH" and ob.name.startswith("marking"):
-                    apply_slope(ob, slope)
-        cells[rc] = render_cell(f"{sheet}_{rc[0]}_{rc[1]}")
+    for season in seasons:  # 雪の絵（season 1）は MARKING_ROWS 行下
+        for rc, (draw, a, voff, slope) in jobs.items():
+            clear_models()
+            plan = _Plan()
+            (functools.partial(draw, snow=True) if season else draw)(plan)
+            plan.emit(a, mat, voff, pave_mat, snow_mat if season else None)
+            if slope:
+                for ob in list(bpy.context.scene.objects):
+                    if ob.type == "MESH" and ob.name.startswith("marking"):
+                        apply_slope(ob, slope)
+            row = rc[0] + season * MARKING_ROWS
+            cells[(row, rc[1])] = render_cell(f"{sheet}_{row}_{rc[1]}")
     cursor = MARKING_CURSOR[kind]
     cells[(0, 1)] = cells[cursor]
     clear_models()
@@ -600,12 +644,12 @@ def marking_sheet(sheet, kind, label="M", paving=None):
     draw(plan)
     plan.emit(a, mat, voff, pave_mat)
     cells[(0, 0)] = _s.render_icon(sheet + "_icon", 0.5, shift=(-0.14, 0.2), label=label, style="tram")
-    make_sheet(cells, MARKING_ROWS, MARKING_COLS, os.path.join(_s.SRC, sheet + ".png"))
+    make_sheet(cells, MARKING_ROWS * len(seasons), MARKING_COLS, os.path.join(_s.SRC, sheet + ".png"))
 
 
 # カーソルの絵のセル: 北南の直線、北へ向かう 2 車線の腕（行き止まり [n]）、北へ向かう 4 車線の腕の 1 マス目（入る側は T字 [nse]、出る側は [nsw]）
 MARKING_CURSOR = {"lane4": (0, 2), "junction2": (0, 7), "junction2_t": (0, 7), "junction4_in": (3, 5), "junction4_out": (3, 7),
-                  "lane6_m": (0, 2), "junction6_in": (3, 5), "junction6_out": (3, 7), "junction6_m": (3, 5), "junction6_c": (3, 9)}
+                  "lane6_a": (0, 2), "lane6_b": (0, 2), "lane6_m": (0, 2), "junction6_in": (3, 5), "junction6_out": (3, 7), "junction6_m": (3, 5), "junction6_c": (3, 9)}
 
 
 # ---------------------------------------------------------------- 高速道路の分岐・合流（AMI #188。ADR 0012 の作りを高速道路へ広げる）

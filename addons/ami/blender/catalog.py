@@ -146,7 +146,7 @@ ROADS = (ROAD_LOCAL, ROAD_GENERAL, ROAD_EXPRESSWAY)
 # 6 車線（#189。外のタイルの直線は lane4、中心の角は junction4_in の曲がりを使う）: lane6_m は真ん中のタイルの直線、junction6_in・junction6_out は
 # 腕の入る側・出る側の外の列、junction6_m は腕の真ん中の列（右折車線）、junction6_c は中心 3×3 の角を除く 5 枚（路面で覆うだけ）
 MARKINGS = {f"{PREFIX}mark_{_k}": _k for _k in ("lane4", "junction2", "junction2_t", "junction4_in", "junction4_out",
-                                                 "lane6_m", "junction6_in", "junction6_out", "junction6_m", "junction6_c")}
+                                                 "lane6_a", "lane6_b", "lane6_m", "junction6_in", "junction6_out", "junction6_m", "junction6_c")}
 # 高速道路の分岐・合流（#188）: 高速道路（ROAD_EXPRESSWAY）に重ねる。本線の列（_main）とランプの列（_ramp）。路面は高速道路のアスファルト
 MARKINGS_EXPWY = {f"{PREFIX}mark_{_k}": _k for _k in ("diverge_main", "diverge_ramp", "merge_main", "merge_ramp")}
 MARKINGS.update(MARKINGS_EXPWY)

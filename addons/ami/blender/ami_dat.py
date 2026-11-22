@@ -541,6 +541,8 @@ MARKING_CELLS = {
     "junction2_t": _MARK_DEADENDS | _MARK_TEES | {(0, 9), (3, 9)},
     "junction4_in": _MARK_DEADENDS | _MARK_TEES | {(2, 5), (2, 6), (2, 7), (2, 8)},
     "junction4_out": _MARK_DEADENDS | _MARK_TEES | {(2, 5), (2, 6), (2, 7), (2, 8)},
+    "lane6_a": {(0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (1, 5), (1, 6), (1, 7), (1, 8)} | _MARK_DEADENDS,
+    "lane6_b": {(0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (1, 5), (1, 6), (1, 7), (1, 8)} | _MARK_DEADENDS,
     "lane6_m": {(0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (1, 5), (1, 6), (1, 7), (1, 8)} | _MARK_DEADENDS,
     "junction6_in": _MARK_DEADENDS | _MARK_TEES,
     "junction6_out": _MARK_DEADENDS | _MARK_TEES,
@@ -551,6 +553,9 @@ MARKING_CELLS = {
        for _k in ("diverge_main", "diverge_ramp", "merge_main", "merge_ramp")},
 }
 MARKING_EMPTY_CELL = (0, 4)
+# 雪の絵（[1]）を夏と別のセルに持つ種類（tools/blender/sheetlib/marking.py の MARKING_SNOW_KINDS）。雪は MARKING_ROWS 行下
+MARKING_SNOW_KINDS = {"lane6_m"}
+MARKING_ROWS = 4
 
 
 def marking_dat_text(name, kind):
@@ -583,6 +588,8 @@ def marking_dat_text(name, kind):
                 row, col = cell[("image", PIER_SWITCH[idx])]
             if (row, col) not in MARKING_CELLS[kind]:
                 row, col = MARKING_EMPTY_CELL
+            elif season and kind in MARKING_SNOW_KINDS:
+                row += MARKING_ROWS
             out.append(f"{key}{idx}[{season}]={name}.{row}.{col},-64,-32")
     return NL.join(out) + NL
 
