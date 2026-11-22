@@ -4,7 +4,7 @@
 
 描画の道具は tools/blender/sheetlib/。ここには AMI のシートの設定（描き分け・シート名）だけを置く
 （共通とアドオンの設定の分け方は tools/README.md）。dat は blender/ami_dat.py、pak は build.py。
-軌道の種類ごとの名前は blender/catalog.py から展開する。種類を足すときは catalog.TRACKS と、下の TRACK_SETTINGS に足す。
+軌道の種類ごとの名前は blender/catalog.py から展開する。種類を足すときは catalog.TRACKS と、下の TRACK_SETTINGS に足す（旧描画位置の版 catalog.OLD_TRACKS は TRACKS から導かれ、TRACK_SETTINGS も新の設定から導く）。
 
 出力（在来線の名前で書く。高速線 ami_rail_slab も、壁・架線・橋脚を除いて同じ並び）:
     src/ami_rail_ballast.png  在来線（バラスト軌道）の通常の版。形は blender-poc の線路と同じで、夏の道床を砕石のまだらにした
@@ -402,7 +402,7 @@ for _w, _wold in _WALL_TRACKS:
 # 高架の版の way（ami_rail_ballast_elev_<版>、dat は system_type=1）は、基盤の版と同じ絵（道床・基盤。基盤は壁の位置で止まる）の下に、
 # 躯体（桁。sheetlib の ELEV_BODY_*）を足したもの。橋脚は描かない。壁・架線は地上と同じ way-object（ami_wall_rail_*）を重ねるので、
 # 壁の way-object のシートは書かない（write_walls）。持ち分は躯体の分だけ下へ広げる（lower）。アイコンは高架の帯
-for _t in catalog.TRACKS:
+for _t in catalog.ALL_TRACKS:
     for _v in BASE_VARIANTS:
         R.TRACK_PROFILES[_p(_t.elev(_v))] = dict(
             R.TRACK_PROFILES[_p(_t.base(_v))], sheet=_t.elev(_v), write_walls=False, elev_body=True,
@@ -424,7 +424,7 @@ PIER_GATE_LABEL = "G"
 # （Start・Start2）。手前の絵は無い（欄干が無く、車両より手前に描く物が無い）。雪の絵は 4 行下
 BRIDGE_PIER = (R.PIER_SIZE * R.PIER_ACROSS_K, R.PIER_SIZE, R._M_PIER)  # 橋脚の柱（横切る向き × 沿う向き）。高架の単柱の橋脚と同じ太さ
 BRIDGE_CELLS = ("ns", "ew", "up12", "up9", "up3", "up6", "up2_12", "up2_9", "up2_3", "up2_6")
-for _t in catalog.TRACKS:
+for _t in catalog.ALL_TRACKS:
     _bridge_base = R.TRACK_PROFILES[_p(_t.elev("single"))]
     R.TRACK_PROFILES[_p(_t.bridge)] = dict(
         _bridge_base, sheet=_t.bridge, write_walls=False,
@@ -462,14 +462,11 @@ TRACK_GATE_SKIN = {f"{spec[0]}_{k}": _track_concrete(f"{spec[0]}_{k}", spec[1])
                                       (R._M_PIER_BEAM, ("n", "s", "e", "w", "ne", "nw", "se", "sw")))
                    for k in keys}
 TRACK_MAT_SKIN = {spec[0]: _track_concrete(*spec) for spec in (R._M_BASE, R._M_ELEV_BODY)} | TRACK_WALL_SKIN | TRACK_PIER_SKIN
-for _t in catalog.TRACKS:
+for _t in catalog.ALL_TRACKS:
     for _v in BASE_VARIANTS:
         for _name in (_t.base(_v), _t.elev(_v)):
             R.TRACK_PROFILES[_p(_name)]["mat_skin"] = TRACK_MAT_SKIN
     R.TRACK_PROFILES[_p(_t.bridge)]["mat_skin"] = TRACK_MAT_SKIN
-for _t in catalog.OLD_TRACKS:  # 旧（#26）の基盤の版
-    for _v in BASE_VARIANTS:
-        R.TRACK_PROFILES[_p(_t.base(_v))]["mat_skin"] = TRACK_MAT_SKIN
 # 架線つきの壁は基盤の版の描き分けを上で写したもの（mat_skin を持たない）なので、壁の表を渡す
 for _w, _ in _WALL_TRACKS:
     for _v in BASE_VARIANTS:
@@ -640,13 +637,16 @@ for _w, _wold in _WALL_TRACKS:
         SHEETS[catalog.wall_rail(_v, _wold) + "_catenary"] = _track_target(f"{_p(_w.base(_v))}_catenary")
     for _v in TWIN_FROM:
         SHEETS[f"ami_wall_rail_{'old_' if _wold else ''}twin_catenary_{_v}"] = _track_target(f"{_p(_w.base(_v))}_twin_catenary")
-for _t in catalog.TRACKS:
+for _t in catalog.ALL_TRACKS:
     for _v in BASE_VARIANTS:
         SHEETS[_t.elev(_v)] = _track_target(_p(_t.elev(_v)))
-SHEETS["ami_pier_rail"] = lambda: R.pier_sheet("ami_pier_rail", _DATUMS, label=PIER_LABEL, mat_skin=TRACK_PIER_SKIN)
-SHEETS["ami_pier_rail_gate"] = lambda: R.pier_gate_sheet("ami_pier_rail_gate", _DATUMS, label=PIER_GATE_LABEL,
-                                                         mat_skin=TRACK_GATE_SKIN)
-for _t in catalog.TRACKS:
+# 橋脚（旧描画位置の物は基準面を動かさない。#26）
+for _old_pier, _pier_datums in ((False, _DATUMS), (True, _OLD_DATUMS)):
+    SHEETS[catalog.pier_rail(False, _old_pier)] = (lambda n, d: lambda: R.pier_sheet(n, d, label=PIER_LABEL, mat_skin=TRACK_PIER_SKIN))(
+        catalog.pier_rail(False, _old_pier), _pier_datums)
+    SHEETS[catalog.pier_rail(True, _old_pier)] = (lambda n, d: lambda: R.pier_gate_sheet(n, d, label=PIER_GATE_LABEL, mat_skin=TRACK_GATE_SKIN))(
+        catalog.pier_rail(True, _old_pier), _pier_datums)
+for _t in catalog.ALL_TRACKS:
     SHEETS[_t.bridge] = _track_target(_p(_t.bridge))
     SHEETS[_t.tunnel] = _tunnel_target(_t)
 _road_target = lambda key: lambda: R.road_sheet(key)

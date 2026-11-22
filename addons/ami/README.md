@@ -54,7 +54,8 @@ dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）�
 
 | 種類 | way | 版 |
 |---|---|---|
-| 在来線・直結・ラダー・スラブ | `ami_rail_ballast_old`・`ami_rail_concrete_old`・`ami_rail_ladder_old`・`ami_rail_slab_old` | 通常・基盤 4 版（`_base_<版>`）。高架・橋・トンネルは 2 本目の PR |
+| 在来線・直結・ラダー・スラブ | `ami_rail_ballast_old`・`ami_rail_concrete_old`・`ami_rail_ladder_old`・`ami_rail_slab_old` | 通常・基盤 4 版（`_base_<版>`）・高架 4 版（`_elev_<版>`）・橋（`_bridge`）・トンネル（`_tunnel`） |
+| 橋脚（旧用） | `ami_pier_rail_old`・`ami_pier_rail_old_gate` | 単柱と門型 |
 | 壁・架線つきの壁（旧用） | `ami_wall_rail_old_<版>`・`ami_wall_rail_old_<版>_catenary`・`ami_wall_rail_old_twin`・`ami_wall_rail_old_twin_catenary` | 新と同じ 4 版と twin |
 
 - 作り: 新と同じ部品・材質・寸法で、基準面を動かさず（`datums=R.FLAT`）、持ち分を手前へはみ出させない（`spill=0`）。blender-poc の旧描画位置（`TRACK_PROFILES["old"]`）と同じ。`blender/render.py` の `TRACK_SETTINGS` が新の設定から導く。名前は `catalog.OLD_TRACKS`・`catalog.is_old`
@@ -739,7 +740,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 ### 後で足すもの
 
-- 旧描画位置（SIS に合う）の線路の高架・橋脚・橋・トンネル（#26 の 2 本目。通常・基盤・壁・架線は上の「旧描画位置の線路」）
+- なし（旧描画位置の線路は、高架・橋・トンネル・橋脚まで作った。#26）
 
 ### 範囲に入れないもの
 

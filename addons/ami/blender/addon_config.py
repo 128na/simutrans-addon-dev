@@ -10,8 +10,7 @@ for _t in catalog.ALL_TRACKS:
     SHEETS[_t.way] = _t.way
     SHEETS.update({_t.base(v): _t.base(v) for v in catalog.VARIANTS})
     SHEETS.update({_t.elev(v): _t.elev(v) for v in catalog.VARIANTS})
-SHEETS["ami_pier_rail"] = "ami_pier_rail"
-SHEETS["ami_pier_rail_gate"] = "ami_pier_rail_gate"
+SHEETS.update({catalog.pier_rail(_g, _o): catalog.pier_rail(_g, _o) for _o in (False, True) for _g in (False, True)})
 SHEETS.update({_r.way: _r.way for _r in catalog.ROADS})
 for _r in catalog.ROADS:
     SHEETS.update({_r.base(v): _r.base(v) for v in catalog.VARIANTS})
