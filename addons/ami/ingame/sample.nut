@@ -72,8 +72,8 @@ foreach (v in VARIANTS) {
 }
 local W_AREA = [24, 18];  // 区画 W の大きさ（降雪の塗り直しに使う）
 // 橋脚の way。ELEV_DX は地上の区画からの東へのずらし
-local PIER = "ami_pier_rail";
-local PIER_GATE = "ami_pier_rail_gate";
+local PIER = TRACK.find("_old") != null ? "ami_pier_rail_old" : "ami_pier_rail";  // 旧描画位置（#26）は旧用の橋脚
+local PIER_GATE = PIER + "_gate";
 local GATE_ONLY = false;
 // 橋とトンネル（#19）。BT_DY は門型の橋脚の区画の原点からの南へのずらし
 local BRIDGE = TRACK + "_bridge";

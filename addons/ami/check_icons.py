@@ -40,6 +40,8 @@ REF = re.compile(r"^>?\s*([A-Za-z0-9_\-]+)\.(\d+)\.(\d+)\s*(?:,|$)")
 BG_BORROW = {
     "ami_pier_rail": "track",  # 橋脚は tram_track の way だが、線路の下に立てる物なので線路の色（#25）
     "ami_pier_rail_gate": "track",  # 同上
+    "ami_pier_rail_old": "track",  # 旧描画位置（#26）の橋脚も同じ
+    "ami_pier_rail_old_gate": "track",
     "ami_pier_road": "road",  # 道路の下に立てる橋脚なので道路の色（#25）
     "ami_sidewalk": "road",  # 歩道は water の way だが、道路の脇に敷く物なので道路の色（#25）
     **{_n: "road" for _n in ("ami_sidewalk_asphalt", "ami_sidewalk_brick", "ami_sidewalk_tile", "ami_sidewalk_elev",

@@ -45,6 +45,14 @@ ROUND_TARGETS = (["ami_rail_ballast"] + [f"ami_rail_ballast_base_{v}" for v in (
                  + [f"ami_rail_ballast_elev_{v}" for v in ("single", "back", "center", "front")]
                  + ["ami_pier_rail", "ami_pier_rail_gate", "ami_rail_ballast_bridge", "ami_rail_ballast_tunnel"])
 
+# 旧描画位置（SIS に合う。#26）の物は、ラウンドの対象にしない（glob の ami_wall_rail_*・ami_rail_slab_* などに合ってしまうため）。catalog.is_old と同じ
+_OLD_NAME = re.compile(r"ami_(rail_[a-z]+_old(_|$)|wall_rail_old_|pier_rail_old)")
+
+
+def _is_old(name):
+    return _OLD_NAME.match(name) is not None
+
+
 # 系統 → pak に入れる dat（src/ の名前。glob）と描く対象（render.py の SHEETS の名前。glob）。
 # pak には、見本が _round<n> の名前で引く物を全部入れる（描かなかったシートは src/ のものを写す）。
 # 在来線の壁・架線・橋脚は rail_ballast のラウンドで描いた物で、rail_slab の pak には src/ のまま入れる（スラブ軌道の見本 sample.nut が引くため）。
@@ -163,7 +171,7 @@ def pak_path(n):
 def family_targets(names):
     """系統の描く対象（FAMILIES の targets の glob を、render.py の SHEETS の名前 names に当てる。並びは names の順）。"""
     pats = FAMILIES[FAMILY]["targets"]
-    return [t for t in names if any(fnmatch.fnmatchcase(t, p) for p in pats)]
+    return [t for t in names if not _is_old(t) and any(fnmatch.fnmatchcase(t, p) for p in pats)]
 
 
 def _render_family(n):
@@ -367,7 +375,8 @@ def _pack(n):
     shutil.rmtree(out_src, ignore_errors=True)
     os.makedirs(out_src)
     rename = lambda text: re.sub(r"\b(ami_[a-z0-9_]+?)(?=\.\d|\b)", lambda m: m[1] + suffix, text)
-    dats = sorted({p for g in FAMILIES[FAMILY]["dats"] for p in glob.glob(os.path.join(ROOT, "src", g + ".dat"))})
+    dats = sorted({p for g in FAMILIES[FAMILY]["dats"] for p in glob.glob(os.path.join(ROOT, "src", g + ".dat"))
+                   if not _is_old(os.path.basename(p)[:-4])})
     sheets = set()
     names = []
     for d in dats:

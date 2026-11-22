@@ -141,7 +141,7 @@ for _r in catalog.ROADS:
 # 基盤の版と同じ並び（近い斜めの絵を持たない）で、system_type=1。値は仮: iss と同じく地上の 2 倍の費用・維持費（速さは地上と同じ）
 ELEV_COST_K = 2
 ELEVATED = set()
-for _t in catalog.TRACKS:
+for _t in catalog.ALL_TRACKS:
     for _v in BASE_VARIANTS:
         _n = _t.elev(_v)
         BUILT[_n] = _n
@@ -197,12 +197,12 @@ NO_SWITCH = {catalog.CANAL}  # 分岐の絵（image[nse1] など）を書かな�
 # 本体は track（system_type=7）として読むので、線路の網とつながり、線路の way-object（壁・架線）も載り、道路に重ねられる。
 # 値は仮（iss の橋脚と同じ費用・維持費）。topspeed は走らせる物ではないので 1
 PIER_VALUES = dict(waytype="tram_track", cost=1000, maintenance=100, intro_year=1900, topspeed=1)
-PIERS = {"ami_pier_rail": "ami_pier_rail", "ami_pier_rail_gate": "ami_pier_rail_gate"}  # 単柱と門型（門型は #18 の追加）
+PIERS = {catalog.pier_rail(_g, _o): catalog.pier_rail(_g, _o) for _o in (False, True) for _g in (False, True)}  # 単柱と門型（旧描画位置は #26）（門型は #18 の追加）
 # 道路用の橋脚（#22）: 線路用と同じ waytype（tram_track。2026-11-19 にユーザーが確定）と値（仮）。シートの並びは単柱の橋脚と同じ（README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
 PIERS[catalog.PIER_ROAD] = catalog.PIER_ROAD
 # 手前の絵（frontimage）を持つ橋脚: 名前 → 手前の絵の行のずらし。シートを描く側の tools/blender/sheetlib/sheetlib.py の
 # PIER_GATE_FRONT_ROW と同じ値にする。門型は柱・梁を手前の絵に描く
-PIER_FRONT_ROW = {"ami_pier_rail_gate": 4}
+PIER_FRONT_ROW = {catalog.pier_rail(True, _o): 4 for _o in (False, True)}
 # 橋脚のシートにあるセル（render の pier_sheet）。分岐の絵（switch 画像）は T字・十字と同じ柱
 PIER_SWITCH = {"[nse1]": "[nse]", "[nse2]": "[nse]", "[new1]": "[new]", "[new2]": "[new]", "[nsw1]": "[nsw]", "[nsw2]": "[nsw]",
                "[sew1]": "[sew]", "[sew2]": "[sew]", "[nsew1]": "[nsew]", "[nsew2]": "[nsew]"}
@@ -271,12 +271,12 @@ BRIDGE_STARTS = (("n", 0), ("s", 1), ("e", 2), ("w", 3))  # Start の向き → 
 BRIDGE_FRONT_KEYS = (("image", "ns ew".split()), ("start", "nsew"), ("ramp", "nsew"), ("pillar", "sw"),
                      ("image2", "ns ew".split()), ("start2", "nsew"), ("ramp2", "nsew"), ("pillar2", "sw"))
 BRIDGE_EMPTY_CELL = "0.9"
-BRIDGES = {_t.bridge: (_t.way, _t.bridge) for _t in catalog.TRACKS}  # 名前 → (地上の way, シート)
+BRIDGES = {_t.bridge: (_t.way, _t.bridge) for _t in catalog.ALL_TRACKS}  # 名前 → (地上の way, シート)
 BRIDGES.update({_r.bridge: (_r.way, _r.bridge) for _r in catalog.ROADS})  # 道路の橋（#22）。シートの並びは線路の橋と同じ
 # トンネルのシートの並び（sheetlib の tunnel_sheet）: 行 0 が奥の絵、行 1 が手前の絵（坑口の躯体）、行 2・3 が雪。列 2〜5 が n・s・e・w。
 # image[N] は北が高い坂のタイル。トンネルの中の way は地上の通常の版（way=）
 TUNNEL_DIRS = (("n", 2), ("s", 3), ("e", 4), ("w", 5))
-TUNNELS = {_t.tunnel: (_t.way, _t.tunnel) for _t in catalog.TRACKS}  # 名前 → (中の way, シート)
+TUNNELS = {_t.tunnel: (_t.way, _t.tunnel) for _t in catalog.ALL_TRACKS}  # 名前 → (中の way, シート)
 TUNNELS.update({_r.tunnel: (_r.way, _r.tunnel) for _r in catalog.ROADS})  # 道路のトンネル（#22）。シートの並びは線路のトンネルと同じ
 TUNNELS[catalog.MONORAIL_TUNNEL] = (catalog.MONORAIL, catalog.MONORAIL_TUNNEL)  # 跨座式モノレールのトンネル（#113）。中の way は地上の版
 
