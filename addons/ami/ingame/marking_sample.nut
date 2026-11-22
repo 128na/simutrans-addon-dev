@@ -3,7 +3,7 @@
 // 使い方（アドオンのディレクトリで）: sample_parallel.sh に NUT=ingame/marking_sample.nut を付ける（撮る場所は sample_spots.sh の MARKING_SPOTS）。
 // 返り値の先頭が ok なら全部敷けて、[check] で比べた名前も期待どおり。違えば先頭が check で、「名前 場所=[…]」が続く。最後に [check] の行が続く。
 // 敷き方は README の「路面表示の作り」と同じ:
-//   4 車線どうし: 1. 道路を 2 本ずつ並べる 2. 直線に lane4_b（西・北の列）・lane4_f（東・南の列）を腕の手前まで 3. junction4_in で 4 本の L 字（入る側の腕の外の端
+//   4 車線どうし: 1. 道路を 2 本ずつ並べる 2. 直線の 2 列に lane4 を腕の手前まで 3. junction4_in で 4 本の L 字（入る側の腕の外の端
 //   → 中心の角 → 左隣の腕の出る側の外の端）と、腕の 1 マス目の 2 列を横につなぐ 4. 出る側の 2 マス（スクランブルなら中心も）を
 //   junction4_out で 1 マスずつ敷き直す
 //   4 車線 × 2 車線: 4 車線の 2 列を junction4_in で通して敷き、1 マス目を横につなぎ、2 車線の腕から中心へ junction2、出る側を junction4_out
@@ -16,7 +16,7 @@ local ORIGINS = [[20, 20], [276, 20]];
 local SNOW = 1;
 local AREA = [[-3, -4], [66, 36]];
 local G = "ami_road_general";
-local LB = "ami_mark_lane4_b", LF = "ami_mark_lane4_f", J2 = "ami_mark_junction2", J2T = "ami_mark_junction2_t";
+local L4 = "ami_mark_lane4", J2 = "ami_mark_junction2", J2T = "ami_mark_junction2_t";
 local JI = "ami_mark_junction4_in", JO = "ami_mark_junction4_out";
 local pl = player_x(0);
 local report = "";
@@ -43,9 +43,8 @@ function expect(tag, x, y, road, mark) {
 function x4(tag, dx, scramble) {
   foreach (y in [8, 9]) way(tag, G, dx, y, dx + 17, y);
   foreach (x in [8, 9]) way(tag, G, dx + x, 0, dx + x, 17);
-  // 奥の列（北の行 y 8・西の列 x 8）は lane4_b、手前の列（南の行 y 9・東の列 x 9）は lane4_f
-  foreach (y in [8, 9]) { local l = y == 8 ? LB : LF; way(tag, l, dx, y, dx + 5, y); way(tag, l, dx + 12, y, dx + 17, y); }
-  foreach (x in [8, 9]) { local l = x == 8 ? LB : LF; way(tag, l, dx + x, 0, dx + x, 5); way(tag, l, dx + x, 12, dx + x, 17); }
+  foreach (y in [8, 9]) { way(tag, L4, dx, y, dx + 5, y); way(tag, L4, dx + 12, y, dx + 17, y); }
+  foreach (x in [8, 9]) { way(tag, L4, dx + x, 0, dx + x, 5); way(tag, L4, dx + x, 12, dx + x, 17); }
   // L 字: 入る側の腕の外の端 → 中心の角 → 左隣の腕の出る側の外の端
   foreach (l in [[9, 6, 9, 8, 11, 8], [11, 9, 9, 9, 9, 11], [8, 11, 8, 9, 6, 9], [6, 8, 8, 8, 8, 6]]) {
     way(tag + " L", JI, dx + l[0], l[1], dx + l[2], l[3]);
@@ -59,17 +58,14 @@ function x4(tag, dx, scramble) {
   foreach (p in [[9, 6], [9, 7], [10, 9], [11, 9], [8, 10], [8, 11], [6, 8], [7, 8]]) expect(tag + " in", dx + p[0], p[1], G, JI);
   foreach (p in outs) expect(tag + " out", dx + p[0], p[1], G, JO);
   foreach (p in centers) expect(tag + " center", dx + p[0], p[1], G, scramble ? JO : JI);
-  expect(tag + " lane4", dx + 3, 8, G, LB);
-  expect(tag + " lane4", dx + 3, 9, G, LF);
-  expect(tag + " lane4", dx + 8, 3, G, LB);
-  expect(tag + " lane4", dx + 9, 3, G, LF);
+  foreach (p in [[3, 8], [3, 9], [8, 3], [9, 3]]) expect(tag + " lane4", dx + p[0], p[1], G, L4);
 }
 
 // 4 車線（南北の x 8・9）× 2 車線（東西の y 8）
 function x42(tag, dx) {
   way(tag, G, dx, 8, dx + 17, 8);
   foreach (x in [8, 9]) way(tag, G, dx + x, 0, dx + x, 17);
-  foreach (x in [8, 9]) { local l = x == 8 ? LB : LF; way(tag, l, dx + x, 0, dx + x, 5); way(tag, l, dx + x, 11, dx + x, 17); }
+  foreach (x in [8, 9]) { way(tag, L4, dx + x, 0, dx + x, 5); way(tag, L4, dx + x, 11, dx + x, 17); }
   foreach (x in [8, 9]) way(tag, JI, dx + x, 6, dx + x, 10);
   way(tag + " link", JI, dx + 8, 7, dx + 9, 7);
   way(tag + " link", JI, dx + 8, 9, dx + 9, 9);

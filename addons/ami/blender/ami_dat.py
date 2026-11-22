@@ -536,7 +536,7 @@ MARKING_VALUES = dict(waytype="tram_track", cost=1000, maintenance=100, intro_ye
 _MARK_DEADENDS = {(0, 5), (0, 6), (0, 7), (0, 8)}
 _MARK_TEES = {(3, 5), (3, 6), (3, 7), (3, 8)}
 MARKING_CELLS = {
-    **{k: {(0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (1, 5), (1, 6), (1, 7), (1, 8)} | _MARK_DEADENDS for k in ("lane4_b", "lane4_f")},
+    "lane4": {(0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (1, 5), (1, 6), (1, 7), (1, 8)} | _MARK_DEADENDS,
     "junction2": _MARK_DEADENDS | _MARK_TEES | {(0, 9), (3, 9)},
     "junction2_t": _MARK_DEADENDS | _MARK_TEES | {(0, 9), (3, 9)},
     "junction4_in": _MARK_DEADENDS | _MARK_TEES | {(2, 5), (2, 6), (2, 7), (2, 8)},

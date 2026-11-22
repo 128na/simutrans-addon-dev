@@ -82,9 +82,9 @@ def ref(v):
 
 
 # 路面表示（#187）の左上の字と、絵にするセル（北へ向かう腕・北南の直線・北が閉じた T字の中心）
-MARK_LABELS = {"ami_mark_lane4_b": "奥", "ami_mark_lane4_f": "前", "ami_mark_junction2": "交", "ami_mark_junction2_t": "丁",
+MARK_LABELS = {"ami_mark_lane4": "線", "ami_mark_junction2": "交", "ami_mark_junction2_t": "丁",
                "ami_mark_junction4_in": "入", "ami_mark_junction4_out": "出"}
-MARK_PICTURE = {"ami_mark_lane4_b": "image[ns][0]", "ami_mark_lane4_f": "image[ns][0]", "ami_mark_junction2": "image[n][0]", "ami_mark_junction2_t": "image[sew][0]",
+MARK_PICTURE = {"ami_mark_lane4": "image[ns][0]", "ami_mark_junction2": "image[n][0]", "ami_mark_junction2_t": "image[sew][0]",
                 "ami_mark_junction4_in": "image[nse][0]", "ami_mark_junction4_out": "image[nsw][0]"}
 
 

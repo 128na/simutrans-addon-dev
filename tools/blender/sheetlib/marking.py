@@ -5,9 +5,8 @@
 絵（夏の路面・雪）をそのまま見せる。下の道路は白線のある一般道路のままでよい（その中央線・内の路側線・交差点の中の線は路面が覆い、外の路側線・
 角の円弧は表示と同じ位置）。絵はタイルの内に収まるので、draw_as_ding は付けない（0。docs/reference/cityscape.md の 2.1）。
 種類（marking_sheet の kind）と、つながる形ごとの絵（左側通行。右側通行の版は作らない）:
-  lane4_b:       4 車線の直線の、奥の列（南北の道は西、東西の道は北）の 1 タイル。直線・坂・行き止まり（直線と同じ絵）
-  lane4_f:       同じく手前の列（南北の道は東、東西の道は南）。2 つの列のあいだの帯は路面で覆い、外の路肩は覆わないので、列で絵が違う
-                 （SIS の B・F と同じ分け方）
+  lane4:         4 車線の直線の 1 タイル（2 列とも同じ絵。左右対称なので、地図を回しても崩れない）。直線・坂・行き止まり（直線と同じ絵）。
+                 路面は MARKING_PAVE_IN の内だけで、2 つの列のあいだの帯と外の路肩は、下の道路の絵（雪も）を見せる
   junction2:     2 車線の腕（行き止まり）、2 車線どうしの中心（十字・1 タイル）、4 車線 × 2 車線の中心（T字。欠ける向きが相方のタイル）
   junction2_t:   2 車線の腕（行き止まり）、2 車線の T字路の中心（T字。欠ける向きの側に路側線）、十字・1 タイルは junction2 と同じ
   junction4_in:  4 車線の腕の入る側。行き止まり = 2 マス目（導流帯の三角）、T字 = 1 マス目（矢印・停止線・横断歩道）、曲がり = 中心（角の縁石）
@@ -19,7 +18,7 @@
 腕の外の端の中央線の一点から 2 本に分けて、あいだに楔の導流帯を置く（iss の intersection1 と同じ）。2 車線の交差点の路面は、
 腕の 3 車線の幅の区間と中心を路側線まで覆う（MARKING_W2_PAVE。_wide_pave）。
 位置と幅は道路の白線（road_parts の EDGE_LINE・LINE_W・LINE_TOP・EDGE_CORNER_R・CENTER_DASHES）に合わせる。停止線（MARKING_STOP_U）は横断歩道の手前に置く。
-雪の絵は持たない（車道は除雪した想定で、路面・白線は夏と同じ。路肩の雪は下の道路の絵。dat は雪の絵に夏のセルを使う）。坂は lane4_b・lane4_f だけ、斜めは持たない
+雪の絵は持たない（車道は除雪した想定で、路面・白線は夏と同じ。路肩の雪は下の道路の絵。dat は雪の絵に夏のセルを使う）。坂は lane4 だけ、斜めは持たない
 """
 import math
 import os
@@ -86,9 +85,7 @@ MARKING_SCRAMBLE_GAP = 1.9    # 内の端の、交差点の中心からの距離
 MARKING_SCRAMBLE_OUT = 4.6    # 縞を置く外の限り（タイルの中心からの距離。対角線の上。角の円弧の中ほどは約 5.1）。
 # 外の端の縞は、路面で覆わない角の四角（MARKING_PAVE_IN より外）にかかる（降雪では下の道路のまだらの雪の上に乗る）
 
-MARKING_KINDS = ("lane4_b", "lane4_f", "junction2", "junction2_t", "junction4_in", "junction4_out")
-# lane4 の列 → 外の路肩の向き（南北の道の向き, 東西の道の向き）
-MARKING_LANE4_OUTER = {"lane4_b": ("w", "n"), "lane4_f": ("e", "s")}
+MARKING_KINDS = ("lane4", "junction2", "junction2_t", "junction4_in", "junction4_out")
 _DIRS = {"n": (0, 1), "e": (1, 0), "s": (0, -1), "w": (-1, 0)}
 # セル（行, 列）→ 形。位置は ami_dat.py の IMAGES と同じ（iss・blender-poc の線路の並び）
 MARKING_DEADENDS = {(0, 5): "s", (0, 6): "w", (0, 7): "n", (0, 8): "e"}       # 行き止まり → つながる向き
@@ -258,14 +255,14 @@ def _prism(name, a, pts, mat, z=MARKING_Z):
 
 
 # ---------------------------------------------------------------- 絵（どれも 1 タイル 1 枚。_Plan に集めて emit する）
-def _lane4(plan, side):
-    """4 車線の直線の 1 タイル（向き a の座標）: 両側の路側線（実線）と、中ほどの車線の境（破線）。路面は、外の路肩（side が +1 なら
-    v の正、-1 なら負の側）の MARKING_PAVE_IN より外を除く全面（帯の側はタイルの端まで覆い、下の道路の中央線も覆う）"""
+def _lane4(plan):
+    """4 車線の直線の 1 タイル（向き a の座標）: 両側の路側線（実線）と、中ほどの車線の境（破線）。路面は ±MARKING_PAVE_IN の内
+    （下の道路の中央線を覆う。そこから外は、ふつうの一般道路と同じく下の道路の絵で、2 つの列のあいだの帯にも雪が見える）"""
     h, P = MARKING_HALF, MARKING_PAVE_IN
     for v in (-EDGE_LINE, EDGE_LINE):
         plan.line(v, -h, h)
     plan.dashed(0.0)
-    plan.pave(-h, h, -h if side > 0 else -P, P if side > 0 else h)
+    plan.pave(-h, h, -P, P)
 
 
 def _arm4_pave(plan):
@@ -424,18 +421,13 @@ def marking_jobs(kind):
     """種類 → {セル: (描く関数, 向き a か None, 横位置のずらし, 坂)}"""
     jobs = {}
     d = lambda c: _DIRS[c]
-    if kind in MARKING_LANE4_OUTER:
-        def lane(a):
-            """向き a のタイルの絵: 外の路肩が a の左（v の正）なら +1"""
-            o = d(MARKING_LANE4_OUTER[kind][0 if a[0] == 0 else 1])
-            side = 1 if o[0] * -a[1] + o[1] * a[0] > 0 else -1
-            return lambda p: _lane4(p, side)
+    if kind == "lane4":
         for rc, axis in MARKING_STRAIGHTS.items():
-            jobs[rc] = (lane(d(axis[1])), d(axis[1]), 0.0, None)
+            jobs[rc] = (_lane4, d(axis[1]), 0.0, None)
         for rc, c in MARKING_DEADENDS.items():
-            jobs[rc] = (lane(d(c)), d(c), 0.0, None)
+            jobs[rc] = (_lane4, d(c), 0.0, None)
         for rc, (axis, slope) in MARKING_SLOPES.items():
-            jobs[rc] = (lane(d(axis[1])), d(axis[1]), 0.0, slope)
+            jobs[rc] = (_lane4, d(axis[1]), 0.0, slope)
         return jobs
     if kind in ("junction2", "junction2_t"):
         four = lambda p: _center(p, (("n", "e"), ("e", "s"), ("s", "w"), ("w", "n")), (), "nesw")
@@ -517,4 +509,4 @@ def marking_sheet(sheet, kind, label="M", paving=None):
 
 
 # カーソルの絵のセル: 北南の直線、北へ向かう 2 車線の腕（行き止まり [n]）、北へ向かう 4 車線の腕の 1 マス目（入る側は T字 [nse]、出る側は [nsw]）
-MARKING_CURSOR = {"lane4_b": (0, 2), "lane4_f": (0, 2), "junction2": (0, 7), "junction2_t": (0, 7), "junction4_in": (3, 5), "junction4_out": (3, 7)}
+MARKING_CURSOR = {"lane4": (0, 2), "junction2": (0, 7), "junction2_t": (0, 7), "junction4_in": (3, 5), "junction4_out": (3, 7)}
