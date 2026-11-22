@@ -91,6 +91,9 @@ done
 MARKING_SPOTS="X4:9:9 X4S:31:9 X42:53:8 X2:5:27 T2:19:27"
 # 6 車線の路面表示の見本（ingame/marking6_sample.nut。#189）: X6 6 車線どうしの十字（中心 (9,9)）、W6 西の腕、S6 南の腕、N6 北の腕、E6 東の腕
 MARKING6_SPOTS="X6:9:9 W6:5:9 S6:9:14 N6:9:4 E6:14:9"
+# 高速道路の分岐・合流の見本（ingame/expwy_marking_sample.nut。#188）: DE・DS・DW・DN 分岐（東・南・西・北行き）、ME・MS・MW・MN 合流、
+#   D0 分岐の平行 0 マス、D2 平行 2 マスでランプが斜め、M0 合流の平行 0 マスでランプが斜め
+EXPWY_MARKING_SPOTS="DE:9:9 DS:32:7 DW:59:10 DN:77:15 ME:9:31 MS:32:29 MW:59:32 MN:77:37 D0:8:55 D2:33:55 M0:62:55"
 # 操車場の見本（ingame/yard_sample.nut）: Y1 南北の 1・3 タイル、YP 乗客の駅の隣、YE 東西の 1・3 タイル、YG 並べた留置線、
 #   YW 壁つきの基盤の版、YT 列車を止めた操車場、YX 斜め・坂・高架に建てる試し
 YARD_SPOTS="Y1:2:3 YP:6:4 YE:3:13 YG:11:4 YW:15:3 YT:19:5 YX:30:4"
@@ -102,6 +105,7 @@ case "${NUT:-}" in
   *sidewalk_sample.nut) SPOTS=${SPOTS:-$SIDEWALK_SPOTS} ;;
   *embankment_sample.nut) SPOTS=${SPOTS:-$EMBANKMENT_SPOTS} ;;
   *divider_sample.nut) SPOTS=${SPOTS:-$DIVIDER_SPOTS} ;;
+  *expwy_marking_sample.nut) SPOTS=${SPOTS:-$EXPWY_MARKING_SPOTS} ;;
   *marking_sample.nut) SPOTS=${SPOTS:-$MARKING_SPOTS} ;;
   *marking6_sample.nut) SPOTS=${SPOTS:-$MARKING6_SPOTS} ;;
   *yard_sample.nut) SPOTS=${SPOTS:-$YARD_SPOTS} ;;

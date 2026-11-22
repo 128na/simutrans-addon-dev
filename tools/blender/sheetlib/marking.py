@@ -489,6 +489,8 @@ def _tile_v(inbound):
 
 def marking_jobs(kind):
     """種類 → {セル: (描く関数, 向き a か None, 横位置のずらし, 坂)}"""
+    if kind in MARKING_EXPWY_KINDS:
+        return _expwy_jobs(kind)
     jobs = {}
     d = lambda c: _DIRS[c]
     if kind == "lane4":
@@ -604,3 +606,171 @@ def marking_sheet(sheet, kind, label="M", paving=None):
 # カーソルの絵のセル: 北南の直線、北へ向かう 2 車線の腕（行き止まり [n]）、北へ向かう 4 車線の腕の 1 マス目（入る側は T字 [nse]、出る側は [nsw]）
 MARKING_CURSOR = {"lane4": (0, 2), "junction2": (0, 7), "junction2_t": (0, 7), "junction4_in": (3, 5), "junction4_out": (3, 7),
                   "lane6_m": (0, 2), "junction6_in": (3, 5), "junction6_out": (3, 7), "junction6_m": (3, 5), "junction6_c": (3, 9)}
+
+
+# ---------------------------------------------------------------- 高速道路の分岐・合流（AMI #188。ADR 0012 の作りを高速道路へ広げる）
+# 本線の車道（高速道路 1 タイル = 1 方向の 2 車線）の左（外）に、ランプへ出入りする 1 車線を足す。車線は、本線の列とランプの列の境をはさむ
+# 2 本の路側線のあいだの帯（#187 の右折車線と同じ帯）。区間は、テーパー 1 マス・平行 0〜n マス・分かれ 1 マス。分かれでは、帯の車線が
+# ランプの列へ曲がり、ランプの道路（ふつうの高速道路）の 2 車線へ広がる。本線との境は太い破線、分かれた後のあいだは導流帯。
+# 種類と形（左側通行。地図を回しても崩れないよう、1 つの種類は行き止まり・T字・曲がりを 1 役ずつに使う。直線は 180° 回すと側が逆になるので使わない）:
+#   diverge_main / merge_main: 本線の列。行き止まり = テーパー（分岐は進む向き、合流は戻る向きへつながる）、T字 = 平行（欠ける向きが右）、
+#                              曲がり = 分かれ（分岐は戻る向きと左、合流は進む向きと左）
+#   diverge_ramp / merge_ramp: ランプの列（テーパー・平行の下は道路なし、分かれの下はランプの道路の曲がり）。行き止まりと曲がりは本線の列と同じ
+#                              向きの決まりで、T字は欠ける向きが左、曲がりの横の向きは右（本線の側）
+# 絵は、進む向き u（タイルの中心が 0）と左の横位置 v（本線のタイルの中心が 0、ランプのタイルの中心が TILE）で 1 行分を描き、
+# タイルごとに切り抜く。合流は分岐の絵を u について裏返す（ランプから入る導線に沿う向きになる）
+MARKING_EXPWY_KINDS = ("diverge_main", "diverge_ramp", "merge_main", "merge_ramp")
+MARKING_KINDS = MARKING_KINDS + MARKING_EXPWY_KINDS
+MARKING_EXPWY_IN = EDGE_LINE                     # 3.37 本線の左の路側線 = 帯の車線との境（太い破線）
+MARKING_EXPWY_OUT = TILE - EDGE_LINE             # 6.63 帯の車線の外の路側線（ランプのタイルの、本線の側の路側線の位置）
+MARKING_EXPWY_RAMP_TOP = TILE + EDGE_LINE        # 13.37 分かれの先の端の、ランプの道路の外の路側線
+MARKING_EXPWY_SHOULDER = 0.4                     # 帯の車線の外の路側線の外に敷く路面（下が草地の所で、線が草に接しないように）
+MARKING_EXPWY_BOUNDARY_W = 2 * LINE_W            # 太い破線の幅（車線境界線。路側線の 2 倍）
+MARKING_EXPWY_SPLIT_U = -3.0                     # 分かれで、帯の車線の内の線が本線の路側線から離れ始める所（u）
+MARKING_EXPWY_RAMP_DASH_W = 5.5                  # ランプの中央の破線を描き始める、車線の幅（分かれた車線が 2 車線へ広がる所）
+MARKING_EXPWY_STEPS = 24                         # 曲がる線・路面を割る数
+
+
+def _smooth(t):
+    t = min(1.0, max(0.0, t))
+    return t * t * (3 - 2 * t)
+
+
+def _expwy_upper(u):
+    """分かれの、帯の車線の外の線（u -5 → 5 で、OUT からランプの外の路側線へ。両端で向きが u にそろう）"""
+    return MARKING_EXPWY_OUT + (MARKING_EXPWY_RAMP_TOP - MARKING_EXPWY_OUT) * _smooth((u + MARKING_HALF) / TILE)
+
+
+def _expwy_lower(u):
+    """分かれの、帯の車線の内の線（SPLIT_U まで本線の路側線、そこから OUT へ）"""
+    u0 = MARKING_EXPWY_SPLIT_U
+    return MARKING_EXPWY_IN + (MARKING_EXPWY_OUT - MARKING_EXPWY_IN) * _smooth((u - u0) / (MARKING_HALF - u0))
+
+
+def _expwy_curve(plan, f, u0, u1, w=LINE_W):
+    n = MARKING_EXPWY_STEPS
+    pts = [(u0 + (u1 - u0) * i / n, f(u0 + (u1 - u0) * i / n)) for i in range(n + 1)]
+    for p, q in zip(pts, pts[1:]):
+        plan.seg(p, q, w)
+
+
+def _expwy_dashes(plan, f, w, u0=-MARKING_HALF, u1=MARKING_HALF):
+    """v = f(u) に沿う破線。区切りは道路の中央線の破線と同じ（タイルの辺がすき間の中ほど）"""
+    for i in range(MARKING_DASHES):
+        t0 = -MARKING_HALF + TILE * (i + (1 - MARKING_DASH_FRAC) / 2) / MARKING_DASHES
+        t1 = t0 + TILE * MARKING_DASH_FRAC / MARKING_DASHES
+        a, b = max(t0, u0), min(t1, u1)
+        if b > a:
+            pts = [(a + (b - a) * k / 4, f(a + (b - a) * k / 4)) for k in range(5)]
+            for p, q in zip(pts, pts[1:]):
+                plan.seg(p, q, w)
+
+
+def _expwy_pave(plan, lo, hi):
+    """lo(u)〜hi(u) の路面を、u の短冊（凸の台形）に割って敷く"""
+    n, h = MARKING_EXPWY_STEPS, MARKING_HALF
+    us = [-h + TILE * i / n for i in range(n + 1)]
+    for a, b in zip(us, us[1:]):
+        plan.pave_poly([(a, lo(a)), (b, lo(b)), (b, hi(b)), (a, hi(a))])
+
+
+def _expwy_zebra(plan, lo, hi, u0, u1):
+    """lo(u)〜hi(u)（u0〜u1）の導流帯の縞。縞は v = u - k の向き（分岐で出ていく導線に沿う）で、両側の線の内の縁で切る"""
+    e, hw = MARKING_E, MARKING_ZEBRA_W / 2
+    step = MARKING_ZEBRA_STEP * math.sqrt(2)
+    k = u0 - TILE
+    while k < u1:
+        inside = []
+        for i in range(401):
+            u = u0 + (u1 - u0) * i / 400
+            v = u - k
+            if lo(u) + e + hw <= v <= hi(u) - e - hw:
+                inside.append(u)
+        if inside and (inside[-1] - inside[0]) * math.sqrt(2) >= MARKING_ZEBRA_MIN:
+            a, b = inside[0], inside[-1]
+            d = hw * math.sqrt(2)
+            plan.poly([(a, a - k - d), (b, b - k - d), (b, b - k + d), (a, a - k + d)])
+        k += step
+
+
+def _expwy_main_lines(plan):
+    """本線の 2 車線の中央の破線（下の道路の破線を路面で覆うので描き直す）。右の路側線は下の道路の絵のまま"""
+    plan.dashed(0.0)
+
+
+def _expwy_taper(plan):
+    """テーパー（分岐の 1 マス目）: 帯の車線が 0 から広がる。本線との境は太い破線、外の線は本線の路側線から OUT へ斜めに"""
+    h, I, O, S = MARKING_HALF, MARKING_EXPWY_IN, MARKING_EXPWY_OUT, MARKING_EXPWY_SHOULDER
+    outer = lambda u: I + (O - I) * (u + h) / TILE
+    _expwy_pave(plan, lambda u: -MARKING_PAVE_IN, lambda u: outer(u) + S)
+    _expwy_main_lines(plan)
+    _expwy_dashes(plan, lambda u: I, MARKING_EXPWY_BOUNDARY_W)
+    plan.seg((-h, I), (h, O))
+
+
+def _expwy_parallel(plan):
+    """平行（減速・加速車線）: 帯の車線。本線との境は太い破線、外は実線"""
+    h, I, O, S = MARKING_HALF, MARKING_EXPWY_IN, MARKING_EXPWY_OUT, MARKING_EXPWY_SHOULDER
+    plan.pave(-h, h, -MARKING_PAVE_IN, O + S)
+    _expwy_main_lines(plan)
+    _expwy_dashes(plan, lambda u: I, MARKING_EXPWY_BOUNDARY_W)
+    plan.line(O, -h, h)
+
+
+def _expwy_split(plan):
+    """分かれ: 帯の車線がランプの列へ曲がり、ランプの道路の 2 車線（外の路側線 RAMP_TOP、内の路側線 OUT）へ広がる。
+    本線との境は SPLIT_U まで太い破線、そこから本線の路側線（実線）。そのあいだが導流帯"""
+    h, I, S = MARKING_HALF, MARKING_EXPWY_IN, MARKING_EXPWY_SHOULDER
+    u0 = MARKING_EXPWY_SPLIT_U
+    _expwy_pave(plan, lambda u: -MARKING_PAVE_IN, lambda u: _expwy_upper(u) + S)
+    _expwy_main_lines(plan)
+    _expwy_dashes(plan, lambda u: I, MARKING_EXPWY_BOUNDARY_W, u1=u0)
+    plan.line(I, u0, h)
+    _expwy_curve(plan, _expwy_upper, -h, h)
+    _expwy_curve(plan, _expwy_lower, u0, h)
+    _expwy_zebra(plan, lambda u: I, _expwy_lower, u0, h)
+    # ランプの中央の破線: 車線の幅が RAMP_DASH_W を超えた所から、2 本の線のあいだの中ほどに
+    mid = lambda u: (_expwy_upper(u) + _expwy_lower(u)) / 2
+    us = [-h + TILE * i / 200 for i in range(201)]
+    start = next(u for u in us if _expwy_upper(u) - _expwy_lower(u) >= MARKING_EXPWY_RAMP_DASH_W)
+    _expwy_dashes(plan, mid, LINE_W, u0=start)
+
+
+def _mirror(draw):
+    """u について裏返した絵（合流）"""
+    def mirrored(plan):
+        p = _Plan()
+        draw(p)
+        plan.polys += [[(-u, v) for u, v in pts] for pts in p.polys]
+        plan.paves += [[(-u, v) for u, v in pts] for pts in p.paves]
+    return mirrored
+
+
+def _expwy_jobs(kind):
+    merge = kind.startswith("merge")
+    ramp = kind.endswith("_ramp")
+    voff = TILE if ramp else 0.0
+    d = lambda c: _DIRS[c]
+    left = lambda a: (-a[1], a[0])
+    right = lambda a: (a[1], -a[0])
+    side = right if ramp else left              # 分かれで横につながる向き（相方の列の側）
+    wrap = _mirror if merge else (lambda f: f)
+    jobs = {}
+    for rc, c in MARKING_DEADENDS.items():      # テーパー: 分岐は進む向き、合流は戻る向きへつながる
+        x, y = d(c)
+        jobs[rc] = (wrap(_expwy_taper), (-x, -y) if merge else (x, y), voff, None)
+    for rc, m in MARKING_TEES.items():          # 平行: 欠ける向きは、本線の列は右、ランプの列は左
+        mx, my = d(m)
+        jobs[rc] = (wrap(_expwy_parallel), (my, -mx) if ramp else (-my, mx), voff, None)
+    for rc, cv in MARKING_CURVES.items():       # 分かれ: 分岐は戻る向きと横、合流は進む向きと横
+        for p, q in ((cv[0], cv[1]), (cv[1], cv[0])):
+            a = d(p) if merge else (-d(p)[0], -d(p)[1])
+            if side(a) == d(q):
+                jobs[rc] = (wrap(_expwy_split), a, voff, None)
+                break
+    assert len(jobs) == 12, (kind, len(jobs))
+    return jobs
+
+
+# カーソルの絵のセル: 北へつながる行き止まり（分岐は北へ向かうテーパー、合流は南へ向かうテーパーの終わり）
+MARKING_CURSOR.update({k: (0, 7) for k in MARKING_EXPWY_KINDS})
