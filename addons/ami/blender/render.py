@@ -654,7 +654,7 @@ MARKING_PAVING = ROAD_SETTINGS[catalog.ROAD_GENERAL.key]["skin"]["asphalt"]
 MARKING_EXPWY_PAVING = ROAD_SETTINGS[catalog.ROAD_EXPRESSWAY.key]["skin"]["asphalt"]
 for _name, _kind in catalog.MARKINGS.items():
     _paving = MARKING_EXPWY_PAVING if _name in catalog.MARKINGS_EXPWY else MARKING_PAVING
-    SHEETS[_name] = (lambda n, k, pv: lambda: R.marking_sheet(n, k, label=MARKING_LABEL, paving=pv))(_name, _kind, _paving)
+    SHEETS[_name] = (lambda n, k, pv: lambda: R.marking_sheet(n, k, label=MARKING_LABEL, paving=pv, snow=ROAD_SNOW))(_name, _kind, _paving)
 for _v in catalog.ROAD_WALL_VARIANTS:
     SHEETS[f"ami_wall_road_{_v}"] = _road_target(f"wall_road_{_v}")
 for _v, _name in catalog.ROAD_DIVIDERS.items():

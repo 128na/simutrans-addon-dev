@@ -142,8 +142,11 @@ ROADS = (ROAD_LOCAL, ROAD_GENERAL, ROAD_EXPRESSWAY)
 # 多車線と交差点の路面表示の way（#187。ADR 0012）: 道路に重ねて敷く tram_track の way。名前 → 種類（sheetlib の marking の MARKING_KINDS）。
 # 一般道路（ROAD_GENERAL）に重ね、白線と路面を描く（下の道路の線と、帯・交差点の中の雪を覆う）。
 # lane4 は 4 車線の直線（2 列とも）、junction2 は 2 車線の腕と中心（4 車線 × 2 車線の中心も）、
-# junction2_t は 2 車線の T字路の中心、junction4_in・junction4_out は 4 車線の腕の入る側・出る側と中心（出る側の中心はスクランブル）
-MARKINGS = {f"{PREFIX}mark_{_k}": _k for _k in ("lane4", "junction2", "junction2_t", "junction4_in", "junction4_out")}
+# junction2_t は 2 車線の T字路の中心、junction4_in・junction4_out は 4 車線の腕の入る側・出る側と中心（出る側の中心はスクランブル）。
+# 6 車線（#189。外のタイルの直線は lane4、中心の角は junction4_in の曲がりを使う）: lane6_m は真ん中のタイルの直線、junction6_in・junction6_out は
+# 腕の入る側・出る側の外の列、junction6_m は腕の真ん中の列（右折車線）、junction6_c は中心 3×3 の角を除く 5 枚（路面で覆うだけ）
+MARKINGS = {f"{PREFIX}mark_{_k}": _k for _k in ("lane4", "junction2", "junction2_t", "junction4_in", "junction4_out",
+                                                 "lane6_a", "lane6_b", "lane6_m", "junction6_in", "junction6_out", "junction6_m", "junction6_c")}
 # 高速道路の分岐・合流（#188）: 高速道路（ROAD_EXPRESSWAY）に重ねる。本線の列（_main）とランプの列（_ramp）。路面は高速道路のアスファルト
 MARKINGS_EXPWY = {f"{PREFIX}mark_{_k}": _k for _k in ("diverge_main", "diverge_ramp", "merge_main", "merge_ramp")}
 MARKINGS.update(MARKINGS_EXPWY)
