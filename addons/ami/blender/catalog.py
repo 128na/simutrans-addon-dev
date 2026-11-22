@@ -144,6 +144,9 @@ ROADS = (ROAD_LOCAL, ROAD_GENERAL, ROAD_EXPRESSWAY)
 # lane4 は 4 車線の直線（2 列とも）、junction2 は 2 車線の腕と中心（4 車線 × 2 車線の中心も）、
 # junction2_t は 2 車線の T字路の中心、junction4_in・junction4_out は 4 車線の腕の入る側・出る側と中心（出る側の中心はスクランブル）
 MARKINGS = {f"{PREFIX}mark_{_k}": _k for _k in ("lane4", "junction2", "junction2_t", "junction4_in", "junction4_out")}
+# 高速道路の分岐・合流（#188）: 高速道路（ROAD_EXPRESSWAY）に重ねる。本線の列（_main）とランプの列（_ramp）。路面は高速道路のアスファルト
+MARKINGS_EXPWY = {f"{PREFIX}mark_{_k}": _k for _k in ("diverge_main", "diverge_ramp", "merge_main", "merge_ramp")}
+MARKINGS.update(MARKINGS_EXPWY)
 WALL_ROAD = ROAD_GENERAL  # 道路の壁のシートを描く元の道路（壁の形は 3 種で同じ。断面とカーブの作りが同じため）
 ROAD_WALL_VARIANTS = ("single", "back", "center", "front")  # 道路の壁の way-object の版（README の名前の表。center は行き止まりの端の壁だけ）
 # 近い斜めの分け合うタイル用の道路の壁（名前は 2026-11-19 にユーザーが確定。README の「道路の壁・高架・橋脚・橋・トンネルの作り」）

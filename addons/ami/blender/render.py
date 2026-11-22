@@ -650,8 +650,11 @@ for _r in catalog.ROADS:
 # 路面は一般道路のアスファルトと同じ材質（MARKING_PAVING。走行跡は描かない）
 MARKING_LABEL = "M"  # 描画のアイコンの文字（ゲームのアイコンは icons.py が書き直す）
 MARKING_PAVING = ROAD_SETTINGS[catalog.ROAD_GENERAL.key]["skin"]["asphalt"]
+# 高速道路の分岐・合流（#188）は、高速道路のアスファルト（MARKING_EXPWY_PAVING）
+MARKING_EXPWY_PAVING = ROAD_SETTINGS[catalog.ROAD_EXPRESSWAY.key]["skin"]["asphalt"]
 for _name, _kind in catalog.MARKINGS.items():
-    SHEETS[_name] = (lambda n, k: lambda: R.marking_sheet(n, k, label=MARKING_LABEL, paving=MARKING_PAVING))(_name, _kind)
+    _paving = MARKING_EXPWY_PAVING if _name in catalog.MARKINGS_EXPWY else MARKING_PAVING
+    SHEETS[_name] = (lambda n, k, pv: lambda: R.marking_sheet(n, k, label=MARKING_LABEL, paving=pv))(_name, _kind, _paving)
 for _v in catalog.ROAD_WALL_VARIANTS:
     SHEETS[f"ami_wall_road_{_v}"] = _road_target(f"wall_road_{_v}")
 for _v, _name in catalog.ROAD_DIVIDERS.items():
