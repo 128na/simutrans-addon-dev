@@ -8,6 +8,7 @@ src/ の dat から、全部入りのまとめ（dist/ami.pak）と、種類別�
     dist/ami_canal.pak    運河（ami_canal*。地上の way と船の車庫 ami_canal_depot）
     dist/ami_extra.pak  付属（壁・橋脚・歩道・歩道の柵・踏切: ami_wall_*（歩道の柵 ami_wall_sidewalk_* と柵つきの電柱を含む）・ami_pier_*・ami_sidewalk*（電柱 ami_sidewalk_pole_* を含む）・ami_crossing_*）
     dist/ami_scenery.pak 景観（盛土・道路標識: ami_embankment_*・ami_sign_*）
+    dist/ami_rail_old.pak 旧描画位置（SIS に合う）の線路と、その壁・架線・橋脚（catalog.is_old。#26・ADR 0011）。全部入りの ami.pak と、上の種類別の pak には入らない
 dat が 1 つも無い種類の pak は作らない。makeobj の出力に WARNING か ERROR があれば、出力を見せて 1 で終わる（ACCEPTANCE 1-5）。
 作った後、分岐の追加画像（Y字分岐・三方分岐。絵の番号 26〜35）を継ぎ足す: src/ex_donors.dat（blender/ami_dat.py が書く提供用の物）を
 work/ex/donors.pak に作り、ex_graft.py で dist/ の各 pak の対象の物（線路・路面軌道の way と架線つきの壁）へ写す。提供用の物は dist/ に入らない。
@@ -22,6 +23,8 @@ import sys
 import ex_graft
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "blender"))
+import catalog  # noqa: E402
 # SHEET_LAYOUT=1 のときは、レイアウト検証用モードのシートと dat（render.py が work/layout/ に書く）から、
 # work/layout/dist/ に pak を作る（ゲームで部品の配置と接合を見るため。src/・dist/ は変えない）
 LAYOUT = os.environ.get("SHEET_LAYOUT") == "1"
@@ -37,7 +40,19 @@ KINDS = {
     "ami_canal.pak": ("ami_canal",),  # 運河（#114。ADR 0008）。船の車庫 ami_canal_depot も入る
     "ami_extra.pak": ("ami_wall_", "ami_pier_", "ami_sidewalk", "ami_crossing_"),  # 踏切（#111）は線路・道路と組で使うので付属に入れる
     "ami_scenery.pak": ("ami_embankment_", "ami_sign_"),  # 景観（ADR 0008。盛土 #123・道路標識 #122）
+    "ami_rail_old.pak": (),  # 旧描画位置の線路・壁・架線・橋脚（#26。ADR 0011）。名前の頭でなく catalog.is_old で決める（belongs）
 }
+OLD_PAK = "ami_rail_old.pak"
+
+
+def belongs(pak, name):
+    """物 name（dat の名前）が pak に入るか。旧描画位置の物（catalog.is_old）は ami_rail_old.pak だけに入り、全部入りの ami.pak と
+    種類別の pak（名前の頭 KINDS）には入らない。pak は拡張子付き（ami.pak は全部入り）"""
+    if pak == OLD_PAK:
+        return catalog.is_old(name)
+    if catalog.is_old(name):
+        return False
+    return pak == "ami.pak" or name.startswith(KINDS[pak])
 
 
 EX_DONORS = "ex_donors.dat"  # blender/ami_dat.py の EX_DONORS_DAT
@@ -60,10 +75,11 @@ def main():
     dats = sorted(glob.glob(os.path.join(SRC, "ami_*.dat")))
     if not dats:
         sys.exit("[build] src/ に ami_*.dat が無い（先に blender/ami_dat.py）")
-    makeobj("ami.pak", dats)
+    stem = lambda d: os.path.splitext(os.path.basename(d))[0]
+    makeobj("ami.pak", [d for d in dats if belongs("ami.pak", stem(d))])
     outs = ["ami.pak"]
-    for out, prefixes in KINDS.items():
-        part = [d for d in dats if os.path.basename(d).startswith(prefixes)]
+    for out in KINDS:
+        part = [d for d in dats if belongs(out, stem(d))]
         if part:
             makeobj(out, part)
             outs.append(out)
@@ -83,8 +99,7 @@ def graft_ex(outs):
         path = os.path.join(DIST, out)
         done = ex_graft.graft(path, donors)
         print(f"[build] {out}: 分岐の追加画像を {len(done)} 個に継ぎ足した")
-        prefixes = KINDS.get(out, ("",))  # ami.pak は全部
-        want = [n for n in donors if n.startswith(prefixes)]
+        want = [n for n in donors if belongs(out, n[:-len(ex_graft.DONOR_SUFFIX)])]
         if len(done) != len(want):
             sys.exit(f"[build] {out}: 継ぎ足す対象 {len(want)} 個のうち {len(done)} 個にしか継ぎ足せなかった")
         problems = ex_graft.check_ex(path)

@@ -28,7 +28,7 @@ OUT = os.path.join(HERE, "work", "release")
 TEMPLATE = os.path.join(HERE, "release")
 TEXTS = os.path.join(TEMPLATE, "text")
 THUMBNAIL = os.path.join(HERE, "docs", "thumbnail.png")
-KINDS = ("ami_rail", "ami_road", "ami_tram", "ami_monorail", "ami_canal", "ami_extra", "ami_scenery")  # build.py の KINDS と同じ
+KINDS = ("ami_rail", "ami_road", "ami_tram", "ami_monorail", "ami_canal", "ami_extra", "ami_scenery", "ami_rail_old")  # build.py の KINDS と同じ
 
 
 def main():

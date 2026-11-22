@@ -30,6 +30,8 @@ import numpy as np
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(_HERE, "..", "..", "..", "tools", "blender"))
+sys.path.insert(0, _HERE)  # Blender の --python は、スクリプトのディレクトリを探す先に入れない
+import catalog  # noqa: E402
 import sheetlib as R  # noqa: E402
 
 SRC = os.path.join(_HERE, "..", "src")
@@ -83,7 +85,8 @@ def describe(d):
     """dat から、アイコンの決まりに使う中身を取る"""
     name, obj = d["name"], d["obj"]
     m = re.search(r"_(single|back|center|front|twin|lane[1-7])(_catenary|_divider|_pole)?$", name)
-    info = dict(name=name, version=m.group(1) if m else None, speed=None, struct=None, label=None)
+    info = dict(name=name, version=m.group(1) if m else None, speed=None, struct=None, label=None,
+                old=catalog.is_old(name))  # old: 旧描画位置（SIS に合う。#26）の物。アイコンの左下に「旧」
     if name.startswith(("ami_tram", "ami_embankment")):  # 盛土は tram_track の way（路面軌道の道具の一覧に出る）
         info["way"] = "tram"
     elif name.startswith("ami_road_expressway"):
@@ -306,6 +309,9 @@ def band(ic, struct):
         rect(ic, 12 * SS, y0 + 2 * SS, 20 * SS, I, (10, 10, 10))
 
 
+OLD_MARK = "旧"  # 旧描画位置の物のアイコンの印（左下）
+
+
 def make_icon(info, pic):
     """32px のアイコン（RGBA 0〜1）"""
     ic = grad(*WAY_BG[info["way"]], I, I)
@@ -318,6 +324,8 @@ def make_icon(info, pic):
         items.append((info["speed"], 2 * SS, 2 * SS, 11 * SS, (1, 1, 1), "LEFT", True))
     if info["label"]:
         items.append((info["label"], 2 * SS, 2 * SS, 11 * SS, (1, 1, 1), "LEFT", True))
+    if info["old"]:
+        items.append((OLD_MARK, 2 * SS, I - (20 * SS if has_band else 13 * SS), 11 * SS, (1, 1, 1), "LEFT", True))
     if info["kind"] == "catenary":
         poly(ic, BOLT, (0, 40, 20), SS, 1, 1)
         poly(ic, BOLT, (255, 225, 30), SS)

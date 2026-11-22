@@ -17,7 +17,8 @@ import re
 import sys
 import unicodedata
 
-from build import KINDS
+from build import KINDS, belongs
+import catalog  # build が blender/ を import の探す先に入れる
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, "src")
@@ -72,7 +73,11 @@ def waytype(v):
 
 
 def kind_label(o):
-    """遊ぶ人向けの種類の名前"""
+    """遊ぶ人向けの種類の名前。旧描画位置（SIS に合う。#26）の物は「（旧位置）」を足す"""
+    return _kind_label(o) + ("（旧位置）" if catalog.is_old(o.get("name", "")) else "")
+
+
+def _kind_label(o):
     t = o.get("obj")
     wt = waytype(o.get("waytype", ""))
     name = o.get("name", "")
@@ -146,15 +151,11 @@ def row(o):
 
 def pak_rows(pak):
     """pak の名前（拡張子なし）に入る物の行。並びは種類（OBJ_ORDER）、名前の順"""
-    if pak == "ami":
-        prefixes = ("",)
-    elif pak + ".pak" in KINDS:
-        prefixes = KINDS[pak + ".pak"]
-    else:
+    if pak != "ami" and pak + ".pak" not in KINDS:
         raise ValueError(f"知らない pak: {pak}（build.py の KINDS）")
     objs = []
     for path in sorted(glob.glob(os.path.join(SRC, "ami_*.dat"))):
-        if os.path.basename(path).startswith(prefixes):
+        if belongs(pak + ".pak", os.path.splitext(os.path.basename(path))[0]):
             o = read_dat(path)
             if "name" not in o:
                 raise ValueError(f"{path}: name が無い")

@@ -3,6 +3,9 @@
 # 見本は ingame/seam_slope.nut（線路の種類ごとに、つなぎ目の 4 か所と、急坂・1 段の坂の十字）。
 # 使い方（アドオンのディレクトリで。python -X utf8 build.py で dist/ami.pak を作っておく）:
 #   GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> bash ingame/seam_slope_check.sh
+# 旧描画位置の線路を SIS の新幹線の線路とつなぐとき（#26）: PAK=dist/ami_rail_old.pak に、
+#   TRACKS_LIST="ami_rail_ballast_old ami_rail_concrete_old ami_rail_ladder_old ami_rail_slab_old" REF=SIS_ST_TGbl_E01-999B を足す
+#   （見本の NUT の TRACKS・REF を、この 2 つで置き換える。SIS の pak は GAME_DIR の addons/pak128 に入れておく）
 # ゲームは work/seam_game/<PORT>/ の写し（GAME_DIR の exe・dll・設定・pak128・addons と保存データ）に PAK を足して起動し、
 # 撮り終えたら閉じて写しも消す。GAME_DIR には書き込まない。
 # 出力: OUT（既定 work/seam_slope）に <種類>_<場所>.png（画面）・.txt（タイル一覧）・_judge.png・_measure.png（拡大）。
@@ -44,6 +47,10 @@ printf '\nday_night_shift = 0\n' >> "$WORK/config/simuconf.tab"
 (cd "$WORK" && "./$EXE" -objects pak128/ -addons -load "$SAVE" -mcp-port "$PORT" > /dev/null 2>&1 &)
 for r in $(seq 1 120); do timeout 10 $M --timeout 5 --run-squirrel "return 1;" > /dev/null 2>&1 && break; sleep 1; done
 SCRIPT=$(sed -e 's/\r$//' -e 's/^[[:space:]]*//' -e '/^\/\//d' -e '/^$/d' "$NUT")
+if [ -n "$TRACKS_LIST" ]; then  # 見本の TRACKS（線路の種類）と REF（つなぐ相手）を替える
+  q=$(for t in $TRACKS_LIST; do printf '"%s", ' "$t"; done); q=${q%, }
+  SCRIPT=$(echo "$SCRIPT" | sed -e "s/^local TRACKS = .*/local TRACKS = [$q];/" -e "s/^local REF = .*/local REF = \"${REF:-Rail_160_Tracks}\";/")
+fi
 r=$($M --run-squirrel "$SCRIPT" --timeout 300 2>&1)
 case $r in *'"result":"'*) ;; *) echo "[seam] 見本を敷けない: ${r:0:400}"; exit 1 ;; esac
 # 敷く命令のうち失敗したもの（名前=[理由]）
@@ -60,7 +67,7 @@ shot() {  # shot <名前> <x> <y> <半径>
 }
 
 i=0
-for t in $(sed -n 's/^local TRACKS = \[\(.*\)\];/\1/p' "$NUT" | tr -d '",'); do
+for t in ${TRACKS_LIST:-$(sed -n 's/^local TRACKS = \[\(.*\)\];/\1/p' "$NUT" | tr -d '",')}; do
   y0=$((100 + 30 * i)); k=${t#ami_}
   for spec in ew:136:0 ns:146:6 dg:133:7 sl:152:2; do
     IFS=: read s x dy <<< "$spec"

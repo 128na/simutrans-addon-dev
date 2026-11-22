@@ -48,6 +48,22 @@ dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）�
 | フローティング・ラダー軌道（#67） | 360 km/h | `ami_rail_ladder` | 同上 |
 | 高速線（スラブ軌道） | 480 km/h | `ami_rail_slab` | 同上 |
 
+#### 旧描画位置の線路（SIS に合う。#26）
+
+線路の 4 種を、旧描画位置でも作る（名前・pak・範囲は [ADR 0011](../../docs/adr/0011-ami-old-draw-position-separate-pak.md)）。新描画位置はレールが地面より約 4px 下にあり、SIS の新幹線の線路（旧描画位置）とつなぐとレールがずれて見える。旧はレールを地面の位置に描く。
+
+| 種類 | way | 版 |
+|---|---|---|
+| 在来線・直結・ラダー・スラブ | `ami_rail_ballast_old`・`ami_rail_concrete_old`・`ami_rail_ladder_old`・`ami_rail_slab_old` | 通常・基盤 4 版（`_base_<版>`）。高架・橋・トンネルは 2 本目の PR |
+| 壁・架線つきの壁（旧用） | `ami_wall_rail_old_<版>`・`ami_wall_rail_old_<版>_catenary`・`ami_wall_rail_old_twin`・`ami_wall_rail_old_twin_catenary` | 新と同じ 4 版と twin |
+
+- 作り: 新と同じ部品・材質・寸法で、基準面を動かさず（`datums=R.FLAT`）、持ち分を手前へはみ出させない（`spill=0`）。blender-poc の旧描画位置（`TRACK_PROFILES["old"]`）と同じ。`blender/render.py` の `TRACK_SETTINGS` が新の設定から導く。名前は `catalog.OLD_TRACKS`・`catalog.is_old`
+- 壁・架線は新と別のシート（壁の足元を旧の基準面に合わせるため。新の壁は基準面 `bed` が 2px 下）。旧の基盤は旧の壁で止まる
+- pak: 旧の物は `ami.pak` と種類別の pak に入れず、`dist/ami_rail_old.pak` にまとめる（`build.py` の `belongs`）。SIS と並べて使う人だけが読み込む。道具のメニューでは、アイコンの左下に「旧」が付く。一覧（`lineup.py`）の種類の欄には「（旧位置）」が付く
+- 速さ・費用・維持費・登場年は新と同じ。新の線路・踏切とつなぐと数 px ずれる。旧の線路への踏切は作らない
+- 確かめ方: `ingame/seam_slope_check.sh` に `TRACKS_LIST`・`REF` を渡すと、SIS の線路との継ぎ目を `seam_judge.py` で測る（ACCEPTANCE の 10-1）。新と並べた画像は `bash ingame/old_seam.sh`（`ingame/old_seam.nut`）で撮り、`docs/old_seam/<種類>.png` に書く
+- 測った結果（2026-11-22、`OTRPv64_3.exe`、`flat_512.sve` の温暖側）: 旧は東西・南北・斜めの継ぎ目が 4 種とも OK（継ぎ目の草 0px）。坂の継ぎ目は在来線・直結で NG（模様のずれ +1.0・+1.1px。しきい値 1.0px）、ラダー・スラブは OK。坂の十字のレールの寄りは、新と同じく平地との差が 0.5px を超えるタイルがある（急坂の十字の合格: 在来線・直結 0/4、ラダー 4/4、スラブ 2/4。新は 1/4・1/4・2/4・2/4）。新は SIS とつなぐとレールが数 px 下にずれて見える
+
 #### 在来線の手本（blender-poc の線路）
 
 在来線（バラスト軌道）の手本は、[blender-poc](../blender-poc/README.md) の線路（新描画位置の `bpoc_track`）と、カーブ・分岐の作りは pak128 標準の線路（`Rail_100` など）。
@@ -723,7 +739,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 ### 後で足すもの
 
-- 旧描画位置（SIS に合う）の線路。新描画位置で全部を作り終えてから、まとめて作る（別の PR でよい）
+- 旧描画位置（SIS に合う）の線路の高架・橋脚・橋・トンネル（#26 の 2 本目。通常・基盤・壁・架線は上の「旧描画位置の線路」）
 
 ### 範囲に入れないもの
 
