@@ -39,6 +39,18 @@ _M_WATER = lambda: noisy_material("canal_water", WATER_LO, WATER_HI, scale=30, r
 _M_WALL = lambda: noisy_material("canal_wall", WALL_LO, WALL_HI, scale=55, rough=0.9)
 _M_COPING = lambda: noisy_material("canal_coping", COPING_LO, COPING_HI, scale=55, rough=0.85)
 
+# 景観の運河（#161）: iss の運河と同じ見せ方。水面は 13px 下（高さ 1 段 = 16px）で、タイルの辺近くまで広げ、縁は細い笠石。
+# 坂は閘門（iss と同じく、上下の水面を扉枠で分ける。LOCK）。実用の運河（ROAD_STYLE。#114）の寸法は変えない
+ROAD_STYLE = dict(pad=CANAL_PAD, bank=CANAL_BANK, coping=CANAL_COPING, water_z=CANAL_WATER_Z, wall_bottom=CANAL_WALL_BOTTOM, lock=False)
+SCENIC_STYLE = dict(bank=0.35, coping=0.3, water_z=-13 / 16 * H, wall_bottom=-13 / 16 * H - 0.35, lock=True, pad=2.6,
+                    wall_col=((0.55, 0.55, 0.53), (0.66, 0.66, 0.63)), coping_col=((0.74, 0.74, 0.71), (0.84, 0.84, 0.81)))
+CANAL_STYLES = {"road": ROAD_STYLE, "scenic": SCENIC_STYLE}
+SCENIC_DEPTH_PX = 13      # 景観の運河の水面の深さ（画素。つなぎ目の持ち分を下へ広げる量）
+LOCK_GATE = 0.25         # 閘門の扉の半分の厚み（坂の向きの座標 u = ±LOCK_GATE の間）
+LOCK_PILLAR = 0.5        # 扉枠の柱の幅（水路の幅の端から）
+LOCK_FRAME_Z = 2.2       # 扉枠の柱の高さ（上の水面側の縁から）
+_LOCK_DIR = {"12": (0, 1), "9": (-1, 0), "3": (0, -1), "6": (1, 0)}  # 坂の名前 → 上りの向き（_slopes の高さの式と同じ）
+
 # セル（行, 列）→ 名前。位置は線路の way と同じ（ami_dat.py の IMAGES）。カーブは斜めのセルを使うので、行 2 の列 5〜8 は描かない。
 # 分岐の絵（列 10〜14）は持たない
 _CELLS = {
@@ -89,9 +101,9 @@ def _clip(poly, a, b, c):
     return out
 
 
-def canal_water_pieces(name, inset):
+def canal_water_pieces(name, inset, pad=None):
     """水路の平面の形（凸の多角形の和）。inset はタイルの辺から縁までの距離（水面は CANAL_BANK、笠石の外の縁は CANAL_BANK − CANAL_COPING）"""
-    half, reach = TILE / 2, TILE / 2 + CANAL_PAD
+    half, reach = TILE / 2, TILE / 2 + (CANAL_PAD if pad is None else pad)
     if name in _DIAG_CORNERS:
         frame = [(-reach, -reach), (reach, -reach), (reach, reach), (-reach, reach)]
         out = []
@@ -112,6 +124,14 @@ def canal_water_pieces(name, inset):
             y0, y1 = sorted((0.0, ay * reach))
             out.append([(-w, y0), (w, y0), (w, y1), (-w, y1)])
     return out
+
+
+def _pieces(name, inset, half_plane=None, pad=None):
+    """canal_water_pieces を、半平面 a x + b y <= c で切ったもの（閘門の上下の水面・壁を分ける）"""
+    pieces = canal_water_pieces(name, inset, pad)
+    if half_plane:
+        pieces = [q for q in (_clip(p, *half_plane) for p in pieces) if len(q) >= 3]
+    return pieces
 
 
 def _prism(name, poly, z0, z1, mat):
@@ -154,59 +174,127 @@ def _holdout():
     return m
 
 
-def _shell(name, name_cell, outer_inset, z0, z1, mat):
-    """水路の縁の帯（outer_inset の形から水面の形を抜いたもの）"""
-    ob = _joined(name, canal_water_pieces(name_cell, outer_inset), z0, z1, mat)
-    cut = _joined(name + "_cut", canal_water_pieces(name_cell, CANAL_BANK), z0 - 1.0, z1 + 1.0, mat)
+def _shell(name, name_cell, outer_inset, z0, z1, mat, bank=CANAL_BANK, half_plane=None, pad=None):
+    """水路の縁の帯（outer_inset の形から水面の形を抜いたもの）。half_plane=(a, b, c) なら a x + b y <= c の側だけ"""
+    ob = _joined(name, _pieces(name_cell, outer_inset, half_plane, pad), z0, z1, mat)
+    cut = _joined(name + "_cut", _pieces(name_cell, bank, half_plane, pad), z0 - 1.0, z1 + 1.0, mat)
     boolean(ob, cut)
     _remove(cut)
     return ob
 
 
-def canal_build(name, slope, snow):
-    """運河 1 タイルの形"""
-    reach = TILE / 2 + CANAL_PAD
-    water = make_material(_M_WATER, "canal_water")
-    wall = make_material(_M_WALL, "canal_wall")
-    coping = make_material(_SNOW if snow else _M_COPING, "canal_coping")
-    obs = [_joined("canal_water", canal_water_pieces(name, CANAL_BANK - 0.05), CANAL_WALL_BOTTOM, CANAL_WATER_Z, water)]
-    obs.append(_shell("canal_wall", name, CANAL_BANK - CANAL_COPING, CANAL_WALL_BOTTOM, 0.0, wall))
-    obs.append(_shell("canal_coping", name, CANAL_BANK - CANAL_COPING, 0.0, CANAL_COPING_T, coping))
+def canal_build(name, slope, snow, st=ROAD_STYLE, slope_name=None):
+    """運河 1 タイルの形。st は寸法（ROAD_STYLE・SCENIC_STYLE）。景観の坂（st["lock"] と slope_name）は閘門"""
+    bank, cop, wz, wb = st["bank"], st["coping"], st["water_z"], st["wall_bottom"]
+    pad = st["pad"]
+    reach = TILE / 2 + pad
+    water, wall, coping = _materials(st, snow)
+    lock = bool(slope and st["lock"] and slope_name)
+    if lock:
+        return _lock_build(name, slope, slope_name, st, water, wall, coping)
+    obs = [_joined("canal_water", canal_water_pieces(name, bank - 0.05, pad), wb, wz, water)]
+    obs.append(_shell("canal_wall", name, bank - cop, wb, 0.0, wall, bank, None, pad))
+    obs.append(_shell("canal_coping", name, bank - cop, 0.0, CANAL_COPING_T, coping, bank, None, pad))
     if not LAYOUT:
-        earth = _prism("canal_earth", [(-reach, -reach), (reach, -reach), (reach, reach), (-reach, reach)],
-                       CANAL_WALL_BOTTOM - 0.5, 0.0, _holdout())
-        cut = _joined("canal_earth_cut", canal_water_pieces(name, CANAL_BANK + CANAL_EARTH_EPS), CANAL_WALL_BOTTOM - 1.0, 1.0, water)
-        boolean(earth, cut)
-        _remove(cut)
-        obs.append(earth)
+        obs.append(_earth(name, bank, wb, reach, water, pad))
     if slope:
         for ob in obs:
             apply_slope(ob, slope)
     return obs
 
 
-def _own(cname, slope):
-    """持ち分: 道路と同じ菱形（ROAD_CY）を上へ 1 行広げる（笠石の厚み）"""
+def _materials(st, snow):
+    """水面・壁・笠石の材質。景観の運河（wall_col・coping_col がある）は iss のように明るいコンクリート"""
+    water = make_material(_M_WATER, "canal_water")
+    if "wall_col" in st:
+        wall = make_material(lambda: noisy_material("canal_wall_s", *st["wall_col"], scale=55, rough=0.9), "canal_wall_s")
+        cop = make_material(_SNOW if snow else (lambda: noisy_material("canal_coping_s", *st["coping_col"], scale=55, rough=0.85)), "canal_coping_s")
+        return water, wall, cop
+    return water, make_material(_M_WALL, "canal_wall"), make_material(_SNOW if snow else _M_COPING, "canal_coping")
+
+
+def _earth(name, bank, wb, reach, water, pad=CANAL_PAD):
+    """地面（holdout）。水路の形に抜く"""
+    earth = _prism("canal_earth", [(-reach, -reach), (reach, -reach), (reach, reach), (-reach, reach)],
+                   wb - 0.5, 0.0, _holdout())
+    cut = _joined("canal_earth_cut", canal_water_pieces(name, bank + CANAL_EARTH_EPS, pad), wb - 1.0, 1.0, water)
+    boolean(earth, cut)
+    _remove(cut)
+    return earth
+
+
+def _lock_build(name, slope, slope_name, st, water, wall, coping):
+    """景観の運河の坂（閘門）。下半分は地面に沿う運河、上半分は 1 段（急坂は 2 段）上の平らな水面と、上の縁の高さの平らな壁。
+    境に扉（壁）を立て、両岸に柱と、上に梁の扉枠を付ける。船が通る水面は扉で分かれる（絵だけ。経路は way がつなぐ）"""
+    bank, cop, wz, wb = st["bank"], st["coping"], st["water_z"], st["wall_bottom"]
+    n = 2 if slope_name.startswith("up2_") else 1
+    a, b = _LOCK_DIR[slope_name.split("_")[-1] if slope_name.startswith("up2_") else slope_name[2:]]
+    top = n * H
+    lo, hi = (a, b, -LOCK_GATE), (-a, -b, -LOCK_GATE)  # u <= −扉 / u >= 扉（u = a x + b y）
+    outer = bank - cop
+    pad = st["pad"]
+    obs = [_joined("canal_water_lo", _pieces(name, bank - 0.05, lo, pad), wb, wz, water),
+           _joined("canal_water_hi", _pieces(name, bank - 0.05, hi, pad), wb + top, wz + top, water)]
+    # 下半分の壁・笠石は地面に沿って傾ける
+    lo_obs = [_shell("canal_wall_lo", name, outer, wb, 0.0, wall, bank, lo, pad),
+              _shell("canal_coping_lo", name, outer, 0.0, CANAL_COPING_T, coping, bank, lo, pad)]
+    for ob in lo_obs:
+        apply_slope(ob, slope)
+    obs += lo_obs
+    # 上半分の壁・笠石は、上の縁の高さで平ら
+    obs.append(_shell("canal_wall_hi", name, outer, wb, top, wall, bank, hi, pad))
+    obs.append(_shell("canal_coping_hi", name, outer, top, top + CANAL_COPING_T, coping, bank, hi, pad))
+    # 扉: 水路全体の幅を、扉の厚みで切った板。下の水面の下から上の水面の少し上まで
+    gate = [q for q in (_clip(_clip(p, a, b, LOCK_GATE), -a, -b, LOCK_GATE) for p in canal_water_pieces(name, outer)) if len(q) >= 3]
+    obs.append(_joined("canal_gate", gate, wb, top + wz + 0.3, wall))
+    # 扉枠: 両岸の柱（水路の幅の端から LOCK_PILLAR）と、上の梁
+    w_out = TILE / 2 - outer
+    for sgn in (1, -1):
+        pil = [q for q in (_clip(p, -sgn * b, sgn * a, -(w_out - LOCK_PILLAR)) for p in gate) if len(q) >= 3]
+        obs.append(_joined(f"canal_pillar{sgn}", pil, top, top + LOCK_FRAME_Z, coping))
+    obs.append(_joined("canal_lintel", gate, top + LOCK_FRAME_Z - 0.4, top + LOCK_FRAME_Z, coping))
+    if not LAYOUT:
+        obs.append(_earth_sheared(name, bank, wb, slope, water, pad))
+    return obs
+
+
+def _earth_sheared(name, bank, wb, slope, water, pad=CANAL_PAD):
+    """傾けた地面（holdout）。坂の面に沿い、水路の形に抜く"""
+    reach = TILE / 2 + pad
+    ob = _earth(name, bank, wb, reach, water, pad)
+    apply_slope(ob, slope)
+    return ob
+
+
+def _own(cname, slope, depth_px=0):
+    """持ち分: 道路と同じ菱形（ROAD_CY）を上へ 1 行広げる（笠石の厚み）。depth_px > 0 のとき（景観の運河。水面が深い）は、
+    菱形を depth_px だけ下へずらした分も足す: つながる辺の向こうの水面は、深いぶん手前のタイルの菱形の上の端へはみ出して見えるため
+    （足さないと、タイルのつなぎ目に地面の帯が出る）"""
     m = _ground_mask(slope, None, ROAD_CY)
     m[:-1] |= m[1:]
+    if depth_px:
+        base = m.copy()
+        for k in range(1, depth_px + 1):
+            m[k:] |= base[:-k]
     own = m.astype(np.uint8) * 255
     save_rgba(os.path.join(_s.WORK, cname + "_own.png"), np.dstack([own, own, own, np.full_like(own, 255)]))
 
 
-def canal_sheet(sheet, label="C", style="road"):
+def canal_sheet(sheet, label="C", style="road", variant="road"):
     """運河の way のシート。夏の絵は行 0〜3、雪の絵（笠石に雪）は行 CANAL_SNOW_ROWS 下。アイコン（0,0）・カーソル（0,1。南北の直線）は
     仮の絵（AMI は icons.py が描き直す）"""
     set_anchor(ROAD_CY)  # 道路と同じ（dat のオフセット -64,-32）
+    st = CANAL_STYLES[variant]  # "scenic" は景観の運河（#161）
     cells = {}
     for is_snow, dr in ((False, 0), (True, CANAL_SNOW_ROWS)):
         for (r, c), (name, slope) in _jobs().items():
             cname = f"{sheet}_{'snow_' if is_snow else ''}{name}"
             clear_models()
-            canal_build(name, slope, is_snow)
+            canal_build(name, slope, is_snow, st, name)
             cells[(r + dr, c)] = render_cell(cname)
-            _own(cname, slope)
+            _own(cname, slope, SCENIC_DEPTH_PX if variant == "scenic" else 0)
     clear_models()
-    canal_build("ns", None, False)
+    canal_build("ns", None, False, st)
     cells[(0, 0)] = _s.render_icon(sheet + "_icon", 0.5, shift=(-0.14, 0.2), label=label, style=style)
     cells[(0, 1)] = cells[(0, 2)]
     make_sheet(cells, 2 * CANAL_SNOW_ROWS, 10, os.path.join(_s.SRC, sheet + ".png"))

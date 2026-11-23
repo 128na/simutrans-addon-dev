@@ -31,12 +31,12 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 | 電柱 | `ami_sidewalk_pole_<版>`（電柱だけ）・`ami_wall_sidewalk_<版>_pole`（柵つき。#120） |
 | 景観 | 盛土 `ami_embankment_front`・`ami_embankment_back`（ADR 0008 の `ami_embankment_<版>`）、道路標識 `ami_sign_<名前>`（6 種。#122）、路面の横断歩道の標識 `ami_sign_crosswalk`・`ami_sign_crosswalk_one_way`（#162） |
 | モノレール | 跨座式 `ami_monorail_straddle`、高架 `ami_monorail_straddle_elev_<版>`（`front`・`center`・`back`）、トンネル `ami_monorail_straddle_tunnel`（ADR 0008。#113）。懸垂式 `ami_monorail_suspended_<版>`、高架 `ami_monorail_suspended_elev_<版>`（どちらも `front`・`center`・`back`。#116）。電化 `ami_monorail_power`（跨座式用）・`ami_monorail_suspended_power`（懸垂式用。#116） |
-| 運河 | `ami_canal`（ADR 0008。#114） |
+| 運河 | `ami_canal`（ADR 0008。#114）、景観の運河 `ami_canal_scenic`（#161） |
 | 水路の踏切 | `ami_crossing_<線路\|道路>_canal`（例 `ami_crossing_rail_ballast_canal`・`ami_crossing_road_general_canal`。#117） |
 | 車庫 | `ami_rail_depot`・`ami_tram_depot`・`ami_road_depot`・`ami_monorail_depot`・`ami_canal_depot`（ADR 0008） |
 | 操車場 | `ami_rail_yard`（#115） |
 
-dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`・`ami_rail_concrete`・`ami_rail_concrete_base_<版>`（4 版）・`ami_rail_concrete_elev_<版>`（4 版）・`ami_rail_concrete_bridge`・`ami_rail_concrete_tunnel`・`ami_rail_ladder`・`ami_rail_ladder_base_<版>`（4 版）・`ami_rail_ladder_elev_<版>`（4 版）・`ami_rail_ladder_bridge`・`ami_rail_ladder_tunnel`・`ami_road_local`・`ami_road_general`・`ami_road_expressway`・道路 3 種それぞれの `_base_<版>`（4 版）・`_elev_<版>`（4 版）・`_bridge`・`_tunnel`・`ami_wall_road_<版>`（4 版）・`ami_wall_road_twin`・`ami_wall_road_front_divider`・`ami_wall_road_center_divider`・`ami_wall_road_twin_divider`・`ami_pier_road`・`ami_tram`・`ami_embankment_front`・`ami_embankment_back`・`ami_sidewalk`・`ami_sidewalk_<舗装>`（3 種）・`ami_sidewalk_elev`・`ami_wall_sidewalk_<版>`（3 版）・`ami_sidewalk_pole_<版>`（2 版）・`ami_wall_sidewalk_<版>_pole`（2 版）・`ami_monorail_straddle`・`ami_monorail_straddle_elev_<版>`（3 版）・`ami_monorail_straddle_tunnel`・`ami_monorail_suspended_<版>`（3 版）・`ami_monorail_suspended_elev_<版>`（3 版）・`ami_monorail_power`・`ami_monorail_suspended_power`・`ami_canal`・水路の踏切 7 つ（`ami_crossing_<線路|道路>_canal`）・車庫 5 つ・`ami_rail_yard`。
+dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`・`ami_rail_concrete`・`ami_rail_concrete_base_<版>`（4 版）・`ami_rail_concrete_elev_<版>`（4 版）・`ami_rail_concrete_bridge`・`ami_rail_concrete_tunnel`・`ami_rail_ladder`・`ami_rail_ladder_base_<版>`（4 版）・`ami_rail_ladder_elev_<版>`（4 版）・`ami_rail_ladder_bridge`・`ami_rail_ladder_tunnel`・`ami_road_local`・`ami_road_general`・`ami_road_expressway`・道路 3 種それぞれの `_base_<版>`（4 版）・`_elev_<版>`（4 版）・`_bridge`・`_tunnel`・`ami_wall_road_<版>`（4 版）・`ami_wall_road_twin`・`ami_wall_road_front_divider`・`ami_wall_road_center_divider`・`ami_wall_road_twin_divider`・`ami_pier_road`・`ami_tram`・`ami_embankment_front`・`ami_embankment_back`・`ami_sidewalk`・`ami_sidewalk_<舗装>`（3 種）・`ami_sidewalk_elev`・`ami_wall_sidewalk_<版>`（3 版）・`ami_sidewalk_pole_<版>`（2 版）・`ami_wall_sidewalk_<版>_pole`（2 版）・`ami_monorail_straddle`・`ami_monorail_straddle_elev_<版>`（3 版）・`ami_monorail_straddle_tunnel`・`ami_monorail_suspended_<版>`（3 版）・`ami_monorail_suspended_elev_<版>`（3 版）・`ami_monorail_power`・`ami_monorail_suspended_power`・`ami_canal`・`ami_canal_scenic`・水路の踏切 7 つ（`ami_crossing_<線路|道路>_canal`）・車庫 5 つ・`ami_rail_yard`。
 
 ### 線路（新描画位置）
 
@@ -716,6 +716,19 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - pak は `ami_canal.pak`（`build.py` の `KINDS`。船の車庫も入る）
 - 見本は `ingame/canal.sh`（`ingame/canal.nut`）。ゲームの写し（`work/canal_game/<PORT>/`）を起動し、地上（車庫と輪・十字・斜め・行き止まり）、坂と急坂、近い斜めを敷き、pak128 の船を輪で走らせる。`SNOW=1` で降雪側、`CAPTURE=1` で撮る。運河と歩道のつながりは `NUT=ingame/canal_link.nut` で見る（使い方はスクリプトの冒頭）
   - 確認画像（2026-11-22、`OTRPv64_3.exe`、`flat_512.sve`）: `docs/canal_ground.png`（輪・十字・車庫の口の T字）、`canal_diag.png`（斜め）、`canal_slope.png`（坂・急坂）、`canal_close.png`（1 タイルずらした斜め 2 本）、`canal_depot.png`（車庫と、出てきた船）、`canal_snow_ground.png`（降雪側）、`canal_link_sidewalk.png`（運河・歩道・運河を一続きに敷き、歩道の上を通る船）
+
+### 景観の運河の作り（#161）
+
+実用の運河（`ami_canal`）とは別に、景観に使う `ami_canal_scenic` を 1 本足した。手本は iss の運河（水面を低く見せて立体感を出す）。ユーザーの考え方: 1 タイル（1 段、16px）掘り下げた所に実用の運河を敷くと、道路の下をくぐる暗渠に見える高さの関係になる。実用の運河とつないだときの違和感は許容（2026-11-22）。
+
+- 水面は地面から 13px 下（iss と同じ。実用の運河は 3.5px）。タイルの辺から 0.35 内まで広げ（実用は 0.5）、縁は細いコンクリートの笠石（幅 0.3）。並べると広い水面になる。壁は明るいコンクリート。部品は `sheetlib/canal.py` の `SCENIC_STYLE`（実用の運河の `ROAD_STYLE` と寸法だけが違い、形の作りは同じ）
+- つなぎ目: 水面が深いので、つながる辺の向こうの水面は、手前のタイルの菱形の上の端へ 13px はみ出して見える。そこで、腕を辺の外へ 2.6 まで延ばして描き、持ち分を 13px 下へ広げた（`_own` の `depth_px`）。これが無いと、タイルのつなぎ目に地面の帯が出る（初めの試しで出た）
+- 坂・急坂は閘門（iss と同じ）: 下半分は地面に沿う運河、上半分は 1 段（急坂は 2 段）上の平らな水面と、上の縁の高さの平らな壁。境に扉の壁を立て、両岸に柱と梁の扉枠を付ける（`_lock_build`）。水面の絵は 2 つに分かれるが、way は坂のタイルでつながり、船は通れる
+- 値・速さ: 実用の運河と同じ（60 km/h、25000、500、1900）。速さが同じなので、本体が選ぶ水路の踏切は #117 の 7 個がそのまま立つ（跳ね橋の下の水は実用の運河の絵になる。許容済み）。船の車庫も `ami_canal_depot` をそのまま使う
+- 雪の絵は笠石だけを雪にする。水面は夏と同じ（実用の運河と同じ）
+- 暗渠: 道路のタイルに運河を敷かず、道路の両側で運河を止めれば、水面が低いまま道路の縁まで続くので、道路の下をくぐって見える（`docs/reference/cityscape.md` の 5 章）
+- pak は `ami_canal.pak`（名前の頭 `ami_canal` で入る）。見本は `WAY=ami_canal_scenic` を付けた `ingame/canal.sh`
+- 確認画像（2026-11-23、`OTRPv64_3.exe`、`flat_512.sve`）: `docs/canal_scenic_ground.png`（輪・十字・車庫の口の T字）、`canal_scenic_diag.png`（斜め）、`canal_scenic_slope.png`（閘門の坂・急坂）、`canal_scenic_close.png`（近い斜め）、`canal_scenic_depot.png`（車庫と船）、`canal_scenic_snow_ground.png`・`canal_scenic_snow_slope.png`（降雪側）
 
 ### 懸垂式モノレールの作り（#116）
 
