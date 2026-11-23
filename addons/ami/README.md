@@ -170,6 +170,8 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 外していた間に見えたもの: 十字はどれも通常の十字（開いた十字）、T字は通常の T字。多車線の交差点（4×2・4×4・6×6）も、4 車線に 2 車線が T字でつながる所も、横切る道路はふさがらない（`docs/road_GE_junction_noswitch.png`・`road_junction_noswitch_all.png`・`road_junction_tee_noswitch.png`・`road_GE_noswitch_ground.png`。2026-11-20、`OTRPv64_3.exe`、`flat_512.sve`）。4×4・6×6 の中ほどの角の丸い四角の枠（下の「十字と T字の絵（通常の絵）」）は残る
 - 線路と橋脚の way（`ami_pier_road` は `tram_track`。分岐の絵は T字・十字と同じ柱）の分岐の絵は変えていない
 
+**T字の 1・2 の轍の向きは 2026-11-23 に改めた**（線路と同じ向き: 枝と名前の側の本線の端をつなぐ。2026-11-19 は逆だった。#46、記録 [2026-11-23_ami-road-switch-ruts-direction](../../docs/records/2026-11-23_ami-road-switch-ruts-direction.md)）。
+
 分岐の絵を入れていたときの作り（T字の 1・2 の白線と轍、優先道路の十字、開いた十字と角の円弧、停止線）と、ゲームで確かめた結果は記録 [2026-11-20_ami-road-switch-design](../../docs/records/2026-11-20_ami-road-switch-design.md) にある。本体の 1・2 の使われ方は [reference](../../docs/reference/way-addon.md) の 9.3。戻すときは [#46](https://github.com/128na/simutrans-addon-dev/issues/46) で、本体の分岐の絵の仕様の整理（[128na/simutrans#15](https://github.com/128na/simutrans/issues/15)）に合わせる。
 
 #### 十字と T字の絵（通常の絵）

@@ -145,6 +145,10 @@ function lay(name, ox, oy) {
   s += r("M branch", line(61, 14, 62, 14));
   s += r("M curve", line(62, 14, 62, 17));
   s += r("M label", marker.work(pl, c(60, 10), "auto: curve next to branch"));
+  // M2: M の向きを変えたもの（T字は nsw）。南北 (61,19)-(61,25) の (61,22) から西へ (60,22) に出て、(60,22) で北へ折れる
+  s += r("M2 ns", line(61, 19, 61, 25));
+  s += r("M2 branch", line(61, 22, 60, 22));
+  s += r("M2 curve", line(60, 22, 60, 19));
   // [check]: 自動選択（H）と固定（I）の絵。通常の T字は区画 B の (0,7) nse・(6,7) nsw・(3,10) new・(3,4) sew
   local plain = {nse = img(ox, oy + 7), nsw = img(ox + 6, oy + 7), new = img(ox + 3, oy + 10), sew = img(ox + 3, oy + 4)};
   local auto = {nse = img(ox + 34, oy + 4), nsw = img(ox + 35, oy + 4), sew = img(ox + 38, oy + 12), new = img(ox + 38, oy + 13)};
@@ -159,6 +163,8 @@ function lay(name, ox, oy) {
   local m_state = m == plain["nse"] ? "plain" : (m == pinned["nse1"] ? "is1" : (m == pinned["nse2"] ? "is2" : "other"));
   checks += "[check] " + name + " M tee_curve=" + m + " pin1=" + pinned["nse1"] + " pin2=" + pinned["nse2"] + " plain=" + plain["nse"] + " " + m_state
             + (pin == null ? "" : ((SWITCH_IMAGES ? m_state == "is1" : m_state == "plain") ? " ok" : " NG")) + "\n";
+  local m2 = img(ox + 61, oy + 22);
+  checks += "[check] " + name + " M2 tee_curve=" + m2 + " pin1=" + pinned["nsw1"] + " pin2=" + pinned["nsw2"] + " plain=" + plain["nsw"] + " " + (m2 == plain["nsw"] ? "plain" : (m2 == pinned["nsw1"] ? "is1" : (m2 == pinned["nsw2"] ? "is2" : "other"))) + "\n";
   local nsew_ok = SWITCH_IMAGES ? (pinned["nsew1"] != cross && pinned["nsew2"] != cross && pinned["nsew1"] != pinned["nsew2"])
                                 : (pinned["nsew1"] == cross && pinned["nsew2"] == cross);
   checks += "[check] " + name + " nsew pin1=" + pinned["nsew1"] + " pin2=" + pinned["nsew2"] + " plain=" + cross
