@@ -158,8 +158,8 @@ def picture_keys(d, kind, for_cursor):
         return [["backimage[0][0][0][0][0][0]", "frontimage[0][0][0][0][0][0]"]]
     if kind == "marking":  # 路面表示（#187）: MARK_PICTURE のセル
         return [[MARK_PICTURE[d["name"]]]]
-    if kind == "sign":  # 北行きの絵（画面の右の角。表が見える）
-        return [["image[0]"]]
+    if kind == "sign":  # 北行きの絵（画面の右の角。表が見える）。一方通行は板を反対の向きに向けた絵なので、表が見える image[1]（#200）
+        return [["image[1]" if d["name"].endswith("_one_way") else "image[0]"]]
     if kind in ("wall", "catenary"):
         # 近い斜めの分け合うタイル用（twin）は直線を持たないので、平行な 2 つの斜め（nw・se）を重ねる
         return [[f"back{k}", f"front{k}"] for k in ("image[ns]", "image[s]", "image[n]")] + \
