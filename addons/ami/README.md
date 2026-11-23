@@ -1041,6 +1041,15 @@ PORT=47300 bash ingame/game.sh STOP
 - 流用した見本は `sidewalk_sample.nut`・`embankment_sample.nut`・`pole_sample.nut`・`roadsign_sample.nut`・`crosswalk_sign_sample.nut`・`marking6_sample.nut`・`marking_sample.nut`・`expwy_marking_sample.nut`・`yard_sample.nut`・`canal.nut`・`depot.nut`・`monorail.nut`・`suspended_sample.nut`・`crossing_sample.nut`。原点（`ORIGINS`・`OX`・`OY`）を `catalog.py` が書き換えて流す。
 - 分岐の絵の網羅（全方位・近い斜め・坂）は入れていない（撮影用の見本の役目）。ゲーム内の見た目はユーザーが確かめる。
 
+## 第 3 弾の汚し（#197）
+
+第 3 弾の路面表示と運河に汚しを付けた（2026-11-23、ユーザーが案 A〜C を「お勧め順で」と決めた）。直す前後の画像は [docs/197_weathering/](docs/197_weathering/)（拡大率 3。座標は `catalog` の保存データ `ami_catalog.sve` のもの）。
+
+- **路面表示の白線の擦れ**: 白線の材質を一色（0.80）から、0.72〜0.88 の粗いまだら（Scale 12）にした（`blender/render.py` の `MARKING_WORN`）。平均の明るさと自己発光（0.35）は元と同じ。細かいまだら（Scale 60）にすると 1px の路側線が点々に欠け、暗くすると灰色に沈んだので、明暗の幅は ±0.08 に抑えた。効きは小さい。下の道路の白線は一色のまま。
+- **6 車線の分離帯の雪の縁のぼかし**: 雪の板（`lane6_m` の雪の絵）の縦の縁に、路面から雪へ寄せた 4 段のまだら（幅 0.2 ずつ。`MARKING_SLUSH_T`）を重ねた。ほかの路面表示の雪は下の道路の路肩の雪のまだら（`SNOW_LAYERS`）で、すでに 4 段でぼけている。板の端（タイルの境）のぼかしは付けていない（板がタイルの端で終わるため）。
+- **運河の水面**: 斜めの縞（Wave テクスチャ）のさざ波を足し、護岸の内から 0.45（約 2px）の岸際を暗い水にした（`tools/blender/sheetlib/canal.py` の `_m_water_ripple`・`WATER_SHADOW`）。運河の踏切のシートは運河のセルを下地にするので、描き直した（`ami_crossing_canal_*`）。
+- 直していないもの: 景観の運河の斜めの内壁の細い横線と、坂の側面のまだら（#161 から回したもの。タイルの境ごとの形の問題で、材質では直らない）、道路の分岐の絵（#46・#205）の降雪の境のぼかし。
+
 ## 今の決まりごと
 
 - 値は次のとおり決めた（2026-11-15）。費用・維持費は pak128 の way と同じ単位（1/100 cr）で、iss の線路（15000・300）を基準にした。`blender/ami_dat.py` の `VALUES` と同じにする
