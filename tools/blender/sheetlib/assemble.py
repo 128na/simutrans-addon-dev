@@ -77,10 +77,17 @@ class RoadTile:
         return out
 
 
+DIAG_TURN_K = 2 / math.sqrt(10)  # road_parts の ROAD_DIAG と同じ値（assemble は road_parts を読まない）
+
+
 def _carve(ob, tile, w, k, transfer, mat, turns=False):
     """板 ob から、車道の型（全部の経路に沿った半幅 w の帯 + 角を丸くする扇形の残り）を抜く。turns は右左折の経路でも抜くか。"""
     prof = [(-w * k, -1.0), (w * k, -1.0), (w * k, 1.0), (-w * k, 1.0)]
-    geo = [sweep(p, prof) for p in list(tile.paths) + (list(tile.turns) if turns else [])]
+    # 斜めの直線の右左折（WearPath.diag。高速道路の分岐の枝）は、斜めのセルと同じ横幅の倍率（road_parts の ROAD_DIAG）で抜く
+    dprof = [(-w * k * DIAG_TURN_K, -1.0), (w * k * DIAG_TURN_K, -1.0), (w * k * DIAG_TURN_K, 1.0), (-w * k * DIAG_TURN_K, 1.0)]
+    geo = [sweep(p, prof) for p in tile.paths]
+    if turns:
+        geo += [sweep(p, dprof if getattr(p, "diag", False) else prof) for p in tile.turns]
     # 角を丸くする: 歩道の角の四角から扇形を除いた部分も抜く
     geo += [corner_piece(c, TILE / 2 - w) for c in tile.corners]
     # 型は 1 つずつ順に抜く。まとめて 1 つの形にすると、分岐・十字で帯どうしが重なって自己交差になり、use_self=True（遅い）が要る。
