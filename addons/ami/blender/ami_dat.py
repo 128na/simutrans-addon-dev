@@ -841,9 +841,6 @@ ROADSIGN_OFFSET_LEFT = 14  # 左側通行のときのずらし（本体の既定
 ROADSIGN_ICON_CELL = "0.4"  # sheetlib の roadsign.ROADSIGN_ICON_CELL と同じ
 ROADSIGN_CURSOR_CELL = "1.4"  # sheetlib の roadsign.ROADSIGN_CURSOR_CELL と同じ
 ROADSIGN_OFFSET = "-64,-32"  # 道路の way と同じ（sheetlib の ROAD_CY）
-# 一方通行（single_way=1）の標識は、本体が置いた向き n の絵（image[n]）が、反対の向きの車を通す（北向きの標識は南行きを通す。#162・#200 で撮って確かめた）。
-# シートのセル 0〜3 は北行き・南行き・西行き・東行きの車に向けた板なので、image[n] には反対の向きのセルを入れる（北↔南、西↔東）。ほかの標識は向きで通す車を変えない
-ROADSIGN_ONE_WAY_CELLS = (1, 0, 3, 2)
 
 
 def roadsign_dat_text(name, key):
@@ -863,8 +860,7 @@ def roadsign_dat_text(name, key):
     if key in ROADSIGN_EFFECT:
         out.append(ROADSIGN_EFFECT[key])
     out += [f"icon=> {name}.{ROADSIGN_ICON_CELL}", f"cursor={name}.{ROADSIGN_CURSOR_CELL}"]
-    cells = ROADSIGN_ONE_WAY_CELLS if key == "one_way" else range(4)
-    out += [f"image[{i}]={name}.0.{cell},{ROADSIGN_OFFSET}" for i, cell in enumerate(cells)]
+    out += [f"image[{i}]={name}.0.{i},{ROADSIGN_OFFSET}" for i in range(4)]
     return NL.join(out) + NL
 
 

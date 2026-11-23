@@ -193,6 +193,10 @@ def roadsign_sheet(sheet, plate, work):
         ex, ey = _cell_xy((x + ax, y + ay, z))
         slope = (ey - cy) / (ex - cx)  # 板の横の向きの画面での傾き（東西 +0.5、南北 -0.5）
         shown = ROADSIGN_FACE_SHOWN[i]
+        if plate == "one_way":
+            # 一方通行は、本体が置いた向き n の絵（image[n]）が反対の向きの車を通す（#162・#200）。柱の角と奥・手前・左側通行のずらしは
+            # slot n のまま使い、板だけ反対の向きの車に向ける（表と裏が入れ替わる）
+            shown = not shown
         _stamp(im, face if shown else back, cx, cy, slope, None if shown else im[..., 3] > 0)
         save_rgba(path, im)
         cells[(0, i)] = path
