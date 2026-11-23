@@ -5,6 +5,9 @@
 //   C（x +16〜、y +12〜+18）: 近い斜め（1 タイルずらして並べた斜め 2 本。分け合うタイルが十字）
 // 降雪側（x=256〜）に敷くときは canal.sh が OX に 256 を足し、敷いた後に一帯を降雪に塗る。
 // 返り値: 失敗した所と、船の名前（[v] の行）・確かめの行（[check]）
+// SNOW: 0 なら敷いた後に一帯を降雪に塗る（catalog.py の流用の決まりと同じ。9 は塗らない）。以前は OX >= 256 で決めていたので、
+// カタログの温暖側（x=416）の運河も降雪に塗られた（#197）
+local SNOW = 9;
 local OX = 20;
 local OY = 20;
 local pl = player_x(0);
@@ -64,6 +67,6 @@ if (ship == null) {
   r("start", d.start_convoy(pl, cnv));
   report += "[v] " + ship.get_name() + "\n";
 }
-if (OX >= 256) r("climate", command_x(tool_set_climate).work(pl, c(-2, -2), c(32, 24), "7"));
+if (SNOW == 0) r("climate", command_x(tool_set_climate).work(pl, c(-2, -2), c(32, 24), "7"));
 gui.close_all_windows();
 return report;
