@@ -43,6 +43,7 @@ MARKING_Z = (0.0, LINE_TOP + 0.004)  # 白線の下面・上面（道路の白�
 # 路面の板: 白線より下。敷くのは、路側線から MARKING_PAVE_GAP だけ内まで（下の道路の路側の雪のまだらの始まり。そこから外は下の道路の絵）
 MARKING_PAVE_Z = (-0.002, 0.008)
 MARKING_SNOW_Z = (0.0, 0.0115)          # 雪の板（下の道路の積もった雪 snowbank と同じ厚み。白線より薄い）
+MARKING_SLUSH_DZ = 0.0004                # 雪の縁のぼかしの段ごとの厚みの差（外の段ほど低く、板の縁を重ねて見せる）
 MARKING_SNOW_KINDS = ("lane6_m",)       # 雪の絵（夏と別のセル）を持つ種類。シートは行を 2 倍にし、雪は MARKING_ROWS 行下
 MARKING_PAVE_IN = SNOW_LAYERS[0][1]                # 2.47（2 車線の道路の中心からの半幅）
 MARKING_PAVE_GAP = EDGE_LINE - MARKING_PAVE_IN     # 0.9
@@ -238,7 +239,7 @@ class _Plan:
         """路面の板（凸の多角形）"""
         self.paves.append(list(pts))
 
-    def emit(self, a, mat, voff=0.0, pave_mat=None, snow_mat=None):
+    def emit(self, a, mat, voff=0.0, pave_mat=None, snow_mat=None, slush=None):
         """向き a（単位ベクトル。None なら (u, v) をそのまま (x, y) とする）のタイルへ、横位置を voff だけずらして
         （タイルの v = V - voff）、タイルの範囲で切り抜いて板にする。pave_mat が有れば路面の板も作る"""
         box = (((1, 0), MARKING_HALF), ((-1, 0), MARKING_HALF), ((0, 1), MARKING_HALF), ((0, -1), MARKING_HALF))
@@ -246,6 +247,11 @@ class _Plan:
         if pave_mat is not None:
             layers.append(("marking_pave", self.paves, pave_mat, MARKING_PAVE_Z))
         if snow_mat is not None and self.snows:
+            # 雪の板の縁のぼかし（#197）: 板を縦（v）に広げた帯を、外が暗く内が明るい順に下から重ねる（slush は外 → 内の (広げる幅, 材質)）
+            for i, (d, sm) in enumerate(slush or ()):
+                zt = MARKING_SNOW_Z[1] - MARKING_SLUSH_DZ * (len(slush) - i)
+                layers.append((f"marking_slush{i}", [[(u, v - d if v < 0 else v + d) for u, v in pts] for pts in self.snows], sm,
+                               (MARKING_SNOW_Z[0], zt)))
             layers.append(("marking_snow", self.snows, snow_mat, MARKING_SNOW_Z))
         for tag, polys, m, z in layers:
             for i, pts in enumerate(polys):
@@ -612,15 +618,17 @@ def _tee(m, closed_edge):
     return draw
 
 
-def marking_sheet(sheet, kind, label="M", paving=None, snow=None):
+def marking_sheet(sheet, kind, label="M", paving=None, snow=None, line=None, slush=None):
     """多車線と交差点の路面表示の way のシート（4 行 × 10 列）。種類ごとの形 → 絵は marking_jobs。絵の無い形のセル
     （MARKING_EMPTY_CELL ほか）は空。アイコン（0,0）は仮の絵（AMI は icons.py が描き直す）、カーソル（0,1）は MARKING_CURSOR の絵。
+    line は白線の材質を返す関数（擦れのまだら。#197。無ければ一色の MARKING_LINE）、slush は雪の板の縁のぼかしの段（外 → 内の (広げる幅, 材質を返す関数)）。
     paving は路面の材質を返す関数（下の道路のアスファルトと同じ物。AMI は render.py の _road_asphalt_skin の "asphalt"）。無ければ白線だけ"""
     assert kind in MARKING_KINDS, kind
     set_anchor(ROAD_CY)  # 道路と同じ（dat のオフセット -64,-32）
-    mat = material(*MARKING_LINE)
+    mat = line() if line else material(*MARKING_LINE)
     pave_mat = paving() if paving else None
     snow_mat = snow() if (snow and kind in MARKING_SNOW_KINDS) else None
+    slush_mats = [(d, f()) for d, f in (slush or ())] if snow_mat is not None else None
     seasons = (0, 1) if snow_mat is not None else (0,)
     cells = {}
     jobs = marking_jobs(kind)
@@ -629,7 +637,7 @@ def marking_sheet(sheet, kind, label="M", paving=None, snow=None):
             clear_models()
             plan = _Plan()
             (functools.partial(draw, snow=True) if season else draw)(plan)
-            plan.emit(a, mat, voff, pave_mat, snow_mat if season else None)
+            plan.emit(a, mat, voff, pave_mat, snow_mat if season else None, slush_mats if season else None)
             if slope:
                 for ob in list(bpy.context.scene.objects):
                     if ob.type == "MESH" and ob.name.startswith("marking"):

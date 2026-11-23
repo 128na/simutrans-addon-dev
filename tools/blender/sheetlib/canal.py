@@ -36,13 +36,50 @@ WATER_LO, WATER_HI = (0.03, 0.13, 0.18), (0.05, 0.19, 0.25)
 WALL_LO, WALL_HI = (0.26, 0.25, 0.23), (0.34, 0.33, 0.30)
 COPING_LO, COPING_HI = (0.45, 0.44, 0.41), (0.53, 0.52, 0.48)
 _M_WATER = lambda: noisy_material("canal_water", WATER_LO, WATER_HI, scale=30, rough=0.35)
+
+# 水面のさざ波と岸の影（#197。ユーザーが「お勧め順で」と決めた、2026-11-23）: 水面は一色のまだらだった。明るい側を足した 3 段のまだらに、
+# 斜めの縞（さざ波）を重ね、岸際（護岸の内の面から WATER_SHADOW だけ内）は暗い水の帯にする。縞はオブジェクトの座標で作るので、
+# タイルの数だけ繰り返す（コントラストは低く、水面の明暗の範囲内に収める）
+WATER_RIPPLE_HI = (0.07, 0.25, 0.32)
+WATER_RIPPLE_SCALE = 14.0
+WATER_SHADOW = 0.45                       # 岸の影の幅（約 2px）
+WATER_SHADOW_LO, WATER_SHADOW_HI = (0.015, 0.075, 0.11), (0.03, 0.11, 0.15)
+
+
+def _m_water_ripple():
+    """さざ波の水面: 2 色のまだらと、斜めの縞（Wave テクスチャ）を、縞の山の所だけ明るい色（WATER_RIPPLE_HI）へ寄せる"""
+    import bpy
+    name = "canal_water_ripple"
+    if name in bpy.data.materials:
+        return bpy.data.materials[name]
+    m = noisy_material(name, WATER_LO, WATER_HI, scale=30, rough=0.35)
+    nt = m.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    base = bsdf.inputs["Base Color"].links[0].from_socket
+    wave = nt.nodes.new("ShaderNodeTexWave")
+    wave.wave_type = "BANDS"
+    wave.bands_direction = "DIAGONAL"
+    wave.inputs["Scale"].default_value = WATER_RIPPLE_SCALE
+    wave.inputs["Distortion"].default_value = 4.0
+    wave.inputs["Detail"].default_value = 1.0
+    ramp = nt.nodes.new("ShaderNodeValToRGB")
+    ramp.color_ramp.elements[0].position = 0.62
+    ramp.color_ramp.elements[1].position = 0.80
+    nt.links.new(wave.outputs["Fac"], ramp.inputs["Fac"])
+    mix = nt.nodes.new("ShaderNodeMix")
+    mix.data_type = "RGBA"
+    nt.links.new(ramp.outputs["Color"], mix.inputs["Factor"])
+    nt.links.new(base, mix.inputs["A"])
+    mix.inputs["B"].default_value = (*WATER_RIPPLE_HI, 1)
+    nt.links.new(mix.outputs["Result"], bsdf.inputs["Base Color"])
+    return m
 _M_WALL = lambda: noisy_material("canal_wall", WALL_LO, WALL_HI, scale=55, rough=0.9)
 _M_COPING = lambda: noisy_material("canal_coping", COPING_LO, COPING_HI, scale=55, rough=0.85)
 
 # 景観の運河（#161）: iss の運河と同じ見せ方。水面は 13px 下（高さ 1 段 = 16px）で、タイルの辺近くまで広げ、縁は細い笠石。
 # 坂は閘門（iss と同じく、上下の水面を扉枠で分ける。LOCK）。実用の運河（ROAD_STYLE。#114）の寸法は変えない
-ROAD_STYLE = dict(pad=CANAL_PAD, bank=CANAL_BANK, coping=CANAL_COPING, water_z=CANAL_WATER_Z, wall_bottom=CANAL_WALL_BOTTOM, lock=False)
-SCENIC_STYLE = dict(bank=0.35, coping=0.3, water_z=-13 / 16 * H, wall_bottom=-13 / 16 * H - 0.35, lock=True, pad=2.6, earth_eps=-0.03,
+ROAD_STYLE = dict(pad=CANAL_PAD, bank=CANAL_BANK, coping=CANAL_COPING, water_z=CANAL_WATER_Z, wall_bottom=CANAL_WALL_BOTTOM, lock=False, ripple=True)
+SCENIC_STYLE = dict(ripple=True, bank=0.35, coping=0.3, water_z=-13 / 16 * H, wall_bottom=-13 / 16 * H - 0.35, lock=True, pad=2.6, earth_eps=-0.03,
                     wall_col=((0.70, 0.70, 0.68), (0.80, 0.80, 0.77)), coping_col=((0.74, 0.74, 0.71), (0.84, 0.84, 0.81)))
 CANAL_STYLES = {"road": ROAD_STYLE, "scenic": SCENIC_STYLE}
 SCENIC_DEPTH_PX = 13      # 景観の運河の水面の深さ（画素。つなぎ目の持ち分を下へ広げる量）
@@ -193,6 +230,13 @@ def canal_build(name, slope, snow, st=ROAD_STYLE, slope_name=None):
     if lock:
         return _lock_build(name, slope, slope_name, st, water, wall, coping)
     obs = [_joined("canal_water", canal_water_pieces(name, bank - 0.05, pad), wb, wz, water)]
+    if st.get("ripple"):
+        # 岸際の影: 水面の中ほど（さざ波）を、護岸の内の面から WATER_SHADOW だけ内に小さく取り、外の帯は暗い水のまま残す
+        obs[0].data.materials.clear()
+        obs[0].data.materials.append(make_material(lambda: noisy_material("canal_water_shadow", WATER_SHADOW_LO, WATER_SHADOW_HI, scale=30, rough=0.35),
+                                                   "canal_water_shadow"))
+        obs.append(_joined("canal_water_mid", canal_water_pieces(name, bank - 0.05 + WATER_SHADOW, pad), wb, wz + 0.004,
+                           make_material(_m_water_ripple, "canal_water_ripple")))
     obs.append(_shell("canal_wall", name, bank - cop, wb, 0.0, wall, bank, None, pad))
     obs.append(_shell("canal_coping", name, bank - cop, 0.0, CANAL_COPING_T, coping, bank, None, pad))
     if not LAYOUT:
@@ -205,7 +249,7 @@ def canal_build(name, slope, snow, st=ROAD_STYLE, slope_name=None):
 
 def _materials(st, snow):
     """水面・壁・笠石の材質。景観の運河（wall_col・coping_col がある）は iss のように明るいコンクリート"""
-    water = make_material(_M_WATER, "canal_water")
+    water = make_material(_m_water_ripple if st.get("ripple") else _M_WATER, "canal_water")
     if "wall_col" in st:
         wall = make_material(lambda: noisy_material("canal_wall_s", *st["wall_col"], scale=55, rough=0.9, emit=0.6), "canal_wall_s")
         cop = make_material(_SNOW if snow else (lambda: noisy_material("canal_coping_s", *st["coping_col"], scale=55, rough=0.85)), "canal_coping_s")
