@@ -533,7 +533,7 @@ ROAD_SETTINGS = {
                                  skin=_road_asphalt_skin("street", R.STREET_ASPHALT, 0.0)),
     catalog.ROAD_GENERAL.key: dict(_ROAD_LOOK, label="120", style="road", center="solid",
                                    skin=_road_asphalt_skin("street", R.STREET_ASPHALT, 0.0)),
-    catalog.ROAD_EXPRESSWAY.key: dict(_ROAD_LOOK, label="360", style="expressway", center="dash",
+    catalog.ROAD_EXPRESSWAY.key: dict(_ROAD_LOOK, label="360", style="expressway", center="dash", switch_diag=True,
                                       skin=_road_asphalt_skin("expwy", R.EXPWY_ASPHALT, 0.0)),
 }
 for _r in catalog.ROADS:

@@ -113,9 +113,10 @@ def _wear_material(tag, lo, hi, t, spec=None):
 class WearPath(list):
     """走行跡だけに使う経路。fade=True は行き止まりへ向かう経路で、始点（閉じた側）から濃い帯ほど手前で止める。"""
 
-    def __init__(self, points, fade=False):
+    def __init__(self, points, fade=False, diag=False):
         super().__init__(points)
         self.fade = fade
+        self.diag = diag  # 真なら斜めの直線の経路（斜めのセルと同じ幅の倍率で作る。build_road が分ける）
 
 
 def _trim_start(path, dist):
@@ -290,6 +291,10 @@ SWITCH_RUT_ARCS = {
     "nsw1": "sw", "nsw2": "nw",
     "sew1": "sw", "sew2": "se",
 }
+
+# 轍のカーブを斜めの直線にするときの、カーブの角 → 斜めの直線がつなぐ 2 辺の中点（road_sheet の switch_diag。高速道路だけ。#205）。
+# 値は (辺の向き, 辺の向き)。カーブの角が arc_ne なら北と東の辺の中点をつなぐ（線路の diag_curves と同じ）
+SWITCH_DIAG_EDGES = {"ne": ("n", "e"), "se": ("s", "e"), "sw": ("s", "w"), "nw": ("n", "w")}
 
 # 雪の絵（dat の image[..][1]）: 道路は線路より除雪されている想定で、車道は夏と同じ（路面・白線・走行跡）。
 # 雪は路肩（group "snow" の snowbank）と、歩道・縁石だけ（2026-11-15、ゲームで確認して決めた）
