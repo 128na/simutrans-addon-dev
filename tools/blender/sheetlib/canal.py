@@ -10,7 +10,7 @@
 （手前の岸の壁の内側の面と、手前の岸の陰の水面が、本物の地面と同じく隠れる）。
 
 手本は iss の運河（../refs/iss/src/way/water/canal.dat。タイルいっぱいの水面と、つながらない辺の薄い壁）と、pak128 の canal_020
-（水面とつながらない辺の石の縁。斜めは半分のタイル）。坂は iss のような閘門を描かず、水面ごと傾ける（pak128 と同じ）。
+（水面とつながらない辺の石の縁。斜めは半分のタイル）。実用の運河の坂は iss のような閘門を描かず、水面ごと傾ける（pak128 と同じ）。景観の運河（SCENIC_STYLE）の坂は閘門（_lock_build）。
 """
 import os
 
@@ -235,8 +235,8 @@ def _lock_build(name, slope, slope_name, st, water, wall, coping):
     pad = st["pad"]
     obs = [_joined("canal_water_lo", _pieces(name, bank - 0.05, lo, pad), wb, wz, water),
            _joined("canal_water_hi", _pieces(name, bank - 0.05, hi, pad), wb + top, wz + top, water)]
-    # 下半分の壁・笠石は地面に沿って傾ける
-    lo_obs = [_shell("canal_wall_lo", name, outer, wb, 0.0, wall, bank, lo, pad),
+    # 下半分の壁・笠石は地面に沿って傾ける。水面は傾けず平らなので、壁の下端は傾けても水面より下に残るよう top だけ深く取る（レビューの指摘）
+    lo_obs = [_shell("canal_wall_lo", name, outer, wb - top, 0.0, wall, bank, lo, pad),
               _shell("canal_coping_lo", name, outer, 0.0, CANAL_COPING_T, coping, bank, lo, pad)]
     for ob in lo_obs:
         apply_slope(ob, slope)
