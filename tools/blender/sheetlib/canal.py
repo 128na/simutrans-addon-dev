@@ -42,8 +42,8 @@ _M_COPING = lambda: noisy_material("canal_coping", COPING_LO, COPING_HI, scale=5
 # 景観の運河（#161）: iss の運河と同じ見せ方。水面は 13px 下（高さ 1 段 = 16px）で、タイルの辺近くまで広げ、縁は細い笠石。
 # 坂は閘門（iss と同じく、上下の水面を扉枠で分ける。LOCK）。実用の運河（ROAD_STYLE。#114）の寸法は変えない
 ROAD_STYLE = dict(pad=CANAL_PAD, bank=CANAL_BANK, coping=CANAL_COPING, water_z=CANAL_WATER_Z, wall_bottom=CANAL_WALL_BOTTOM, lock=False)
-SCENIC_STYLE = dict(bank=0.35, coping=0.3, water_z=-13 / 16 * H, wall_bottom=-13 / 16 * H - 0.35, lock=True, pad=2.6,
-                    wall_col=((0.55, 0.55, 0.53), (0.66, 0.66, 0.63)), coping_col=((0.74, 0.74, 0.71), (0.84, 0.84, 0.81)))
+SCENIC_STYLE = dict(bank=0.35, coping=0.3, water_z=-13 / 16 * H, wall_bottom=-13 / 16 * H - 0.35, lock=True, pad=2.6, earth_eps=-0.03,
+                    wall_col=((0.70, 0.70, 0.68), (0.80, 0.80, 0.77)), coping_col=((0.74, 0.74, 0.71), (0.84, 0.84, 0.81)))
 CANAL_STYLES = {"road": ROAD_STYLE, "scenic": SCENIC_STYLE}
 SCENIC_DEPTH_PX = 13      # 景観の運河の水面の深さ（画素。つなぎ目の持ち分を下へ広げる量）
 LOCK_GATE = 0.25         # 閘門の扉の半分の厚み（坂の向きの座標 u = ±LOCK_GATE の間）
@@ -196,7 +196,7 @@ def canal_build(name, slope, snow, st=ROAD_STYLE, slope_name=None):
     obs.append(_shell("canal_wall", name, bank - cop, wb, 0.0, wall, bank, None, pad))
     obs.append(_shell("canal_coping", name, bank - cop, 0.0, CANAL_COPING_T, coping, bank, None, pad))
     if not LAYOUT:
-        obs.append(_earth(name, bank, wb, reach, water, pad))
+        obs.append(_earth(name, bank, wb, reach, water, pad, st.get("earth_eps", CANAL_EARTH_EPS)))
     if slope:
         for ob in obs:
             apply_slope(ob, slope)
@@ -207,17 +207,17 @@ def _materials(st, snow):
     """水面・壁・笠石の材質。景観の運河（wall_col・coping_col がある）は iss のように明るいコンクリート"""
     water = make_material(_M_WATER, "canal_water")
     if "wall_col" in st:
-        wall = make_material(lambda: noisy_material("canal_wall_s", *st["wall_col"], scale=55, rough=0.9), "canal_wall_s")
+        wall = make_material(lambda: noisy_material("canal_wall_s", *st["wall_col"], scale=55, rough=0.9, emit=0.6), "canal_wall_s")
         cop = make_material(_SNOW if snow else (lambda: noisy_material("canal_coping_s", *st["coping_col"], scale=55, rough=0.85)), "canal_coping_s")
         return water, wall, cop
     return water, make_material(_M_WALL, "canal_wall"), make_material(_SNOW if snow else _M_COPING, "canal_coping")
 
 
-def _earth(name, bank, wb, reach, water, pad=CANAL_PAD):
+def _earth(name, bank, wb, reach, water, pad=CANAL_PAD, eps=CANAL_EARTH_EPS):
     """地面（holdout）。水路の形に抜く"""
     earth = _prism("canal_earth", [(-reach, -reach), (reach, -reach), (reach, reach), (-reach, reach)],
                    wb - 0.5, 0.0, _holdout())
-    cut = _joined("canal_earth_cut", canal_water_pieces(name, bank + CANAL_EARTH_EPS, pad), wb - 1.0, 1.0, water)
+    cut = _joined("canal_earth_cut", canal_water_pieces(name, bank + eps, pad), wb - 1.0, 1.0, water)
     boolean(earth, cut)
     _remove(cut)
     return earth
@@ -254,14 +254,14 @@ def _lock_build(name, slope, slope_name, st, water, wall, coping):
         obs.append(_joined(f"canal_pillar{sgn}", pil, top, top + LOCK_FRAME_Z, coping))
     obs.append(_joined("canal_lintel", gate, top + LOCK_FRAME_Z - 0.4, top + LOCK_FRAME_Z, coping))
     if not LAYOUT:
-        obs.append(_earth_sheared(name, bank, wb, slope, water, pad))
+        obs.append(_earth_sheared(name, bank, wb, slope, water, pad, st.get("earth_eps", CANAL_EARTH_EPS)))
     return obs
 
 
-def _earth_sheared(name, bank, wb, slope, water, pad=CANAL_PAD):
+def _earth_sheared(name, bank, wb, slope, water, pad=CANAL_PAD, eps=CANAL_EARTH_EPS):
     """傾けた地面（holdout）。坂の面に沿い、水路の形に抜く"""
     reach = TILE / 2 + pad
-    ob = _earth(name, bank, wb, reach, water, pad)
+    ob = _earth(name, bank, wb, reach, water, pad, eps)
     apply_slope(ob, slope)
     return ob
 
