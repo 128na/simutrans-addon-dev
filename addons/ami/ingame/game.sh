@@ -20,17 +20,25 @@ script_of() {
   local sed_ox=()
   [ -n "$OX" ] && sed_ox=(-e "s/^local OX = [0-9]*;/local OX = $OX;/")
   # 道路の見本の絞り込み（#208）: ROAD_NAMES="ami_road_general ..."・CLIMATES="temperate snow"
+  if [ -n "$ROAD_NAMES$CLIMATES" ]; then
+    case "$1" in *road_sample.nut) ;; *) echo "ROAD_NAMES・CLIMATES は road_sample.nut だけに効く: $1" >&2; exit 1 ;; esac
+  fi
   if [ -n "$ROAD_NAMES" ]; then
+    [[ "$ROAD_NAMES" =~ ^[A-Za-z0-9_\ ]+$ ]] || { echo "ROAD_NAMES は英数字・_・空白だけ" >&2; exit 1; }
     local rl; rl=$(printf '"%s", ' $ROAD_NAMES); sed_ox+=(-e "s/^local ROADS = .*/local ROADS = [${rl%, }];/")
   fi
   if [ -n "$CLIMATES" ]; then
     local ol="" c; for c in $CLIMATES; do
-      case "$c" in temperate) ol+="[20, 20, 0], " ;; snow) ol+="[276, 20, 1], " ;; *) echo "CLIMATES は temperate・snow: $c" >&2 ;; esac
+      case "$c" in temperate) ol+="[20, 20, 0], " ;; snow) ol+="[276, 20, 1], " ;; *) echo "CLIMATES は temperate・snow（空白区切り）: $c" >&2; exit 1 ;; esac
     done
+    [ -n "$ol" ] || { echo "CLIMATES が空" >&2; exit 1; }
     sed_ox+=(-e "s/^local ORIGINS = .*/local ORIGINS = [${ol%, }];/")
   fi
   sed -e 's/\r$//' -e 's/^[[:space:]]*//' -e '/^\/\//d' -e '/^$/d' "${sed_ox[@]}" "$1"
 }
+
+# 絞り込みの値が不正なら、ゲームを起動する前に止める（script_of の中の exit は $(...) では効かない）
+[ -n "$NUT" ] && { script_of "$NUT" > /dev/null || exit 1; }
 
 stop_game() {
   local win; win=$(cd "$WORK" 2> /dev/null && pwd -W) || return 0
