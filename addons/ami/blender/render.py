@@ -653,9 +653,9 @@ MARKING_PAVING = ROAD_SETTINGS[catalog.ROAD_GENERAL.key]["skin"]["asphalt"]
 # 高速道路の分岐・合流（#188）は、高速道路のアスファルト（MARKING_EXPWY_PAVING）
 MARKING_EXPWY_PAVING = ROAD_SETTINGS[catalog.ROAD_EXPRESSWAY.key]["skin"]["asphalt"]
 # 路面表示の汚し（#197。ユーザーが「お勧め順で」と決めた、2026-11-23）:
-#   白線の擦れ: 一色の白（0.80）でなく、0.74〜0.82 の 2 色の粗いまだら（Scale 60。道路の路面の粒より粗く、白線の 1px 幅で明暗が出る）。
+#   白線の擦れ: 一色の白（0.80）でなく、0.74〜0.82 の 2 色の粗いまだら（Scale 12。線に沿ってゆるく明暗が変わる。Scale 60 では 1px の路側線が点々に欠けて見えなくなった）。
 #     下の道路の白線（一色）との境で浮かないよう、明るい側は元の白線の色（0.80）に近づけ、暗い側も 0.74 までに抑える（0.68 では 1px の路側線が灰色に沈み、ゲームで線が見えにくくなった）（下の道路の白線は一色のままなので、差を広げない）
-MARKING_WORN = ((0.74, 0.74, 0.76), (0.82, 0.82, 0.84), 60.0)
+MARKING_WORN = ((0.74, 0.74, 0.76), (0.82, 0.82, 0.84), 12.0)
 MARKING_LINE_WORN = lambda: R.noisy_material("ami_marking_line_worn", MARKING_WORN[0], MARKING_WORN[1], scale=MARKING_WORN[2], rough=0.6,
                                              ramp=ROAD_ASPHALT_RAMP)
 #   雪の板の縁のぼかし: 路面（街路のアスファルト）の色から雪（ROAD_SNOW）の色へ、4 段で寄せる。下の道路の路肩の雪のまだら（SNOW_LAYERS）と同じ作り。
