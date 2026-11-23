@@ -555,7 +555,7 @@ MARKING_CELLS = {
 }
 MARKING_EMPTY_CELL = (0, 4)
 # 雪の絵（[1]）を夏と別のセルに持つ種類（tools/blender/sheetlib/marking.py の MARKING_SNOW_KINDS）。雪は MARKING_ROWS 行下
-MARKING_SNOW_KINDS = {"lane6_m"}
+MARKING_SNOW_KINDS = {"lane6_m", "junction4_in", "junction4_out", "junction6_in", "junction6_out", "junction6_m"}
 MARKING_ROWS = 4
 
 
