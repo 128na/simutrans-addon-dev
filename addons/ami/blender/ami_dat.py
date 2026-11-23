@@ -861,7 +861,7 @@ def roadsign_dat_text(name, key):
     return NL.join(out) + NL
 
 
-ROADSIGN_CROSSWALK_OFFSET_LEFT = 0  # 左右対称の路面の絵なので、左側通行でずらさない（iss の横断歩道と同じ）
+ROADSIGN_CROSSWALK_OFFSET_LEFT = 0  # 点対称（180° 回すと重なる）の路面の絵なので、左側通行でずらさない（iss の横断歩道と同じ）
 
 
 def crosswalk_dat_text(name, one_way):
@@ -879,6 +879,7 @@ def crosswalk_dat_text(name, one_way):
         f"cost={ROADSIGN_COST}",
         f"offset_left={ROADSIGN_CROSSWALK_OFFSET_LEFT}",
         f"single_way={1 if one_way else 0}",
+        "no_foreground=1",  # 路面の標示は車両の下に描く（#187・#189 の路面表示と同じ。向きによって手前になるのを防ぐ）
         f"icon=> {name}.{ROADSIGN_ICON_CELL}",
         f"cursor={name}.{ROADSIGN_CURSOR_CELL}",
     ]

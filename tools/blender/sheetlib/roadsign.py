@@ -211,8 +211,8 @@ def roadsign_sheet(sheet, plate, work):
 # 縞・白の材質は #187・#189 の路面表示（marking.py）と同じ。絵の座標は、向き a（その向きの車の進む向き）の u（進む向き。タイルの中心が 0）と
 # v（左。左側通行の車線は v > 0）。縞は車の進む向きに長く、6 本（中心 ±0.5・1.5・2.5）で路側線（±EDGE_LINE）の内に収める。
 # 停止線は、縞の手前（進入側。u < 0）に、腕の横断歩道と停止線のあき（MARKING_STOP_U と MARKING_CROSSWALK_U から）をあけて引く。
-CROSSWALK_STOP_GAP = 0.73                       # 縞の端から停止線の縞に近い縁までのあき（4 車線の腕の 1.5 と 0.77 の差）
-CROSSWALK_STOP_W = 0.34                         # 停止線の幅（MARKING_STOP_U の幅）
+CROSSWALK_STOP_GAP = 0.73                       # 縞の端から停止線の縞に近い縁までのあき（4 車線の腕の MARKING_CROSSWALK_U[0] 1.5 と MARKING_STOP_U[1] 0.77 の差）
+CROSSWALK_STOP_W = 0.34                         # 停止線の幅（MARKING_STOP_U の幅 0.77 - 0.43）
 CROSSWALK_LANE_MARGIN = 0.2                     # 停止線の端と路側線・中央線のあき
 CROSSWALK_STRIPES = [i + 0.5 for i in range(-3, 3)]
 # 両方向: 南北の道路・東西の道路の 2 枚（セル (0,0)・(0,1)）。image[0]・[2] だけを使う（iss と同じ）。

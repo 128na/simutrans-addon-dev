@@ -10,6 +10,7 @@ retire_month=1
 cost=500
 offset_left=0
 single_way=1
+no_foreground=1
 icon=> ami_sign_crosswalk_one_way.0.4
 cursor=ami_sign_crosswalk_one_way.1.4
 image[0]=ami_sign_crosswalk_one_way.0.0,-64,-32
