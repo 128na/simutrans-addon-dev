@@ -213,6 +213,34 @@ def coverage():
     return missing
 
 
+def draw_map(path, scale=1.5):
+    """区画の見取り図（1 マス = scale px。左が温暖側、右が降雪側）を PNG に書く"""
+    from PIL import Image, ImageDraw, ImageFont
+    W, H = 1024, 580
+    im = Image.new("RGB", (int(W * scale), int(H * scale)), (250, 250, 250))
+    d = ImageDraw.Draw(im)
+    try:
+        f = ImageFont.truetype("C:/Windows/Fonts/meiryo.ttc", 12)
+    except OSError:
+        f = ImageFont.load_default()
+    d.rectangle([int(512 * scale), 0, int(W * scale), int(H * scale)], fill=(228, 236, 248))
+    colors = {"rail": (150, 190, 150), "road": (200, 190, 150), "misc": (190, 170, 210)}
+    for side in (0, SNOW_DX):
+        for name, (y, cells) in bands().items():
+            col = colors.get(name.split("_")[0], (180, 180, 180))
+            for i in range(len(cells)):
+                x = X0 + i * PITCH + side
+                d.rectangle([x * scale, y * scale, (x + PITCH - 2) * scale, (y + CELL_H - 2) * scale], fill=col, outline=(90, 90, 90))
+            if side == 0:
+                d.text((X0 * scale + 2, (y - 1) * scale - 12 + 12), name, fill=(0, 0, 0), font=f)
+        for name, nut, x, y, _ in REUSE:
+            d.rectangle([(x + side) * scale, y * scale, (x + side + 96) * scale, (y + 80) * scale], fill=(220, 200, 160), outline=(90, 90, 90))
+            d.text(((x + side) * scale + 3, y * scale + 3), name, fill=(0, 0, 0), font=f)
+    d.text((6, H * scale - 16), "temperate x=0..511", fill=(0, 0, 0), font=f)
+    d.text((int(512 * scale) + 6, H * scale - 16), "snow x=512..1023", fill=(0, 0, 0), font=f)
+    im.save(path)
+
+
 def load_client():
     p = os.environ.get("MCP_CLIENT")
     if not p:
@@ -243,10 +271,14 @@ def main():
     ap.add_argument("--port", type=int, required=True)
     ap.add_argument("--only", default="", help="帯の名前の前方一致（カンマ区切り）")
     ap.add_argument("--side", default="both", choices=["both", "temperate", "snow"])
+    ap.add_argument("--map", help="区画の見取り図の PNG を書く")
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--coverage", action="store_true", help="src/ の名前が棚に出てこないものを数える")
     a = ap.parse_args()
     bs = bands()
+    if a.map:
+        draw_map(a.map)
+        return 0
     if a.coverage:
         miss = coverage()
         for k, n in miss:
