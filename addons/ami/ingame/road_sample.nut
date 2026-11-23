@@ -4,6 +4,7 @@
 // （土地を上げたタイルは温暖に変わり、坂の道が雪の絵にならないため。docs/reference/way-addon.md の 8.2）。
 // 道路は ROADS の順に、SPACING タイルずつ南へずらして 1 種ずつ敷く。名札（ASCII）付き。見つからない way は失敗として報告する。
 // 使い方（アドオンのディレクトリで）: sample_check.sh・sample_parallel.sh に NUT=ingame/road_sample.nut を付ける（撮る場所は sample_spots.sh の ROAD_SPOTS）。
+// 絞る（#208）: game.sh に ROAD_NAMES="ami_road_expressway"（空白区切り）・CLIMATES="snow"（temperate・snow）を渡すと、その種類・気候だけ敷く（game.sh が下の ROADS・ORIGINS の行を置き換える。既定は全部）。
 // 返り値の先頭が ok なら全部敷けた。失敗した所は「名前 場所=[…]」で続く。最後に確かめた値（[check] の行）が続く。
 //
 // 1 種ずつの区画（64x27）。原点 (ox,oy) から:
@@ -33,8 +34,7 @@ local SUFFIX = "";
 function wdx(n) { return way_desc_x(n.find("ami_") == 0 ? n + SUFFIX : n); }
 local SWITCH_IMAGES = true;  // dat に分岐の絵（switch 画像 1・2）があるか（ami_dat.py の ROAD_SWITCH_IMAGES と同じにする）
 local STANDARD = "Road_050";   // 区画 K でつなぐ pak128 標準の道路
-local ORIGINS = [[20, 20], [276, 20]];
-local SNOW = 1;          // ORIGINS の何番目を降雪に塗り直すか
+local ORIGINS = [[20, 20, 0], [276, 20, 1]];  // [x, y, 降雪か]。降雪は敷いた後に塗り直す
 local SPACING = 30;
 local AREA = [64, 27];   // 1 種の区画の大きさ（降雪の塗り直しに使う）
 local pl = player_x(0);
@@ -178,7 +178,7 @@ function lay(name, ox, oy) {
 
 foreach (n, o in ORIGINS) {
   foreach (i, name in ROADS) report += lay(name, o[0], o[1] + i * SPACING);
-  if (n == SNOW)
+  if (o[2] == 1)
     report += r("climate", command_x(tool_set_climate).work(pl, coord3d(o[0] - 2, o[1] - 3, 0),
                                                              coord3d(o[0] + AREA[0], o[1] + (ROADS.len() - 1) * SPACING + AREA[1], 0), "7"));
 }
