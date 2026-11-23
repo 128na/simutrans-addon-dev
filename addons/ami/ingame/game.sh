@@ -63,7 +63,7 @@ esac
 
 GAME_DIR=${GAME_DIR:?GAME_DIR に検証用のフォルダを指定する}
 EXE=${EXE:?EXE を指定する（例: OTRPv64_3.exe）}
-SAVE=${SAVE:-flat_512}
+SAVE=${SAVE:-flat_512_left_v64}  # v64（addon_check の既定の exe）の左側通行・フリープレイの地図
 PAK=${PAK:-dist/ami.pak}
 $M --run-squirrel "return 1;" > /dev/null 2>&1 && { echo "[game] ポート $PORT で既にゲームが動いている"; exit 1; }
 rm -rf "$WORK"
@@ -74,7 +74,7 @@ for d in config font themes text script music pak128 addons; do
 done
 printf '\nday_night_shift = 0\n' >> "$WORK/config/simuconf.tab"
 cp "$GAME_DIR/save/$SAVE.sve" "$WORK/save/" || exit 1
-SETTINGS=${SETTINGS:-settings.xml}  # 写しに入れる設定（GAME_DIR の中のファイル名。v64 は settings.xml.v64）
+SETTINGS=${SETTINGS:-settings.xml.v64}  # 写しに入れる設定（GAME_DIR の中のファイル名。v64 は settings.xml.v64）
 [ -f "$GAME_DIR/$SETTINGS" ] && { cp "$GAME_DIR/$SETTINGS" "$WORK/settings.xml"; chmod u+w "$WORK/settings.xml"; }
 cp "$PAK" "$WORK/addons/pak128/ami.pak" || exit 1
 for p in ${EXTRA_PAKS:-}; do cp "$p" "$WORK/addons/pak128/$(basename "$p")" || exit 1; done
