@@ -30,7 +30,7 @@ local ROADS = ["ami_road_local", "ami_road_general", "ami_road_expressway"];
 // ラウンドの版（#56）: AMI の名前（ami_ で始まるもの）の末尾に付ける。例: "_round1"。空なら今の名前（sample_parallel.sh の SUFFIX が置き換える）
 local SUFFIX = "";
 function wdx(n) { return way_desc_x(n.find("ami_") == 0 ? n + SUFFIX : n); }
-local SWITCH_IMAGES = false;  // dat に分岐の絵（switch 画像 1・2）があるか（ami_dat.py の ROAD_SWITCH_IMAGES と同じにする）
+local SWITCH_IMAGES = true;  // dat に分岐の絵（switch 画像 1・2）があるか（ami_dat.py の ROAD_SWITCH_IMAGES と同じにする）
 local STANDARD = "Road_050";   // 区画 K でつなぐ pak128 標準の道路
 local ORIGINS = [[20, 20], [276, 20]];
 local SNOW = 1;          // ORIGINS の何番目を降雪に塗り直すか

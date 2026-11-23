@@ -161,9 +161,11 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 #### 分岐の絵（switch 画像 1・2）
 
+**2026-11-23 に dat へ戻した（[#46](https://github.com/128na/simutrans-addon-dev/issues/46)。OTRP v64 で KUTA 流の道路の決まりが無くなり、十字は標準の十字の絵になった: [teamhimeh/simutrans#816](https://github.com/teamhimeh/simutrans/pull/816)）。ゲーム内の確認は v64 の検証用の地図の用意待ち。** 以下の「今は入れていない」の説明は、外していた間（2026-11-20〜23）の経緯。
+
 **今は道路の dat に分岐の絵を入れていない（2026-11-20、ユーザーの決定）。** 本体（OTRP）は、道路の「1」を枝の先が分岐の T字に、「2」を十字のタイルにだけ出す（KUTA 版から引き継いだ、多車線の交差点のための使い方）。固定の道具の名前は線路の分岐の意味で付いていて、これと合わない。T字の 1・2 を固定の名前に合わせて描くと、自動の 4×2・6×6 の十字がふさがり、ex 画像を足しても 4×4 しか直らない（[reference](../../docs/reference/way-addon.md) の 9.3）。本体の分岐の絵の仕様を整理するまで、道路の way（waytype が `road` のもの全部。通常の版・基盤の版・高架の版）の dat から 1・2 の 10 枚を外す（戻すのは [#46](https://github.com/128na/simutrans-addon-dev/issues/46)）。
 
-- 切り替え: `blender/ami_dat.py` の `ROAD_SWITCH_IMAGES`（既定は偽 = 外す）。真にすると dat に戻る。シートの分岐のセル（下の絵の作り）と、轍・優先道路の十字・停止線の部品、見本の区画 I・P は消さずに残している
+- 切り替え: `blender/ami_dat.py` の `ROAD_SWITCH_IMAGES`（既定は真 = 入れる）。偽にすると dat から外す。シートの分岐のセル（下の絵の作り）と、轍・優先道路の十字・停止線の部品、見本の区画 I・P は消さずに残している
 - 外したことで使えないもの: 優先道路の十字（`nsew1`・`nsew2`）と、固定した T字の轍。固定の道具で 1・2 を選んでも通常の絵のまま。2 本並べた道路の渡り口（区画 HV・HH）も通常の T字（枝の口の点線）が向かい合う
 - 見えるもの: 十字はどれも通常の十字（開いた十字）、T字は通常の T字。多車線の交差点（4×2・4×4・6×6）も、4 車線に 2 車線が T字でつながる所も、横切る道路はふさがらない（`docs/road_GE_junction_noswitch.png`・`road_junction_noswitch_all.png`・`road_junction_tee_noswitch.png`・`road_GE_noswitch_ground.png`。2026-11-20、`OTRPv64_3.exe`、`flat_512.sve`）。4×4・6×6 の中ほどの角の丸い四角の枠（下の「十字と T字の絵（通常の絵）」）は残る
 - 線路と橋脚の way（`ami_pier_road` は `tram_track`。分岐の絵は T字・十字と同じ柱）の分岐の絵は変えていない
