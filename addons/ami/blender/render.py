@@ -652,9 +652,32 @@ MARKING_LABEL = "M"  # 描画のアイコンの文字（ゲームのアイコン
 MARKING_PAVING = ROAD_SETTINGS[catalog.ROAD_GENERAL.key]["skin"]["asphalt"]
 # 高速道路の分岐・合流（#188）は、高速道路のアスファルト（MARKING_EXPWY_PAVING）
 MARKING_EXPWY_PAVING = ROAD_SETTINGS[catalog.ROAD_EXPRESSWAY.key]["skin"]["asphalt"]
+# 路面表示の汚し（#197。ユーザーが「お勧め順で」と決めた、2026-11-23）:
+#   白線の擦れ: 一色の白（0.80）でなく、0.72〜0.88 の 2 色の粗いまだら（Scale 12）。平均は元の 0.80（ノイズの値は 0.5 のあたりに集まるので、
+#     2 色の平均がほぼそのまま出る）。一色の白線の材質（MARKING_LINE）と同じ自己発光 0.35 を付ける（付けないと灰色に沈み、線が薄く見えた）。
+#     細かいまだら（Scale 60）は 1px の路側線が点々に欠けて見えたので、線に沿ってゆるく明暗が変わる粗さにした。
+#     下の道路の白線は一色のままなので、差を広げないよう明暗の幅は ±0.08 に抑える
+MARKING_WORN = ((0.72, 0.72, 0.74), (0.88, 0.88, 0.90), 12.0)
+MARKING_LINE_WORN = lambda: R.noisy_material("ami_marking_line_worn", MARKING_WORN[0], MARKING_WORN[1], scale=MARKING_WORN[2], rough=0.6,
+                                             emit=0.35, ramp=ROAD_ASPHALT_RAMP)
+#   雪の板の縁のぼかし: 路面（街路のアスファルト）の色から雪（ROAD_SNOW）の色へ、4 段で寄せる。下の道路の路肩の雪のまだら（SNOW_LAYERS）と同じ作り。
+#     幅は 0.2 ごと（約 1px ずつ）で、外（暗い）から内（明るい）の順
+MARKING_SLUSH_T = ((0.80, 0.25), (0.60, 0.45), (0.40, 0.65), (0.20, 0.82))  # (広げる幅, 路面から雪へ寄せる具合)
+
+
+def _marking_slush(t):
+    mix = lambda a, b: tuple(x + (y - x) * t for x, y in zip(a, b))
+    asphalt = tuple(tuple(x * ROAD_ASPHALT_LIFT["street"] for x in c) for c in R.STREET_ASPHALT)
+    snow = tuple(tuple(x * (1 + sg * ROAD_SNOW_AMP) for x in ROAD_SNOW_RGB) for sg in (-1, 1))
+    return lambda: R.noisy_material(f"ami_marking_slush_{round(t * 100)}", mix(asphalt[0], snow[0]), mix(asphalt[1], snow[1]),
+                                    scale=45.0, rough=0.9, emit=0.15 * t)
+
+
+MARKING_SLUSH = tuple((_d, _marking_slush(_t)) for _d, _t in MARKING_SLUSH_T)
 for _name, _kind in catalog.MARKINGS.items():
     _paving = MARKING_EXPWY_PAVING if _name in catalog.MARKINGS_EXPWY else MARKING_PAVING
-    SHEETS[_name] = (lambda n, k, pv: lambda: R.marking_sheet(n, k, label=MARKING_LABEL, paving=pv, snow=ROAD_SNOW))(_name, _kind, _paving)
+    SHEETS[_name] = (lambda n, k, pv: lambda: R.marking_sheet(n, k, label=MARKING_LABEL, paving=pv, snow=ROAD_SNOW, line=MARKING_LINE_WORN,
+                                                              slush=MARKING_SLUSH))(_name, _kind, _paving)
 for _v in catalog.ROAD_WALL_VARIANTS:
     SHEETS[f"ami_wall_road_{_v}"] = _road_target(f"wall_road_{_v}")
 for _v, _name in catalog.ROAD_DIVIDERS.items():
