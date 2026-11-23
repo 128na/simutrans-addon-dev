@@ -57,12 +57,10 @@ EX_DONORS_DAT = "ex_donors.dat"  # src/ の中。build.py の pak（ami_*.dat）
 DONOR_SUFFIX = "__ex_donor"  # ex_graft.py の DONOR_SUFFIX と同じにする
 # 分岐の絵（switch 画像）の添字。dat の image[<添字>] の 1・2 の 10 枚
 SWITCH_IDX = {f"[{_s}{_n}]" for _s in ("nse", "new", "nsw", "sew", "nsew") for _n in (1, 2)}
-# 道路の way（waytype=road）の dat に分岐の絵を書くか。偽なら書かない（既定）。本体（OTRP）の道路の 1・2 は、自動では
-# 多車線の交差点向けに選ばれ（「2」は十字のタイルだけ）、固定の道具の名前（線路の分岐の意味）と合わない。本体の仕様を整理するまで外す
-# （2026-11-20、ユーザーの決定。README の「分岐の絵（switch 画像 1・2）」）。シートの分岐のセルは描いたまま残す。真にすれば戻る。
-# 戻すのは https://github.com/128na/simutrans-addon-dev/issues/46（本体の仕様の整理は https://github.com/128na/simutrans/issues/15）。
+# 道路の way（waytype=road）の dat に分岐の絵を書くか。真（既定）で書く。OTRP v64 で KUTA 流の道路の決まりが無くなり、戻した（#46、teamhimeh/simutrans#816、2026-11-23）。外すときは偽にする。
+# 外していた間（2026-11-20〜23）の経緯は README の「分岐の絵（switch 画像 1・2）」。シートの分岐のセルは描いたまま残す。
 # 真にしたら ingame/road_sample.nut の SWITCH_IMAGES も真にする
-ROAD_SWITCH_IMAGES = False
+ROAD_SWITCH_IMAGES = True
 
 # (速度 km/h, 費用, 維持費, 登場年)。費用・維持費は pak128 の way と同じ単位（1/100 cr）。iss の線路（15000・300）を基準にした
 VALUES = {

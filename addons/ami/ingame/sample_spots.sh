@@ -33,7 +33,7 @@ ROAD_SPOTS=""
 for v in LO:0 GE:30 EX:60; do
   IFS=: read n dy <<< "$v"
   ROAD_SPOTS="$ROAD_SPOTS ${n}_AFC:8:$((2 + dy)) ${n}_B:3:$((7 + dy)) ${n}_DE:14:$((7 + dy)) ${n}_G1:25:$((3 + dy)) ${n}_G2:25:$((15 + dy))"
-  ROAD_SPOTS="$ROAD_SPOTS ${n}_HV:34:$((4 + dy)) ${n}_HH:38:$((12 + dy)) ${n}_K:52:$((3 + dy)) ${n}_L:50:$((15 + dy))"
+  ROAD_SPOTS="$ROAD_SPOTS ${n}_HV:34:$((4 + dy)) ${n}_HH:38:$((12 + dy)) ${n}_K:52:$((3 + dy)) ${n}_L:50:$((15 + dy)) ${n}_M:61:$((14 + dy)) ${n}_M2:61:$((22 + dy))"
   for j in 0 1 2 3 4; do ROAD_SPOTS="$ROAD_SPOTS ${n}_I$j:$((5 + 12 * j)):$((23 + dy))"; done
 done
 # 交差点の組み合わせ（ingame/road_junction_sample.nut）: 種類ごとに 22 ずつ南。名前は「南北の車線数x東西の車線数」（道路 1 本が 2 車線）
