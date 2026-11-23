@@ -20,7 +20,8 @@ NUT=${NUT:-ingame/canal.nut}
 OX=20; OY=20
 [ "$SNOW" = 1 ] && OX=$((OX + 256))
 WAY=${WAY:-ami_canal}   # 敷く way（景観の運河なら WAY=ami_canal_scenic。#161）
-NUT_SED="s/^local OX = 20;/local OX = $OX;/; s/^local W = way_desc_x(\"ami_canal\");/local W = way_desc_x(\"$WAY\");/"
+SNOWV=9; [ "$SNOW" = 1 ] && SNOWV=0
+NUT_SED="s/^local SNOW = 9;/local SNOW = $SNOWV;/; s/^local OX = 20;/local OX = $OX;/; s/^local W = way_desc_x(\"ami_canal\");/local W = way_desc_x(\"$WAY\");/"
 PRE=""; [ "$SNOW" = 1 ] && PRE="snow_"
 # 撮る所: 名前 x y（canal.nut の区画の原点からのずれ）
 SPOTS=${SPOTS:-"ground 7 5

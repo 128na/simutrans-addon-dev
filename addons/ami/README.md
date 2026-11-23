@@ -1038,6 +1038,8 @@ PORT=47300 bash ingame/game.sh STOP
 | 車庫・モノレール・景観の運河 | 390 | 車庫（8）、跨座式モノレール（110）、懸垂式モノレール（212）、景観の運河（314） |
 | 踏切 | 480 | 線路 4 種×道路 3 種（8） |
 
+- 前後を撮る: [`ingame/before_after.sh`](ingame/before_after.sh)（#197）。カタログの保存データを、前と後の pak の組で別々に起動し、同じ座標を等倍で撮る（`SPOTS_FILE` で座標を渡す。`CANAL=1` で運河・景観の運河を空き地に敷いて、温暖・降雪の両方を撮る）。使い方はスクリプトの冒頭。
+- 運河の見本（`canal.nut`）は、以前は `OX >= 256` で降雪に塗っていたので、カタログの温暖側（x=416）の運河も降雪に塗られていた。降雪に塗るかを `local SNOW`（0 で塗る。`canal.sh` は `SNOW=1`、`catalog.py` は降雪側で 0 に書き換える）で決めるように直した。保存済みの `ami_catalog.sve` の温暖側の運河は、まだ降雪に塗られたまま（作り直すときに直る。#197）。
 - 流用した見本は `sidewalk_sample.nut`・`embankment_sample.nut`・`pole_sample.nut`・`roadsign_sample.nut`・`crosswalk_sign_sample.nut`・`marking6_sample.nut`・`marking_sample.nut`・`expwy_marking_sample.nut`・`yard_sample.nut`・`canal.nut`・`depot.nut`・`monorail.nut`・`suspended_sample.nut`・`crossing_sample.nut`。原点（`ORIGINS`・`OX`・`OY`）を `catalog.py` が書き換えて流す。
 - 分岐の絵の網羅（全方位・近い斜め・坂）は入れていない（撮影用の見本の役目）。ゲーム内の見た目はユーザーが確かめる。
 
