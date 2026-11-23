@@ -204,3 +204,58 @@ def roadsign_sheet(sheet, plate, work):
     for cell in (ROADSIGN_ICON_CELL, ROADSIGN_CURSOR_CELL):
         cells[cell] = empty_path
     make_sheet(cells, 2, 5, sheet)
+
+
+# ---------------------------------------------------------------- 路面の横断歩道の標識（#162）
+# 柱も板も無く、路面の白い縞と停止線だけを描く（iss の iss_sr_crosswalk・iss_sr_oneway_crosswalk と同じ使い方）。
+# 縞・白の材質は #187・#189 の路面表示（marking.py）と同じ。絵の座標は、向き a（その向きの車の進む向き）の u（進む向き。タイルの中心が 0）と
+# v（左。左側通行の車線は v > 0）。縞は車の進む向きに長く、6 本（中心 ±0.5・1.5・2.5）で路側線（±EDGE_LINE）の内に収める。
+# 停止線は、縞の手前（進入側。u < 0）に、腕の横断歩道と停止線のあき（MARKING_STOP_U と MARKING_CROSSWALK_U から）をあけて引く。
+CROSSWALK_STOP_GAP = 0.73                       # 縞の端から停止線の縞に近い縁までのあき（4 車線の腕の MARKING_CROSSWALK_U[0] 1.5 と MARKING_STOP_U[1] 0.77 の差）
+CROSSWALK_STOP_W = 0.34                         # 停止線の幅（MARKING_STOP_U の幅 0.77 - 0.43）
+CROSSWALK_LANE_MARGIN = 0.2                     # 停止線の端と路側線・中央線のあき
+CROSSWALK_STRIPES = [i + 0.5 for i in range(-3, 3)]
+# 両方向: 南北の道路・東西の道路の 2 枚（セル (0,0)・(0,1)）。image[0]・[2] だけを使う（iss と同じ）。
+# 一方通行: 4 枚（セル (0,0)〜(0,3)。dat の image[0]〜[3] と同じ並び）。image[n] は、標識の向き n（北・南・西・東。本体が置いた回数で決める）の絵で、
+# 車が通れるのはその反対の向き（北向きの標識は南行きを通す。1 回目に建てた南北の道路で、通れる向きが南 = masked 4。2026-11-23 に撮って確かめた）。
+# 停止線は進入側（車の来る側）に引くので、image[0] は南行き（北側に停止線）の絵、[1] は北行き、[2] は東行き、[3] は西行き
+CROSSWALK_TWO_WAY_AXES = ((0, 1), (1, 0))           # image[0]（北行きの向きで描く）・image[2]（東行きの向きで描く）
+CROSSWALK_ONE_WAY_DIRS = ((0, -1), (0, 1), (1, 0), (-1, 0))  # image[0]〜[3] で描く、車の進む向き: 南行き・北行き・東行き・西行き
+
+
+def _crosswalk_plan(plan, one_way):
+    from .marking import MARKING_CROSSWALK_U
+    from .road_parts import EDGE_LINE
+    half = (MARKING_CROSSWALK_U[1] - MARKING_CROSSWALK_U[0]) / 2   # 縞の長さの半分（腕の横断歩道と同じ長さ）。タイルの中心に置く
+    plan.crosswalk(CROSSWALK_STRIPES, (-half, half))
+    u1 = -half - CROSSWALK_STOP_GAP
+    u0 = u1 - CROSSWALK_STOP_W
+    e = EDGE_LINE - CROSSWALK_LANE_MARGIN
+    if one_way:
+        plan.quad(u0, u1, -e, e)                                       # 進入側に 2 車線分
+    else:
+        plan.quad(u0, u1, CROSSWALK_LANE_MARGIN, e)                    # 進入側の車線（左）の分だけ
+        plan.quad(-u1, -u0, -e, -CROSSWALK_LANE_MARGIN)                # 反対の向きの進入側（縞の向こう側。互い違い）
+
+
+def crosswalk_sign_sheet(sheet, one_way, work):
+    """横断歩道の標識のシート（2 行 × 5 列。アイコン・カーソルのセルは空け、AMI の blender/icons.py が書く）"""
+    from . import marking as mk
+    set_anchor(ROAD_CY)
+    mat = material(*mk.MARKING_LINE)
+    dirs = CROSSWALK_ONE_WAY_DIRS if one_way else CROSSWALK_TWO_WAY_AXES
+    cells = {}
+    for i, a in enumerate(dirs):
+        clear_models()
+        plan = mk._Plan()
+        _crosswalk_plan(plan, one_way)
+        plan.emit(a, mat)
+        cells[(0, i)] = render_cell(f"{os.path.basename(sheet)[:-4]}_{i}")
+    clear_models()
+    empty = np.zeros((CELL, CELL, 4), np.uint8)
+    empty[..., :3] = TRANSPARENT
+    empty_path = os.path.join(work, f"{os.path.basename(sheet)[:-4]}_empty.png")
+    save_rgba(empty_path, empty)
+    for cell in (ROADSIGN_ICON_CELL, ROADSIGN_CURSOR_CELL):
+        cells[cell] = empty_path
+    make_sheet(cells, 2, 5, sheet)

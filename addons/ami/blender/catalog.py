@@ -245,3 +245,5 @@ RAIL_YARD = f"{PREFIX}rail_yard"
 # 値は 6 種（2026-11-21、ユーザーの決定。#122 の案 A）。キーは sheetlib の roadsign.ROADSIGN_PLATES のキー（板の絵）
 ROADSIGN_KEYS = ("one_way", "stop", "speed_40", "speed_60", "speed_80", "min_50")
 ROADSIGNS = {f"{PREFIX}sign_{_k}": _k for _k in ROADSIGN_KEYS}
+# 路面の横断歩道（#162）: 柱の無い路面の標示。両方向と一方通行（single_way は物ごとの設定で、1 マスに標識は 1 つしか置けないので分ける）
+ROADSIGN_CROSSWALKS = {f"{PREFIX}sign_crosswalk": False, f"{PREFIX}sign_crosswalk_one_way": True}  # 名前 → 一方通行か

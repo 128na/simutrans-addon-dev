@@ -29,7 +29,7 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 | 橋脚・歩道 | `ami_pier_rail`（門型は `ami_pier_rail_gate`）・`ami_pier_road`・`ami_sidewalk`。歩道の種類は `ami_sidewalk_<舗装>`（`asphalt`・`brick`・`tile`）、高架の歩道は `ami_sidewalk_elev`（#119） |
 | 歩道の柵 | `ami_wall_sidewalk_<版>`（`single`・`back`・`front`。#119。名前は作業者が決めた。ユーザーが PR で確かめる） |
 | 電柱 | `ami_sidewalk_pole_<版>`（電柱だけ）・`ami_wall_sidewalk_<版>_pole`（柵つき。#120） |
-| 景観 | 盛土 `ami_embankment_front`・`ami_embankment_back`（ADR 0008 の `ami_embankment_<版>`）、道路標識 `ami_sign_<名前>`（6 種。#122） |
+| 景観 | 盛土 `ami_embankment_front`・`ami_embankment_back`（ADR 0008 の `ami_embankment_<版>`）、道路標識 `ami_sign_<名前>`（6 種。#122）、路面の横断歩道の標識 `ami_sign_crosswalk`・`ami_sign_crosswalk_one_way`（#162） |
 | モノレール | 跨座式 `ami_monorail_straddle`、高架 `ami_monorail_straddle_elev_<版>`（`front`・`center`・`back`）、トンネル `ami_monorail_straddle_tunnel`（ADR 0008。#113）。懸垂式 `ami_monorail_suspended_<版>`、高架 `ami_monorail_suspended_elev_<版>`（どちらも `front`・`center`・`back`。#116）。電化 `ami_monorail_power`（跨座式用）・`ami_monorail_suspended_power`（懸垂式用。#116） |
 | 運河 | `ami_canal`（ADR 0008。#114） |
 | 水路の踏切 | `ami_crossing_<線路\|道路>_canal`（例 `ami_crossing_rail_ballast_canal`・`ami_crossing_road_general_canal`。#117） |
@@ -484,6 +484,26 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 見本: `ingame/roadsign_sample.nut`。6 種を南北・東西の一般道路に置き、一方通行を 1 回・2 回置いて向きを変える。温暖側 (20,24) と降雪側 (276,24)。`[check]` の行で、置いた標識の名前、一方通行か、道の向き（`dirs`）と標識で絞った向き（`masked`）を期待と比べ（飾りの標識は絞らない、一方通行は南北で 4・2 回で 1、東西で 8・2 回で 2）、訳（`translate`）を出す。最低速度は script から読めないので、情報の窓の「最低速度: 50」で見た（`docs/roadsign122_info_min50.png`）
 - 左側通行: 左側通行の地図で見た（2026-11-22）。検証用の `flat_512.sve` は右側通行なので、起動した写しのゲームで、`gui.open_dialog_tool(27)`（高度な設定の窓）を開き、`gui.click` で `drive_left` の箱を押して窓を閉じ（`settings.get_drive_on_left()` が `true`）、見本を流した。標識は道路の反対の側の角へずれる（南北の道路では表の見える北行きの板が西の側、東西の道路では西行きの板が南の側）。撮った画面は `docs/roadsign122_left_temperate.png`（拡大率 4）、`roadsign122_left_ns.png`・`roadsign122_left_ew.png`（拡大率 1）、`roadsign122_left_oneway.png`（区画 O、拡大率 3）。車両を走らせての奥・手前の重なりは見ていない
 - 撮った画面: `docs/roadsign122_temperate.png`・`roadsign122_snow.png`（拡大率 4。上の 4 本が南北の道路の標識 0〜3、左下に東西の道路の標識の一部）、`roadsign122_temperate_oneway.png`・`roadsign122_snow_oneway.png`（区画 O）、`roadsign122_plates_x4.png`（6 種の表・裏・アイコンを 4 倍）
+
+### 路面の横断歩道の標識の作り（#162）
+
+交差点でない所（直線の道路）の横断歩道を、道路標識（roadsign）で足す。iss の `iss_sr_crosswalk`・`iss_sr_oneway_crosswalk` と同じ使い方で、柱も板も無く、路面に縞と停止線の白だけを描く。交差点の横断歩道は路面表示（`ami_mark_*`。「路面表示の作り」）が描く。
+
+| 名前 | 内容 | 効き目 |
+|---|---|---|
+| `ami_sign_crosswalk` | 縞 6 本と、縞の前後の停止線 | 無し（`single_way=0`）。`image[0]`（南北）・`[2]`（東西）だけ（`[1]`・`[3]` は `-`。iss と同じ） |
+| `ami_sign_crosswalk_one_way` | 縞 6 本と、進入側だけの停止線 | 一方通行（`single_way=1`）。同じタイルにもう一度置くと向きが逆になる |
+
+- 物を 2 つに分けた理由: `single_way` は物ごとの設定で、1 マスに標識は 1 つしか置けない。一方通行の道に両方向用を重ねても、一方通行にならない（#162 の相談。ユーザーが案どおりに決めた）。矢印は描かない（ユーザーの指定、2026-11-23）。
+- 縞は #187・#189 の腕の横断歩道と同じ寸法（幅 0.5・周期 1.0・長さ 3）で、タイルの中心に 6 本（中心 ±0.5・1.5・2.5）、路側線の内に収める。白の材質も路面表示と同じ（`marking.py` の `_Plan`・`MARKING_LINE`）。
+- 停止線は、縞の手前（車の来る側）に、腕の横断歩道と停止線のあきと同じ 0.73 をあけて引く。両方向は、縞の前後に、それぞれの進入側の車線の幅だけを引いて互い違いにする（左側通行。北行きは西の車線、南行きは東の車線。東西も同じ）。一方通行は、進入側に 2 車線分の幅を 1 本引く（ユーザーの指定、2026-11-23）。
+- 一方通行の `image[n]` は、本体が置いた標識の向き n の絵で、車が通れるのは反対の向き（1 回目に建てた南北の道路は北向きの標識で、通れる向きは南。`masked=4`。2026-11-23、見本で撮って確かめた）。このため `image[0]` は南行き（北側に停止線）、`[1]` は北行き、`[2]` は東行き、`[3]` は西行きの絵（`sheetlib/roadsign.py` の `CROSSWALK_ONE_WAY_DIRS`）。
+- `offset_left=0`（左右対称の絵なので、左側通行でずらさない。iss と同じ）。費用 500 cr、登場 1900。`ami_scenery.pak` に入る。名前の訳は `release/text/ja_ami.tab`。
+- 雪の絵は無い（roadsign は季節の絵を持たない）。降雪でも同じ白で、道路の上に敷くので縞は読める（`docs/crosswalk162_snow.png`）。坂では絵が浮く（iss も同じ）。車両との重なり: `offset_left=0` の標識は、向きによって車両の上（北・東の絵）か下（西・南の絵）に描かれる（本体のコード `calc_image` を読んだ。[cityscape.md](../../docs/reference/cityscape.md) の 6.1）。縞が車両を覆わないよう、dat に `no_foreground=1`（すべて奥 = 車両の下に描く。OTRP）を書いた。車両を走らせての見え方は見ていない。
+- アイコンは、縞と停止線の全体を道路の色に縮めた絵（`blender/icons.py` の `crosswalk_picture`）。カーソルは北行きの絵のセル。
+- 停止線の位置（撮った画像で確かめた。左側通行）: 両方向の南北は南端の西側と北端の東側、東西は西端の北側と東端の南側。一方通行は、通れる向きの進入側（南行きは北端、北行きは南端、西行きは東端、東行きは西端）。
+- 見本: `ingame/crosswalk_sign_sample.nut`。両方向（南北・東西）と一方通行（1 回・2 回置いた南北・東西）を一般道路に置く。左側通行の `flat_512_left.sve` の温暖側 (20,24)・降雪側 (276,24)。`[check]` の行で、名前・一方通行か・`masked` を期待と比べる。撮った画面は `docs/crosswalk162_temperate.png`・`crosswalk162_snow.png`（拡大率 3）と、等倍の `crosswalk162_temperate_x1.png`・`crosswalk162_snow_x1.png`。
+- ゲーム内の見た目（縞と停止線の位置、車の止まる側とのずれ）はユーザーが PR で確かめる。車を走らせての重なりは見ていない。
 
 ### 歩道の種類・高架の歩道・歩道の柵の作り（#119）
 

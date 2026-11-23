@@ -861,6 +861,33 @@ def roadsign_dat_text(name, key):
     return NL.join(out) + NL
 
 
+ROADSIGN_CROSSWALK_OFFSET_LEFT = 0  # 点対称（180° 回すと重なる）の路面の絵なので、左側通行でずらさない（iss の横断歩道と同じ）
+
+
+def crosswalk_dat_text(name, one_way):
+    """路面の横断歩道の標識（#162）。両方向は image[0]（南北）・[2]（東西）だけ、一方通行は 4 向き（北・南・西・東行き）"""
+    out = [
+        f"# AMI: {name}（CC BY 4.0）。路面の横断歩道の標識。シートは blender/render.py が描く（sheetlib の roadsign.py。#162）",
+        "obj=roadsign",
+        f"name={name}",
+        "copyright=AMI (CC BY 4.0)",
+        "waytype=road",
+        f"intro_year={ROADSIGN_INTRO_YEAR}",
+        "intro_month=1",
+        "retire_year=2999",
+        "retire_month=1",
+        f"cost={ROADSIGN_COST}",
+        f"offset_left={ROADSIGN_CROSSWALK_OFFSET_LEFT}",
+        f"single_way={1 if one_way else 0}",
+        "no_foreground=1",  # 路面の標示は車両の下に描く（#187・#189 の路面表示と同じ。向きによって手前になるのを防ぐ）
+        f"icon=> {name}.{ROADSIGN_ICON_CELL}",
+        f"cursor={name}.{ROADSIGN_CURSOR_CELL}",
+    ]
+    cell = {0: 0, 1: 1, 2: 2, 3: 3} if one_way else {0: 0, 1: None, 2: 1, 3: None}
+    out += [f"image[{i}]={name}.0.{c},{ROADSIGN_OFFSET}" if c is not None else f"image[{i}]=-" for i, c in cell.items()]
+    return NL.join(out) + NL
+
+
 def main():
     os.makedirs(SRC, exist_ok=True)
     for name, sheet in BUILT.items():
@@ -958,6 +985,10 @@ def main():
     for name, key in catalog.ROADSIGNS.items():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(roadsign_dat_text(name, key))
+        print(f"[dat] {name}.dat")
+    for name, one_way in catalog.ROADSIGN_CROSSWALKS.items():
+        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
+            f.write(crosswalk_dat_text(name, one_way))
         print(f"[dat] {name}.dat")
 
 

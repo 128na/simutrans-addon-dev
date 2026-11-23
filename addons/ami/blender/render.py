@@ -735,6 +735,10 @@ SHEETS[catalog.RAIL_YARD] = lambda: R.yard_sheet(R.sheet_path(catalog.RAIL_YARD 
 for _n, _k in catalog.ROADSIGNS.items():
     SHEETS[_n] = (lambda n, k: lambda: R.roadsign_sheet(R.sheet_path(n + ".png"), k, R.WORK))(_n, _k)
 
+# 路面の横断歩道の標識（#162）: 柱も板も無く、縞と停止線だけ（sheetlib の roadsign.py）
+for _n, _o in catalog.ROADSIGN_CROSSWALKS.items():
+    SHEETS[_n] = (lambda n, o: lambda: R.crosswalk_sign_sheet(R.sheet_path(n + ".png"), o, R.WORK))(_n, _o)
+
 if __name__ == "__main__":
     R.run_targets(SHEETS, list(SHEETS))
     # アイコン・カーソル（#25）: 描いたシートの絵から作り、シートのセルに書く（blender/icons.py）。LAYOUT・ONLY の出力（work/）には書かない
