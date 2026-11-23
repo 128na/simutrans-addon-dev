@@ -1,11 +1,11 @@
 #!/bin/bash
 # AMI のカタログ（見て回るための保存データ。#203）を敷いて保存するスクリプト。
-# v64 の設定（settings.xml.v64）と土台（flat_1024_left.sve）で、work/catalog_game/<PORT>/ の写しを起動し、ingame/catalog.nut を流す。
+# v64 の設定（settings.xml.v64）と土台（flat_1024_left.sve）で、work/catalog_game/<PORT>/ の写しを起動し、ingame/catalog.py で棚を敷く。
 # 検証用のフォルダ GAME_DIR には書き込まない。addons/pak128 には AMI の pak だけを入れる（他のアドオンが入ると、カタログが読めなくなる）。
 # 使い方（アドオンのディレクトリで。python -X utf8 build.py で dist/ami.pak を作っておく）:
 #   GAME_DIR=F:/Simutrans/addon_check EXE=sim-WinGDI64-OTRPv64.exe PORT=47500 bash ingame/catalog.sh           … 起動して catalog.nut を流す
-#   PORT=47500 RUN=1 bash ingame/catalog.sh                                                                     … 動いているゲームに catalog.nut を流す
-#   PORT=47500 CHECK=1 bash ingame/catalog.sh                                                                   … 敷けたかの確かめ（catalog_check.nut）
+#   python -X utf8 ingame/catalog.py --port 47500 [--only 帯の名前] [--side temperate|snow]                       … 動いているゲームに敷く（--coverage は src/ の名前が棚に有るかの確認）
+#   PORT=47500 bash ingame/catalog.sh ALL                                                                       … 起動して catalog.py で全部敷き、保存する（SAVE_AS の既定は ami_catalog）
 #   PORT=47500 SAVE_AS=ami_catalog bash ingame/catalog.sh                                                        … 保存して GAME_DIR/save/ に置く（既にあれば止まる）
 #   PORT=47500 STOP=1 bash ingame/catalog.sh                                                                     … このスクリプトが起動したゲームだけ閉じて写しを消す
 PORT=${PORT:?PORT を指定する}
@@ -28,12 +28,14 @@ stop_game() {
 }
 
 if [ "$STOP" = 1 ]; then stop_game; echo "[catalog] stopped"; exit 0; fi
-if [ "$RUN" = 1 ]; then echo "$($M --run-squirrel "$(script_of "${NUT:-ingame/catalog.nut}")" --timeout 600)"; exit 0; fi
-if [ "$CHECK" = 1 ]; then echo "$($M --run-squirrel "$(script_of ingame/catalog_check.nut)" --timeout 300)"; exit 0; fi
 if [ -n "$SAVE_AS" ]; then
+  # world.save_game は写し（$WORK/save/）に書く。検証用のフォルダの save/ へは、既にあれば止まり、無ければ写して読み取り専用にする
   dest="$GAME_DIR/save/$SAVE_AS.sve"
   [ -e "$dest" ] && { echo "[catalog] $dest が既にある（上書きしない）"; exit 1; }
-  echo "$($M --run-squirrel "return world.save_game(\"$SAVE_AS\");" --timeout 300)"; exit 0
+  out=$($M --run-squirrel "return world.save_game(\"$SAVE_AS\");" --timeout 600); echo "[catalog] save_game: $out"
+  [ "$out" = '{"result":null}' ] || exit 1
+  cp "$WORK/save/$SAVE_AS.sve" "$dest" || exit 1
+  chmod a-w "$dest"; ls -l "$dest"; exit 0
 fi
 
 PAK=${PAK:-dist/ami.pak}
@@ -52,5 +54,10 @@ for p in ${EXTRA_PAKS:-dist/ami_rail_old.pak}; do cp "$p" "$WORK/addons/pak128/$
 (cd "$WORK" && "./$EXE" -objects pak128/ -addons -load "$BASE" -mcp-port "$PORT" > /dev/null 2>&1 &)
 for i in $(seq 1 90); do $M --run-squirrel "return 1;" > /dev/null 2>&1 && break; sleep 2; done
 echo "[catalog] 起動した"
+if [ "$1" = ALL ]; then
+  python -X utf8 ingame/catalog.py --port "$PORT" || { echo "[catalog] 敷けなかった所がある。保存しない"; exit 1; }
+  PORT=$PORT GAME_DIR=$GAME_DIR SAVE_AS=${SAVE_AS:-ami_catalog} bash "$0"
+  exit $?
+fi
 [ -n "$NUT" ] && echo "$($M --run-squirrel "$(script_of "$NUT")" --timeout 600)"
 exit 0

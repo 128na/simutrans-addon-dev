@@ -116,7 +116,101 @@ def bands():
     for k in ("local", "general", "expressway"):
         out["road_" + k] = (y, road_cells(k))
         y += CELL_H + 4
+    out["misc"] = (190, misc_cells())
     return out
+
+
+def misc_cells():
+    """路面軌道・橋脚（棚の 1 マス）"""
+    cells = [("ami_tram (土の上)", line_nut("ami_tram"))]
+    for k in ("local", "general", "expressway"):
+        cells.append((f"ami_tram (ami_road_{k} の上)", 'line(wy("ami_road_%s"), null, 10, 0, null); line(wy("ami_tram"), null, 10, 0, null);' % k))
+    for n in ("ami_pier_rail", "ami_pier_rail_gate", "ami_pier_rail_old", "ami_pier_rail_old_gate", "ami_pier_road",
+              "ami_sidewalk", "ami_sidewalk_asphalt", "ami_sidewalk_brick", "ami_sidewalk_tile"):
+        cells.append((n, line_nut(n)))
+    cells.append(("ami_sidewalk+ami_wall_sidewalk_single", line_nut("ami_sidewalk", "ami_wall_sidewalk_single")))
+    return cells
+
+
+# 既存の見本をそのまま流す区画: (名前, nut, x の原点, y の原点, 置き換え)。1 区画は 100×90 マスの枠（温暖側の x。降雪側は +512）
+REUSE = [
+    ("sidewalk", "sidewalk_sample.nut", 8, 206, {}),
+    ("embankment", "embankment_sample.nut", 110, 206, {}),
+    ("pole", "pole_sample.nut", 212, 206, {}),
+    ("roadsign", "roadsign_sample.nut", 314, 206, {}),
+    ("crosswalk_sign", "crosswalk_sign_sample.nut", 416, 206, {}),
+    ("marking6", "marking6_sample.nut", 8, 300, {}),
+    ("marking", "marking_sample.nut", 110, 300, {}),
+    ("expwy_marking", "expwy_marking_sample.nut", 212, 300, {}),
+    ("yard", "yard_sample.nut", 314, 300, {}),
+    ("canal", "canal.nut", 416, 300, {}),
+    ("depot", "depot.nut", 8, 390, {}),
+    ("monorail", "monorail.nut", 110, 390, {}),
+    ("suspended", "suspended_sample.nut", 212, 390, {}),
+    ("canal_scenic", "canal.nut", 314, 390, {"ami_canal\"": "ami_canal_scenic\""}),
+    ("crossing", "crossing_sample.nut", 8, 480, {}),
+]
+
+
+def reuse_code(nut, ox, oy, snow, repl):
+    src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), nut), encoding="utf-8").read()
+    sx = SNOW_DX if snow else 0
+    src = re.sub(r"^local ORIGINS = \[\[.*?\]\];", "local ORIGINS = [[%d, %d]];" % (ox + sx, oy), src, flags=re.M)
+    src = re.sub(r"^local SNOW = \d+;", "local SNOW = %d;" % (0 if snow else 9), src, flags=re.M)
+    src = re.sub(r"^local OX = \d+;", "local OX = %d;" % (ox + sx), src, flags=re.M)
+    src = re.sub(r"^local OY = \d+;", "local OY = %d;" % oy, src, flags=re.M)
+    for a, b in repl.items():
+        src = src.replace(a, b)
+    return compact(src)
+
+
+def reuse_ok(out):
+    """ok で始まるか、情報の行（[check]・[v]・[d]・start=）だけなら成功。name=[…] の行や missing・error があれば失敗"""
+    if '"error"' in out:
+        return False
+    body = out.split('"result":"', 1)[-1].rstrip('"}')
+    if body.startswith("ok"):
+        return True
+    for l in body.split("\\n"):
+        if "missing" in l or l.startswith("check"):
+            return False
+        if re.match(r"^[^\[\s].*=\[.*\]$", l) and not l.startswith("start="):
+            return False
+    return True
+
+
+def src_names():
+    """src/ の dat の名前（提供用の物 __ex_donor を除く）→ 種類"""
+    here = os.path.dirname(os.path.abspath(__file__))
+    out = {}
+    for f in sorted(os.listdir(os.path.join(here, "..", "src"))):
+        if not f.endswith(".dat") or f == "ex_donors.dat":
+            continue
+        kind = None
+        for l in open(os.path.join(here, "..", "src", f), encoding="utf-8", errors="replace"):
+            m = re.match(r"^\s*(obj|name)\s*=\s*(\S+)", l)
+            if m and m.group(1) == "obj":
+                kind = m.group(2)
+            elif m:
+                out[m.group(2)] = kind
+    return out
+
+
+def coverage():
+    """src/ の名前が、棚（catalog.py の棚と流用する見本）のどこにも出てこないものを返す。名前の一部（接頭辞）で選ばれる物は、
+    見本の文字列に前後の名前が含まれていればよい（踏切 ami_crossing_* は way の組で自動に選ばれる）"""
+    here = os.path.dirname(os.path.abspath(__file__))
+    text = " ".join(body for _, (_, cells) in bands().items() for _, body in cells)
+    text += " ".join(open(os.path.join(here, nut), encoding="utf-8").read() for _, nut, *_ in REUSE)
+    text += " ".join(b for _, _, _, _, repl in REUSE for b in repl.values())
+    missing = []
+    for n, kind in src_names().items():
+        if n in text or n.rsplit("_", 1)[0] + '_"' in text:  # 名前の末尾を組み立てる見本（"…_elev_" + 版）
+            continue
+        if kind == "crossing":
+            continue  # way の組（線路 4 種 × 道路 3 種・運河）で自動に選ばれる
+        missing.append((kind, n))
+    return missing
 
 
 def load_client():
@@ -150,8 +244,15 @@ def main():
     ap.add_argument("--only", default="", help="帯の名前の前方一致（カンマ区切り）")
     ap.add_argument("--side", default="both", choices=["both", "temperate", "snow"])
     ap.add_argument("--list", action="store_true")
+    ap.add_argument("--coverage", action="store_true", help="src/ の名前が棚に出てこないものを数える")
     a = ap.parse_args()
     bs = bands()
+    if a.coverage:
+        miss = coverage()
+        for k, n in miss:
+            print("[missing]", k, n)
+        print("not placed:", len(miss), "/", len(src_names()))
+        return 1 if miss else 0
     if a.list:
         for name, (y, cells) in bs.items():
             for i, (cn, _) in enumerate(cells):
@@ -172,6 +273,15 @@ def main():
                 if not ok:
                     fails += 1
                 print(("[ok] " if ok else "[NG] ") + f"{side} {name} {cn} ({ox},{y})" + ("" if ok else " " + out[:400]))
+    for name, nut, x, y, repl in REUSE:
+        if only and not any(name.startswith(o) for o in only):
+            continue
+        for side in (["temperate", "snow"] if a.side == "both" else [a.side]):
+            out = run_squirrel(m, a.port, reuse_code(nut, x, y, side == "snow", repl), 600)
+            ok = reuse_ok(out)
+            if not ok:
+                fails += 1
+            print(("[ok] " if ok else "[NG] ") + f"{side} {name} ({x},{y}) " + ("" if ok else out[:500]))
     print("failures:", fails)
     return 1 if fails else 0
 

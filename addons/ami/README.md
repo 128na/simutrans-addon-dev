@@ -1012,6 +1012,30 @@ PORT=47300 bash ingame/game.sh STOP
 
 塗りを実装する前に、レイアウト検証用モード（部品ごとに画像で見分けやすい単色で塗る）で、部品の配置とタイルどうしの接合を確かめる（[ADR 0005](../../docs/adr/0005-ami-render-tool-conventions.md)）。
 
+## カタログ（見て回る保存データ。#203）
+
+作成済みの AMI の物を一か所で見て回る保存データ `ami_catalog.sve` を、スクリプトで作る。**v64（`sim-WinGDI64-OTRPv64.exe`）用**（OTRPv64_3 は保存形式が違い読めない）。土台は `addon_check/save/flat_1024_left.sve`（1024 四方・左側通行・平ら。x<512 が温暖、x≥512 が降雪）。
+
+- 作り方（アドオンのディレクトリで。`python -X utf8 build.py` で `dist/` に pak を作っておく）:
+  `GAME_DIR=F:/Simutrans/addon_check PORT=47500 bash ingame/catalog.sh ALL`
+  写し（`work/catalog_game/<PORT>/`）を `settings.xml.v64` で起動し、AMI の pak（`ami.pak` と `ami_rail_old.pak`）だけを入れて、[`ingame/catalog.py`](ingame/catalog.py) で棚を敷き、`world.save_game` で保存して `GAME_DIR/save/ami_catalog.sve` に置く（読み取り専用。既にあれば止まる）。終わったら `PORT=47500 STOP=1 bash ingame/catalog.sh` で閉じる。
+- 置き方: 温暖側は x=8〜、降雪側は同じ配置を x+512。棚の 1 マスは 14×10 マスで、東西 10 マスの直線に 1 つの物（と、重ねる壁・橋脚・橋・トンネル）を置く。`python -X utf8 ingame/catalog.py --list` で、棚の 1 マスごとの座標と名前の一覧が出る。`--coverage` は、`src/` の名前が棚に出てくるか確かめる（今は 233 個すべて）。
+- 新しい物を足したら、`catalog.py` の棚（`rail_cells`・`road_cells`・`misc_cells`・`REUSE`）に足して、流し直す。
+
+| 区画 | y（原点） | x の並び（温暖側。1 マス 14 ごと） |
+|---|---|---|
+| 線路 新（ballast・concrete・ladder・slab） | 8, 22, 36, 50 | way、基盤 4 版（single・back・center・front）＋同じ版の壁、同じ 4 版＋架線つきの壁、高架 4 版（壁・橋脚つき）、橋、トンネル、複線の壁（single の上に twin・twin 架線） |
+| 線路 旧描画位置（`_old`。同じ 4 種） | 64, 78, 92, 106 | 同上 |
+| 道路（local・general・expressway） | 120, 134, 148 | way、基盤 4 版＋壁、基盤＋複線の壁、中央分離帯つきの壁 3 種、高架 4 版、橋、トンネル |
+| 路面軌道・橋脚・歩道 | 190 | `ami_tram`（土・道路 3 種の上）、橋脚 5 種（門型・旧を含む）、歩道 4 種と歩道の柵 |
+| 景観の見本（既存の見本を原点を替えて流す） | 206 | 歩道（x=8）、盛土（110）、電柱（212）、道路標識（314）、横断歩道の標識（416） |
+| 路面表示・操車場・運河 | 300 | 6 車線の路面表示（8）、交差点の路面表示（110）、高速道路の分岐・合流（212）、操車場（314）、運河（416） |
+| 車庫・モノレール・景観の運河 | 390 | 車庫（8）、跨座式モノレール（110）、懸垂式モノレール（212）、景観の運河（314） |
+| 踏切 | 480 | 線路 4 種×道路 3 種（8） |
+
+- 流用した見本は `sidewalk_sample.nut`・`embankment_sample.nut`・`pole_sample.nut`・`roadsign_sample.nut`・`crosswalk_sign_sample.nut`・`marking6_sample.nut`・`marking_sample.nut`・`expwy_marking_sample.nut`・`yard_sample.nut`・`canal.nut`・`depot.nut`・`monorail.nut`・`suspended_sample.nut`・`crossing_sample.nut`。原点（`ORIGINS`・`OX`・`OY`）を `catalog.py` が書き換えて流す。
+- 分岐の絵の網羅（全方位・近い斜め・坂）は入れていない（撮影用の見本の役目）。ゲーム内の見た目はユーザーが確かめる。
+
 ## 今の決まりごと
 
 - 値は次のとおり決めた（2026-11-15）。費用・維持費は pak128 の way と同じ単位（1/100 cr）で、iss の線路（15000・300）を基準にした。`blender/ami_dat.py` の `VALUES` と同じにする
