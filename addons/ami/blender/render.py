@@ -677,6 +677,7 @@ SIDEWALK_LABEL = "S"  # アイコンの文字（仮。アイコンはステッ�
 # 運河の way（ami_canal。#114）: 水面・護岸・笠石（sheetlib の canal_sheet）。カーブは斜めの絵
 CANAL_LABEL = "60"
 SHEETS[catalog.CANAL] = lambda: R.canal_sheet(catalog.CANAL, label=CANAL_LABEL)
+SHEETS[catalog.CANAL_SCENIC] = lambda: R.canal_sheet(catalog.CANAL_SCENIC, label=CANAL_LABEL, variant="scenic")  # 景観の運河（#161）。閘門つきの坂
 SHEETS[catalog.SIDEWALK] = lambda: R.sidewalk_sheet(catalog.SIDEWALK, label=SIDEWALK_LABEL, paving=SIDEWALK_PAVING, snow=ROAD_SNOW)
 # 歩道の種類（ami_sidewalk_<舗装>。#119）: 形は ami_sidewalk と同じで、敷石の材質だけが違う。目地の模様の違い（やはず張りなど）は
 # 敷石が約 6 x 3px の画面では見分けられないので、色と材質で分ける（2026-11-21、#119 で作業者が決めた。ユーザーが PR で確かめる）

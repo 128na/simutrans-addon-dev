@@ -9,6 +9,7 @@
 #   PORT=47401 NUT=ingame/canal_link.nut RUN=1 bash ingame/canal.sh                 … 動いているゲームに NUT を流す
 #   PORT=47401 SNOW=1 bash ingame/canal.sh                                           … 動いているゲームの降雪側（x+256）に同じ見本を敷く
 #   PORT=47401 CAPTURE=1 OUT=work/canal/shots bash ingame/canal.sh                   … 区画ごとに撮る（SNOW=1 を足すと降雪側。名前の先頭に snow_）
+#   WAY=ami_canal_scenic …                                                           … 景観の運河（#161）を敷く（canal.nut の W を替える）
 #   PORT=47401 STOP=1 bash ingame/canal.sh                                           … 閉じて写しを消す
 # ZOOM は gui.set_zoom の値（3 が等倍）
 PORT=${PORT:?PORT を指定する}
@@ -18,7 +19,8 @@ WORK="work/canal_game/$PORT"
 NUT=${NUT:-ingame/canal.nut}
 OX=20; OY=20
 [ "$SNOW" = 1 ] && OX=$((OX + 256))
-NUT_SED="s/^local OX = 20;/local OX = $OX;/"
+WAY=${WAY:-ami_canal}   # 敷く way（景観の運河なら WAY=ami_canal_scenic。#161）
+NUT_SED="s/^local OX = 20;/local OX = $OX;/; s/^local W = way_desc_x(\"ami_canal\");/local W = way_desc_x(\"$WAY\");/"
 PRE=""; [ "$SNOW" = 1 ] && PRE="snow_"
 # 撮る所: 名前 x y（canal.nut の区画の原点からのずれ）
 SPOTS=${SPOTS:-"ground 7 5

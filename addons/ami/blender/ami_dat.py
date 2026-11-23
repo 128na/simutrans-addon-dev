@@ -78,6 +78,7 @@ VALUES = {
     "ami_monorail_straddle": dict(waytype="monorail_track", speed=150, cost=30000, maintenance=600, intro_year=1900),
     # 運河（#114）。値は #110 の一覧（速さは pak128 の船の最高 53 km/h が走れる値）
     "ami_canal": dict(waytype="water", speed=60, cost=25000, maintenance=500, intro_year=1900),
+    "ami_canal_scenic": dict(waytype="water", speed=60, cost=25000, maintenance=500, intro_year=1900),  # 景観の運河（#161）。実用と同じ値
     # 懸垂式モノレール（#116）。値は #110 の一覧（跨座式と同じ）。地上の 3 版の値（下で版ごとに写す）
     "ami_monorail_suspended": dict(waytype="monorail_track", speed=150, cost=30000, maintenance=600, intro_year=1900),
 }
@@ -92,6 +93,7 @@ DIAG_CURVES = {_t.way for _t in catalog.ALL_TRACKS} | {_r.way for _r in catalog.
 # 跨座式モノレール（#113）: 地上・高架の版とも、カーブは斜めの絵（手本の iss の跨座式の dat と同じ）
 DIAG_CURVES |= {catalog.MONORAIL, *catalog.MONORAIL_ELEVS}
 DIAG_CURVES.add(catalog.CANAL)  # 運河（#114）もカーブは斜めの絵
+DIAG_CURVES.add(catalog.CANAL_SCENIC)  # 景観の運河（#161）も
 DIAG_CURVES |= {*catalog.MONORAIL_SUSPENDEDS, *catalog.MONORAIL_SUSPENDED_ELEVS}  # 懸垂式（#116）も跨座式と同じ
 CURVE_TO_DIAG = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
 
@@ -184,7 +186,8 @@ for _v in catalog.MONORAIL_SUSPENDED_VARIANTS:
 # 地上の版だけ（iss の運河と同じ。2026-11-22、ユーザーの決定）。近い斜めの絵は持つ（壁の無い way と同じ）。分岐の絵（1・2）は持たない
 # （本体は water の way の分岐の絵を選ばない。boden/wege/weg.cc の calc_image は track_wt と road_wt だけ）
 BUILT[catalog.CANAL] = catalog.CANAL
-NO_SWITCH = {catalog.CANAL}  # 分岐の絵（image[nse1] など）を書かない way
+BUILT[catalog.CANAL_SCENIC] = catalog.CANAL_SCENIC  # 景観の運河（#161）
+NO_SWITCH = {catalog.CANAL, catalog.CANAL_SCENIC}  # 分岐の絵（image[nse1] など）を書かない way
 
 # ---------------------------------------------------------------- 橋脚の way（#18）
 # 高架の真下の地面のタイルに敷く。waytype は tram_track（iss と同じ。ユーザーの決定、2026-11-18。README の「高架と橋脚の作り」）。
