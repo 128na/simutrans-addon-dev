@@ -954,6 +954,7 @@ GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe NUT=ingame/road_sample.nut
 # 1 台で敷いて開いたままにするなら NUT=ingame/road_sample.nut bash ingame/sample_check.sh（撮るのは NUT=ingame/road_sample.nut OUT=work/road_sample bash ingame/sample_capture.sh）
 ```
 
+- 絞って敷く（#208）: `ingame/game.sh` に `ROAD_NAMES`（敷く道路。空白区切り。例 `"ami_road_expressway"`）・`CLIMATES`（`temperate` と `snow`。空白区切り）を渡すと、その種類・気候だけ敷く（game.sh が `road_sample.nut` の `ROADS`・`ORIGINS` の行を置き換える。既定は全部）。降雪だけでも塗り直す。`SETTINGS` で、写しに入れる GAME_DIR の設定ファイルを替えられる（v64 は `SETTINGS=settings.xml.v64`）。例: `ROAD_NAMES=ami_road_expressway CLIMATES=temperate GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> NUT=ingame/road_sample.nut bash ingame/game.sh`。`sample_check.sh`・`sample_parallel.sh` には効かない。区画の名前での絞り込みは無い
 - `ingame/road_sample.nut` は道路 3 種（`ROADS`）を、温暖側 (20,20) と降雪側 (276,20) に 30 ずつ南へずらして敷く（生活道路・一般道路・高速道路の順）。区画は線路の見本と同じ A・F・C・B・D・E・G に、分岐の自動選択（H。2 本の道路を隣り合わせに並べて渡り口でつないだ形。南北と東西）、分岐の絵の固定（I。T字 4 種と十字を選択 2・1 の順に）、pak128 標準の `Road_050` とのつなぎ目（K）、隣り合う十字（L）。表は `road_sample.nut` の冒頭
 - `[check]` の行: 近い斜めの分け合うタイルが way 1 本か（`two_ways=false`）と、区画 H（自動選択の `auto`）・I（固定の `pin1`・`pin2`）・L（隣り合う十字の `west`・`east`）の絵。値は `way_x.get_image_id()`。判定は `road_sample.nut` の `SWITCH_IMAGES`（`ami_dat.py` の `ROAD_SWITCH_IMAGES` と同じにする）で変わる。今（真。v64 の仕様）は、H（隣が T字・十字）の自動選択（`auto`）が通常の T字と同じで、固定の `pin1`・`pin2` が通常とも互いとも違えば `ok`、L の十字が通常の十字なら `ok`、M（枝の隣がカーブの T字）の自動選択が `pin1` なら `is1`（`pin2` なら `is2`、通常なら `plain`）
 
