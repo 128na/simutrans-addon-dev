@@ -408,11 +408,22 @@ def cell_digest(sheet, r, c):
 
 def icon_picture(d, info, dats):
     d, keys = icon_source(d, info, dats)
+    if info["kind"] == "sign" and "crosswalk" in info["name"]:  # 路面の横断歩道（#162）: 柱も板も無いので、縞の全体を 1/2 に縮める
+        return crosswalk_picture(layers(d, keys))
     if info["kind"] == "sign":  # 標識の上の側（板と柱の上）を ICON/2 四方で切り、画素のまま 2 倍にする（板の字がつぶれないように）
         return sign_picture(layers(d, keys))
     if info["kind"] in ("sidewalk", "depot", "yard"):  # 敷石・車庫はタイル 1 枚なので、つなげず、タイル 1 枚を 1/4 にして菱形を見せる
         return down(center_crop(layers(d, keys), 4 * ICON), 4)
     return down(center_crop(layers(d, keys, extend=True), 2 * ICON), 2)
+
+
+def crosswalk_picture(c):
+    """縞と停止線の全体（外接の四角）を、ICON の中央に 1/3 に縮めて置く"""
+    ys, xs = np.nonzero(c[..., 3] > 0.05)
+    out = np.zeros((3 * ICON, 3 * ICON, 4), np.float32)
+    if len(ys):
+        over(out, c, 3 * ICON // 2 - (xs.min() + xs.max()) // 2, 3 * ICON // 2 - (ys.min() + ys.max()) // 2)
+    return down(out, 3)
 
 
 def sign_picture(c):

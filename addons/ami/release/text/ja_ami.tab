@@ -1,4 +1,4 @@
-§# AMI の日本語の名前（#122。道路標識の 6 種）。先頭の § は UTF-8 の印、# で始まる行は読まれない（OTRP の dataobj/translator.cc）。後は名前と訳の行が交互
+§# AMI の日本語の名前（#122・#162。道路標識の 6 種と路面の横断歩道 2 種）。先頭の § は UTF-8 の印、# で始まる行は読まれない（OTRP の dataobj/translator.cc）。後は名前と訳の行が交互
 ami_sign_one_way
 一方通行の標識（AMI）
 ami_sign_stop
@@ -11,3 +11,7 @@ ami_sign_speed_80
 最高速度 80 km/h の標識（AMI。飾りで、速度は変わらない）
 ami_sign_min_50
 最低速度 50 km/h の標識（AMI。50 km/h 未満の車は通れない）
+ami_sign_crosswalk
+横断歩道の標識（AMI。路面に縞と停止線を描く。飾り）
+ami_sign_crosswalk_one_way
+横断歩道の標識・一方通行（AMI。路面に縞と停止線を描き、一方通行にする）
