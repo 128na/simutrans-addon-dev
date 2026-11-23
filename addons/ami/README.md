@@ -161,13 +161,13 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 #### 分岐の絵（switch 画像 1・2）
 
-**2026-11-23 に dat へ戻した（[#46](https://github.com/128na/simutrans-addon-dev/issues/46)。OTRP v64 で KUTA 流の道路の決まりが無くなり、十字は標準の十字の絵になった: [teamhimeh/simutrans#816](https://github.com/teamhimeh/simutrans/pull/816)）。ゲーム内の確認は v64 の検証用の地図の用意待ち。** 以下の「今は入れていない」の説明は、外していた間（2026-11-20〜23）の経緯。
+**2026-11-23 に dat へ戻した（[#46](https://github.com/128na/simutrans-addon-dev/issues/46)。OTRP v64 で KUTA 流の道路の決まりが無くなり、十字は標準の十字の絵になった: [teamhimeh/simutrans#816](https://github.com/teamhimeh/simutrans/pull/816)）。v64 でゲーム内の確認を済ませた（左側通行の `flat_512_left_v64.sve`。右側通行は未確認）。** 以下の「外していた間」の説明は、2026-11-20〜23 の経緯。
 
-**今は道路の dat に分岐の絵を入れていない（2026-11-20、ユーザーの決定）。** 本体（OTRP）は、道路の「1」を枝の先が分岐の T字に、「2」を十字のタイルにだけ出す（KUTA 版から引き継いだ、多車線の交差点のための使い方）。固定の道具の名前は線路の分岐の意味で付いていて、これと合わない。T字の 1・2 を固定の名前に合わせて描くと、自動の 4×2・6×6 の十字がふさがり、ex 画像を足しても 4×4 しか直らない（[reference](../../docs/reference/way-addon.md) の 9.3）。本体の分岐の絵の仕様を整理するまで、道路の way（waytype が `road` のもの全部。通常の版・基盤の版・高架の版）の dat から 1・2 の 10 枚を外す（戻すのは [#46](https://github.com/128na/simutrans-addon-dev/issues/46)）。
+**（2026-11-20〜23 に外していた間の経緯）道路の dat に分岐の絵を入れていなかった（ユーザーの決定）。** 本体（OTRP）は、道路の「1」を枝の先が分岐の T字に、「2」を十字のタイルにだけ出す（KUTA 版から引き継いだ、多車線の交差点のための使い方）。固定の道具の名前は線路の分岐の意味で付いていて、これと合わない。T字の 1・2 を固定の名前に合わせて描くと、自動の 4×2・6×6 の十字がふさがり、ex 画像を足しても 4×4 しか直らない（[reference](../../docs/reference/way-addon.md) の 9.3）。本体の分岐の絵の仕様を整理するまで、道路の way（waytype が `road` のもの全部。通常の版・基盤の版・高架の版）の dat から 1・2 の 10 枚を外す（戻すのは [#46](https://github.com/128na/simutrans-addon-dev/issues/46)）。
 
 - 切り替え: `blender/ami_dat.py` の `ROAD_SWITCH_IMAGES`（既定は真 = 入れる）。偽にすると dat から外す。シートの分岐のセル（下の絵の作り）と、轍・優先道路の十字・停止線の部品、見本の区画 I・P は消さずに残している
-- 外したことで使えないもの: 優先道路の十字（`nsew1`・`nsew2`）と、固定した T字の轍。固定の道具で 1・2 を選んでも通常の絵のまま。2 本並べた道路の渡り口（区画 HV・HH）も通常の T字（枝の口の点線）が向かい合う
-- 見えるもの: 十字はどれも通常の十字（開いた十字）、T字は通常の T字。多車線の交差点（4×2・4×4・6×6）も、4 車線に 2 車線が T字でつながる所も、横切る道路はふさがらない（`docs/road_GE_junction_noswitch.png`・`road_junction_noswitch_all.png`・`road_junction_tee_noswitch.png`・`road_GE_noswitch_ground.png`。2026-11-20、`OTRPv64_3.exe`、`flat_512.sve`）。4×4・6×6 の中ほどの角の丸い四角の枠（下の「十字と T字の絵（通常の絵）」）は残る
+- 外していた間に使えなかったもの: 優先道路の十字（`nsew1`・`nsew2`）と、固定した T字の轍。固定の道具で 1・2 を選んでも通常の絵のまま。2 本並べた道路の渡り口（区画 HV・HH）も通常の T字（枝の口の点線）が向かい合う
+- 外していた間に見えたもの: 十字はどれも通常の十字（開いた十字）、T字は通常の T字。多車線の交差点（4×2・4×4・6×6）も、4 車線に 2 車線が T字でつながる所も、横切る道路はふさがらない（`docs/road_GE_junction_noswitch.png`・`road_junction_noswitch_all.png`・`road_junction_tee_noswitch.png`・`road_GE_noswitch_ground.png`。2026-11-20、`OTRPv64_3.exe`、`flat_512.sve`）。4×4・6×6 の中ほどの角の丸い四角の枠（下の「十字と T字の絵（通常の絵）」）は残る
 - 線路と橋脚の way（`ami_pier_road` は `tram_track`。分岐の絵は T字・十字と同じ柱）の分岐の絵は変えていない
 
 分岐の絵を入れていたときの作り（T字の 1・2 の白線と轍、優先道路の十字、開いた十字と角の円弧、停止線）と、ゲームで確かめた結果は記録 [2026-11-20_ami-road-switch-design](../../docs/records/2026-11-20_ami-road-switch-design.md) にある。本体の 1・2 の使われ方は [reference](../../docs/reference/way-addon.md) の 9.3。戻すときは [#46](https://github.com/128na/simutrans-addon-dev/issues/46) で、本体の分岐の絵の仕様の整理（[128na/simutrans#15](https://github.com/128na/simutrans/issues/15)）に合わせる。
@@ -201,7 +201,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
   - 桁（POC の C6、判断 2、見せ方は確定。2026-11-19、ユーザーの決定）: iss の都市高速の橋（`../refs/iss/src/bridge/road/bridge.dat` の `iss_br_0120_bridge1`）と同じく、床の縁の下に青い鋼の帯を見せる。基盤と、その下の桁（`ROAD_GIRDER_D`）を青くし、壁の外の面まで出す（躯体のように内へ下げない）。iss の帯は 256px のセルで 4px（`../refs/iss/release/pak128/bridge/road/0120_bridge1.png` の南北のセル。2026-11-19 に測った）で、AMI も約 4px（`docs/road_bridge_girder_zoom.png`。4 倍）
   - 橋の上の way: 橋の道具を引いて架けると、橋の上の way は本体が選ぶ（橋の速さ以下で一番速い、平地の道路。`../simutrans` の `simtool.cc` の `tool_build_bridge_t::do_work` と `bauer/wegbauer.cc` の `weg_search`）。同じ速さの道路が複数あると、どれになるかは決まらない（見本では、一般道路の橋に blender-poc の `bpoc_expressway_wall_back` が載った）。道路の端のタイルを 1 回押して架けると、その道路が載る（`bauer/brueckenbauer.cc`）。橋の上の way は後から道路を敷いても替わらない。見本は端を押す形（`build_bridge_at`）で架ける
 - トンネル（`<道路>_tunnel`）: 坑口の覆いは blender-poc の高速道路のトンネル（iss の都市高速の坑口が手本）で、路面・白線を道路の種類ごとに描く（`tunnel_sheet` の `road_profile`）。壁は坑口とトンネルの中を通して 1 本で敷く
-- 分岐の絵: 今は基盤の版・高架の版も dat に入れていない（2026-11-20。上の「分岐の絵（switch 画像 1・2）」の冒頭）。区画 IB・IV で固定しても 1・2 が通常の絵と同じ番号で、高架の区画 L も通常の十字になる（`docs/road_GE_noswitch_struct.png`・`road_LO_EX_noswitch.png`。2026-11-20）。入れていたときの作り: 通常の版と同じ作り。T字の 1・2 は同じ白線の T字で轍のカーブだけが違い（上の「T字の 1・2 の轍」）、十字の 1・2 は優先道路の十字で、角の路側線は円弧でつなぐ。床・躯体・壁の持ち分は、通常の T字・十字と同じ経路（枝つき）で作る。区画 IB（基盤の版 single）・IV（高架 single）で T字 4 種と十字を 1・2 に固定し、3 種とも 10 枚が違う絵になること（`[check]` の行）と、T字の形で枝の口に壁が立たないことを撮って見た（2026-11-19。画像は記録 [2026-11-19_ami-road-structures-pins](../../docs/records/2026-11-19_ami-road-structures-pins.md)）。「2」が T字の形なので、高架の区画 L でも横切る道路の側に路側線が引かれた。開いた十字の「2」のときの絵は `docs/road_elev_L_cross_zoom.png`。橋は直線のセルだけなので出ない
+- 分岐の絵: 基盤の版・高架の版も、2026-11-23 に dat へ戻した（#46。以下は外していた間の記述。2026-11-20。上の「分岐の絵（switch 画像 1・2）」の冒頭）。区画 IB・IV で固定しても 1・2 が通常の絵と同じ番号で、高架の区画 L も通常の十字になる（`docs/road_GE_noswitch_struct.png`・`road_LO_EX_noswitch.png`。2026-11-20）。入れていたときの作り: 通常の版と同じ作り。T字の 1・2 は同じ白線の T字で轍のカーブだけが違い（上の「T字の 1・2 の轍」）、十字の 1・2 は優先道路の十字で、角の路側線は円弧でつなぐ。床・躯体・壁の持ち分は、通常の T字・十字と同じ経路（枝つき）で作る。区画 IB（基盤の版 single）・IV（高架 single）で T字 4 種と十字を 1・2 に固定し、3 種とも 10 枚が違う絵になること（`[check]` の行）と、T字の形で枝の口に壁が立たないことを撮って見た（2026-11-19。画像は記録 [2026-11-19_ami-road-structures-pins](../../docs/records/2026-11-19_ami-road-structures-pins.md)）。「2」が T字の形なので、高架の区画 L でも横切る道路の側に路側線が引かれた。開いた十字の「2」のときの絵は `docs/road_elev_L_cross_zoom.png`。橋は直線のセルだけなので出ない
 - 値（仮）:
 
   | もの | 費用 | 維持費 | 速さ |
@@ -221,7 +221,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 基盤の版: 基盤が壁の位置で止まる。同じ版の壁の way-object と組で使う（`center` の way-object は行き止まりの端の壁だけ）
 - 高架の版: 床と床の下の躯体だけ。橋脚は描かない
 - 橋: 欄干を描かない。壁の way-object を重ねる
-- 分岐の絵（OTRP の switch 画像、1・2 の 10 枚）は線路の全部の way に入れる。道路は今は入れない（2026-11-20。「道路の作り」の「分岐の絵（switch 画像 1・2）」）。近い斜めは壁の無い way に入れる
+- 分岐の絵（OTRP の switch 画像、1・2 の 10 枚）は線路の全部の way に入れる。道路は 2026-11-23 に戻した（#46。外していた間の経緯は 2026-11-20。「道路の作り」の「分岐の絵（switch 画像 1・2）」）。近い斜めは壁の無い way に入れる
 - 雪の絵と汚れ（blender-poc の 6 章）は全部の way に入れる
 
 ### 高速線の作り（スラブ軌道、#20）

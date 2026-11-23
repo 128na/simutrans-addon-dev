@@ -156,14 +156,15 @@ function lay(name, ox, oy) {
               + (pin == null ? "" : (ok ? " ok" : " NG")) + (SWITCH_IMAGES && pinned[k + "1"] == pinned[k + "2"] ? " same12" : "") + "\n";
   }
   local m = img(ox + 61, oy + 14);
-  checks += "[check] " + name + " M tee_curve=" + m + " pin1=" + pinned["nse1"] + " pin2=" + pinned["nse2"] + " plain=" + plain["nse"]
-            + (m == pinned["nse1"] ? " is1" : (m == pinned["nse2"] ? " is2" : (m == plain["nse"] ? " plain" : " other"))) + "\n";
+  local m_state = m == plain["nse"] ? "plain" : (m == pinned["nse1"] ? "is1" : (m == pinned["nse2"] ? "is2" : "other"));
+  checks += "[check] " + name + " M tee_curve=" + m + " pin1=" + pinned["nse1"] + " pin2=" + pinned["nse2"] + " plain=" + plain["nse"] + " " + m_state
+            + (pin == null ? "" : ((SWITCH_IMAGES ? m_state == "is1" : m_state == "plain") ? " ok" : " NG")) + "\n";
   local nsew_ok = SWITCH_IMAGES ? (pinned["nsew1"] != cross && pinned["nsew2"] != cross && pinned["nsew1"] != pinned["nsew2"])
                                 : (pinned["nsew1"] == cross && pinned["nsew2"] == cross);
   checks += "[check] " + name + " nsew pin1=" + pinned["nsew1"] + " pin2=" + pinned["nsew2"] + " plain=" + cross
             + (pin == null ? "" : (nsew_ok ? " ok" : " NG")) + "\n";
   local lw = img(ox + 50, oy + 15), le = img(ox + 51, oy + 15);
-  local l_ok = SWITCH_IMAGES ? (lw == cross && le == cross) : (lw == cross && le == cross);
+  local l_ok = lw == cross && le == cross;
   checks += "[check] " + name + " L west=" + lw + " east=" + le + " plain=" + cross
             + (l_ok ? " ok" : " NG") + "\n";
   return s;
