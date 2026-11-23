@@ -381,7 +381,29 @@ def _road_sheet(style="street"):
             if prof.get("corner_arcs"):
                 for base_name in ("nse", "new", "nsw", "sew"):
                     switch_lines[base_name] = (tee_lines(base_name, mouth=False), switch_lines[base_name][1])
-            if prof.get("switch_ruts"):
+            if prof.get("switch_diag"):
+                # 斜めにつながる枝（高速道路。#205）: 轍だけでなく枝の側の路側線も、角の円弧でなく斜めの直線にする。
+                # 1 と 2 は枝の曲がる角が違うので白線も違う（SWITCH_RUT_ARCS の角）。斜めの路側線は斜めのセルと同じ位置（経路から
+                # EDGE_LINE / √2。タイルの辺で直線の路側線と同じ点を通る）。本線の枝の側の路側線は斜めの内側の線とぶつかる所までで折れ、
+                # 内側の線で枝の口の辺へ向かう。外側の線は本線の辺の端から枝の口の辺へ。中央線は本線だけ
+                def diag_tee_lines(n, corner):
+                    ea, eb = SWITCH_DIAG_EDGES[corner]
+                    main_axis = "ns" if n in ("nse", "nsw") else "ew"
+                    if ea not in main_axis:
+                        ea, eb = eb, ea
+                    a, b = Vector(AX[ea]), Vector(AX[eb])  # a: 本線の端の向き、b: 枝の向き
+                    ext = lambda p0, p1: p1 + (p1 - p0).normalized() * PATH_EXT
+                    mid = a * (half - 2 * E_) + b * E_  # 本線の枝の側の路側線が斜めの内側の線とぶつかる点
+                    mouth = b * half - a * E_
+                    far = -a * reach + b * E_
+                    out = center(tees[n][0]) + [(tees[n][0], tees[n][1])]
+                    out.append(([far, mid, ext(mid, mouth)], 0.0))
+                    o0, o1 = a * half + b * E_, b * half + a * E_
+                    out.append(([o0 + (o0 - o1).normalized() * PATH_EXT, ext(o0, o1)], 0.0))
+                    return out
+                for base_name in ("nse", "new", "nsw", "sew"):
+                    switch_lines[base_name] = tuple(diag_tee_lines(base_name, SWITCH_RUT_ARCS[base_name + k]) for k in "12")
+            elif prof.get("switch_ruts"):
                 # T字の 1・2 はどちらも「1」の白線（枝の無い側は実線、渡り口の点線なし）。違いは轍（走行跡）だけ（下の wear）
                 for base_name in ("nse", "new", "nsw", "sew"):
                     switch_lines[base_name] = (switch_lines[base_name][0], switch_lines[base_name][0])
