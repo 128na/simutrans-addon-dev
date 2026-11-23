@@ -25,7 +25,8 @@
 // [check] の行: 区画 G の分け合うタイルが way 1 本か（two_ways=false なら近い斜めの絵）、区画 H・I・L の絵（get_image_id）、固定の道具があるか。
 // H・I・L の判定は SWITCH_IMAGES で変わる（blender/ami_dat.py の ROAD_SWITCH_IMAGES に合わせる。#46）:
 //   偽（今）: 分岐の絵が無いので、自動選択（H）・固定（I）・隣り合う十字（L）がどれも通常の T字・十字と同じ絵なら ok
-//   真: H の自動選択の絵が I の選択 2 と同じで通常の T字と違えば ok、I の選択 1 と 2 が同じなら same12、L の十字が T字の「2」なら t2
+//   真（v64 の仕様。KUTA 流の決まりは無くなった: teamhimeh/simutrans#816）: H（隣が T字・十字）の自動選択は通常の T字と同じで、固定の 1・2 は通常と違い互いにも違えば ok、
+//   L の十字は通常の十字（標準の十字の絵）なら ok。M（枝の隣がカーブの T字）の自動選択が 1・2 の絵なら is1・is2（通常なら plain）
 local ROADS = ["ami_road_local", "ami_road_general", "ami_road_expressway"];
 // ラウンドの版（#56）: AMI の名前（ami_ で始まるもの）の末尾に付ける。例: "_round1"。空なら今の名前（sample_parallel.sh の SUFFIX が置き換える）
 local SUFFIX = "";
@@ -139,24 +140,32 @@ function lay(name, ox, oy) {
   s += r("L ns", line(51, 11, 51, 19));
   s += r("L ew", line(46, 15, 55, 15));
   s += r("L label", marker.work(pl, c(46, 10), "auto: nsew next to nsew"));
+  // M: 枝の隣がカーブの T字（v64 の自動選択: 分岐 1・2 の絵になる）。南北 (61,11)-(61,17) の (61,14) から東へ (62,14) に出て、(62,14) で南へ折れる
+  s += r("M ns", line(61, 11, 61, 17));
+  s += r("M branch", line(61, 14, 62, 14));
+  s += r("M curve", line(62, 14, 62, 17));
+  s += r("M label", marker.work(pl, c(60, 10), "auto: curve next to branch"));
   // [check]: 自動選択（H）と固定（I）の絵。通常の T字は区画 B の (0,7) nse・(6,7) nsw・(3,10) new・(3,4) sew
   local plain = {nse = img(ox, oy + 7), nsw = img(ox + 6, oy + 7), new = img(ox + 3, oy + 10), sew = img(ox + 3, oy + 4)};
   local auto = {nse = img(ox + 34, oy + 4), nsw = img(ox + 35, oy + 4), sew = img(ox + 38, oy + 12), new = img(ox + 38, oy + 13)};
   local cross = img(ox + 3, oy + 7);
   foreach (k, v in auto) {
-    local ok = SWITCH_IMAGES ? (v == pinned[k + "1"] && v != plain[k])
+    local ok = SWITCH_IMAGES ? (v == plain[k] && pinned[k + "1"] != plain[k] && pinned[k + "2"] != plain[k] && pinned[k + "1"] != pinned[k + "2"])
                              : (v == plain[k] && pinned[k + "1"] == plain[k] && pinned[k + "2"] == plain[k]);
     checks += "[check] " + name + " " + k + " auto=" + v + " pin1=" + pinned[k + "1"] + " pin2=" + pinned[k + "2"] + " plain=" + plain[k]
               + (pin == null ? "" : (ok ? " ok" : " NG")) + (SWITCH_IMAGES && pinned[k + "1"] == pinned[k + "2"] ? " same12" : "") + "\n";
   }
+  local m = img(ox + 61, oy + 14);
+  checks += "[check] " + name + " M tee_curve=" + m + " pin1=" + pinned["nse1"] + " pin2=" + pinned["nse2"] + " plain=" + plain["nse"]
+            + (m == pinned["nse1"] ? " is1" : (m == pinned["nse2"] ? " is2" : (m == plain["nse"] ? " plain" : " other"))) + "\n";
   local nsew_ok = SWITCH_IMAGES ? (pinned["nsew1"] != cross && pinned["nsew2"] != cross && pinned["nsew1"] != pinned["nsew2"])
                                 : (pinned["nsew1"] == cross && pinned["nsew2"] == cross);
   checks += "[check] " + name + " nsew pin1=" + pinned["nsew1"] + " pin2=" + pinned["nsew2"] + " plain=" + cross
             + (pin == null ? "" : (nsew_ok ? " ok" : " NG")) + "\n";
   local lw = img(ox + 50, oy + 15), le = img(ox + 51, oy + 15);
-  local l_ok = SWITCH_IMAGES ? (lw == pinned["nse2"] && le == pinned["nsw2"]) : (lw == cross && le == cross);
+  local l_ok = SWITCH_IMAGES ? (lw == cross && le == cross) : (lw == cross && le == cross);
   checks += "[check] " + name + " L west=" + lw + " east=" + le + " plain=" + cross
-            + (l_ok ? (SWITCH_IMAGES ? " t2" : " ok") : " NG") + "\n";
+            + (l_ok ? " ok" : " NG") + "\n";
   return s;
 }
 

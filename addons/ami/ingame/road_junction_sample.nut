@@ -1,6 +1,6 @@
 // AMI の道路の見本（交差点の組み合わせ）: 道路を何本か隣り合わせに並べた「多車線」どうしの交差点で、本体が十字のタイルにどの絵を選ぶかを見る。
 // 本体（OTRP の boden/wege/weg.cc の select_switch_road_image）は、ex 画像の無い way の十字で、隣が T字か十字なら、その隣の向きの
-// T字の「2」の絵（dat の image[nse2] など）を十字のタイルに出す。AMI の道路は今、分岐の絵を持たない（ami_dat.py の ROAD_SWITCH_IMAGES。
+// （v64 で KUTA 流の決まりは無くなり、十字は標準の十字の絵になる。2026-11-23）。以下は KUTA 流の頃の説明: T字の「2」の絵（dat の image[nse2] など）を十字のタイルに出す。AMI の道路は今、分岐の絵を持たない（ami_dat.py の ROAD_SWITCH_IMAGES。
 // README の「分岐の絵（switch 画像 1・2）」）ので、十字はどれも通常の十字、T字は通常の T字になるはず。
 // 検証用の flat_512.sve の温暖側 (20,20) に敷く。道路は ROADS の順に、SPACING タイルずつ南へずらして 1 種ずつ。
 // 使い方（アドオンのディレクトリで）: sample_check.sh・sample_parallel.sh に NUT=ingame/road_junction_sample.nut を付ける
