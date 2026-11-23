@@ -100,6 +100,7 @@ from .road_parts import (  # noqa: F401
     STOP_LINE_SPAN,
     EDGE_CORNER_R,
     SWITCH_RUT_ARCS,
+    SWITCH_DIAG_EDGES,
     WearPath,
 )
 from .assemble import (  # noqa: F401
@@ -147,8 +148,13 @@ def build_road(paths, lines, slope=None, scale=1.0, clip=True, size=TILE + 4, co
     obs = assemble(ROAD_PARTS, paths, datums, slope, clip, widths, div, main, ends,
                    skin=skin, tile=tile, half=half, half_over=half_over, **({} if tall_pad is None else {"tall_pad": tall_pad}))
     if wear_paths is not None and "weathering" in groups:
-        obs += assemble(ROAD_PARTS, wear_paths, datums, slope, clip, widths, div, ("weathering",), skin=skin, half=half,
-                        half_over=half_over)
+        # 斜めの直線の走行跡（WearPath.diag）は、斜めのセルと同じ幅の倍率で別に組む
+        straight_w = [p for p in wear_paths if not getattr(p, "diag", False)]
+        diag_w = [p for p in wear_paths if getattr(p, "diag", False)]
+        for ps, wd in ((straight_w, widths), (diag_w, {"road": ROAD_DIAG, "lane": DIAG_EDGE})):
+            if ps:
+                obs += assemble(ROAD_PARTS, ps, datums, slope, clip, wd, div, ("weathering",), skin=skin, half=half,
+                                half_over=half_over)
     return obs
 
 
@@ -186,6 +192,7 @@ def _road_sheet(style="street"):
     open_cross: 真なら通常の十字（nsew）を、交差点の中に白線を通さない開いた十字にする
         （どちらも優先道路に見せない）。無ければ、東西の中央線と両側の点線（高速道路の十字の作り）
     corner_arcs: 真なら分岐の絵（T字・十字・1・2・優先道路の十字）で、隣り合う腕の路側線を角で円弧（EDGE_CORNER_R）でつなぐ
+    switch_diag: 真なら switch_ruts の轍の枝を、カーブでなく斜めの直線にする（線路の diag_curves と同じ。高速道路だけ。#205）
     switch_ruts: 真なら T字の分岐の絵の 1・2 を、どちらも「1」と同じ T字の白線にし、走行跡（轍）を直進と右左折のカーブ 1 本だけにする
         （カーブは下の SWITCH_RUT_ARCS）。1 と 2 の違いは轍だけ
     drive_left: priority_cross の停止線の通行の側。真（既定）なら左側通行、偽なら右側通行（停止線が進入する車線の反対の半分へ移る）
@@ -444,7 +451,13 @@ def _road_sheet(style="street"):
         # T字の分岐の絵の轍: 直進と、枝とつなぐカーブ 1 本（SWITCH_RUT_ARCS の向き）
         arcs = {"sw": arc_sw, "nw": arc_nw, "ne": arc_ne, "se": arc_se}
         for sname, corner_name in SWITCH_RUT_ARCS.items():
-            wear[sname] = [sn if sname[:2] == "ns" else we, arcs[corner_name]]
+            if prof.get("switch_diag"):
+                # 高速道路: 斜めにつながる枝の轍はカーブでなく、線路と同じ直線（斜めのセルと同じ経路。#205）
+                a_, b_ = (AX[c] for c in SWITCH_DIAG_EDGES[corner_name])
+                branch = WearPath(straight(tuple(Vector(a_) * half), tuple(Vector(b_) * half), ext=DIAG_EXT), diag=True)
+            else:
+                branch = arcs[corner_name]
+            wear[sname] = [sn if sname[:2] == "ns" else we, branch]
     # 坂のタイルから始まる橋の端（Start・Start2）: 平らな橋の絵の下に、坂の地面までの躯体を足す（線路の橋と同じ）。
     # 本体の slope_t::north は南が高い坂で、そのとき Start[N] が使われる（東西も同じく、名前と反対の側が高い）
     grounds = {}
