@@ -3,27 +3,20 @@
 # ゲームは work/study_game/<PORT>/ の写し（GAME_DIR の exe・dll・設定・pak128・addons と保存データ）に、AMI の pak と iss の線路の pak を
 # 足して起動する。GAME_DIR には書き込まない（iss の pak は写しの中だけに置く）。敷いた後はゲームを開いたままにする（撮るのは CAPTURE=1）。
 # 使い方（アドオンのディレクトリで。python -X utf8 build.py で dist/ami.pak を作っておく）:
-#   GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe PORT=47400 bash ingame/curve_switch_study.sh   … 起動して敷く
+#   GAME_DIR=<検証用のフォルダ> PORT=47400 bash ingame/curve_switch_study.sh   … 起動して敷く
 #   PORT=47400 CLASSIFY=1 bash ingame/curve_switch_study.sh                                     … 分岐のタイルの自動の絵が標準・分岐 1・2 のどれかを出す
 #   PORT=47400 TRAIN=1 bash ingame/curve_switch_study.sh                                        … 列車を走らせ、渡り線の絵が予約で変わるかを読む
 #   PORT=47400 CAPTURE=1 OUT=work/study/shots bash ingame/curve_switch_study.sh                 … 撮る（区画ごと）
 #   PORT=47400 STOP=1 bash ingame/curve_switch_study.sh                                         … 閉じて写しを消す
 # ISS_PAKS で iss の pak を渡す（既定は親フォルダの refs/iss/release/pak128/iss_rail_way.pak）
 PORT=${PORT:?PORT を指定する}
-source "$(dirname "$0")/mcp_client.sh"
-M="python $MCP_CLIENT --port $PORT"
+source "$(dirname "$0")/game_lib.sh"   # 起動・停止・MCP のコマンド M（#243）
 WORK="work/study_game/$PORT"
 OX=150; OY=20; SPACING=34
 SETS=${SETS:-"iss ami amin"}
 
-stop_game() {
-  local win; win=$(cd "$WORK" 2> /dev/null && pwd -W) || return 0
-  powershell.exe -NoProfile -Command "\$d = '$win'.Replace('/', '\') + '\'; Get-Process | Where-Object { \$_.Path -and \$_.Path.StartsWith(\$d, 'OrdinalIgnoreCase') } | Stop-Process -Force" > /dev/null 2>&1
-  sleep 1
-  rm -rf "$WORK"
-}
 
-if [ "$STOP" = 1 ]; then stop_game; echo "[study] stopped"; exit 0; fi
+if [ "$STOP" = 1 ]; then game_stop; echo "[study] stopped"; exit 0; fi
 
 if [ "$TRAIN" = 1 ]; then
   # curve_switch_train.nut を流し、渡り線の 2 タイル（組ごとに (OX+36, y+5) の back と (OX+36, y+6) の front）の絵の番号を
@@ -89,27 +82,12 @@ if [ "$CAPTURE" = 1 ]; then
   exit 0
 fi
 
-GAME_DIR=${GAME_DIR:?GAME_DIR に検証用のフォルダを指定する}
-EXE=${EXE:?EXE を指定する（例: OTRPv64_3.exe）}
-SAVE=${SAVE:-flat_512}
 PAK=${PAK:-dist/ami.pak}
 REFS=$(cd "$(dirname "$0")" && git rev-parse --path-format=absolute --git-common-dir 2> /dev/null | xargs dirname | xargs dirname)/refs
 ISS_PAKS=${ISS_PAKS:-$REFS/iss/release/pak128/iss_rail_way.pak}
 NUT=${NUT:-ingame/curve_switch_study.nut}
 
-$M --run-squirrel "return 1;" > /dev/null 2>&1 && { echo "[study] ポート $PORT で既にゲームが動いている"; exit 1; }
-rm -rf "$WORK"
-mkdir -p "$WORK/save"
-cp "$GAME_DIR/$EXE" "$GAME_DIR"/*.dll "$WORK/" || exit 1
-for d in config font themes text script music pak128 addons; do
-  [ -d "$GAME_DIR/$d" ] && { cp -r "$GAME_DIR/$d" "$WORK/" || exit 1; }
-done
-cp "$GAME_DIR/save/$SAVE.sve" "$WORK/save/" || exit 1
-[ -f "$GAME_DIR/settings.xml" ] && { cp "$GAME_DIR/settings.xml" "$WORK/settings.xml"; chmod u+w "$WORK/settings.xml"; }
-bash "$(dirname "${BASH_SOURCE[0]:-$0}")/strip_usage_log.sh" "$WORK/settings.xml" || exit 1  # 送信用の記録を外す（#235）
-cp "$PAK" "$WORK/addons/pak128/ami.pak" || exit 1
-for p in $ISS_PAKS; do cp "$p" "$WORK/addons/pak128/" || exit 1; done
-(cd "$WORK" && "./$EXE" -objects pak128/ -addons -load "$SAVE" -mcp-port "$PORT" > /dev/null 2>&1 &)
-for i in $(seq 1 60); do $M --run-squirrel "return 1;" > /dev/null 2>&1 && break; sleep 2; done
+GAME_TAG=study
+game_start "$PAK=ami.pak" $ISS_PAKS || exit 1
 echo "$($M --run-squirrel "$(sed -e 's/^[[:space:]]*//' -e '/^\/\//d' -e '/^$/d' "$NUT")" --timeout 300)"
 $M --run-squirrel "gui.close_all_windows(); gui.set_zoom(3); gui.jump(coord3d($((OX + 6)), $((OY + 13)), 0)); return 1;" > /dev/null

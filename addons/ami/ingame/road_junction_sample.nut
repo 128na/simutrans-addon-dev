@@ -1,7 +1,7 @@
 // AMI の道路の見本（交差点の組み合わせ）: 道路を何本か隣り合わせに並べた「多車線」どうしの交差点で、本体が十字のタイルにどの絵を選ぶかを見る。
 // OTRP v64 の本体は、多車線の交差点（4×2・4×4・6×6・T4x2・T4x4）の十字を標準の十字の絵にする（KUTA 流の決まりは無くなった: teamhimeh/simutrans#816）。
 // AMI の道路は分岐の絵（switch 画像 1・2）を dat に持つ（ami_dat.py の ROAD_SWITCH_IMAGES、#46）が、十字はどれも通常の十字、T字は通常の T字になるはず。
-// 検証用の flat_512.sve の温暖側 (20,20) に敷く。道路は ROADS の順に、SPACING タイルずつ南へずらして 1 種ずつ。
+// 検証用の flat_512_left_v64.sve の温暖側 (20,20) に敷く。道路は ROADS の順に、SPACING タイルずつ南へずらして 1 種ずつ。
 // 使い方（アドオンのディレクトリで）: sample_check.sh・sample_parallel.sh に NUT=ingame/road_junction_sample.nut を付ける
 // （撮る場所は sample_spots.sh の JUNCTION_SPOTS）。返り値の先頭が ok なら全部敷けた。最後に確かめた値（[check] の行）が続く。
 //

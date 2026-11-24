@@ -1,47 +1,26 @@
 #!/bin/bash
 # アイコン・カーソル（#25）をゲームで撮る: 道具のメニュー（鉄道・道路・路面軌道・船）の窓と、道具を選んで地図を押したときのカーソル。
 # 使い方（アドオンのディレクトリで。python -X utf8 build.py で dist/ami.pak を作っておく）:
-#   GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe PORT=47200 bash ingame/icon_capture.sh
+#   GAME_DIR=<検証用のフォルダ> PORT=47200 bash ingame/icon_capture.sh
 # ゲームは work/icon_game/<PORT>/ の写しで起動し、GAME_DIR には書き込まない。写しからは AMI のほかのアドオンの pak を外す
 # （検証用のフォルダには、古い AMI の写し amib.pak が入っていて、同じ形のアイコンが混ざる）。終わったらゲームを閉じる。
 # 撮った画面は OUT（既定 work/icons/）に、menu_<名前>.png（窓の切り抜きを 2 倍）と cursor_<名前>.png（カーソルの辺りを 2 倍）で置く。
 # メニューの中の位置（列, 行）は、pak128 標準と AMI を入れたときの並び（2026-11-21）。並びが変わったら CURSORS を直す
-GAME_DIR=${GAME_DIR:?GAME_DIR に検証用のフォルダを指定する}
-EXE=${EXE:?EXE に実行ファイルの名前を指定する}
 PORT=${PORT:?PORT に MCP のポートを指定する}
-SAVE=${SAVE:-flat_512}
 PAK=${PAK:-dist/ami.pak}
 OUT=${OUT:-work/icons}
-B=${BLENDER:-D:/bin/blender/blender.exe}
-source "$(dirname "$0")/mcp_client.sh"
-M="python -X utf8 $MCP_CLIENT --port $PORT"
+B=${BLENDER:-${SHEET_BLENDER:-blender}}  # Blender の場所（PATH に無ければ BLENDER か SHEET_BLENDER で渡す）
+command -v "$B" > /dev/null 2>&1 || [ -x "$B" ] || { echo "[icon] Blender が見つからない: $B（BLENDER か SHEET_BLENDER で渡す）"; exit 1; }
+source "$(dirname "$0")/game_lib.sh"   # 起動・停止・MCP のコマンド M（#243）
 WORK="work/icon_game/$PORT"
 [ -f "$PAK" ] || { echo "[icon] $PAK が無い"; exit 1; }
-$M --run-squirrel "return 1;" > /dev/null 2>&1 && { echo "[icon] ポート $PORT で既にゲームが動いている"; exit 1; }
-
-stop_game() {
-  powershell.exe -NoProfile -Command "\$d = '$WORK_WIN'.Replace('/', '\') + '\'; Get-Process | Where-Object { \$_.Path -and \$_.Path.StartsWith(\$d, 'OrdinalIgnoreCase') } | Stop-Process -Force" > /dev/null 2>&1
-  sleep 1
-  rm -rf "$WORK"
-}
-rm -rf "$WORK"
-mkdir -p "$WORK/save" "$OUT"
-rm -f "$OUT"/menu_*.png "$OUT"/cursor_*.png  # 前回の画像が残って、撮れなかったのに通らないように
-WORK_WIN=$(cd "$WORK" && pwd -W)
-trap stop_game EXIT
+trap game_cleanup EXIT
 trap 'exit 130' INT TERM
-cp "$GAME_DIR/$EXE" "$GAME_DIR"/*.dll "$WORK/" || exit 1
-for d in config font themes text script music pak128 addons; do
-  [ -d "$GAME_DIR/$d" ] && { cp -r "$GAME_DIR/$d" "$WORK/" || exit 1; }
-done
-rm -f "$WORK"/addons/pak128/ami*.pak
-cp "$GAME_DIR/save/$SAVE.sve" "$WORK/save/" || exit 1
-cp "$PAK" "$WORK/addons/pak128/ami.pak" || exit 1
-printf '\nday_night_shift = 0\n' >> "$WORK/config/simuconf.tab"
-[ -f "$GAME_DIR/settings.xml" ] && { cp "$GAME_DIR/settings.xml" "$WORK/settings.xml"; chmod u+w "$WORK/settings.xml"; }
-bash "$(dirname "${BASH_SOURCE[0]:-$0}")/strip_usage_log.sh" "$WORK/settings.xml" || exit 1  # 送信用の記録を外す（#235）
-(cd "$WORK" && "./$EXE" -objects pak128/ -addons -load "$SAVE" -mcp-port "$PORT" > /dev/null 2>&1 &)
-for r in $(seq 1 120); do timeout 10 $M --timeout 5 --run-squirrel "return 1;" > /dev/null 2>&1 && break; sleep 1; done
+mkdir -p "$OUT"
+rm -f "$OUT"/menu_*.png "$OUT"/cursor_*.png  # 前回の画像が残って、撮れなかったのに通らないように
+GAME_TAG=icon
+game_start "$PAK=ami.pak" || exit 1
+WORK_WIN=$(cd "$WORK" && pwd -W)
 sleep 3
 OUT_WIN=$(cd "$OUT" && pwd -W)
 TMP="$WORK_WIN/_screen.png"  # 画面の一時ファイル（ゲームの写しと一緒に消える）

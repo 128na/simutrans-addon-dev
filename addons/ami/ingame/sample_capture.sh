@@ -6,7 +6,7 @@
 # 架線つきの壁の区画（CATENARY）と区画 WE、高架の区画（ELEVATED・WV・WVE・J）。一部だけ撮るときは SPOTS="名前:x:y ..." を渡す。
 # 場所の意味は sample.nut の冒頭の表。画像は目で見る（絵の欠け・縦線・段・すき間）
 source "$(dirname "$0")/mcp_client.sh"   # MCP_CLIENT の既定（リポジトリの隣の simutrans/）
-M="python $MCP_CLIENT --port ${PORT:-47123}"
+M="python $MCP_CLIENT --port ${PORT:?PORT に MCP のポートを指定する}"
 OUT=${OUT:-work/sample}
 ZOOM=${ZOOM:-3}
 source "$(dirname "$0")/sample_spots.sh"

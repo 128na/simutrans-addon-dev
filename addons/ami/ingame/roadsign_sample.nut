@@ -1,6 +1,6 @@
 // AMI の道路標識の見本（#122）: 6 種を、南北と東西の一般道路（ami_road_general）に置く。一方通行は 1 回・2 回置いて向きを変える。
-// 検証用の flat_512.sve に、温暖側 (20,24) と降雪側 (276,24) の 2 か所へ同じ並びで置く。降雪側は置いた後に一帯を降雪に塗り直す。
-// 使い方（アドオンのディレクトリで）: GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe PORT=47300 EXTRA_TEXTS=release/text/ja_ami.tab bash ingame/game.sh で起動し、
+// 検証用の flat_512_left_v64.sve に、温暖側 (20,24) と降雪側 (276,24) の 2 か所へ同じ並びで置く。降雪側は置いた後に一帯を降雪に塗り直す。
+// 使い方（アドオンのディレクトリで）: GAME_DIR=<検証用のフォルダ> PORT=47300 EXTRA_TEXTS=release/text/ja_ami.tab bash ingame/game.sh で起動し、
 // PORT=47300 NUT=ingame/roadsign_sample.nut bash ingame/game.sh RUN で流す。撮る場所は README の「道路標識の作り」。
 // 返り値の先頭が ok なら全部置けて、[check] で比べた値も期待どおり。違えば先頭が check で、「名前 場所=[…]」が続く。最後に確かめた値（[check] の行）が続く。
 //

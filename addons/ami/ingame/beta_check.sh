@@ -1,7 +1,7 @@
 #!/bin/bash
 # 配る pak の読み込みの確認（#91）: 配る zip と同じ種類別の pak だけを入れたゲームを起動し、ingame/beta_check.nut で全部の物を 1 つずつ道具で敷く。
 # 使い方（アドオンのディレクトリで。python -X utf8 build.py で dist/ を作っておく）:
-#   GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe PORT=47400 bash ingame/beta_check.sh
+#   GAME_DIR=<検証用のフォルダ> PORT=47400 bash ingame/beta_check.sh
 # ゲームは work/beta_game/<PORT>/ の写し（GAME_DIR の exe・dll・設定・pak128・addons と保存データ）で起動し、GAME_DIR には書き込まない。
 # 写しからは AMI の古い pak（addons/pak128/ami*.pak）を外し、PAKS（既定は build.py の KINDS の種類別の pak 全部から旧描画位置の 1 本を除いたもの）を入れる。
 # 敷く物は src/*.dat のうち PAKS に入る物（build.py の belongs）の obj・name・waytype・system_type から作る（提供用の ex_donors.dat は除く）。
@@ -9,10 +9,7 @@
 # 出力: 敷いた結果（先頭が ok なら全部敷けた）と、ゲームのログ（-log 1 -debug 3 の simu.log。work/beta_game/simu_<PORT>.log に残す）のうち、
 # 読んだ AMI の pak と、AMI の物の名前を含む警告・エラーの行（同じ物を二重に読むと「object way::<名前> is overlaid!」が出る）。
 # 全部敷けて警告が無ければ 0、どちらかが外れたら 1 で終わる
-GAME_DIR=${GAME_DIR:?GAME_DIR に検証用のフォルダを指定する}
-EXE=${EXE:?EXE を指定する（例: OTRPv64_3.exe）}
 PORT=${PORT:?PORT に MCP のポートを指定する}
-SAVE=${SAVE:-flat_512}
 # 既定の PAKS は build.py の KINDS の全部（旧描画位置の ami_rail_old.pak を除く）。ラインナップが増えても build.py に追従する（#177）
 PAKS=${PAKS:-$(python -X utf8 -c "
 import sys
@@ -21,36 +18,15 @@ import build
 print(' '.join('dist/' + k for k in build.KINDS if k != build.OLD_PAK))
 ")}
 NUT=ingame/beta_check.nut
-source "$(dirname "$0")/mcp_client.sh"
-M="python -X utf8 $MCP_CLIENT --port $PORT"
+source "$(dirname "$0")/game_lib.sh"   # 起動・停止・MCP のコマンド M（#243）
 WORK="work/beta_game/$PORT"
 [ -n "$PAKS" ] || { echo "[beta] PAKS が空（既定の組み立てに失敗した）"; exit 1; }
 for p in $PAKS; do [ -f "$p" ] || { echo "[beta] $p が無い"; exit 1; }; done
-$M --run-squirrel "return 1;" > /dev/null 2>&1 && { echo "[beta] ポート $PORT で既にゲームが動いている"; exit 1; }
-
-stop_game() {
-  powershell.exe -NoProfile -Command "\$d = '$WORK_WIN'.Replace('/', '\') + '\'; Get-Process | Where-Object { \$_.Path -and \$_.Path.StartsWith(\$d, 'OrdinalIgnoreCase') } | Stop-Process -Force" > /dev/null 2>&1
-  sleep 1
-  rm -rf "$WORK"
-}
-rm -rf "$WORK"
-mkdir -p "$WORK/save"
-WORK_WIN=$(cd "$WORK" && pwd -W)
-trap stop_game EXIT
+trap game_cleanup EXIT
 trap 'exit 130' INT TERM
-cp "$GAME_DIR/$EXE" "$GAME_DIR"/*.dll "$WORK/" || exit 1
-for d in config font themes text script music pak128 addons; do
-  [ -d "$GAME_DIR/$d" ] && { cp -r "$GAME_DIR/$d" "$WORK/" || exit 1; }
-done
-rm -f "$WORK"/addons/pak128/ami*.pak
-cp "$GAME_DIR/save/$SAVE.sve" "$WORK/save/" || exit 1
-for p in $PAKS; do cp "$p" "$WORK/addons/pak128/" || exit 1; done
-[ -f "$GAME_DIR/settings.xml" ] && { cp "$GAME_DIR/settings.xml" "$WORK/settings.xml"; chmod u+w "$WORK/settings.xml"; }
-bash "$(dirname "${BASH_SOURCE[0]:-$0}")/strip_usage_log.sh" "$WORK/settings.xml" || exit 1  # 送信用の記録を外す（#235）
-(cd "$WORK" && "./$EXE" -objects pak128/ -addons -load "$SAVE" -log 1 -debug 3 -mcp-port "$PORT" > /dev/null 2>&1 &)
-up=""
-for r in $(seq 1 120); do timeout 10 $M --timeout 5 --run-squirrel "return 1;" > /dev/null 2>&1 && { up=1; break; }; sleep 1; done
-[ -n "$up" ] || { echo "[beta] ゲームが起動しなかった"; exit 1; }
+GAME_TAG=beta
+GAME_ARGS="${GAME_ARGS:-} -log 1 -debug 3"  # 警告と読み込みの行まで simu.log に出す
+game_start $PAKS || exit 1
 sleep 3
 
 # 敷く物の一覧: [名前, obj, waytype, system_type]。PAKS の pak に入る物だけ（build.py の belongs。旧描画位置の物は ami_rail_old.pak だけに入る。#26）
