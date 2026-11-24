@@ -142,6 +142,9 @@ ROAD_GENERAL = Road("road_general", ("single",))  # 一般道路（120 km/h、�
 ROAD_TRUNK = Road("road_trunk")  # 幹線道路（#257。最高速度 240 km/h（確定）、中央線は白の破線（直線 4・斜め 3 で高速道路より細かい）。4 車線は道路を 2 本並べる。カーブは高速道路と同じ斜めの直線）
 ROAD_EXPRESSWAY = Road("road_expressway")  # 高速道路（360 km/h、中央線は白の広い破線。線 8m・すき間 12m の割り方。#257）
 ROADS = (ROAD_LOCAL, ROAD_GENERAL, ROAD_TRUNK, ROAD_EXPRESSWAY)
+# pak128 以外の大きさ（sheet_settings.PAK_SIZE が 128 でない。#261）で描き・組める物（#266。残りは #261 で足す）。
+# 画素で書いた値を大きさに合わせて確かめたものだけを入れる。ここに無い物は、render.py・ami_dat.py が pak128 以外では止まる（絵が合わないものを作らない）
+SCALED_SHEETS = (ROAD_LOCAL.way,)
 # 道路のカーブの形（#259。#209 の 2 本目）: 種類 → "arc"（円弧。路面軌道と同じ）か "ell"（L 字。直角）。ここに無い種類（高速道路・幹線道路）は斜めの絵。
 # 速さで描き分ける（一般は円弧、生活道路は L 字）。カーブの絵は way のシートの行 2 の列 5〜8 に描き、dat の image[sw] などがそれを指す。
 # 基盤・高架の single と壁（ROAD_WALL_CURVED）も同じ形にそろえた（3 本目の #260）

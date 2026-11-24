@@ -13,6 +13,8 @@ dat が 1 つも無い種類の pak は作らない。makeobj の出力に WARNI
 作った後、分岐の追加画像（Y字分岐・三方分岐。絵の番号 26〜35）を継ぎ足す: src/ex_donors.dat（blender/ami_dat.py が書く提供用の物）を
 work/ex/donors.pak に作り、ex_graft.py で dist/ の各 pak の対象の物（線路・路面軌道の way と架線つきの壁）へ写す。提供用の物は dist/ に入らない。
 dat は先に blender/ami_dat.py で書き出す。画像（シート）は blender/render.py で描く。
+環境変数 SHEET_PAK_SIZE=256 を付けると、256 の pak を src256/ の dat・シートから dist256/ に作る（#266。makeobj の大きさは pak512。
+catalog.SCALED_SHEETS の物だけ。分岐の追加画像の継ぎ足しはしない）。pak128 の src/・dist/ には触れない。
 SHEET_LAYOUT=1 を付けると、work/layout/ のシートと dat から work/layout/dist/ に作る（レイアウト検証用モード。ADR 0005）。
 """
 import glob
@@ -24,13 +26,15 @@ import ex_graft
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "blender"))
+sys.path.insert(0, os.path.join(HERE, "..", "..", "tools", "blender"))
 import catalog  # noqa: E402
+import sheet_settings  # noqa: E402  pak の大きさ（SHEET_PAK_SIZE。既定は pak128）
 # SHEET_LAYOUT=1 のときは、レイアウト検証用モードのシートと dat（render.py が work/layout/ に書く）から、
 # work/layout/dist/ に pak を作る（ゲームで部品の配置と接合を見るため。src/・dist/ は変えない）
 LAYOUT = os.environ.get("SHEET_LAYOUT") == "1"
-SRC = os.path.join(HERE, "work", "layout") if LAYOUT else os.path.join(HERE, "src")
-DIST = os.path.join(SRC, "dist") if LAYOUT else os.path.join(HERE, "dist")
-PAKSET = "pak256"  # 256px のセルとして切り出す（ゲームは pak128）。iss・blender-poc と同じ
+SRC = os.path.join(HERE, "work", "layout") if LAYOUT else os.path.join(HERE, "src" + sheet_settings.SUFFIX)
+DIST = os.path.join(SRC, "dist") if LAYOUT else os.path.join(HERE, "dist" + sheet_settings.SUFFIX)
+PAKSET = sheet_settings.PAKSET  # セルの一辺（pak128 のゲームは 256px のセルとして切り出す = pak256。iss・blender-poc と同じ。256 の pak は pak512）
 
 KINDS = {
     "ami_rail.pak": ("ami_rail_",),
@@ -83,7 +87,8 @@ def main():
         if part:
             makeobj(out, part)
             outs.append(out)
-    graft_ex(outs)
+    if sheet_settings.SCALE == 1:  # 分岐の追加画像は線路・路面軌道の物の継ぎ足し。pak128 以外の大きさにはまだ無い（#261）
+        graft_ex(outs)
 
 
 def graft_ex(outs):

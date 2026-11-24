@@ -13,6 +13,10 @@ zip（work/release/ami-<版>.zip）の中身:
                        本体はファイル名の先頭 2 文字で言語を決める（dataobj/translator.cc）。読んでいない pak の物の訳は使われないだけ
 pak の名前が dist/ に無いとき、--paks に ami（全部入り）と種類別を混ぜたとき（同じ物を二重に読む）は止まる。
 展開した中身を ingame/beta_check.sh の PAKS に渡すと、配る形のままゲームで確かめられる（--extract で work/release/ami-<版>/ にも展開する）。
+
+環境変数 SHEET_PAK_SIZE=256 を付けると、dist256/（build.py が作る 256 の pak）から、pak だけを入れた zip（work/release/ami-256-<版>.zip）を作る（#266）。
+pak は zip の直下に置く（pak256 の fetch_ami.py は zip の中の .pak を全部取る）。readme・許諾・一覧・訳・サムネイルは入れない
+（許諾は pak256 が addons/ami/release/license.txt の写しを持つ）。--readme・--no-thumbnail は無視する。pak128 の zip とは名前が違うので混ざらない。
 """
 import argparse
 import os
@@ -23,7 +27,10 @@ import zipfile
 import lineup
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DIST = os.path.join(HERE, "dist")
+sys.path.insert(0, os.path.join(HERE, "..", "..", "tools", "blender"))
+import sheet_settings  # noqa: E402  pak の大きさ（SHEET_PAK_SIZE。既定は pak128）
+
+DIST = os.path.join(HERE, "dist" + sheet_settings.SUFFIX)
 OUT = os.path.join(HERE, "work", "release")
 TEMPLATE = os.path.join(HERE, "release")
 TEXTS = os.path.join(TEMPLATE, "text")
@@ -49,9 +56,31 @@ def main():
             sys.exit(f"[release] {path} が無い（先に build.py）")
         paks.append(path)
 
-    name = f"ami-{a.version}"
+    scaled = sheet_settings.SCALE != 1  # pak128 以外の大きさ: pak だけの zip（#266）
+    name = f"ami-{sheet_settings.PAK_SIZE}-{a.version}" if scaled else f"ami-{a.version}"
     os.makedirs(OUT, exist_ok=True)
     zpath = os.path.join(OUT, name + ".zip")
+    if scaled:
+        with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
+            for path in paks:
+                z.write(path, os.path.basename(path))
+    else:
+        write_full_zip(zpath, a, paks)
+    with zipfile.ZipFile(zpath) as z:
+        for i in z.infolist():
+            print(f"[release] {i.filename}  {i.file_size:,} B")
+    print(f"[release] {zpath}  {os.path.getsize(zpath):,} B")
+
+    if a.extract:
+        dst = os.path.join(OUT, name)
+        shutil.rmtree(dst, ignore_errors=True)
+        with zipfile.ZipFile(zpath) as z:
+            z.extractall(dst)
+        print(f"[release] 展開した: {dst}")
+
+
+def write_full_zip(zpath, a, paks):
+    """pak128 の配る zip（pak・readme・許諾・一覧・訳・サムネイル）を書く"""
     with open(a.readme, encoding="utf8") as f:
         readme = f.read().replace("{version}", a.version)
     try:
@@ -70,17 +99,6 @@ def main():
             z.write(os.path.join(TEXTS, t), "pak128/text/" + t)
         if os.path.isfile(THUMBNAIL) and not a.no_thumbnail:
             z.write(THUMBNAIL, "thumbnail.png")
-    with zipfile.ZipFile(zpath) as z:
-        for i in z.infolist():
-            print(f"[release] {i.filename}  {i.file_size:,} B")
-    print(f"[release] {zpath}  {os.path.getsize(zpath):,} B")
-
-    if a.extract:
-        dst = os.path.join(OUT, name)
-        shutil.rmtree(dst, ignore_errors=True)
-        with zipfile.ZipFile(zpath) as z:
-            z.extractall(dst)
-        print(f"[release] 展開した: {dst}")
 
 
 if __name__ == "__main__":

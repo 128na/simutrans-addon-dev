@@ -22,6 +22,9 @@
 #   COPY_DIRS … 写すフォルダ（既定 config font themes text script music pak128 addons）
 #   GAME_KEEP=1 … game_cleanup で閉じない（開いたままにする）
 #   NO_SETTINGS=1 … game_copy で settings.xml を写さない（sample_parallel.sh が台ごとに写す）
+#   PAKSET    … 地面などの元になる pak のフォルダ名（GAME_DIR の中。既定 pak128）。256 の確認は pak256poc（#266）。-objects と addons/<PAKSET>/ に使う
+#   PAKSET_SRC … 渡すと、写しの <PAKSET>/ を写さず、この場所へのジャンクション（読むだけ）にする。pak256poc は 1.6GB あるので写さない。
+#                写しを消すときは、先にジャンクションだけを外す（rm -rf が元の中身を消さないように。game_unlink）
 _GL_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$_GL_DIR/mcp_client.sh" || return 1
 [ -n "$PORT" ] && M="python -X utf8 $MCP_CLIENT --port $PORT"
@@ -50,26 +53,31 @@ game_copy() {
   game_defaults
   mkdir -p "$dir/save" || return 1
   cp "$GAME_DIR/$EXE" "$GAME_DIR"/*.dll "$dir/" || return 1
-  for d in ${COPY_DIRS:-config font themes text script music pak128 addons}; do
+  for d in ${COPY_DIRS:-config font themes text script music ${PAKSET:-pak128} addons}; do
+    if [ -n "$PAKSET_SRC" ] && [ "$d" = "${PAKSET:-pak128}" ]; then
+      [ -d "$PAKSET_SRC" ] || { echo "[${GAME_TAG:-game}] PAKSET_SRC が無い: $PAKSET_SRC" >&2; return 1; }
+      MSYS2_ARG_CONV_EXCL="*" cmd.exe /c mklink /J "$(cygpath -w "$dir/$d")" "$(cygpath -w "$PAKSET_SRC")" > /dev/null || return 1
+      continue
+    fi
     [ -d "$GAME_DIR/$d" ] && { cp -r "$GAME_DIR/$d" "$dir/" || return 1; }
   done
-  mkdir -p "$dir/addons/pak128" "$dir/config" || return 1
-  rm -f "$dir"/addons/pak128/ami*.pak  # 検証用のフォルダに古い AMI の写しがあっても、二重に読まない
+  mkdir -p "$dir/addons/${PAKSET:-pak128}" "$dir/config" || return 1
+  rm -f "$dir"/addons/${PAKSET:-pak128}/ami*.pak  # 検証用のフォルダに古い AMI の写しがあっても、二重に読まない
   printf '\nday_night_shift = 0\n' >> "$dir/config/simuconf.tab"
   cp "$GAME_DIR/save/$SAVE.sve" "$dir/save/" || return 1
   [ -n "$NO_SETTINGS" ] || game_settings "$dir" || return 1
   # 訳のファイル（EXTRA_TEXTS。addons/pak128/text/<言語>_<名前>.tab。本体は名前の先頭 2 文字で言語を決める: dataobj/translator.cc）
-  for p in ${EXTRA_TEXTS:-}; do mkdir -p "$dir/addons/pak128/text" && cp "$p" "$dir/addons/pak128/text/$(basename "$p")" || return 1; done
+  for p in ${EXTRA_TEXTS:-}; do mkdir -p "$dir/addons/${PAKSET:-pak128}/text" && cp "$p" "$dir/addons/${PAKSET:-pak128}/text/$(basename "$p")" || return 1; done
   for p in "$@"; do
     src=${p%%=*}; dest=$(basename "$src"); [ "$src" = "$p" ] || dest=${p#*=}
     [ -f "$src" ] || { echo "[${GAME_TAG:-game}] pak が無い: $src" >&2; return 1; }
-    cp "$src" "$dir/addons/pak128/$dest" || return 1
+    cp "$src" "$dir/addons/${PAKSET:-pak128}/$dest" || return 1
   done
 }
 
 # game_launch <写し> <ポート>: 写しの中の exe を MCP つきで起動する（待たない）
 game_launch() {
-  (cd "$1" && "./$EXE" -objects pak128/ -addons -load "$SAVE" -mcp-port "$2" ${GAME_ARGS:-} > "${GAME_LOG:-/dev/null}" 2>&1 &)
+  (cd "$1" && "./$EXE" -objects ${PAKSET:-pak128}/ -addons -load "$SAVE" -mcp-port "$2" ${GAME_ARGS:-} > "${GAME_LOG:-/dev/null}" 2>&1 &)
 }
 
 # game_wait <ポート>: MCP が応えるまで待つ（GAME_WAIT 回、2 秒おき）。応えなければ 1
@@ -86,11 +94,18 @@ game_kill() {
   powershell.exe -NoProfile -Command "\$d = '$win'.Replace('/', '\') + '\'; Get-Process | Where-Object { \$_.Path -and \$_.Path.StartsWith(\$d, 'OrdinalIgnoreCase') } | Stop-Process -Force" > /dev/null 2>&1
 }
 
+# game_unlink <写し>: 写しの <PAKSET>/ がジャンクションなら、それだけを外す（PAKSET_SRC の有無によらず呼ぶ。rm -rf が元の pak を消さないように。rmdir はジャンクションだけを外し、中身のある普通のフォルダは消さない）
+game_unlink() {
+  [ -e "$1/${PAKSET:-pak128}" ] && MSYS2_ARG_CONV_EXCL="*" cmd.exe /c rmdir "$(cygpath -w "$1/${PAKSET:-pak128}")" > /dev/null 2>&1
+  return 0
+}
+
 # game_start [pak …]: PORT のゲームを WORK の写しで起動する。同じポートで別のゲームが動いていたら何もせず 1
 game_start() {
   : "${WORK:?WORK に写しの置き場を決める}"
   game_up "$PORT" && { echo "[${GAME_TAG:-game}] ポート $PORT で既にゲームが動いている（PORT を替えるか、そのゲームを閉じる）" >&2; return 1; }
   _GL_OWN=1
+  game_unlink "$WORK"
   rm -rf "$WORK"
   game_copy "$WORK" "$@" || { game_stop; return 1; }
   game_launch "$WORK" "$PORT"
@@ -102,6 +117,7 @@ game_stop() {
   : "${WORK:?WORK に写しの置き場を決める}"
   game_kill "$WORK"
   sleep 1
+  game_unlink "$WORK"
   rm -rf "$WORK"
 }
 

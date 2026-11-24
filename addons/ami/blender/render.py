@@ -51,7 +51,7 @@ _p = catalog.profile  # way・シートの名前 → TRACK_PROFILES の名前
 # ---------------------------------------------------------------- 線路の描き分け
 # 新描画位置（レールが低い。今の pak128・iss）。旧描画位置（SIS に合う）は、catalog.OLD_TRACKS の名前で、下の TRACK_SETTINGS が新の設定から導く（#26。ADR 0011）。
 # datums: 基準面ごとの下げ幅。決め方は blender-poc の README の「描画位置の描き分け」。label はアイコンの最高速度の数字
-_DATUMS = {"bed": R.Datum(2, 1), "rail": R.Datum(4, 1)}
+_DATUMS = {"bed": R.Datum(2 * R.SCALE, 1 * R.SCALE), "rail": R.Datum(4 * R.SCALE, 1 * R.SCALE)}  # px は pak の大きさに比例（R.SCALE）
 
 # 在来線のバラスト（砕石）: 道床を 2 色のまだらにして、石の粒に見せる（夏の絵だけ）。
 # 元の 2 色の平均は blender-poc の道床の一色 (0.42, 0.40, 0.37)。そこから明暗差を BALLAST_CONTRAST 倍に広げ（#56）、BALLAST_DARK・BALLAST_TINT で暗く青みの灰にした（#70）。
@@ -255,7 +255,7 @@ for _t in catalog.OLD_TRACKS:
 # この設定を引き継ぐ（dat は blender/ami_dat.py の EX_WAYS・EX_WAYOBJS、pak への継ぎ足しは ex_graft.py）
 for _t in catalog.ALL_TRACKS:
     # diag_curves: カーブを斜めの絵で表す（pak128 標準の線路と同じ。T字・十字・分岐の絵も斜めの直線）。buffer: 行き止まりの車止め
-    R.TRACK_PROFILES[_t.key] = dict({"sheet": _t.way, "spill": 1, "datums": _DATUMS, "snow": True,
+    R.TRACK_PROFILES[_t.key] = dict({"sheet": _t.way, "spill": 1 * R.SCALE, "datums": _DATUMS, "snow": True,
                                      "groups": ("body", "weathering", "buffer"), "diag_curves": True,
                                      "end_from_edge": END_FROM_EDGE, "ex_switches": True}, **TRACK_SETTINGS[_t.key])
 
@@ -281,12 +281,12 @@ R.TRACK_PROFILES[TRAM_KEY] = {
 MONORAIL_KEY = catalog.profile(catalog.MONORAIL)
 MONORAIL_LABEL = "150"
 R.TRACK_PROFILES[MONORAIL_KEY] = {
-    "sheet": catalog.MONORAIL, "label": MONORAIL_LABEL, "spill": 1, "datums": R.FLAT, "snow": True, "anchor": 128,
+    "sheet": catalog.MONORAIL, "label": MONORAIL_LABEL, "spill": 1 * R.SCALE, "datums": R.FLAT, "snow": True, "anchor": 128 * R.SCALE,
     "groups": ("body",), "track_parts": R.monorail_parts(), "snow_skin": R.MONO_SNOW_SKIN, "diag_curves": True, "close": False,
 }
 # 高架の 3 版（ami_monorail_elev_<版>、dat は system_type=1）: 桁を下へ深くし、桁が出入りする辺の角に柱と腕を足す（版で柱の側が違う）。
 # 柱は高架の高さ（ELEV_STEPS 段）下の地面まで伸ばし、持ち分も同じだけ下へ広げる。アイコンは下の帯で高架を示す
-MONORAIL_ELEV_LOWER = R.ELEV_LOWER + 4
+MONORAIL_ELEV_LOWER = R.ELEV_LOWER + 4 * R.SCALE
 for _v in catalog.MONORAIL_ELEV_VARIANTS:
     R.TRACK_PROFILES[catalog.profile(catalog.monorail_elev(_v))] = dict(
         R.TRACK_PROFILES[MONORAIL_KEY], sheet=catalog.monorail_elev(_v),
@@ -589,7 +589,7 @@ for _r in catalog.ROADS:
 # 基盤は壁の外の面で止まり、壁の無い側はタイルの端まで（線路の高架と同じ）。躯体は壁のある側で壁の外の面から ELEV_BODY_INSET 内で止める。
 # 壁は地上と同じ way-object（ami_wall_road_<版>）を重ねるので、壁のシートは書かない（write_walls）。
 # 持ち分は基盤と躯体の分だけ下へ広げる（道路の基盤は路面の板の下へ ROAD_BASE_DROP 下げてあるので、線路の ELEV_BODY_LOWER より深い）
-ROAD_ELEV_LOWER = math.ceil((R.BASE_H + R.ELEV_BODY_D + R.ROAD_BASE_DROP) * 16 / R.H) + 2
+ROAD_ELEV_LOWER = math.ceil((R.BASE_H + R.ELEV_BODY_D + R.ROAD_BASE_DROP) * 16 * R.SCALE / R.H) + 2
 for _r in catalog.ROADS:
     for _v, _walls in ((_v, BASE_VARIANTS[_v]) for _v in _r.variants):
         R.ROAD_PROFILES[_p(_r.elev(_v))] = dict(
@@ -779,6 +779,14 @@ for _n, _o in catalog.ROADSIGN_CROSSWALKS.items():
     SHEETS[_n] = (lambda n, o: lambda: R.crosswalk_sign_sheet(R.sheet_path(n + ".png"), o, R.WORK))(_n, _o)
 
 if __name__ == "__main__":
+    if R.SCALE != 1:
+        # pak128 以外の大きさは、catalog.SCALED_SHEETS の物だけ描ける（#266）。対象を渡さなければその物だけを描く
+        _asked = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+        _bad = [t for t in _asked if t not in catalog.SCALED_SHEETS]
+        if _bad:
+            raise SystemExit(f"[render] pak{R.sheet_settings.PAK_SIZE} で描けるのは {' '.join(catalog.SCALED_SHEETS)} だけ（#261 の残りで足す）: {' '.join(_bad)}")
+        if not _asked:
+            sys.argv += ["--"] + list(catalog.SCALED_SHEETS)
     R.run_targets(SHEETS, list(SHEETS))
     # アイコン・カーソル（#25）: 描いたシートの絵から作り、シートのセルに書く（blender/icons.py）。LAYOUT・ONLY の出力（work/）には書かない
     if not (R.LAYOUT or R.ONLY):

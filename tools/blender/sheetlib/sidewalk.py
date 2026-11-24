@@ -21,7 +21,7 @@ import numpy as np
 
 from . import sheetlib as _s
 from .cells import ROAD_CY, _ground_mask, exits_of, load_rgba8, make_sheet, render_cell, save_rgba
-from .core import (H, ONLY, TILE, _SNOW, apply_slope, box, clear_models, make_material, mesh_object, named_materials,
+from .core import (H, ONLY, SCALE, TILE, _SNOW, apply_slope, box, clear_models, make_material, mesh_object, named_materials,
                    set_anchor)
 from .road_parts import CURB_W, SIDEWALK_H, _M_CURB, _M_PAVING
 from .wall_parts import BASE_H, ELEV_BODY_D, ELEV_BODY_INSET, _M_BASE, _M_ELEV_BODY
@@ -30,14 +30,14 @@ SIDEWALK_PAD = 1.0       # つながる辺で、板と敷石をタイルの外�
 SIDEWALK_FOOT = 0.3      # 板の下端（地面より下。手前の辺の立ち上がりの下の縁を持ち分の縁まで届かせる）
 PAVING_TH = 0.02         # 敷石の厚み（道路の歩道の paving と同じ）
 # 持ち分を上へ広げる行数。板の上面は地面より SIDEWALK_H 高く、奥の辺（北・西）の縁石の上面の帯が地面の菱形より上に出る
-SIDEWALK_RISE = 3
+SIDEWALK_RISE = 3 * SCALE
 # 雪の絵の行のずらし（dat を書く側の addons/ami/blender/ami_dat.py の SNOW_ROWS と同じ）
 SIDEWALK_SNOW_ROWS = 4
 
 # 高架の版: 板（縁石の色）は道路の高架の路面の下の基盤の上面（ROAD_BASE_DROP 下）まで。その下に基盤（BASE_H）と躯体（ELEV_BODY_D）。
 # 深さは道路の高架（sheetlib の road_sheet の elev_body）と同じにし、並べた高架の道路と床の下の縁をそろえる。
 # 躯体は、つながらない辺で ELEV_BODY_INSET 内へ下げる（道路の高架の、壁のある側と同じ）。道路用の橋脚（ami_pier_road）の上端もこの深さに合う
-SIDEWALK_ELEV_LOWER = math.ceil((BASE_H + ELEV_BODY_D + _s.ROAD_BASE_DROP) * 16 / H) + 2  # 持ち分を下へ広げる行数（AMI の道路の高架と同じ）
+SIDEWALK_ELEV_LOWER = math.ceil((BASE_H + ELEV_BODY_D + _s.ROAD_BASE_DROP) * 16 * SCALE / H) + 2  # 持ち分を下へ広げる行数（AMI の道路の高架と同じ）
 
 # 歩道の柵（横断防止柵・転落防止柵の形。白く塗った鋼）。寸法の単位は 1 ≈ 1.15m（docs/reference/way-addon.md の 12 章）。
 # 画面で 1px を切る部品は消えるので、横木・柱は 1.3px 以上（高さ 1 ≈ 7.8px）にする
@@ -51,7 +51,7 @@ FENCE_MID = (0.38, 0.15)  # 中の横木の下端と高さ
 # 4 本でタイル 1 辺（直線の画面で約 18px ごと）
 FENCE_PITCH = TILE / 4
 FENCE_PAD = 0.6          # 隣の柵へ続く端で、横木をタイルの外へ延ばす量（持ち分で切る）
-FENCE_RISE = 11          # 柵の持ち分を上へ広げる行数（柵の高さ 約 7px と敷石の高さ 約 2px に余り）
+FENCE_RISE = 11 * SCALE          # 柵の持ち分を上へ広げる行数（柵の高さ 約 7px と敷石の高さ 約 2px に余り）
 FENCE_ALPHA = 128        # これより覆われていない縁の画素は捨てる（壁と同じく、半透明の縁が暗い点線になるため）
 _M_FENCE = ("sidewalk_fence", (0.80, 0.81, 0.80), 0.5, 0.3)
 # 版 → 柵を立てる辺
@@ -270,7 +270,7 @@ POLE_WIRE = (0.1, 0.14)  # 電線の幅・高さ（画面で約 1px。細いと�
 POLE_CABLE_Z = 3.2       # 通信線の高さ（1 本。柱の脇を通る）
 POLE_CABLE_OFF = 0.3     # 通信線の柱からのずれ（腕木の向き）
 POLE_PAD = 0.6           # 隣のタイルへ続く電線をタイルの外へ延ばす量（持ち分で切る）
-POLE_RISE = 58           # 持ち分を上へ広げる行数（柱の高さ 約 43px と腕木・余り）
+POLE_RISE = 58 * SCALE           # 持ち分を上へ広げる行数（柱の高さ 約 43px と腕木・余り）
 POLE_IN = 0.6            # 柵つきの版で、柵の中心から柱の中心まで（歩道の内側へ）
 _M_SW_POLE = ("sidewalk_pole", (0.66, 0.66, 0.63), 0.7, 0.0)   # コンクリートの柱
 _M_SW_POLE_ARM = ("sidewalk_pole_arm", (0.30, 0.30, 0.31), 0.5, 0.3)  # 鋼の腕木

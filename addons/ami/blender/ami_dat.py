@@ -24,10 +24,17 @@ makeobj は橋の手前のキーが無いと警告するので、手前のキー
 way・基盤・高架・橋・トンネルの名前は、軌道の種類の表（blender/catalog.py）から展開する。
 """
 import os
+import sys
 
 import catalog
 
-SRC = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "tools", "blender"))
+import sheet_settings  # noqa: E402  pak の大きさ（SHEET_PAK_SIZE。既定は pak128）
+
+# dat の位置合わせ（セルの左上からタイルの左上までの画素。pak128 は -64,-32）。pak の大きさに比例する（sheetlib の GROUND_CY・ROAD_CY と対応）
+OFFSET = f"{-64 * sheet_settings.SCALE},{-32 * sheet_settings.SCALE}"
+# pak128 以外の大きさは src<大きさ>/ に書く（pak128 の src/ と混ぜない）。書くのは catalog.SCALED_SHEETS の物だけ（main）
+SRC = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src" + sheet_settings.SUFFIX)
 NL = chr(10)
 SNOW_ROWS = 4  # 雪の絵は、夏の絵の 4 行下
 
@@ -267,27 +274,27 @@ def _head(name, kind, obj, base, cost_k, sheet):
 
 def bridge_dat_text(name, base, sheet):
     out = _head(name, "橋（欄干なし。壁は way-object を重ねる）", "bridge", base, BRIDGE_COST_K, sheet)
-    out += ["pillar_distance=1", f"icon=> {sheet}.0.0", f"cursor={sheet}.0.1,-64,-32"]
+    out += ["pillar_distance=1", f"icon=> {sheet}.0.0", f"cursor={sheet}.0.1,{OFFSET}"]
     for season in (0, 1):
         dr = season * BRIDGE_SNOW_ROWS
-        out += [f"backimage[ns][{season}]={sheet}.{dr}.2,-64,-32", f"backimage[ew][{season}]={sheet}.{dr}.3,-64,-32"]
+        out += [f"backimage[ns][{season}]={sheet}.{dr}.2,{OFFSET}", f"backimage[ew][{season}]={sheet}.{dr}.3,{OFFSET}"]
         for pre, dc in (("", 0), ("2", 5)):
-            out += [f"backramp{pre}[{d}][{season}]={sheet}.{1 + dr}.{c + dc},-64,-32" for d, c in BRIDGE_RAMPS]
-            out += [f"backstart{pre}[{d}][{season}]={sheet}.{3 + dr}.{c + dc},-64,-32" for d, c in BRIDGE_STARTS]
-        out += [f"backpillar[s][{season}]={sheet}.2.0,-64,-32", f"backpillar[w][{season}]={sheet}.2.1,-64,-32"]
+            out += [f"backramp{pre}[{d}][{season}]={sheet}.{1 + dr}.{c + dc},{OFFSET}" for d, c in BRIDGE_RAMPS]
+            out += [f"backstart{pre}[{d}][{season}]={sheet}.{3 + dr}.{c + dc},{OFFSET}" for d, c in BRIDGE_STARTS]
+        out += [f"backpillar[s][{season}]={sheet}.2.0,{OFFSET}", f"backpillar[w][{season}]={sheet}.2.1,{OFFSET}"]
         # 手前の絵は無いが、makeobj は front のキーが無いと全部の向きで警告を出す（descriptor/writer/bridge_writer.cc）。空のセルを指す
         for key, dirs in BRIDGE_FRONT_KEYS:
-            out += [f"front{key}[{d}][{season}]={sheet}.{BRIDGE_EMPTY_CELL},-64,-32" for d in dirs]
+            out += [f"front{key}[{d}][{season}]={sheet}.{BRIDGE_EMPTY_CELL},{OFFSET}" for d in dirs]
     return NL.join(out) + NL
 
 
 def tunnel_dat_text(name, base, sheet):
     out = _head(name, "トンネル", "tunnel", base, TUNNEL_COST_K, sheet)
-    out += [f"way={base}", f"icon=> {sheet}.0.0", f"cursor={sheet}.0.1,-64,-32"]
+    out += [f"way={base}", f"icon=> {sheet}.0.0", f"cursor={sheet}.0.1,{OFFSET}"]
     for season in (0, 1):
         for d, c in TUNNEL_DIRS:
-            out += [f"backimage[{d}][{season}]={sheet}.{2 * season}.{c},-64,-32",
-                    f"frontimage[{d}][{season}]={sheet}.{2 * season + 1}.{c},-64,-32"]
+            out += [f"backimage[{d}][{season}]={sheet}.{2 * season}.{c},{OFFSET}",
+                    f"frontimage[{d}][{season}]={sheet}.{2 * season + 1}.{c},{OFFSET}"]
     return NL.join(out) + NL
 
 
@@ -310,7 +317,7 @@ def dat_text(name, sheet, donor=False):
         f"topspeed={v['speed']}",
         f"system_type={1 if name in ELEVATED else 0}",
         f"icon=> {sheet}.0.0",
-        f"cursor={sheet}.0.1,-64,-32",
+        f"cursor={sheet}.0.1,{OFFSET}",
     ]
     front = name in FRONT_WAYS
     snow_rows = FRONT_SNOW_ROWS if front else SNOW_ROWS
@@ -330,9 +337,9 @@ def dat_text(name, sheet, donor=False):
                 row, col = CURVE_TO_DIAG[idx]
             if donor and key == "image" and idx in EX_CELLS:
                 row, col = EX_CELLS[idx]
-            out.append(f"{key}{idx}[{season}]={sheet}.{row + season * snow_rows}.{col},-64,-32")
+            out.append(f"{key}{idx}[{season}]={sheet}.{row + season * snow_rows}.{col},{OFFSET}")
             if front:
-                out.append(f"front{key}{idx}[{season}]={sheet}.{row + FRONT_ROW + season * snow_rows}.{col},-64,-32")
+                out.append(f"front{key}{idx}[{season}]={sheet}.{row + FRONT_ROW + season * snow_rows}.{col},{OFFSET}")
     return NL.join(out) + NL
 
 
@@ -369,7 +376,7 @@ def wall_dat_text(name, sheet, twin=False, catenary=False, road=False, donor=Fal
         f"maintenance={v['maintenance']}",
         f"topspeed={(CATENARY_TWIN_TOPSPEED if catenary else DIVIDER_TWIN_TOPSPEED if divider else WALL_TWIN_TOPSPEED) if twin else v['topspeed']}",
         f"icon=> {sheet}.{icon_cell}",
-        f"cursor={sheet}.{cursor_cell},-64,-32",
+        f"cursor={sheet}.{cursor_cell},{OFFSET}",
     ]
     ex = name in EX_WAYOBJS or donor
     cell = {(key, idx): (row, col) for key, idx, row, col in IMAGES}
@@ -388,7 +395,7 @@ def wall_dat_text(name, sheet, twin=False, catenary=False, road=False, donor=Fal
                 continue
             src = twin_from[idx]
         for side, dr in (("back", 0), ("front", WALL_FRONT_ROW)):
-            out.append(f"{side}{WAYOBJ_KEYS[key]}{idx}={src}.{row + dr}.{col},-64,-32")
+            out.append(f"{side}{WAYOBJ_KEYS[key]}{idx}={src}.{row + dr}.{col},{OFFSET}")
     return NL.join(out) + NL
 
 
@@ -417,7 +424,7 @@ def monorail_power_dat_text(name, suspended):
         f"maintenance={v['maintenance']}",
         f"topspeed={v['topspeed']}",
         f"icon=> {name}.0.0",
-        f"cursor={name}.0.1,-64,-32",
+        f"cursor={name}.0.1,{OFFSET}",
     ]
     for key, idx, row, col in IMAGES:
         if key not in WAYOBJ_KEYS or idx.startswith("[close") or (key == "image" and idx in SWITCH_IDX):
@@ -425,7 +432,7 @@ def monorail_power_dat_text(name, suspended):
         if key == "image" and idx in CURVE_TO_DIAG:
             row, col = CURVE_TO_DIAG[idx]
         for side, dr in (("back", 0), ("front", WALL_FRONT_ROW)):
-            out.append(f"{side}{WAYOBJ_KEYS[key]}{idx}={name}.{row + dr}.{col},-64,-32")
+            out.append(f"{side}{WAYOBJ_KEYS[key]}{idx}={name}.{row + dr}.{col},{OFFSET}")
     return NL.join(out) + NL
 
 
@@ -449,7 +456,7 @@ def pier_dat_text(name, sheet):
         f"topspeed={v['topspeed']}",
         "system_type=0",
         f"icon=> {sheet}.0.0",
-        f"cursor={sheet}.0.1,-64,-32",
+        f"cursor={sheet}.0.1,{OFFSET}",
     ]
     front_rows = (0, PIER_FRONT_ROW[name]) if name in PIER_FRONT_ROW else (0,)
     for dr in front_rows:
@@ -459,7 +466,7 @@ def pier_dat_text(name, sheet):
                     row, col = CURVE_TO_DIAG[idx]
                 elif key == "image" and idx in PIER_SWITCH:
                     row, col = cell[("image", PIER_SWITCH[idx])]
-                out.append(f"{'front' if dr else ''}{key}{idx}[{season}]={sheet}.{row + dr}.{col},-64,-32")
+                out.append(f"{'front' if dr else ''}{key}{idx}[{season}]={sheet}.{row + dr}.{col},{OFFSET}")
     return NL.join(out) + NL
 
 # 盛土の way（#123。ADR 0008 の景観 6）: 高架の脇の地面に敷く法面の楔。waytype は橋脚と同じ tram_track、速さ 1（ADR 0008）。値は #110 の一覧
@@ -490,7 +497,7 @@ def embankment_dat_text(name, sheet):
         f"topspeed={v['topspeed']}",
         "system_type=0",
         f"icon=> {sheet}.0.0",
-        f"cursor={sheet}.0.1,-64,-32",
+        f"cursor={sheet}.0.1,{OFFSET}",
     ]
     for season in (0, 1):
         for key, idx, row, col in IMAGES:
@@ -500,7 +507,7 @@ def embankment_dat_text(name, sheet):
                 row, col = EMBANKMENT_CURVES[idx]
             elif key == "image" and idx in PIER_SWITCH:
                 row, col = cell[("image", PIER_SWITCH[idx])]
-            out.append(f"{key}{idx}[{season}]={sheet}.{row + season * EMBANKMENT_SNOW_ROWS}.{col},-64,-32")
+            out.append(f"{key}{idx}[{season}]={sheet}.{row + season * EMBANKMENT_SNOW_ROWS}.{col},{OFFSET}")
     return NL.join(out) + NL
 
 # 多車線と交差点の路面表示の way（#187。ADR 0012）: 道路に重ねて敷く白線と路面の way。waytype は橋脚・盛土と同じ tram_track、速さ 1
@@ -552,7 +559,7 @@ def marking_dat_text(name, kind):
         f"topspeed={v['topspeed']}",
         "system_type=0",
         f"icon=> {name}.0.0",
-        f"cursor={name}.0.1,-64,-32",
+        f"cursor={name}.0.1,{OFFSET}",
     ]
     for season in (0, 1):
         for key, idx, row, col in IMAGES:
@@ -564,7 +571,7 @@ def marking_dat_text(name, kind):
                 row, col = MARKING_EMPTY_CELL
             elif season and kind in MARKING_SNOW_KINDS:
                 row += MARKING_ROWS
-            out.append(f"{key}{idx}[{season}]={name}.{row}.{col},-64,-32")
+            out.append(f"{key}{idx}[{season}]={name}.{row}.{col},{OFFSET}")
     return NL.join(out) + NL
 
 # 歩道の way（ami_sidewalk。#24）。waytype は iss の歩道（../refs/iss/src/util/sidewalk/ground.dat）と同じ water（README の「歩道の作り」）。
@@ -608,12 +615,12 @@ def sidewalk_dat_text(name, sheet):
         f"topspeed={v['topspeed']}",
         f"system_type={1 if elevated else 0}",
         f"icon=> {sheet}.0.0",
-        f"cursor={sheet}.0.1,-64,-32",
+        f"cursor={sheet}.0.1,{OFFSET}",
     ]
     for season in (0, 1):
         for key, idx, row, col in IMAGES:
             if key in SIDEWALK_KEYS and idx not in SWITCH_IDX:
-                out.append(f"{key}{idx}[{season}]={sheet}.{row + season * SNOW_ROWS}.{col},-64,-32")
+                out.append(f"{key}{idx}[{season}]={sheet}.{row + season * SNOW_ROWS}.{col},{OFFSET}")
     return NL.join(out) + NL
 
 
@@ -636,13 +643,13 @@ def sidewalk_wall_dat_text(name, sheet, values=None, kind="歩道の柵"):
         f"maintenance={v['maintenance']}",
         f"topspeed={v['topspeed']}",
         f"icon=> {sheet}.0.0",
-        f"cursor={sheet}.0.1,-64,-32",
+        f"cursor={sheet}.0.1,{OFFSET}",
     ]
     for key, idx, row, col in IMAGES:
         if key not in SIDEWALK_WALL_KEYS or idx in SWITCH_IDX or idx.startswith("[close"):
             continue
         for side, dr in (("back", 0), ("front", WALL_FRONT_ROW)):
-            out.append(f"{side}{WAYOBJ_KEYS[key]}{idx}={sheet}.{row + dr}.{col},-64,-32")
+            out.append(f"{side}{WAYOBJ_KEYS[key]}{idx}={sheet}.{row + dr}.{col},{OFFSET}")
     return NL.join(out) + NL
 
 
@@ -679,8 +686,8 @@ def crossing_dat_text(name, track, road):
         for d in ("ns", "ew"):
             for closed, key in ((False, "openimage"), (True, "closedimage")):
                 col = CROSSING_COLS[(d, closed)]
-                out.append(f"{key}[{d}][{season}]={sheet}.{row}.{col},-64,-32")
-                out.append(f"front_{key}[{d}][{season}]={sheet}.{row + 1}.{col},-64,-32")
+                out.append(f"{key}[{d}][{season}]={sheet}.{row}.{col},{OFFSET}")
+                out.append(f"front_{key}[{d}][{season}]={sheet}.{row + 1}.{col},{OFFSET}")
     return NL.join(out) + NL
 
 
@@ -714,8 +721,8 @@ def canal_crossing_dat_text(name, way):
         for d in ("ns", "ew"):
             for closed, key in ((False, "openimage"), (True, "closedimage")):
                 col = CROSSING_COLS[(d, closed)]
-                out.append(f"{key}[{d}][{season}]={sheet}.{row}.{col},-64,-32")
-                out.append(f"front_{key}[{d}][{season}]={sheet}.{row + 1}.{col},-64,-32")
+                out.append(f"{key}[{d}][{season}]={sheet}.{row}.{col},{OFFSET}")
+                out.append(f"front_{key}[{d}][{season}]={sheet}.{row + 1}.{col},{OFFSET}")
     return NL.join(out) + NL
 
 # 車庫（building の depot。#112）。シートの並びは sheetlib の depot.py（列 = layout 0〜3、行 0・1 が夏の奥・手前、行 2・3 が雪の奥・手前、
@@ -729,7 +736,7 @@ DEPOT_LAYOUTS = 4
 DEPOT_SNOW_ROW = 2  # sheetlib の depot.DEPOT_SNOW_ROW と同じ
 DEPOT_ICON_CELL = "0.4"  # sheetlib の depot.DEPOT_ICON_CELL と同じ
 DEPOT_CURSOR_CELL = "1.4"  # sheetlib の depot.DEPOT_CURSOR_CELL と同じ
-DEPOT_OFFSET = "-64,-96"  # sheetlib の depot.BUILDING_OFFSET と同じ
+DEPOT_OFFSET = f"{-64 * sheet_settings.SCALE},{-96 * sheet_settings.SCALE}"  # sheetlib の depot.BUILDING_OFFSET と同じ
 
 
 def depot_dat_text(depot):
@@ -811,7 +818,7 @@ ROADSIGN_EFFECT = {"one_way": "single_way=1", "min_50": "min_speed=50"}
 ROADSIGN_OFFSET_LEFT = 14  # 左側通行のときのずらし（本体の既定と同じ値を明示する。obj/roadsign.cc の calc_image）
 ROADSIGN_ICON_CELL = "0.4"  # sheetlib の roadsign.ROADSIGN_ICON_CELL と同じ
 ROADSIGN_CURSOR_CELL = "1.4"  # sheetlib の roadsign.ROADSIGN_CURSOR_CELL と同じ
-ROADSIGN_OFFSET = "-64,-32"  # 道路の way と同じ（sheetlib の ROAD_CY）
+ROADSIGN_OFFSET = OFFSET  # 道路の way と同じ（sheetlib の ROAD_CY）
 
 
 def roadsign_dat_text(name, key):
@@ -864,6 +871,13 @@ def crosswalk_dat_text(name, one_way):
 
 def main():
     os.makedirs(SRC, exist_ok=True)
+    if sheet_settings.SCALE != 1:
+        # pak128 以外の大きさは、catalog.SCALED_SHEETS の way だけ（#266）。ほかは画素の値を大きさに合わせていない
+        for name in catalog.SCALED_SHEETS:
+            with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
+                f.write(dat_text(name, BUILT[name]))
+            print(f"[dat] {name}.dat（pak{sheet_settings.PAK_SIZE}）")
+        return
     for name, sheet in BUILT.items():
         with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
             f.write(dat_text(name, sheet))

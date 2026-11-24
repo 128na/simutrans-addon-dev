@@ -17,9 +17,10 @@ from .layout_colors import layout_rgb
 
 ROOT = os.getcwd()  # アドオンのディレクトリ（入口はそこで動かす）
 
-WORK = os.path.join(ROOT, "work")
+# pak128 以外の大きさ（sheet_settings.SUFFIX が空でない）は、出力先を分ける（work256・src256）。pak128 の絵・途中のセルと混ざらず、同時に描いても名前がぶつからない
+WORK = os.path.join(ROOT, "work" + sheet_settings.SUFFIX)
 
-SRC = os.path.join(ROOT, "src")
+SRC = os.path.join(ROOT, "src" + sheet_settings.SUFFIX)
 
 
 # アドオンが入口で登録するシートの設定（アドオンごとの値。tools/README.md）。キーは対象のシート名ではなく、描き分けの名前。
@@ -29,17 +30,21 @@ TRACK_PROFILES = {}
 ROAD_PROFILES = {}
 
 
-CELL = 256                      # 1セルの画素数（iss と同じ）
+# pak の大きさ（sheet_settings.PAK_SIZE。既定は pak128）に対する倍率。画素で書いた値（pak128 で測ったもの）には SCALE を掛ける。
+# SCALE が 1 のとき、この倍率を掛けた式は掛けない式と同じ値（整数の 1 を掛けるだけ）なので、pak128 の絵は変わらない
+SCALE = sheet_settings.SCALE
+
+CELL = 256 * SCALE              # 1セルの画素数（iss と同じ。pak128 で 256）
 
 TILE = 10.0                     # Blender上のタイル1辺
 
-# タイル菱形が 128x64px になる正投影の幅（256px = タイル対角線2本分）
+# タイル菱形が 128x64px（pak128。SCALE 倍）になる正投影の幅（CELL = タイル対角線2本分）
 ORTHO = 2 * TILE * math.sqrt(2)
 
 PX_PER_UNIT = CELL / ORTHO
 
-# 高さ1段 = 16px（pak128）。Z方向は sin60° 倍で画面に映る
-H = 16 / (PX_PER_UNIT * math.sin(math.radians(60)))
+# 高さ1段 = 16px（pak128。SCALE 倍）。Z方向は sin60° 倍で画面に映る。世界の単位での高さは大きさによらない
+H = 16 * SCALE / (PX_PER_UNIT * math.sin(math.radians(60)))
 
 
 TRANSPARENT = (231, 255, 255)   # #E7FFFF

@@ -58,6 +58,31 @@ if [ -s "$report" ]; then
 fi
 rm -rf "$snap"
 
+step "256 の dat の書き忘れ（SHEET_PAK_SIZE=256 の blender/ami_dat.py の出力と src256/ の dat を比べる。#266）"
+snap256="$(mktemp -d)"
+cp "$AMI"/src256/*.dat "$snap256/"
+rm -f "$AMI"/src256/*.dat
+SHEET_PAK_SIZE=256 "$PY" -X utf8 "$AMI/blender/ami_dat.py" > /dev/null
+report256="$snap256/report.txt"
+: > "$report256"
+for n in $( (cd "$snap256" && ls *.dat; cd "$AMI/src256" && ls *.dat) | sort -u ); do
+  if [ ! -f "$snap256/$n" ]; then echo "生成されたが src256/ に無い: $n" >> "$report256"
+  elif [ ! -f "$AMI/src256/$n" ]; then echo "src256/ にあるが生成されない: $n" >> "$report256"
+  elif ! diff -q --strip-trailing-cr "$snap256/$n" "$AMI/src256/$n" > /dev/null; then
+    echo "中身が違う: $n" >> "$report256"
+    diff --strip-trailing-cr "$snap256/$n" "$AMI/src256/$n" | head -20 >> "$report256" || true
+  fi
+done
+rm -f "$AMI"/src256/*.dat
+cp "$snap256"/*.dat "$AMI/src256/"
+if [ -s "$report256" ]; then
+  cat "$report256"
+  rm -rf "$snap256"
+  echo "${GITHUB_ACTIONS:+::error::}SHEET_PAK_SIZE=256 の blender/ami_dat.py の出力と src256/ の dat が違う。ami_dat.py を実行し、出た dat をコミットする"
+  exit 1
+fi
+rm -rf "$snap256"
+
 step "アイコン・カーソルの参照先（セルの重なり・絵の有無・背景色・別のシートの絵。check_icons.py）"
 "$PY" -X utf8 "$AMI/check_icons.py"
 
@@ -88,10 +113,12 @@ fi
 
 step "dat_linter"
 (cd "$AMI/src" && dat_linter lint --tile-size 256 .)
+(cd "$AMI/src256" && dat_linter lint --tile-size 512 .)  # 256 の pak（#266）
 
 step "dat の静かな誤り（行末の # 注記・数値でない値・行頭の空白・知らない obj・way の絵の綴りと坂。dat_lint_extra.py）"
 "$PY" -X utf8 "$ROOT/tools/dat_lint_extra/dat_lint_extra.py" --self-test
 "$PY" -X utf8 "$ROOT/tools/dat_lint_extra/dat_lint_extra.py" "$AMI/src"
+"$PY" -X utf8 "$ROOT/tools/dat_lint_extra/dat_lint_extra.py" "$AMI/src256"  # 256 の dat（#266）
 
 if [ -n "${SKIP_BUILD:-}" ]; then
   step "pak のビルドは飛ばした（SKIP_BUILD）"
@@ -99,6 +126,8 @@ else
   step "pak を作る"
   { makeobj || true; } | head -1
   (cd "$AMI" && "$PY" -X utf8 build.py)
+  step "256 の pak を作る（SHEET_PAK_SIZE=256。makeobj pak512。警告があれば止まる。#266）"
+  (cd "$AMI" && SHEET_PAK_SIZE=256 "$PY" -X utf8 build.py)
 fi
 
 if [ -n "${SKIP_BUILD:-}" ]; then
