@@ -10,7 +10,7 @@ icon・cursor は check_icons.py が見るので、ここでは読まない。�
 PNG の読み方は check_icons.py と同じ（Blender を使わない）。
 
 ほとんどの物は、描かない向き・坂・層を空のセルに向ける（壁・架線は奥の層か手前の層だけ、路面表示の way は使わない向きなど。意図して空）ので、
-「空のセルを指してはならない」とは言えない。そこで、空のセルを指す（層を除いた）絵の種類を物ごとに check_cells.allow.txt に控え、控えに無い物が新しく
+「空のセルを指してはならない」とは言えない。そこで、空のセルを指す絵のキー（層・季節は別々に）を物ごとに check_cells.allow.txt に控え、控えに無い物が新しく
 空のセルを指したら失敗にする（向きの追加・セルのずれ・描き忘れ）。控えにあるのに空でなくなったものも失敗にする（控えを古いまま残さない）。
 意図して空にしたものを足す・絵を描いて空でなくなったものを外すときは、`python -X utf8 check_cells.py --update` で控えを書き直し、差分を読んでコミットする。
 """
@@ -33,13 +33,6 @@ EMPTY_ROW = bytes(TRANSPARENT) * CELL
 PICTURE_KEY = re.compile(r"^[a-z_]*(image|pillar|ramp|start|diagonal)[a-z_0-9]*(\[|$)")  # 絵を指すキー（値は参照か `-`）
 
 
-def group_key(key):
-    """控えの単位のキー。層（back・front）は残す（片方の層だけ空にした直し忘れを拾うため）。季節の添字（末尾の [0]・[1]。添字が 2 つ以上あるキーだけ）は畳む"""
-    if key.count("[") >= 2:
-        key = re.sub(r"\[[01]\]$", "", key)
-    return key
-
-
 def empty_cells(task):
     """(シートの PNG のパス, 行の数, [(行, 列)]) → {(行, 列): 空か}。シートごとに別のプロセスで呼ぶ"""
     path, nrows, cells = task
@@ -56,7 +49,7 @@ def empty_cells(task):
 def scan(src, jobs=None):
     """src の dat が指すセルを読み、(エラー, {物: {空の絵の種類}}, 調べたセルの数, 調べた参照の数) を返す。
 
-    空の絵の種類は、同じ物の同じキー（層は別。季節の添字 [0]・[1] は畳む）が、全部空のセルを指しているもの。
+    空の絵の種類は、同じ物の 1 つのキー（層・季節ごとに別）が、空のセルを指しているもの。
     奥の層だけ・手前の層だけを描く物（壁・架線・柱・踏切の手前の絵など）は、描かない層が空のセルを指すので、控えに入る"""
     objs = read_dats(src)
     errors, refs = [], 0
@@ -72,7 +65,7 @@ def scan(src, jobs=None):
             elif PICTURE_KEY.match(k) and v != "-" and not v.isdigit():  # pillar_distance などの数値は絵でない
                 errors.append(f"{o['name']}（{o['file']}）: {k} の値がセルの参照でも `-` でもない（検査の対象外になる）: {v}")
     if not refs:
-        errors.append(f"{src} に、セルを指す絵のキーが 1 つも無い（dat が読めていない）")
+        errors.append(f"{src} に、セルを指す絵のキーが 1 つも無い（src の dat が読めていない）")
     per_sheet = {}
     for sheet, r, c in uses:
         per_sheet.setdefault(sheet, []).append((r, c))
@@ -99,11 +92,11 @@ def scan(src, jobs=None):
                 errors.append(f"セル {fmt(cell)} がシートの外（{who(uses[cell])}）")
             else:
                 empty[cell] = e
-    # 物ごと・キー（季節を畳む）ごとに、指すセルが全部空のものを探す
+    # 物ごと・キー（層・季節ごと）に、指すセルが全部空のものを探す
     groups = {}
     for cell, us in uses.items():
         for name, f, k in us:
-            groups.setdefault((name, f, group_key(k)), []).append((cell, k))
+            groups.setdefault((name, f, k), []).append((cell, k))
     empties = {}
     for (name, f, g), items in groups.items():
         if all(empty.get(cell) for cell, _ in items):
@@ -123,7 +116,7 @@ def read_allow(path):
 
 def write_allow(path, empties):
     with open(path, "w", encoding="utf8", newline="\n") as f:
-        f.write("# check_cells.py が許す、空のセルを指す絵の種類（物: 層を除いた絵の種類…）。意図して描かない向き・坂・層。\n"
+        f.write("# check_cells.py が許す、空のセルを指す絵の種類（物: 層・季節ごとの絵のキー…）。意図して描かない向き・坂・層。\n"
                 "# python -X utf8 check_cells.py --update で書き直し、差分を読んでからコミットする（手で直さない）。\n")
         for name in sorted(empties):
             f.write(f"{name}: {' '.join(sorted(empties[name]))}\n")
@@ -189,8 +182,8 @@ def self_test():
         e, empties, _, _ = scan(d, jobs=1)
         assert compare(empties, {"t": {"backimage[ns]"}}) == []  # 控えにあれば通る
         assert len(compare(empties, {"t": {"frontimage[ns]"}})) == 2  # 控えの層が違えば、新しいのと古いのの両方で落ちる
-        season = run("obj=way\nname=t\nimage[ns][0]=t.0.1\nimage[ns][1]=t.0.0\n")  # 季節は畳む（片方でも絵があれば空でない）
-        assert not season, season
+        season = run("obj=way\nname=t\nimage[ns][0]=t.0.0\nimage[ns][1]=t.0.1\n")  # 季節も別々に見る（冬だけ空でも落ちる）
+        assert len(season) == 1 and "image[ns][1]" in season[0] and "image[ns][0]" not in season[0], season
         text = run("obj=way\nname=t\nimage[ns]=oops\nimage[ew]=t.0.0\n")  # 参照の形でない値は黙って無視しない
         assert len(text) == 1 and "image[ns]" in text[0], text
         none = run("obj=way\nname=t\n")  # 参照が 0 件
