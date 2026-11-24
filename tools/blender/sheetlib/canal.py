@@ -3,7 +3,7 @@
 形: 地面より下がった水面と、水面を囲む石積みの護岸（壁）と、地面の高さの笠石（護岸の上の縁）。水路の外は描かない（地面のまま）。
 水路の平面の形は、道路と同じく「腕」の和で決める: タイルの中心の正方形と、つながる辺ごとにタイルの辺の外まで延ばした腕
 （幅はタイルの幅から両側の岸 CANAL_BANK を引いたもの）。T字・十字は腕の和で、腕と腕のあいだの角に岸が残る。
-斜め（カーブも本体の斜めの絵を使う。AMI の線路・道路と同じ）は、つながる 2 辺の中点を結ぶ線に沿う帯で、タイルの辺で直線の腕と同じ幅になる
+斜め（カーブも本体の斜めの絵を使う。AMI の線路・道路と同じ。景観の運河は除く: 斜めを持たず、カーブは L 字のセル `_CURVE_CELLS`。#217）は、つながる 2 辺の中点を結ぶ線に沿う帯で、タイルの辺で直線の腕と同じ幅になる
 （帯の境は、その角の向きの座標 t = ±x ± y で CANAL_BANK < t < TILE − CANAL_BANK）。近い斜めの分け合うタイルは 2 本の帯。
 
 地面より下の形を地面で隠すために、水路の外のタイル全面に holdout の材質の板（地面）を置く。holdout は透明に描かれ、後ろの形を隠す
@@ -39,6 +39,8 @@ _M_WATER = lambda: noisy_material("canal_water", WATER_LO, WATER_HI, scale=30, r
 _M_WALL = lambda: noisy_material("canal_wall", WALL_LO, WALL_HI, scale=55, rough=0.9)
 _M_COPING = lambda: noisy_material("canal_coping", COPING_LO, COPING_HI, scale=55, rough=0.85)
 
+CULVERT_LINTEL = 0.45    # 暗渠の蓋（まぐさ）の幅（閉じた側のタイルの辺から。周りの護岸と笠石と同じくらい）
+CULVERT_THICK = 1.0      # まぐさの厚み（地面から下へ。約 8px）。この下に暗い口が見える
 # 景観の運河（#161）: iss の運河と同じ見せ方。水面は 13px 下（高さ 1 段 = 16px）で、タイルの辺近くまで広げ、縁は細い笠石。
 # 坂は閘門（iss と同じく、上下の水面を扉枠で分ける。LOCK）。実用の運河（ROAD_STYLE。#114）の寸法は変えない
 ROAD_STYLE = dict(pad=CANAL_PAD, bank=CANAL_BANK, coping=CANAL_COPING, water_z=CANAL_WATER_Z, wall_bottom=CANAL_WALL_BOTTOM, lock=False)
@@ -46,7 +48,10 @@ SCENIC_STYLE = dict(bank=0.35, coping=0.3, water_z=-13 / 16 * H, wall_bottom=-13
                     wall_col=((0.70, 0.70, 0.68), (0.80, 0.80, 0.77)), coping_col=((0.74, 0.74, 0.71), (0.84, 0.84, 0.81)),
                     # 護岸の水際の染み（#197。精細化のラウンド 1 の 1wl2）: 水面から height だけ上へ薄れる暗い帯（色, 高さ, 強さ）。物の座標の高さで付けるので、
                     # タイルをまたいで連続する
-                    waterline=((0.06, 0.12, 0.10), 1.2, 1.0))
+                    waterline=((0.06, 0.12, 0.10), 1.2, 1.0),
+                    # 行き止まりの暗渠（#217。iss の運河に倣う）: 閉じた側の辺に、笠石・護岸（辺から 0.35）より 0.1 広い（辺から 0.45）蓋（まぐさ）を付け、その下に暗い口を描いて、水が奥へ続いて見えるようにする（だまし絵）。
+                    # 蓋は地面の高さから厚み分だけ下まで（口は暗く見える）
+                    culvert=(CULVERT_LINTEL, CULVERT_THICK))
 CANAL_STYLES = {"road": ROAD_STYLE, "scenic": SCENIC_STYLE}
 SCENIC_DEPTH_PX = 13      # 景観の運河の水面の深さ（画素。つなぎ目の持ち分を下へ広げる量）
 LOCK_GATE = 0.25         # 閘門の扉の半分の厚み（坂の向きの座標 u = ±LOCK_GATE の間）
@@ -54,7 +59,7 @@ LOCK_PILLAR = 0.5        # 扉枠の柱の幅（水路の幅の端から）
 LOCK_FRAME_Z = 2.2       # 扉枠の柱の高さ（上の水面側の縁から）
 _LOCK_DIR = {"12": (0, 1), "9": (-1, 0), "3": (0, -1), "6": (1, 0)}  # 坂の名前 → 上りの向き（_slopes の高さの式と同じ）
 
-# セル（行, 列）→ 名前。位置は線路の way と同じ（ami_dat.py の IMAGES）。カーブは斜めのセルを使うので、行 2 の列 5〜8 は描かない。
+# セル（行, 列）→ 名前。位置は線路の way と同じ（ami_dat.py の IMAGES）。カーブは斜めのセルを使うので、行 2 の列 5〜8 は描かない（景観の運河は逆に、斜めのセルを描かず列 5〜8 に L 字のカーブを描く）。
 # 分岐の絵（列 10〜14）は持たない
 _CELLS = {
     (0, 2): "ns", (0, 3): "ew", (0, 5): "s", (0, 6): "w", (0, 7): "n", (0, 8): "e", (0, 9): "single",
@@ -81,9 +86,17 @@ def _slopes():
     return out
 
 
-def _jobs():
-    """描くセル（行, 列）→ (名前, 坂の高さ)。ONLY のときは、その名前と南北の直線だけ"""
-    jobs = {pos: (name, None) for pos, name in _CELLS.items()}
+# 景観の運河（#217）のカーブのセル（行 2 の列 5〜8。iss の運河と同じ L 字）。斜めのセル（行 2 の列 0〜4・9）の代わりに描く。
+# 斜めは壁が画面の縦の線になって面が見えず、直線の壁（面が見える）とのつなぎ目で壁が連続しない（iss も斜めを諦めて L 字のジグザグにしている）
+_CURVE_CELLS = {(2, 5): "curve_sw", (2, 6): "curve_nw", (2, 7): "curve_ne", (2, 8): "curve_se"}
+
+
+def _jobs(scenic=False):
+    """描くセル（行, 列）→ (名前, 坂の高さ)。ONLY のときは、その名前と南北の直線だけ。景観の運河（scenic）は斜めのセルでなく L 字のカーブのセル"""
+    cells = {pos: name for pos, name in _CELLS.items() if not (scenic and name in _DIAG_CORNERS)}
+    if scenic:
+        cells.update(_CURVE_CELLS)
+    jobs = {pos: (name, None) for pos, name in cells.items()}
     jobs.update({pos: (name, slope) for pos, (name, slope) in _slopes().items()})
     if ONLY:
         jobs = {k: v for k, v in jobs.items() if v[0] in ONLY + ("ns",)}
@@ -198,12 +211,34 @@ def canal_build(name, slope, snow, st=ROAD_STYLE, slope_name=None):
     obs = [_joined("canal_water", canal_water_pieces(name, bank - 0.05, pad), wb, wz, water)]
     obs.append(_shell("canal_wall", name, bank - cop, wb, 0.0, wall, bank, None, pad))
     obs.append(_shell("canal_coping", name, bank - cop, 0.0, CANAL_COPING_T, coping, bank, None, pad))
+    if "culvert" in st and name in _ARMS and not slope:
+        obs += _culvert(name, st, coping)
     if not LAYOUT:
         obs.append(_earth(name, bank, wb, reach, water, pad, st.get("earth_eps", CANAL_EARTH_EPS)))
     if slope:
         for ob in obs:
             apply_slope(ob, slope)
     return obs
+
+
+def _culvert(name, st, coping):
+    """行き止まりのセル（name は つながる辺の 1 文字）の暗渠。閉じた側の辺に、笠石の材質のまぐさ（幅 lintel、厚み thick）を付け、
+    その下（水面から まぐさの下端まで）に暗い口の板を置く。口の前の面はまぐさと同じ位置で、水路の護岸の奥の面より少し手前に出す"""
+    lintel, thick = st["culvert"]
+    ax, ay = _ARMS[name]
+    half = TILE / 2
+    reach = half + st["pad"]
+    edge = half - lintel  # 閉じた側の辺（u = −half）から lintel だけ内側の位置（u = −edge）
+    wwidth = half - st["bank"]  # 水面の半幅
+    dark = make_material(lambda: noisy_material("canal_culvert_dark", (0.01, 0.03, 0.04), (0.025, 0.06, 0.07), scale=30, rough=0.5), "canal_culvert_dark")
+
+    def box(w, z0, z1, mat, nm):
+        a, b = sorted((-ax * reach, -ax * edge)) if ax else sorted((-ay * reach, -ay * edge))
+        poly = [(a, -w), (b, -w), (b, w), (a, w)] if ax else [(-w, a), (w, a), (w, b), (-w, b)]
+        return _prism(nm, poly, z0, z1, mat)
+
+    return [box(half - (st["bank"] - st["coping"]), -thick, CANAL_COPING_T, coping, "canal_culvert_lintel"),
+            box(wwidth, st["wall_bottom"], -thick, dark, "canal_culvert_mouth")]
 
 
 def _waterline_wall(wall, water_z, stain, height, k):
@@ -324,7 +359,7 @@ def canal_sheet(sheet, label="C", style="road", variant="road"):
     st = CANAL_STYLES[variant]  # "scenic" は景観の運河（#161）
     cells = {}
     for is_snow, dr in ((False, 0), (True, CANAL_SNOW_ROWS)):
-        for (r, c), (name, slope) in _jobs().items():
+        for (r, c), (name, slope) in _jobs(variant == "scenic").items():
             cname = f"{sheet}_{'snow_' if is_snow else ''}{name}"
             clear_models()
             canal_build(name, slope, is_snow, st, name)

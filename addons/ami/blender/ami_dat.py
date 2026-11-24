@@ -91,7 +91,6 @@ DIAG_CURVES = {_t.way for _t in catalog.ALL_TRACKS} | {_r.way for _r in catalog.
 # 跨座式モノレール（#113）: 地上・高架の版とも、カーブは斜めの絵（手本の iss の跨座式の dat と同じ）
 DIAG_CURVES |= {catalog.MONORAIL, *catalog.MONORAIL_ELEVS}
 DIAG_CURVES.add(catalog.CANAL)  # 運河（#114）もカーブは斜めの絵
-DIAG_CURVES.add(catalog.CANAL_SCENIC)  # 景観の運河（#161）も
 DIAG_CURVES |= {*catalog.MONORAIL_SUSPENDEDS, *catalog.MONORAIL_SUSPENDED_ELEVS}  # 懸垂式（#116）も跨座式と同じ
 CURVE_TO_DIAG = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
 
@@ -185,6 +184,7 @@ for _v in catalog.MONORAIL_SUSPENDED_VARIANTS:
 # （本体は water の way の分岐の絵を選ばない。boden/wege/weg.cc の calc_image は track_wt と road_wt だけ）
 BUILT[catalog.CANAL] = catalog.CANAL
 BUILT[catalog.CANAL_SCENIC] = catalog.CANAL_SCENIC  # 景観の運河（#161）
+NO_DIAG = {catalog.CANAL_SCENIC}  # 斜めの絵（diagonal[...]）を書かない way。景観の運河（#217）は、斜めを L 字のカーブのジグザグにする（iss と同じ）
 NO_SWITCH = {catalog.CANAL, catalog.CANAL_SCENIC}  # 分岐の絵（image[nse1] など）を書かない way
 
 # ---------------------------------------------------------------- 橋脚の way（#18）
@@ -346,6 +346,8 @@ def dat_text(name, sheet, donor=False):
     for season in (0, 1):
         for key, idx, row, col in IMAGES:
             if name in NO_CLOSE and idx.startswith("[close"):
+                continue
+            if name in NO_DIAG and key == "diagonal":
                 continue
             if key == "image" and idx in SWITCH_IDX and v["waytype"] == "road" and not ROAD_SWITCH_IMAGES:
                 continue
