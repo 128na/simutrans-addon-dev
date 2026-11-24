@@ -1,0 +1,8 @@
+t_canal_endN 55 624 380 250 580 370
+t_canal_endS 55 624 40 400 240 520
+t_scenic_endN 55 684 380 250 580 370
+t_scenic_endS 55 684 40 400 240 520
+s_canal_endN 567 624 380 250 580 370
+s_canal_endS 567 624 40 400 240 520
+s_scenic_endN 567 684 380 250 580 370
+s_scenic_endS 567 684 40 400 240 520

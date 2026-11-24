@@ -87,11 +87,7 @@ for _t in catalog.OLD_TRACKS:
 
 # カーブを斜めの絵で表すシート（pak128 標準の線路と同じ。dat の image[sw]・[nw]・[ne]・[se] が diagonal と同じセルを指す。
 # シートのカーブのセル（行 2 の列 5〜8）は描かない。render.py の diag_curves と同じにする）
-DIAG_CURVES = {_t.way for _t in catalog.ALL_TRACKS} | {_r.way for _r in catalog.ROADS}  # 道路 3 種もカーブは斜めの絵（README の「道路の作り」）
-# 跨座式モノレール（#113）: 地上・高架の版とも、カーブは斜めの絵（手本の iss の跨座式の dat と同じ）
-DIAG_CURVES |= {catalog.MONORAIL, *catalog.MONORAIL_ELEVS}
-DIAG_CURVES.add(catalog.CANAL)  # 運河（#114）もカーブは斜めの絵
-DIAG_CURVES |= {*catalog.MONORAIL_SUSPENDEDS, *catalog.MONORAIL_SUSPENDED_ELEVS}  # 懸垂式（#116）も跨座式と同じ
+DIAG_CURVES = catalog.DIAG_CURVE_WAYS  # 唯一の定義は catalog.py（addon_config.py の DIAG_CURVE_SHEETS と同じ集まり）
 CURVE_TO_DIAG = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
 
 # 手前の絵（frontimage など）を持つ way: シートは 奥の絵 4 行 → 手前の絵 4 行 → 雪の奥の絵 4 行 → 雪の手前の絵 4 行

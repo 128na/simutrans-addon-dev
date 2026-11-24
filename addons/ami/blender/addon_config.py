@@ -24,8 +24,5 @@ SHEETS.update({_m: _m for _m in (catalog.MONORAIL, *catalog.MONORAIL_ELEVS)})  #
 SHEETS[catalog.CANAL] = catalog.CANAL  # 運河（#114）
 SHEETS[catalog.CANAL_SCENIC] = catalog.CANAL_SCENIC  # 景観の運河（#161）
 
-# カーブに斜めの絵を使うシート（道路 3 種も）。
-# 基盤の版・高架の版（線路・道路）はカーブを斜めの形の別のセル（基盤の壁の無い側を削らない）に描くので、ここには入れない
-DIAG_CURVE_SHEETS = {_t.way for _t in catalog.ALL_TRACKS} | {_r.way for _r in catalog.ROADS}
-DIAG_CURVE_SHEETS |= {catalog.MONORAIL, *catalog.MONORAIL_ELEVS}  # 跨座式モノレールは高架の版もカーブを斜めの絵（#113）
-DIAG_CURVE_SHEETS.add(catalog.CANAL)  # 運河もカーブは斜めの絵（#114）
+# カーブに斜めの絵を使うシート。唯一の定義は catalog.py の DIAG_CURVE_WAYS（dat を書く ami_dat.py の DIAG_CURVES と同じ集まり。#227）
+DIAG_CURVE_SHEETS = catalog.DIAG_CURVE_WAYS
