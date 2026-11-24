@@ -3,6 +3,7 @@
 #   bash addons/ami/check.sh           # リポジトリのどこからでもよい（Windows は Git Bash）
 #   SKIP_BUILD=1 bash addons/ami/check.sh   # pak のビルドを飛ばす
 #   MAKEOBJ_FROM_PATH=1 bash addons/ami/check.sh   # ci.env の makeobj でなく、PATH の makeobj を使う
+#   HEADLESS_SIM_BIN=<sim> HEADLESS_PAKSET=<simutrans-test-base.zip> bash addons/ami/check.sh   # 画面を出さない本体で pak を読む検査（下記）。Windows の手元はこれを渡す。渡さないと飛ばす
 # 道具の版は ci.env。makeobj と dat_linter は TOOLS_DIR（既定は ~/.cache/simutrans-addon-dev/ci-tools）に取ってくる。
 # 要るもの: Python、gh（道具を取るとき。サインイン済み）、uvx か pipx（ruff）。
 # シートの描画（Blender）はしない（#50）。
@@ -96,5 +97,36 @@ else
   (cd "$AMI" && "$PY" -X utf8 build.py)
 fi
 
+if [ -n "${SKIP_BUILD:-}" ]; then
+  :
+else
+  step "画面を出さない本体で配る pak を読む（tools/ci/check_pak_load.py。#236）"
+  sim="${HEADLESS_SIM_BIN:-}"; pakset="${HEADLESS_PAKSET:-}"
+  if [ -n "$sim" ] && [ -z "$pakset" ]; then
+    echo "HEADLESS_SIM_BIN だけで HEADLESS_PAKSET が無い（本体の tests/simutrans-test-base.zip を渡す）" >&2
+    exit 1
+  fi
+  if [ -z "$sim" ]; then
+    case "$(uname -s)" in
+      MINGW*|MSYS*|CYGWIN*) ;;
+      *)
+        hdir="$TOOLS_DIR/headless-sim/${HEADLESS_SIM//[:\/]/_}"
+        bash "$ROOT/tools/ci/setup-headless-sim.sh" "$HEADLESS_SIM" "$hdir"
+        sim="$hdir/sim"; pakset="$hdir/simutrans-test-base.zip" ;;
+    esac
+  fi
+  if [ -z "$sim" ]; then
+    SKIPPED_HEADLESS=1
+    echo "飛ばした（Windows の手元で HEADLESS_SIM_BIN・HEADLESS_PAKSET が無い。addons/ami/README.md の「画面を出さない本体での読み込みの検査」）"
+  else
+    # 種類別の pak は全部一緒に、全部入りの ami.pak は単独で読む（一緒に置くと名前が重複する）
+    kinds=(); for f in "$AMI"/dist/ami_*.pak; do kinds+=("$f"); done
+    "$PY" -X utf8 "$ROOT/tools/ci/check_pak_load.py" --sim "$sim" --pakset "$pakset" "${kinds[@]}"
+    "$PY" -X utf8 "$ROOT/tools/ci/check_pak_load.py" --sim "$sim" --pakset "$pakset" "$AMI/dist/ami.pak"
+    # 壊した pak（空・ROOT の大きさ・参照切れ）で失敗することの確かめ（XREF を持つ種類別の pak から作る）
+    "$PY" -X utf8 "$ROOT/tools/ci/check_pak_load.py" --sim "$sim" --pakset "$pakset" --self-test "$AMI/dist/ami_monorail.pak"
+  fi
+fi
+
 [ -n "${GITHUB_ACTIONS:-}" ] && echo "::endgroup::"
-echo "== AMI の検査はすべて通った"
+echo "== AMI の検査はすべて通った${SKIPPED_HEADLESS:+（画面を出さない本体での pak の読み込みは飛ばした）}"
