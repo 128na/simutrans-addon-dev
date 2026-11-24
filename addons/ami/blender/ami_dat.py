@@ -92,75 +92,55 @@ CURVE_TO_DIAG = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
 
 # 手前の絵（frontimage など）を持つ way: シートは 奥の絵 4 行 → 手前の絵 4 行 → 雪の奥の絵 4 行 → 雪の手前の絵 4 行
 # （sheetlib の track_sheet の front_row。懸垂式モノレールの柱・梁。#116）。名前の集まり
-FRONT_WAYS = set()
+FRONT_WAYS = catalog.FRONT_WAYS  # 唯一の定義は catalog.py（#242）
 FRONT_ROW = 4  # sheetlib の TRACK_PROFILES の front_row と同じ
 FRONT_SNOW_ROWS = 8  # 手前の絵を持つ way の雪の絵の行のずらし（奥と手前の 8 行の下）
 # 絵を作った way（名前 → シート名）。dat と pak を作る
-BUILT = {}
+BUILT = {_n: _n for _n in catalog.BUILT_WAYS}  # 並びの唯一の定義は catalog.py の BUILT_WAYS（#242）
 BASE_VARIANTS = catalog.VARIANTS
-NO_CLOSE = set()  # 近い斜めの絵を持たない way
+NO_CLOSE = catalog.NO_CLOSE_WAYS  # 近い斜めの絵を持たない way（唯一の定義は catalog.py）
 for _t in catalog.ALL_TRACKS:
-    BUILT[_t.way] = _t.way
     for _v in BASE_VARIANTS:
         # 基盤の版はカーブのセル（行 2 の列 5〜8）を斜めの形で描く（render.py の curve_cells）。斜めのセルとは基盤の削り方だけが違う:
         # 斜めのセルは近い斜めの分け合うタイルのために、壁の無い側を 2 本の真ん中で削る。カーブ（斜めが続かない曲がり）は削らない
         _n = _t.base(_v)
-        BUILT[_n] = _n
         VALUES[_n] = VALUES[_t.way]
-        NO_CLOSE.add(_n)
-# 路面軌道（#23）。通常の版だけで、並びは線路の通常の版と同じ（近い斜め・分岐の絵を持つ）。カーブはカーブのセル（曲線。DIAG_CURVES に入れない）
-BUILT[catalog.TRAM] = catalog.TRAM
+# 路面軌道（#23）。通常の版だけ（並びは catalog.BUILT_WAYS。線路の通常の版と同じで、近い斜め・分岐の絵を持つ）。カーブはカーブのセル（曲線。DIAG_CURVES に入れない）
 # 路面軌道の dat に分岐の絵（switch 画像 1・2）を書くか。tram_track は本体で線路と同じ選び方（weg_t::calc_image の track_wt →
 # select_switch_image。docs/reference/way-addon.md の 9.2）で、道路の 1・2 のような多車線の交差点の意味は無いので、線路と同じく入れる。
 # 道路（ROAD_SWITCH_IMAGES）とはそろえず入れる（2026-11-20、ユーザーの決定。#23）。偽にすると dat から 10 枚を外す（シートのセルは残る）
 TRAM_SWITCH_IMAGES = True
-# 道路 3 種の通常の版（#21）。並びは線路の通常の版と同じ（近い斜め・分岐の絵を持つ）。waytype と値は VALUES
-for _r in catalog.ROADS:
-    BUILT[_r.way] = _r.way
 # 道路の地上の基盤の版（#22。2026-11-19 にユーザーが確定）: 線路の基盤の版と同じく近い斜めの絵を持たず、カーブはカーブのセル（斜めの形）。
 # 値は通常の版と同じ（README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
 for _r in catalog.ROADS:
     for _v in BASE_VARIANTS:
         _n = _r.base(_v)
-        BUILT[_n] = _n
         VALUES[_n] = VALUES[_r.way]
-        NO_CLOSE.add(_n)
 
 # ---------------------------------------------------------------- 高架の 4 版（#18）
 # 基盤の版と同じ並び（近い斜めの絵を持たない）で、system_type=1。値は仮: iss と同じく地上の 2 倍の費用・維持費（速さは地上と同じ）
 ELEV_COST_K = 2
-ELEVATED = set()
+ELEVATED = catalog.ELEVATED_WAYS  # 高架（system_type=1）の way（唯一の定義は catalog.py）
 for _t in catalog.ALL_TRACKS:
     for _v in BASE_VARIANTS:
         _n = _t.elev(_v)
-        BUILT[_n] = _n
         VALUES[_n] = dict(VALUES[_t.way], cost=VALUES[_t.way]["cost"] * ELEV_COST_K,
                           maintenance=VALUES[_t.way]["maintenance"] * ELEV_COST_K)
-        NO_CLOSE.add(_n)
-        ELEVATED.add(_n)
 # 道路の高架の 4 版（#22）: 線路の高架と同じく、近い斜めの絵を持たない（分け合うタイルに way が 2 本置かれ、奥の線と手前の線を別の版にできる）。
 # カーブはカーブのセル（斜めの形で、壁の無い側をタイルの端まで。render.py の curve_cells）。値の倍率も線路と同じ
 for _r in catalog.ROADS:
     for _v in BASE_VARIANTS:
         _n = _r.elev(_v)
-        BUILT[_n] = _n
         VALUES[_n] = dict(VALUES[_r.way], cost=VALUES[_r.way]["cost"] * ELEV_COST_K,
                           maintenance=VALUES[_r.way]["maintenance"] * ELEV_COST_K)
-        NO_CLOSE.add(_n)
-        ELEVATED.add(_n)
 
 # ---------------------------------------------------------------- 跨座式モノレール（#113）
 # 物の並びは iss の跨座式に合わせる（2026-11-21、ユーザーの決定）: 地上・高架の 3 版（front・center・back。system_type=1）・トンネル。
 # 近い斜めの絵は持たない（iss の dat にキーが無い）。分岐の絵（1・2）は iss と同じく書く（本体は今のところ monorail_track では選ばない。
 # boden/wege/weg.cc の calc_image は track_wt と road_wt だけ select_switch_image を呼ぶ）。高架の値の倍率は線路と同じ ELEV_COST_K
-BUILT[catalog.MONORAIL] = catalog.MONORAIL
-NO_CLOSE.add(catalog.MONORAIL)
 for _n in catalog.MONORAIL_ELEVS:
-    BUILT[_n] = _n
     VALUES[_n] = dict(VALUES[catalog.MONORAIL], cost=VALUES[catalog.MONORAIL]["cost"] * ELEV_COST_K,
                       maintenance=VALUES[catalog.MONORAIL]["maintenance"] * ELEV_COST_K)
-    NO_CLOSE.add(_n)
-    ELEVATED.add(_n)
 # 懸垂式モノレール（#116）: 地上・高架とも柱の側で front・center・back の 3 版（iss の懸垂式と同じ）。柱と梁は way の絵に持たせ、
 # 手前の側の柱・梁は手前の絵（FRONT_WAYS）。並びは跨座式と同じ（近い斜め無し・分岐の絵あり）。高架の値の倍率は跨座式と同じ
 for _v in catalog.MONORAIL_SUSPENDED_VARIANTS:
@@ -168,18 +148,11 @@ for _v in catalog.MONORAIL_SUSPENDED_VARIANTS:
         _n = catalog.monorail_suspended(_v, _elev)
         _k = ELEV_COST_K if _elev else 1
         _base = VALUES[catalog.MONORAIL_SUSPENDED]
-        BUILT[_n] = _n
         VALUES[_n] = dict(_base, cost=_base["cost"] * _k, maintenance=_base["maintenance"] * _k)
-        NO_CLOSE.add(_n)
-        FRONT_WAYS.add(_n)
-        if _elev:
-            ELEVATED.add(_n)
 
 # ---------------------------------------------------------------- 運河（#114）
 # 地上の版だけ（iss の運河と同じ。2026-11-22、ユーザーの決定）。近い斜めの絵は持つ（壁の無い way と同じ）。分岐の絵（1・2）は持たない
 # （本体は water の way の分岐の絵を選ばない。boden/wege/weg.cc の calc_image は track_wt と road_wt だけ）
-BUILT[catalog.CANAL] = catalog.CANAL
-BUILT[catalog.CANAL_SCENIC] = catalog.CANAL_SCENIC  # 景観の運河（#161）
 NO_DIAG = {catalog.CANAL_SCENIC}  # 斜めの絵（diagonal[...]）を書かない way。景観の運河（#217）は、斜めを L 字のカーブのジグザグにする（iss と同じ）
 NO_SWITCH = {catalog.CANAL, catalog.CANAL_SCENIC}  # 分岐の絵（image[nse1] など）を書かない way
 

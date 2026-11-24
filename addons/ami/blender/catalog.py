@@ -256,3 +256,46 @@ DIAG_CURVE_WAYS = {_t.way for _t in ALL_TRACKS} | {_r.way for _r in ROADS}  # �
 DIAG_CURVE_WAYS |= {MONORAIL, *MONORAIL_ELEVS}  # 跨座式モノレールは高架の版もカーブを斜めの絵（#113。手本の iss の跨座式の dat と同じ）
 DIAG_CURVE_WAYS.add(CANAL)  # 運河もカーブは斜めの絵（#114）
 DIAG_CURVE_WAYS |= {*MONORAIL_SUSPENDEDS, *MONORAIL_SUSPENDED_ELEVS}  # 懸垂式（#116）も跨座式と同じ
+
+
+# ---------------------------------------------------------------- way の絵の並びの性質（#242）
+# 唯一の定義。dat を書く ami_dat.py と、判定・比較の道具が読む addon_config.py がここから引く（別々に書いて片方を直し忘れた。#227・#242）。
+# 絵を作った way（dat と pak を作る。名前 = シート名）の並び。まだ絵を作っていない way は入れない
+BUILT_WAYS = []
+NO_CLOSE_WAYS = set()  # 近い斜めの絵を持たない way
+ELEVATED_WAYS = set()  # 高架（system_type=1）の way
+FRONT_WAYS = set()  # 手前の絵（frontimage）を持つ way。シートは 奥の絵 4 行 → 手前の絵 4 行 → 雪の奥 4 行 → 雪の手前 4 行（懸垂式の柱・梁）
+for _t in ALL_TRACKS:
+    BUILT_WAYS.append(_t.way)
+    BUILT_WAYS += [_t.base(_v) for _v in VARIANTS]  # 基盤の版（カーブは斜めの形の別のセル。近い斜め無し）
+    NO_CLOSE_WAYS.update(_t.base(_v) for _v in VARIANTS)
+BUILT_WAYS.append(TRAM)  # 路面軌道（通常の版だけ）
+for _r in ROADS:
+    BUILT_WAYS.append(_r.way)
+for _r in ROADS:
+    BUILT_WAYS += [_r.base(_v) for _v in VARIANTS]  # 道路の地上の基盤の版（線路と同じ並び）
+    NO_CLOSE_WAYS.update(_r.base(_v) for _v in VARIANTS)
+for _t in ALL_TRACKS:
+    BUILT_WAYS += [_t.elev(_v) for _v in VARIANTS]  # 高架の 4 版
+    NO_CLOSE_WAYS.update(_t.elev(_v) for _v in VARIANTS)
+    ELEVATED_WAYS.update(_t.elev(_v) for _v in VARIANTS)
+for _r in ROADS:
+    BUILT_WAYS += [_r.elev(_v) for _v in VARIANTS]
+    NO_CLOSE_WAYS.update(_r.elev(_v) for _v in VARIANTS)
+    ELEVATED_WAYS.update(_r.elev(_v) for _v in VARIANTS)
+BUILT_WAYS += [MONORAIL, *MONORAIL_ELEVS]  # 跨座式（近い斜め無し。高架は system_type=1）
+NO_CLOSE_WAYS.update((MONORAIL, *MONORAIL_ELEVS))
+ELEVATED_WAYS.update(MONORAIL_ELEVS)
+for _v in MONORAIL_SUSPENDED_VARIANTS:  # 懸垂式（#116）: 並びは跨座式と同じで、柱・梁は手前の絵
+    for _elev in (False, True):
+        _n = monorail_suspended(_v, _elev)
+        BUILT_WAYS.append(_n)
+        NO_CLOSE_WAYS.add(_n)
+        FRONT_WAYS.add(_n)
+        if _elev:
+            ELEVATED_WAYS.add(_n)
+BUILT_WAYS += [CANAL, CANAL_SCENIC]  # 運河（近い斜めの絵は持つ）
+BUILT_WAYS = tuple(BUILT_WAYS)
+NO_CLOSE_WAYS = frozenset(NO_CLOSE_WAYS)  # 書き換えられないようにする（ami_dat.py などが別名で持つ）
+ELEVATED_WAYS = frozenset(ELEVATED_WAYS)
+FRONT_WAYS = frozenset(FRONT_WAYS)
