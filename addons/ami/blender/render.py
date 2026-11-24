@@ -660,9 +660,9 @@ MARKING_EXPWY_PAVING = ROAD_SETTINGS[catalog.ROAD_EXPRESSWAY.key]["skin"]["aspha
 MARKING_WORN = ((0.72, 0.72, 0.74), (0.88, 0.88, 0.90), 12.0)
 MARKING_LINE_WORN = lambda: R.noisy_material("ami_marking_line_worn", MARKING_WORN[0], MARKING_WORN[1], scale=MARKING_WORN[2], rough=0.6,
                                              emit=0.35, ramp=ROAD_ASPHALT_RAMP)
-#   雪の板の縁のぼかし: 路面（街路のアスファルト）の色から雪（ROAD_SNOW）の色へ、4 段で寄せる。下の道路の路肩の雪のまだら（SNOW_LAYERS）と同じ作り。
-#     幅は 0.2 ごと（約 1px ずつ）で、外（暗い）から内（明るい）の順
-MARKING_SLUSH_T = ((0.80, 0.25), (0.60, 0.45), (0.40, 0.65), (0.20, 0.82))  # (広げる幅, 路面から雪へ寄せる具合)
+#   雪の板の縁のぼかし: 路面（街路のアスファルト）の色から雪（ROAD_SNOW）の色へ、6 段で寄せる。下の道路の路肩の雪のまだら（SNOW_LAYERS）と同じ作り。
+#     幅は 0.13〜0.14 ごと（6 段。ラウンド 2 で 4 段から細かくした）で、外（暗い）から内（明るい）の順
+MARKING_SLUSH_T = ((0.80, 0.20), (0.67, 0.32), (0.53, 0.44), (0.40, 0.58), (0.27, 0.72), (0.13, 0.86))  # (広げる幅, 路面から雪へ寄せる具合)。4 段から 6 段へ（精細化のラウンド 2 の 2slush6）
 
 
 def _marking_slush(t):

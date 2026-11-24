@@ -43,7 +43,10 @@ _M_COPING = lambda: noisy_material("canal_coping", COPING_LO, COPING_HI, scale=5
 # 坂は閘門（iss と同じく、上下の水面を扉枠で分ける。LOCK）。実用の運河（ROAD_STYLE。#114）の寸法は変えない
 ROAD_STYLE = dict(pad=CANAL_PAD, bank=CANAL_BANK, coping=CANAL_COPING, water_z=CANAL_WATER_Z, wall_bottom=CANAL_WALL_BOTTOM, lock=False)
 SCENIC_STYLE = dict(bank=0.35, coping=0.3, water_z=-13 / 16 * H, wall_bottom=-13 / 16 * H - 0.35, lock=True, pad=2.6, earth_eps=-0.03,
-                    wall_col=((0.70, 0.70, 0.68), (0.80, 0.80, 0.77)), coping_col=((0.74, 0.74, 0.71), (0.84, 0.84, 0.81)))
+                    wall_col=((0.70, 0.70, 0.68), (0.80, 0.80, 0.77)), coping_col=((0.74, 0.74, 0.71), (0.84, 0.84, 0.81)),
+                    # 護岸の水際の染み（#197。精細化のラウンド 1 の 1wl2）: 水面から height だけ上へ薄れる暗い帯（色, 高さ, 強さ）。物の座標の高さで付けるので、
+                    # タイルをまたいで連続する
+                    waterline=((0.06, 0.12, 0.10), 1.2, 1.0))
 CANAL_STYLES = {"road": ROAD_STYLE, "scenic": SCENIC_STYLE}
 SCENIC_DEPTH_PX = 13      # 景観の運河の水面の深さ（画素。つなぎ目の持ち分を下へ広げる量）
 LOCK_GATE = 0.25         # 閘門の扉の半分の厚み（坂の向きの座標 u = ±LOCK_GATE の間）
@@ -203,11 +206,45 @@ def canal_build(name, slope, snow, st=ROAD_STYLE, slope_name=None):
     return obs
 
 
+def _waterline_wall(wall, water_z, stain, height, k):
+    """壁の材質の複製に、水面（water_z）から height だけ上へ薄れる暗い帯（stain の色、強さ k）を、物の座標の高さで重ねる。
+    壁は発光（emit 0.6）で明るく見せているので、発光の色にも同じ帯を掛ける。"""
+    import bpy
+    name = "canal_wall_waterline"
+    if name in bpy.data.materials:
+        return bpy.data.materials[name]
+    m = wall.copy()
+    m.name = name
+    nt = m.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    base = bsdf.inputs["Base Color"].links[0].from_socket
+    sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+    nt.links.new(nt.nodes.new("ShaderNodeTexCoord").outputs["Object"], sep.inputs["Vector"])
+    rng = nt.nodes.new("ShaderNodeMapRange")
+    rng.clamp = True
+    rng.inputs["From Min"].default_value = water_z
+    rng.inputs["From Max"].default_value = water_z + height
+    rng.inputs["To Min"].default_value = k
+    rng.inputs["To Max"].default_value = 0.0
+    nt.links.new(sep.outputs["Z"], rng.inputs["Value"])
+    mix = nt.nodes.new("ShaderNodeMix")
+    mix.data_type = "RGBA"
+    nt.links.new(rng.outputs["Result"], mix.inputs["Factor"])
+    nt.links.new(base, mix.inputs["A"])
+    mix.inputs["B"].default_value = (*stain, 1)
+    nt.links.new(mix.outputs["Result"], bsdf.inputs["Base Color"])
+    if bsdf.inputs["Emission Color"].links:
+        nt.links.new(mix.outputs["Result"], bsdf.inputs["Emission Color"])
+    return m
+
+
 def _materials(st, snow):
     """水面・壁・笠石の材質。景観の運河（wall_col・coping_col がある）は iss のように明るいコンクリート"""
     water = make_material(_M_WATER, "canal_water")
     if "wall_col" in st:
         wall = make_material(lambda: noisy_material("canal_wall_s", *st["wall_col"], scale=55, rough=0.9, emit=0.6), "canal_wall_s")
+        if "waterline" in st:
+            wall = make_material(lambda: _waterline_wall(wall, st["water_z"], *st["waterline"]), "canal_wall_waterline") if not LAYOUT else wall
         cop = make_material(_SNOW if snow else (lambda: noisy_material("canal_coping_s", *st["coping_col"], scale=55, rough=0.85)), "canal_coping_s")
         return water, wall, cop
     return water, make_material(_M_WALL, "canal_wall"), make_material(_SNOW if snow else _M_COPING, "canal_coping")
