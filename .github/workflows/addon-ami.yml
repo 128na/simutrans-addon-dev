@@ -39,6 +39,9 @@ jobs:
           path: ${{ env.TOOLS_DIR }}
           key: ci-tools-${{ runner.os }}-makeobj-${{ env.MAKEOBJ }}-datlinter-${{ env.DAT_LINTER }}-headless-${{ env.HEADLESS_SIM }}
 
+      - name: Pillow（check_cells.py が PNG を速く読む。#251）
+        run: pip install Pillow==13.0.0
+
       - name: 検査
         run: bash addons/ami/check.sh
 

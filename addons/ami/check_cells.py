@@ -7,7 +7,7 @@ dat の絵のキー（image・imageup・diagonal・frontimage・backimage・open
 シートの PNG で読み、全部の画素が透明色（231,255,255）なら失敗にする。セルを描き忘れたり、dat の指すセルがずれたりすると、
 その向き・坂の絵が空になって本体で見えなくなる（#217・#227 で、設定が 2 か所に分かれていて片方を直し忘れた取りこぼし）。
 icon・cursor は check_icons.py が見るので、ここでは読まない。値が `-`（絵なし。dat が意図して空にしたもの）はセルの参照でないので対象外。
-PNG の読み方は check_icons.py と同じ（Blender を使わない）。
+PNG は Pillow があればそれで読み（CI は pip install Pillow。約 1.4 ギガ画素を数秒で読める）、無ければ check_icons.py の read_rows（純 Python。数分かかる）で読む。結果は同じ（`CHECK_CELLS_PURE=1` で純 Python に固定できる。Blender は使わない）。
 
 ほとんどの物は、描かない向き・坂・層を空のセルに向ける（壁・架線は奥の層か手前の層だけ、路面表示の way は使わない向きなど。意図して空）ので、
 「空のセルを指してはならない」とは言えない。そこで、空のセルを指す絵のキー（層・季節は別々に）を物ごとに check_cells.allow.txt に控え、控えに無い物が新しく
@@ -33,9 +33,14 @@ EMPTY_ROW = bytes(TRANSPARENT) * CELL
 PICTURE_KEY = re.compile(r"^[a-z_]*(image|pillar|ramp|start|diagonal)[a-z_0-9]*(\[|$)")  # 絵を指すキー（値は参照か `-`）
 
 
-def empty_cells(task):
-    """(シートの PNG のパス, 行の数, [(行, 列)]) → {(行, 列): 空か}。シートごとに別のプロセスで呼ぶ"""
-    path, nrows, cells = task
+try:
+    from PIL import Image  # あれば C の読みで速い（CI は pip install Pillow）。無ければ純 Python の read_rows
+except ImportError:
+    Image = None
+
+
+def empty_cells_pure(path, nrows, cells):
+    """純 Python（check_icons.read_rows）の読み。Pillow が無いとき、と Pillow の読みとの突き合わせに使う"""
     w, h, rows = read_rows(path, nrows)
     out = {}
     for r, c in cells:
@@ -44,6 +49,29 @@ def empty_cells(task):
         else:
             out[(r, c)] = all(bytes(rows[y][c * CELL * 3:(c + 1) * CELL * 3]) == EMPTY_ROW for y in range(r * CELL, (r + 1) * CELL))
     return out
+
+
+def empty_cells_pil(path, cells):
+    """Pillow の読み。セルの全画素が透明色かを、切り出したセルの各チャンネルの最小・最大で見る"""
+    with Image.open(path) as im:
+        if im.mode != "RGB" or im.info.get("interlace"):
+            raise SystemExit(f"8bit RGB・インターレースなしの PNG でない（読めない）: {path} mode={im.mode}")
+        w, h = im.size
+        out = {}
+        for r, c in cells:
+            if (c + 1) * CELL > w or (r + 1) * CELL > h:
+                out[(r, c)] = None
+            else:
+                out[(r, c)] = im.crop((c * CELL, r * CELL, (c + 1) * CELL, (r + 1) * CELL)).getextrema() == tuple((t, t) for t in TRANSPARENT)
+        return out
+
+
+def empty_cells(task):
+    """(シートの PNG のパス, 行の数, [(行, 列)]) → {(行, 列): 空か}。シートごとに別のプロセスで呼ぶ"""
+    path, nrows, cells = task
+    if Image is None or os.environ.get("CHECK_CELLS_PURE"):
+        return empty_cells_pure(path, nrows, cells)
+    return empty_cells_pil(path, cells)
 
 
 def scan(src, jobs=None):
@@ -179,6 +207,9 @@ def self_test():
         assert len(bad) == 1 and "diagonal[ne]" in bad[0] and "image[ns]" not in bad[0], bad
         one = run("obj=way-object\nname=t\nbackimage[ns]=t.0.1\nfrontimage[ns]=t.0.0\n")  # 片方の層だけ空でも、控えに無ければ落ちる（層ごとに見る）
         assert len(one) == 1 and "backimage[ns]" in one[0] and "frontimage[ns]" not in one[0], one
+        if Image is not None:  # Pillow の読みと純 Python の読みが同じ（0.0 は絵あり・0.1 は空・0.2 はシートの外）
+            cs = [(0, 0), (0, 1), (0, 2)]
+            assert empty_cells_pil(os.path.join(d, "t.png"), cs) == empty_cells_pure(os.path.join(d, "t.png"), CELL, cs) == {(0, 0): False, (0, 1): True, (0, 2): None}
         e, empties, _, _ = scan(d, jobs=1)
         assert compare(empties, {"t": {"backimage[ns]"}}) == []  # 控えにあれば通る
         assert len(compare(empties, {"t": {"frontimage[ns]"}})) == 2  # 控えの層が違えば、新しいのと古いのの両方で落ちる
