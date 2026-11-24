@@ -2,7 +2,7 @@
 # AMI の線路の、pak128 標準の線路とのつなぎ目（tools/blender/seam_judge.py）と、坂・急坂でのレールの寄り（tools/blender/slope_measure.py）を測る。
 # 見本は ingame/seam_slope.nut（線路の種類ごとに、つなぎ目の 4 か所と、急坂・1 段の坂の十字）。
 # 使い方（アドオンのディレクトリで。python -X utf8 build.py で dist/ami.pak を作っておく）:
-#   GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> bash ingame/seam_slope_check.sh
+#   GAME_DIR=<検証用のフォルダ> PORT=<ポート> bash ingame/seam_slope_check.sh
 # 旧描画位置の線路を SIS の新幹線の線路とつなぐとき（#26）: PAK=dist/ami_rail_old.pak に、
 #   TRACKS_LIST="ami_rail_ballast_old ami_rail_concrete_old ami_rail_ladder_old ami_rail_slab_old" REF=SIS_ST_TGbl_E01-999B を足す
 #   （見本の NUT の TRACKS・REF を、この 2 つで置き換える。SIS の pak は GAME_DIR の addons/pak128 に入れておく）
@@ -10,43 +10,19 @@
 # 撮り終えたら閉じて写しも消す。GAME_DIR には書き込まない。
 # 出力: OUT（既定 work/seam_slope）に <種類>_<場所>.png（画面）・.txt（タイル一覧）・_judge.png・_measure.png（拡大）。
 # [seam] の行がつなぎ目ごとの判定、[slope] の行が坂のタイルごとの判定（読み方は各道具の冒頭）
-GAME_DIR=${GAME_DIR:?GAME_DIR に検証用のフォルダを指定する}
-EXE=${EXE:?EXE に実行ファイルの名前を指定する}
 PORT=${PORT:?PORT に MCP のポートを指定する}
-SAVE=${SAVE:-flat_512}
 PAK=${PAK:-dist/ami.pak}
 NUT=${NUT:-ingame/seam_slope.nut}
 OUT=${OUT:-work/seam_slope}
-B=${BLENDER:-D:/bin/blender/blender.exe}
-source "$(dirname "$0")/mcp_client.sh"   # MCP_CLIENT の既定（リポジトリの隣の simutrans/）
-CLIENT=$MCP_CLIENT
-M="python -X utf8 $CLIENT --port $PORT"
+B=${BLENDER:-${SHEET_BLENDER:-blender}}  # Blender の場所（PATH に無ければ BLENDER か SHEET_BLENDER で渡す）
+source "$(dirname "$0")/game_lib.sh"   # 起動・停止・MCP のコマンド M（#243）
 WORK="work/seam_game/$PORT"
 [ -f "$PAK" ] || { echo "[seam] $PAK が無い"; exit 1; }
-$M --run-squirrel "return 1;" > /dev/null 2>&1 && { echo "[seam] ポート $PORT で既にゲームが動いている"; exit 1; }
-
-stop_game() {
-  powershell.exe -NoProfile -Command "\$d = '$WORK_WIN'.Replace('/', '\') + '\'; Get-Process | Where-Object { \$_.Path -and \$_.Path.StartsWith(\$d, 'OrdinalIgnoreCase') } | Stop-Process -Force" > /dev/null 2>&1
-  sleep 1
-  rm -rf "$WORK"
-}
-rm -rf "$WORK"
-mkdir -p "$WORK/save" "$OUT"
-WORK_WIN=$(cd "$WORK" && pwd -W)
-trap stop_game EXIT
+trap game_cleanup EXIT
 trap 'exit 130' INT TERM
-cp "$GAME_DIR/$EXE" "$GAME_DIR"/*.dll "$WORK/" || exit 1
-for d in config font themes text script music pak128 addons; do
-  [ -d "$GAME_DIR/$d" ] && { cp -r "$GAME_DIR/$d" "$WORK/" || exit 1; }
-done
-cp "$GAME_DIR/save/$SAVE.sve" "$WORK/save/" || exit 1
-cp "$PAK" "$WORK/addons/pak128/ami.pak" || exit 1
-printf '\nday_night_shift = 0\n' >> "$WORK/config/simuconf.tab"
-[ -f "$GAME_DIR/settings.xml" ] && { cp "$GAME_DIR/settings.xml" "$WORK/settings.xml"; chmod u+w "$WORK/settings.xml"; }
-bash "$(dirname "${BASH_SOURCE[0]:-$0}")/strip_usage_log.sh" "$WORK/settings.xml" || exit 1  # 送信用の記録を外す（#235）
-
-(cd "$WORK" && "./$EXE" -objects pak128/ -addons -load "$SAVE" -mcp-port "$PORT" > /dev/null 2>&1 &)
-for r in $(seq 1 120); do timeout 10 $M --timeout 5 --run-squirrel "return 1;" > /dev/null 2>&1 && break; sleep 1; done
+mkdir -p "$OUT"
+GAME_TAG=seam
+game_start "$PAK=ami.pak" || exit 1
 SCRIPT=$(sed -e 's/\r$//' -e 's/^[[:space:]]*//' -e '/^\/\//d' -e '/^$/d' "$NUT")
 if [ -n "$TRACKS_LIST" ]; then  # 見本の TRACKS（線路の種類）と REF（つなぐ相手）を替える
   q=$(for t in $TRACKS_LIST; do printf '"%s", ' "$t"; done); q=${q%, }

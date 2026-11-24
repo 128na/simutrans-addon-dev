@@ -1,5 +1,5 @@
 // AMI の高速道路の分岐・合流の路面表示（ami_mark_diverge_*・ami_mark_merge_*。#188）の見本。高速道路（ami_road_expressway）を敷き、表示を重ねる。
-// 検証用の flat_512.sve に、温暖側 (20,20) と降雪側 (276,20) の 2 か所へ同じ並びで敷き、降雪側は一帯を降雪に塗り直す。
+// 検証用の flat_512_left_v64.sve に、温暖側 (20,20) と降雪側 (276,20) の 2 か所へ同じ並びで敷き、降雪側は一帯を降雪に塗り直す。
 // 使い方（アドオンのディレクトリで）: sample_parallel.sh に NUT=ingame/expwy_marking_sample.nut を付ける（撮る場所は sample_spots.sh の EXPWY_MARKING_SPOTS）。
 // 返り値の先頭が ok なら全部敷けて、[check] で比べた名前と、表示のつながる向き（README の形の表から導いた値）も期待どおり。違えば先頭が check で、「名前 場所=[…]」が続く。最後に [check] の行が続く。
 // 敷き方は README の「高速道路の分岐・合流の路面表示の作り」と同じ（f は進む向き、l は左。本線の列が l=0、ランプの列が l=1）:

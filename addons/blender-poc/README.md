@@ -36,7 +36,6 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 | `ingame/close_diag.nut` | 近い斜め（1 タイルずらして並べた斜め 2 本）の見本。`flat2.sve` の x=105 から右に、線路の全版（壁なし 3 種・側壁・高架の 2 本と 3 本）と道路・高速道路の南東・北東の組を名札つきで敷く |
 | `tools/blender/render_parallel.py` | シートを Blender の別々のプロセスで同時に描く（`--jobs` 既定は `sheet_settings.JOBS` = 16。マシン全体では、作業者どうしで共有する描画の枠 `SHEET_SLOTS` も上限になる）。ふつうの Python で動かす |
 | `ingame/switch_auto.nut` | 自動選択の 8 通りだけを `bpoc_track` で敷く（`flat.sve` の y=120） |
-| `ingame/switch_check.sh` | 分岐の絵を手で確かめる準備。pak を入れ、固定の道具がある OTRP のビルドを MCP つきで `flat2` で起動し、`switch_all.nut` を敷く（`GAME_DIR=… EXE=… bash ingame/switch_check.sh`） |
 | `ingame/wall.nut`・`elev.nut`・`bridge.nut`・`tunnel.nut`・`trial.nut` | 側壁・高架・橋・トンネル・試作の見本（複線の並び、行き止まり、橋の端、坑口） |
 | `ingame/track_review.nut` | 線路の確認用パターン。線路の全種類と手本の Rail_100 を名札つきで `flat_512.sve` の温暖側・降雪側に敷く（「線路の確認用パターン」の節） |
 | `tools/blender/sheet_diff.py` | 前と後のシートを比べ、透過の範囲（輪郭）と色の差をセルごとに出す。`ALL=1` で色だけ変わったセルも出す。描き直す前のシートを `SHEET_ONLY`（描くセルを絞る。シートは `work/only/`）の結果と比べるのにも使う |

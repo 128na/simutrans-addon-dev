@@ -1,5 +1,5 @@
 // 旧描画位置の線路（#26）と SIS の新幹線の線路（SIS_ST_TGbl_E01-999B）の継ぎ目の見本。blender-poc の seam.nut と同じ並びで、
-// 比べる線路 → AMI の線路 → 比べる線路 の順に 1 本につなぐ。flat_512.sve の降雪でない側（x=130〜152）で使う。
+// 比べる線路 → AMI の線路 → 比べる線路 の順に 1 本につなぐ。flat_512_left_v64.sve の降雪でない側（x=130〜152）で使う。
 // y0=100 から 20 ずつ、在来線・直結・ラダー・スラブの順に、新（ami_rail_*）を 4 行、旧（ami_rail_*_old）を 4 行（y0=200〜）。
 // 直線（東西・南北）、斜め、坂を 1 組ずつ。SIS は way.SIS_ShinkansenTrack_Ballast_E01_ds.pak を addons/pak128 に入れておく。
 local pl = player_x(0);

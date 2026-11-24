@@ -1,4 +1,4 @@
-// 旧描画位置の基盤・壁・架線つきの壁の見本（#26。ingame/old_base.sh が撮る）。flat_512.sve の温暖側 (20,20) 〜 で使う。
+// 旧描画位置の基盤・壁・架線つきの壁の見本（#26。ingame/old_base.sh が撮る）。flat_512_left_v64.sve の温暖側 (20,20) 〜 で使う。
 // 旧の線路 ami_rail_<TRACK>_old の基盤の版に、旧用の壁（ami_wall_rail_old_<版>）か架線つきの壁（..._catenary）を重ねる。
 //   区画 1（y=20〜）: 単線 single + 壁 single（東西 12 タイル、行き止まり）
 //   区画 2（y=30〜）: 複線 back（y=30）+ front（y=31）+ 壁 back・front（東西 12 タイル）
