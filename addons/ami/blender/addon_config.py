@@ -29,4 +29,3 @@ SHEETS[catalog.CANAL_SCENIC] = catalog.CANAL_SCENIC  # 景観の運河（#161）
 DIAG_CURVE_SHEETS = {_t.way for _t in catalog.ALL_TRACKS} | {_r.way for _r in catalog.ROADS}
 DIAG_CURVE_SHEETS |= {catalog.MONORAIL, *catalog.MONORAIL_ELEVS}  # 跨座式モノレールは高架の版もカーブを斜めの絵（#113）
 DIAG_CURVE_SHEETS.add(catalog.CANAL)  # 運河もカーブは斜めの絵（#114）
-DIAG_CURVE_SHEETS.add(catalog.CANAL_SCENIC)  # 景観の運河（#161）も
