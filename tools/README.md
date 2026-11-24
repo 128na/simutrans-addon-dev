@@ -43,7 +43,7 @@ D:\bin\blender\blender.exe -b --factory-startup --python ..\..\tools\blender\com
 
 - `sheetlib` の `TRACK_PROFILES`・`ROAD_PROFILES` は、入口が登録する。共通の描画が名前で引くのは `TRACK_PROFILES["new"]`（トンネル）と、プロファイルを渡されなかったときの `ROAD_PROFILES["street"]`・`["expressway"]`（`build_road` の `prof`・`tunnel_sheet` の `road_profile` の既定。blender-poc が登録する）。`road_sheet` は自分のプロファイルを `build_road` に渡すので、ほかの名前で登録した道路（AMI の `road_local` など）でもこの名前は要らない
 - 道路の描き分けのキー（AMI の道路 3 種。#21）。どれも無くてよく、無ければ blender-poc の道路と同じ絵になる:
-  - `center`: 中央線の種類。`"solid"`（実線。既定）・`"dash"`（破線）・`"double"`（二重の実線。中心から ±`road_parts.DOUBLE_CENTER_U`。#257）・`None`（中央線なし）。破線は白線の種類 `"cdash"` で、タイルの中の長さ（直線 10・斜め 10/√2）を `road_parts.CENTER_DASHES` 本に割り、タイルの辺がすき間の中ほどに来るように置く（`core.tile_dashes`）。直線・斜め・坂の継ぎ目で区切りがそろう。分岐の口の路側線の点線（`"dash"`）は今までどおり
+  - `center`: 中央線の種類。`"solid"`（実線。既定）・`"dash"`（破線）・`"dash_fine"`（細かい破線。周期が `"dash"` の半分で `road_parts.CENTER_DASHES_FINE`。白線の種類は `"cdash_fine"`。#257）・`None`（中央線なし）。破線は白線の種類 `"cdash"` で、タイルの中の長さ（直線 10・斜め 10/√2）を `road_parts.CENTER_DASHES` 本に割り、タイルの辺がすき間の中ほどに来るように置く（`core.tile_dashes`）。直線・斜め・坂の継ぎ目で区切りがそろう。分岐の口の路側線の点線（`"dash"`）は今までどおり
   - `switches`: 真なら分岐の絵（OTRP の switch 画像）のセルを行 2・3 の列 10〜14 に描き、シートを 15 列にする（`expressway` の道路だけ。中身は `road_sheet` の `switch_lines`）
   - `switch_ruts`: T字の分岐の絵の 1・2 を、どちらも枝の無い側を実線でふさいだ T字の白線にし、轍（走行跡）を直進と枝へのカーブ 1 本だけにする（カーブの向きは `road_parts.SWITCH_RUT_ARCS`）
   - `priority_cross`: 十字の分岐の絵（`nsew1`・`nsew2`）を、優先道路のある十字にする（`nsew1` は南北、`nsew2` は東西が優先。従道路に停止線。`road_sheet` の `priority_lines`）

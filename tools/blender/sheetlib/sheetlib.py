@@ -88,7 +88,7 @@ from .road_parts import (  # noqa: F401
     CURB_W,
     DIAG_EDGE,
     EDGE_LINE,
-    DOUBLE_CENTER_U,
+    CENTER_DASHES_FINE,
     EXPWY_WALL_U,
     EXPWY_WALL_W,
     ROAD_CUT_Z,
@@ -216,15 +216,15 @@ def _road_sheet(style="street"):
     arc_se = arc((half, -half), 90, 180)
     sn, we = straight(S, N), straight(W, E)
     center_kind = prof.get("center", "solid")
-    if center_kind not in ("solid", "dash", "double", None):
-        raise SystemExit(f"[road_sheet] {style}: center は solid・dash・double・None のどれか: {center_kind}")
+    if center_kind not in ("solid", "dash", "dash_fine", None):
+        raise SystemExit(f"[road_sheet] {style}: center は solid・dash・dash_fine・None のどれか: {center_kind}")
 
     def center(p, u=0.0):
-        """中央線（無しなら空）。破線は区切りをタイルの辺にそろえる。二重線（double）は中心から ±DOUBLE_CENTER_U の実線 2 本"""
+        """中央線（無しなら空）。破線は区切りをタイルの辺にそろえる。細かい破線（dash_fine）は周期が半分（CENTER_DASHES_FINE）"""
         if center_kind is None:
             return []
-        if center_kind == "double":
-            return [(p, u - DOUBLE_CENTER_U), (p, u + DOUBLE_CENTER_U)]
+        if center_kind == "dash_fine":
+            return [(p, u, "cdash_fine")]
         return [(p, u, "cdash")] if center_kind == "dash" else [(p, u)]
 
     both = lambda p: [(p, -EDGE_LINE)] + center(p) + [(p, EDGE_LINE)]  # 両側の白線と中央線
@@ -1670,9 +1670,7 @@ def _tunnel_sheet(kind="track", profile="new", sheet=None, label="100", road_pro
     pre = (sheet or "expwy_tunnel") if expwy else (sheet or "tunnel")
     if expwy and sheet:
         ck = road_prof.get("center", "solid")
-        road_lines = lambda p: [(p, -EDGE_LINE)] + (
-            [] if ck is None else [(p, -DOUBLE_CENTER_U), (p, DOUBLE_CENTER_U)] if ck == "double"
-            else [(p, 0.0, "cdash") if ck == "dash" else (p, 0.0)]) + [(p, EDGE_LINE)]
+        road_lines = lambda p: [(p, -EDGE_LINE)] + ([] if ck is None else [(p, 0.0, {"dash": "cdash", "dash_fine": "cdash_fine"}[ck]) if ck in ("dash", "dash_fine") else (p, 0.0)]) + [(p, EDGE_LINE)]
     else:
         road_lines = lambda p: [(p, -EDGE_LINE), (p, 0.0), (p, EDGE_LINE)]
     set_anchor(ROAD_CY if expwy else 128 + BALLAST_DY)
