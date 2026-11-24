@@ -64,6 +64,9 @@ FAMILIES = {
     "tram": {"dats": ("ami_tram",), "targets": ("ami_tram",), "module": "round_tram"},
     "road": {"dats": ("ami_road_*", "ami_wall_road_*", "ami_pier_road", "ami_sidewalk"),
              "targets": ("ami_road_*", "ami_wall_road_*", "ami_pier_road", "ami_sidewalk"), "module": "round_road"},
+    # 第 3 弾の物（#197）: 路面表示（ami_mark_*）と運河・景観の運河。運河の踏切のシートは運河のセルが下地なので、系統に入れない
+    "wave3": {"dats": ("ami_mark_*", "ami_canal", "ami_canal_scenic"), "targets": ("ami_mark_*", "ami_canal", "ami_canal_scenic"),
+              "module": "round_wave3"},
 }
 FAMILY = os.environ.get("AMI_FAMILY", "rail_ballast")
 if FAMILY not in FAMILIES:

@@ -15,6 +15,8 @@
 local ORIGINS = [[20, 20], [276, 20]];
 local SNOW = 1;
 local AREA = [[-2, -2], [92, 70]];
+// ラウンドの版（#56）: ami_mark_ で始まる名前の末尾に付ける。例: "_round1"。空なら今の名前（sample_parallel.sh の SUFFIX が置き換える）
+local SUFFIX = "";
 local X = "ami_road_expressway";
 local DM = "ami_mark_diverge_main", DR = "ami_mark_diverge_ramp", MM = "ami_mark_merge_main", MR = "ami_mark_merge_ramp";
 local pl = player_x(0);
@@ -27,7 +29,7 @@ function left(f) { return [f[1], -f[0]]; }
 function r(name, v) { return v == null ? "" : name + "=[" + v + "]\n"; }
 function c(x, y) { return coord3d(OX + x, OY + y, 0); }
 function way(tag, n, p0, p1) {
-  local w = way_desc_x(n);
+  local w = way_desc_x(n.find("ami_mark_") == 0 ? n + SUFFIX : n);
   if (w == null) { report += n + " desc=[missing]\n"; return; }
   report += r(tag + " " + n, command_x.build_way(pl, c(p0[0], p0[1]), c(p1[0], p1[1]), w, true));
 }
