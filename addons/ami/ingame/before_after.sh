@@ -67,8 +67,9 @@ done
 printf '\nday_night_shift = 0\n' >> "$W/config/simuconf.tab"
 cp "$GAME_DIR/save/$SAVE.sve" "$W/save/" || exit 1
 cp "$GAME_DIR/settings.xml.v64" "$W/settings.xml" || exit 1; chmod u+w "$W/settings.xml"
+bash "$(dirname "${BASH_SOURCE[0]:-$0}")/strip_usage_log.sh" "$W/settings.xml" || exit 1  # 送信用の記録を外す（#235）
 for p in $PAKS; do cp "$PAKDIR/$p" "$W/addons/pak128/" || { stop_game; exit 1; }; done
-(cd "$W" && "./$EXE" -objects pak128/ -addons -load "$SAVE" -mcp-port "$PORT" > /dev/null 2>&1 &)
+(cd "$W" && "./$EXE" -objects pak128/ -addons -load "$SAVE" -mcp-port "$PORT" ${GAME_ARGS:-} > "${GAME_LOG:-/dev/null}" 2>&1 &)
 for i in $(seq 1 60); do timeout 20 $M --run-squirrel "return 1;" > /dev/null 2>&1 && break; sleep 3; done
 $M --run-squirrel "return 1;" > /dev/null 2>&1 || { echo "[ba] ゲームが起動しなかった"; stop_game; exit 1; }
 

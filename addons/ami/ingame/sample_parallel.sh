@@ -24,6 +24,7 @@ source "$(dirname "$0")/mcp_client.sh"   # MCP_CLIENT の既定（リポジト�
 CLIENT=$MCP_CLIENT
 source "$(dirname "$0")/sample_spots.sh"
 
+game_log() { if [ -n "$GAME_LOG" ]; then echo "$GAME_LOG.$1"; else echo /dev/null; fi; }  # GAME_LOG があれば台ごとに .<台番号> を付けて残す
 mcp() { local port=$1; shift; python -X utf8 "$CLIENT" --port "$port" "$@"; }
 pids() { netstat -ano | tr -d '\r' | awk -v p=":$1" '$4 == "LISTENING" && $2 ~ p "$" {print $NF}' | sort -u; }
 # 写しの中の exe で動いているものだけを止める（ポートを開く前のゲームも含む）
@@ -61,6 +62,7 @@ for ((i = 0; i < JOBS; i++)); do
   cp -r "$BASE/config" "$D/config"
   printf '\nday_night_shift = 0\n' >> "$D/config/simuconf.tab"
   [ -f "$GAME_DIR/settings.xml" ] && { cp "$GAME_DIR/settings.xml" "$D/settings.xml"; chmod u+w "$D/settings.xml"; }
+  bash "$(dirname "${BASH_SOURCE[0]:-$0}")/strip_usage_log.sh" "$D/settings.xml" || exit 1  # 送信用の記録を外す（#235）
 done
 
 TRACK_SED=${TRACK:+s/^local TRACK = .*/local TRACK = \"$TRACK\";/}
@@ -76,7 +78,7 @@ for season in ${SEASONS:-temperate:20:20 snow:276:20}; do for spot in $SPOTS; do
 
 worker() {
   local i=$1 port=$((BASE_PORT + i)) n=0 item season spot s ox oy k x y f r
-  (cd "$WORK/$i" && "./$EXE" -objects pak128/ -addons -load "$SAVE" -mcp-port "$port" > /dev/null 2>&1 &)
+  (cd "$WORK/$i" && "./$EXE" -objects pak128/ -addons -load "$SAVE" -mcp-port "$port" ${GAME_ARGS:-} > "$(game_log "$i")" 2>&1 &)
   for r in $(seq 1 120); do timeout 10 python -X utf8 "$CLIENT" --port "$port" --timeout 5 --run-squirrel "return 1;" > /dev/null 2>&1 && break; sleep 1; done
   r=$(mcp "$port" --run-squirrel "$SCRIPT" --timeout 300 2>&1)
   case $r in

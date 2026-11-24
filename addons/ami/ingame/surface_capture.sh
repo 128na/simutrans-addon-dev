@@ -39,6 +39,7 @@ for d in config font themes text script music pak128 addons; do
 done
 cp "$GAME_DIR/save/$SAVE.sve" "$WORK/save/" || exit 1
 [ -f "$GAME_DIR/settings.xml" ] && { cp "$GAME_DIR/settings.xml" "$WORK/settings.xml"; chmod u+w "$WORK/settings.xml"; }
+bash "$(dirname "${BASH_SOURCE[0]:-$0}")/strip_usage_log.sh" "$WORK/settings.xml" || exit 1  # 送信用の記録を外す（#235）
 for p in $PAKS; do cp "$p" "$WORK/addons/pak128/$(basename "$p")" || exit 1; done
 (cd "$WORK" && "./$EXE" -objects pak128/ -addons -load "$SAVE" -mcp-port "$PORT" > /dev/null 2>&1 &)
 for i in $(seq 1 60); do $M --run-squirrel "return 1;" > /dev/null 2>&1 && break; sleep 2; done
