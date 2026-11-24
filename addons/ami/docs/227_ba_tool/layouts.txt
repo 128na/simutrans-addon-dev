@@ -1,0 +1,4 @@
+ingame/canal.nut 30 620 9
+ingame/canal.nut 30 680 9 W=way_desc_x("ami_canal_scenic")
+ingame/canal.nut 542 620 0
+ingame/canal.nut 542 680 0 W=way_desc_x("ami_canal_scenic")

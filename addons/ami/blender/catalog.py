@@ -248,3 +248,11 @@ ROADSIGN_KEYS = ("one_way", "stop", "speed_40", "speed_60", "speed_80", "min_50"
 ROADSIGNS = {f"{PREFIX}sign_{_k}": _k for _k in ROADSIGN_KEYS}
 # 路面の横断歩道（#162）: 柱の無い路面の標示。両方向と一方通行（single_way は物ごとの設定で、1 マスに標識は 1 つしか置けないので分ける）
 ROADSIGN_CROSSWALKS = {f"{PREFIX}sign_crosswalk": False, f"{PREFIX}sign_crosswalk_one_way": True}  # 名前 → 一方通行か
+
+# カーブを斜めの絵で表すシート（pak128 標準の線路と同じ。dat の image[sw]・[nw]・[ne]・[se] が diagonal と同じセルを指す）。
+# 唯一の定義。dat を書く ami_dat.py（DIAG_CURVES）と、判定・比較の道具が読む addon_config.py（DIAG_CURVE_SHEETS）がここから引く（#227。別々に書いて片方を直し忘れた）
+# 基盤の版・高架の版（線路・道路）はカーブを斜めの形の別のセル（基盤の壁の無い側を削らない）に描くので、ここには入れない。render.py の diag_curves と同じにする
+DIAG_CURVE_WAYS = {_t.way for _t in ALL_TRACKS} | {_r.way for _r in ROADS}  # 道路 3 種もカーブは斜めの絵（README の「道路の作り」）
+DIAG_CURVE_WAYS |= {MONORAIL, *MONORAIL_ELEVS}  # 跨座式モノレールは高架の版もカーブを斜めの絵（#113。手本の iss の跨座式の dat と同じ）
+DIAG_CURVE_WAYS.add(CANAL)  # 運河もカーブは斜めの絵（#114）
+DIAG_CURVE_WAYS |= {*MONORAIL_SUSPENDEDS, *MONORAIL_SUSPENDED_ELEVS}  # 懸垂式（#116）も跨座式と同じ
