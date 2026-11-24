@@ -1017,6 +1017,17 @@ PORT=47300 bash ingame/game.sh STOP
 
 塗りを実装する前に、レイアウト検証用モード（部品ごとに画像で見分けやすい単色で塗る）で、部品の配置とタイルどうしの接合を確かめる（[ADR 0005](../../docs/adr/0005-ami-render-tool-conventions.md)）。
 
+## 画面を出さない本体での読み込みの検査（#236）
+
+`check.sh` の最後（pak を作った後）で、画面を出さない OTRP 本体（Makefile の `BACKEND=posix`）に配る pak を読ませ、出力の文字列で失敗を見つける（`tools/ci/check_pak_load.py`。調査と判定の表は記録 [2026-11-24_headless-pak-load](../../docs/records/2026-11-24_headless-pak-load.md)）。
+
+- 種類別の pak（`dist/ami_*.pak`）を全部一緒に読み、全部入りの `ami.pak` は単独で読む（一緒に置くと名前が重複する）。pakset は本体の `tests/simutrans-test-base.zip`。所要は 1 回 3〜5 秒
+- 失敗にするのは、`FATAL ERROR`（参照切れ・ROOT の大きさ）・`ERROR: obj_reader`（空・壊れたファイル）・`skipping unknown`・`is overlaid`・`Reading addon object data failed`・時間切れなど。見つけられない物（絵の画素・必須の絵の書き忘れ・半分で切れた pak など）は記録の表のとおり。見た目とつなぎ目は `addon_check` のゲームで見る
+- 検査の自己確認として、`ami_monorail.pak` から壊した pak（空・ROOT の大きさ・参照切れ）を作り、3 種とも失敗することを毎回確かめる（`--self-test`）
+- 起動の前に毎回 `settings.xml` を消し、作業フォルダは毎回新しく作る（本体は `settings.xml` の記録で使用状況を外へ送るため）
+- **CI（Linux）**: 本体を `ci.env` の `HEADLESS_SIM`（`otrp:<128na/simutrans のコミット>`）から `tools/ci/setup-headless-sim.sh` でビルドし、`actions/cache` に載せる
+- **手元（Windows）**: 本体を MinGW でビルドして渡したときだけ動かす（渡さないと飛ばす）。本体の一時の worktree で `config.default` に `BACKEND = posix`・`OSTYPE = mingw` などを書いて PowerShell から `make`（作り方は親フォルダの `otrp-dev/dev/build.md`）、`HEADLESS_SIM_BIN=<sim.exe> HEADLESS_PAKSET=<本体の tests/simutrans-test-base.zip> bash addons/ami/check.sh`。`sim.exe` の DLL は `C:\msys64\mingw64in` から探すので、`PATH` に足しておく。ゲームの検証環境とポートは使わない
+
 ## カタログ（見て回る保存データ。#203）
 
 作成済みの AMI の物を一か所で見て回る保存データ `ami_catalog.sve` を、スクリプトで作る。**v64（`sim-WinGDI64-OTRPv64.exe`）用**（OTRPv64_3 は保存形式が違い読めない）。土台は `addon_check/save/flat_1024_left.sve`（1024 四方・左側通行・平ら。x<512 が温暖、x≥512 が降雪）。
