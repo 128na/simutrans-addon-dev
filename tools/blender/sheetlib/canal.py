@@ -39,6 +39,8 @@ _M_WATER = lambda: noisy_material("canal_water", WATER_LO, WATER_HI, scale=30, r
 _M_WALL = lambda: noisy_material("canal_wall", WALL_LO, WALL_HI, scale=55, rough=0.9)
 _M_COPING = lambda: noisy_material("canal_coping", COPING_LO, COPING_HI, scale=55, rough=0.85)
 
+CULVERT_MOUTH = 0.0      # 暗渠の口の位置（タイルの中心から、閉じた側へ測った距離。0 でタイルの半分が蓋）
+CULVERT_THICK = 1.0      # 暗渠の蓋の厚み（地面から下へ。約 8px）
 # 景観の運河（#161）: iss の運河と同じ見せ方。水面は 13px 下（高さ 1 段 = 16px）で、タイルの辺近くまで広げ、縁は細い笠石。
 # 坂は閘門（iss と同じく、上下の水面を扉枠で分ける。LOCK）。実用の運河（ROAD_STYLE。#114）の寸法は変えない
 ROAD_STYLE = dict(pad=CANAL_PAD, bank=CANAL_BANK, coping=CANAL_COPING, water_z=CANAL_WATER_Z, wall_bottom=CANAL_WALL_BOTTOM, lock=False)
@@ -46,7 +48,10 @@ SCENIC_STYLE = dict(bank=0.35, coping=0.3, water_z=-13 / 16 * H, wall_bottom=-13
                     wall_col=((0.70, 0.70, 0.68), (0.80, 0.80, 0.77)), coping_col=((0.74, 0.74, 0.71), (0.84, 0.84, 0.81)),
                     # 護岸の水際の染み（#197。精細化のラウンド 1 の 1wl2）: 水面から height だけ上へ薄れる暗い帯（色, 高さ, 強さ）。物の座標の高さで付けるので、
                     # タイルをまたいで連続する
-                    waterline=((0.06, 0.12, 0.10), 1.2, 1.0))
+                    waterline=((0.06, 0.12, 0.10), 1.2, 1.0),
+                    # 行き止まりの暗渠（#217。iss の運河と同じ）: 閉じた側の半分に笠石の材質の蓋をかぶせ、水がその下へ消えて見えるようにする。
+                    # 蓋は地面の高さから厚み分だけ下まで（口は暗く見える）
+                    culvert=(CULVERT_MOUTH, CULVERT_THICK))
 CANAL_STYLES = {"road": ROAD_STYLE, "scenic": SCENIC_STYLE}
 SCENIC_DEPTH_PX = 13      # 景観の運河の水面の深さ（画素。つなぎ目の持ち分を下へ広げる量）
 LOCK_GATE = 0.25         # 閘門の扉の半分の厚み（坂の向きの座標 u = ±LOCK_GATE の間）
@@ -206,12 +211,29 @@ def canal_build(name, slope, snow, st=ROAD_STYLE, slope_name=None):
     obs = [_joined("canal_water", canal_water_pieces(name, bank - 0.05, pad), wb, wz, water)]
     obs.append(_shell("canal_wall", name, bank - cop, wb, 0.0, wall, bank, None, pad))
     obs.append(_shell("canal_coping", name, bank - cop, 0.0, CANAL_COPING_T, coping, bank, None, pad))
+    if "culvert" in st and name in _ARMS and not slope:
+        obs.append(_culvert(name, st, coping))
     if not LAYOUT:
         obs.append(_earth(name, bank, wb, reach, water, pad, st.get("earth_eps", CANAL_EARTH_EPS)))
     if slope:
         for ob in obs:
             apply_slope(ob, slope)
     return obs
+
+
+def _culvert(name, st, coping):
+    """行き止まりのセル（name は つながる辺の 1 文字）の暗渠の蓋。閉じた側（つながる辺の反対）の、口から先を笠石の材質で覆う"""
+    mouth, thick = st["culvert"]
+    ax, ay = _ARMS[name]
+    reach = TILE / 2 + st["pad"]
+    w = TILE / 2 - (st["bank"] - st["coping"])  # 笠石の外の縁まで
+    if ax:
+        a, b = sorted((ax * -reach, ax * -mouth))
+        poly = [(a, -w), (b, -w), (b, w), (a, w)]
+    else:
+        a, b = sorted((ay * -reach, ay * -mouth))
+        poly = [(-w, a), (w, a), (w, b), (-w, b)]
+    return _prism("canal_culvert", poly, -thick, CANAL_COPING_T, coping)
 
 
 def _waterline_wall(wall, water_z, stain, height, k):
