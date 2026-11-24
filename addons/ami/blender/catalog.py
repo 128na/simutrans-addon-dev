@@ -144,7 +144,7 @@ ROAD_EXPRESSWAY = Road("road_expressway")  # 高速道路（360 km/h、中央線
 ROADS = (ROAD_LOCAL, ROAD_GENERAL, ROAD_TRUNK, ROAD_EXPRESSWAY)
 # 道路のカーブの形（#259。#209 の 2 本目）: 種類 → "arc"（円弧。路面軌道と同じ）か "ell"（L 字。直角）。ここに無い種類（高速道路・幹線道路）は斜めの絵。
 # 速さで描き分ける（一般は円弧、生活道路は L 字）。カーブの絵は way のシートの行 2 の列 5〜8 に描き、dat の image[sw] などがそれを指す。
-# 基盤・高架・壁の版は、まだ斜めの形のまま（3 本目の #260 でそろえる）
+# 基盤・高架の single と壁（ROAD_WALL_CURVED）も同じ形にそろえた（3 本目の #260）
 ROAD_CURVE_SHAPES = {ROAD_LOCAL.key: "ell", ROAD_GENERAL.key: "arc"}
 # 多車線と交差点の路面表示の way（#187。ADR 0012）: 道路に重ねて敷く tram_track の way。名前 → 種類（sheetlib の marking の MARKING_KINDS）。
 # 一般道路（ROAD_GENERAL）に重ね、白線と路面を描く（下の道路の線と、帯・交差点の中の雪を覆う）。

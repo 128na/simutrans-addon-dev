@@ -167,8 +167,7 @@ function lay(name, ox, oy) {
   local curved = {ami_road_general = "ami_wall_road_single_arc", ami_road_local = "ami_wall_road_single_ell"};
   if (name in curved) {
     od["single"] = wodx(curved[name]);
-    if (od["single"] == null) return curved[name] + " desc=[missing]
-";
+    if (od["single"] == null) return curved[name] + " desc=[missing]\n";
   }
   local br = bdx(name + "_bridge");
   if (w == null || br == null || pier == null) return name + " desc=[missing]\n";
