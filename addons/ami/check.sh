@@ -61,6 +61,10 @@ rm -rf "$snap"
 step "アイコン・カーソルの参照先（セルの重なり・絵の有無・背景色・別のシートの絵。check_icons.py）"
 "$PY" -X utf8 "$AMI/check_icons.py"
 
+step "dat が指すセルが空（全部透明）でないか（check_cells.py。意図して空のものは check_cells.allow.txt。#241）"
+"$PY" -X utf8 "$AMI/check_cells.py" --self-test
+"$PY" -X utf8 "$AMI/check_cells.py"
+
 step "踏切のシートが今の道路のシートから描かれているか（check_crossing.py）"
 "$PY" -X utf8 "$AMI/check_crossing.py"
 
