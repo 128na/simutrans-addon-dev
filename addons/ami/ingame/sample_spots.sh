@@ -36,6 +36,12 @@ for v in LO:0 GE:30 EX:60; do
   ROAD_SPOTS="$ROAD_SPOTS ${n}_HV:34:$((4 + dy)) ${n}_HH:38:$((12 + dy)) ${n}_K:52:$((3 + dy)) ${n}_L:50:$((15 + dy)) ${n}_M:61:$((14 + dy)) ${n}_M2:61:$((22 + dy))"
   for j in 0 1 2 3 4; do ROAD_SPOTS="$ROAD_SPOTS ${n}_I$j:$((5 + 12 * j)):$((23 + dy))"; done
 done
+# 道路のカーブの見本（ingame/curve_sample.nut。#259）: 種類ごとに 30 ずつ南（LO 生活道路・GE 一般道路）。R1 は 1 本の輪、R2 は 2 本並べた輪（4 車線の直角の曲がり）、S は坂の隣のカーブ、D は斜めとの継ぎ目、T は T字の隣のカーブ
+CURVE_SPOTS=""
+for v in LO:0 GE:30; do
+  IFS=: read n dy <<< "$v"
+  CURVE_SPOTS="$CURVE_SPOTS ${n}_R1:4:$((4 + dy)) ${n}_R2:16:$((4 + dy)) ${n}_S:4:$((12 + dy)) ${n}_D:14:$((15 + dy)) ${n}_T:25:$((15 + dy))"
+done
 # 交差点の組み合わせ（ingame/road_junction_sample.nut）: 種類ごとに 22 ずつ南。名前は「南北の車線数x東西の車線数」（道路 1 本が 2 車線）
 JUNCTION_SPOTS=""
 for v in LO:0 GE:22 EX:44; do
@@ -100,6 +106,7 @@ YARD_SPOTS="Y1:2:3 YP:6:4 YE:3:13 YG:11:4 YW:15:3 YT:19:5 YX:30:4"
 case "${NUT:-}" in
   *tram_sample.nut) SPOTS=${SPOTS:-$TRAM_SPOTS} ;;
   *road_sample.nut) SPOTS=${SPOTS:-$ROAD_SPOTS} ;;
+  *curve_sample.nut) SPOTS=${SPOTS:-$CURVE_SPOTS} ;;
   *road_junction_sample.nut) SPOTS=${SPOTS:-$JUNCTION_SPOTS} ;;
   *road_struct_sample.nut) SPOTS=${SPOTS:-$STRUCT_SPOTS} ;;
   *sidewalk_sample.nut) SPOTS=${SPOTS:-$SIDEWALK_SPOTS} ;;
