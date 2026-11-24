@@ -15,6 +15,20 @@ python -X utf8 ..\..\tools\blender\render_parallel.py --jobs 16 track track_old 
 D:\bin\blender\blender.exe -b --factory-startup --python ..\..\tools\blender\compose.py -- road work\compose_road.png
 ```
 
+## Blender の版と描画エンジンの識別子
+
+`sheetlib.core.setup_scene()` は、描画エンジンを版に合わせて選ぶ（`core.pick_eevee`）。EEVEE の識別子は Blender の版で変わる。その版が持つ識別子の一覧（`render.bl_rna.properties["engine"]` の選択肢）から、`core.EEVEE_IDS` の先頭から順に最初に見つかったものを使う。
+
+| 識別子 | 使われる版 | 備考 |
+|---|---|---|
+| `BLENDER_EEVEE_NEXT` | 4.2〜4.5 | 今の標準（4.5.16 LTS で確認）。両方あれば、こちらを優先 |
+| `BLENDER_EEVEE` | 4.1 以前。5.x も見込み（未確認） | 5.x で戻ると見られるのは、外部の simutrans-blender-kit のコメントに基づく推測（記録 [2026-11-24_blender-kit-survey](../docs/records/2026-11-24_blender-kit-survey.md)） |
+
+- 受け入れ条件の「識別子が無い版でも止まらない」は、片方が無い版で、もう片方を選んで描くこと。
+- どちらも無いときは、候補と、その版にある識別子を示して止まる（黙って別のエンジン（Cycles など）で描かない）。選び方だけを変えていて、サンプル数などほかの設定は同じ。
+- 4.5 では変更前と描いたシートがバイト単位で同じ（AMI 10 枚・blender-poc 10 枚で確認。#223）。4.1 以前・5.x は実機で未確認で、`BLENDER_EEVEE` に切り替わったときの絵（4.1 以前の EEVEE は別の実装）は同じとは限らない。
+- 分岐の確認（リポジトリの直下から）: `D:\bin\blender\blender.exe -b --factory-startup --python tools/blender/test_engine_pick.py`。識別子の一覧を差し替えて 4 通りの分岐と、`setup_scene` が一覧を使っていることを確かめる。
+
 ## 共通とアドオンの設定の分け方
 
 | どこ | 置くもの |

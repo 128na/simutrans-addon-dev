@@ -83,11 +83,27 @@ assert len(SPECIAL_COLORS) == 31
 
 # ---------------------------------------------------------------- シーン設定
 
+EEVEE_IDS = ("BLENDER_EEVEE_NEXT", "BLENDER_EEVEE")  # 優先順。4.2〜4.5 は _NEXT、4.1 以前は BLENDER_EEVEE（5.x は BLENDER_EEVEE に戻ると見られるが未確認）
+
+
+def pick_eevee(identifiers):
+    """使える描画エンジンの識別子の中から EEVEE を選ぶ（EEVEE_IDS の先頭が優先）。無ければ止める"""
+    for ident in EEVEE_IDS:
+        if ident in identifiers:
+            return ident
+    raise RuntimeError(f"EEVEE の識別子が見つからない（Blender {bpy.app.version_string}、候補 {EEVEE_IDS}、この版にあるもの {sorted(identifiers)}）")
+
+
+def engine_ids(render):
+    """この Blender が持つ描画エンジンの識別子の集合"""
+    return {e.identifier for e in render.bl_rna.properties["engine"].enum_items}
+
+
 def setup_scene():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
     r = scene.render
-    r.engine = "BLENDER_EEVEE_NEXT"
+    r.engine = pick_eevee(engine_ids(r))
     r.resolution_x = r.resolution_y = CELL
     r.resolution_percentage = 100
     r.film_transparent = True
