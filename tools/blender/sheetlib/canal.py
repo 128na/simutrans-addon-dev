@@ -39,7 +39,7 @@ _M_WATER = lambda: noisy_material("canal_water", WATER_LO, WATER_HI, scale=30, r
 _M_WALL = lambda: noisy_material("canal_wall", WALL_LO, WALL_HI, scale=55, rough=0.9)
 _M_COPING = lambda: noisy_material("canal_coping", COPING_LO, COPING_HI, scale=55, rough=0.85)
 
-DIAG_PAD = 7.0            # 景観の運河の斜めのセルで、腕・帯をタイルの外へ延ばす量。隣のタイルの壁（タイルの角をかすめる線）全体の影を、このセルの水面にも落とす
+DIAG_PAD = 7.0            # 景観の運河の斜め（画面で縦向き）のセルで、帯をタイルの外へ延ばす量。隣のタイルの壁（このセルの角をかすめる線）の影が、このセルの水面の縦の範囲（菱形 64 行＋深さ 13px、部品の単位で約 5）を全部覆うのに足りる長さ。2.6 では影が途中で切れ、7.0 で組のセルとそろった（他の値は試していない。必要最小値は測っていない）
 # 景観の運河（#161）: iss の運河と同じ見せ方。水面は 13px 下（高さ 1 段 = 16px）で、タイルの辺近くまで広げ、縁は細い笠石。
 # 坂は閘門（iss と同じく、上下の水面を扉枠で分ける。LOCK）。実用の運河（ROAD_STYLE。#114）の寸法は変えない
 ROAD_STYLE = dict(pad=CANAL_PAD, bank=CANAL_BANK, coping=CANAL_COPING, water_z=CANAL_WATER_Z, wall_bottom=CANAL_WALL_BOTTOM, lock=False)
