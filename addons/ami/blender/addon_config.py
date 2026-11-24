@@ -21,6 +21,7 @@ SHEETS[catalog.TRAM] = catalog.TRAM
 SHEETS.update({_s: _s for _s in catalog.SIDEWALKS})
 SHEETS.update({_e: _e for _e in catalog.EMBANKMENTS})
 SHEETS.update({_m: _m for _m in (catalog.MONORAIL, *catalog.MONORAIL_ELEVS)})  # 跨座式モノレール（#113）
+SHEETS.update({_m: _m for _m in (*catalog.MONORAIL_SUSPENDEDS, *catalog.MONORAIL_SUSPENDED_ELEVS)})  # 懸垂式モノレール（#116）
 SHEETS[catalog.CANAL] = catalog.CANAL  # 運河（#114）
 SHEETS[catalog.CANAL_SCENIC] = catalog.CANAL_SCENIC  # 景観の運河（#161）
 
