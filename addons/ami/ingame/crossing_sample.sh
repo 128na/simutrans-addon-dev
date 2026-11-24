@@ -1,5 +1,5 @@
 #!/bin/bash
-# AMI の踏切の見本（#111）。ingame/crossing_sample.nut を流して 12 組 × 2 向きの踏切を温暖・降雪に敷き、開いた絵と閉じた絵を撮る。
+# AMI の踏切の見本（#111）。ingame/crossing_sample.nut を流して 16 組 × 2 向きの踏切を温暖・降雪に敷き、開いた絵と閉じた絵を撮る。
 # ゲームは work/crossing_game/<PORT>/ の写し（GAME_DIR の exe・dll・設定・pak128・addons と保存データ）に dist/ami.pak を足して起動する。
 # GAME_DIR には書き込まない。敷いた後はゲームを開いたままにする。
 # 使い方（アドオンのディレクトリで。python -X utf8 build.py で dist/ami.pak を作っておく）:
@@ -20,7 +20,7 @@
 ORIGINS="temperate:20:24 snow:276:24"
 START=10; SP=6; VX=4; VY=12
 # 区画 M（crossing_sample.nut の MIXED。温暖側だけ）: j 番目の踏切は (ox + MX + j * 8, oy + 2)。MX = LEN + 14
-MX=$((START + 12 * SP + 4 + 14)); NMIXED=5
+MX=$((START + 16 * SP + 4 + 14)); NMIXED=5
 # 区画 M の組ごとに出る踏切（ami = AMI の踏切、other = ほかの pak の踏切）。README の「踏切の作り」に書いた結果（2026-11-21）
 MIXED_EXPECT=${MIXED_EXPECT:-"other other ami ami ami"}
 # 画面（704x536、gui.jump で踏切のタイルへ飛んだとき）のうち、格子に並べる範囲（x0,y0,x1,y1）。踏切のタイルが中ほどに来る
@@ -126,8 +126,8 @@ if [ "$CAPTURE" = closed ]; then
   sq="local out = \"\"; foreach (c in world.get_convoy_list()) { local q = c.get_pos();"
   for o in $ORIGINS; do
     IFS=: read -r clim ox oy <<< "$o"
-    sq="$sq if (q.y == $((oy + 2)) && q.x >= $ox && q.x <= $((ox + 100))) for (local k = 0; k < 12; k++) { local d = q.x - $((ox + START)) - k * $SP; if (d < 0) d = -d; if (d >= 1 && d <= 3) out += \"${clim}:H:\" + k + \" \"; }"
-    sq="$sq if (q.x == $((ox + VX)) && q.y >= $((oy + VY)) && q.y <= $((oy + VY + 100))) for (local k = 0; k < 12; k++) { local d = q.y - $((oy + VY + START)) - k * $SP; if (d < 0) d = -d; if (d >= 1 && d <= 3) out += \"${clim}:V:\" + k + \" \"; }"
+    sq="$sq if (q.y == $((oy + 2)) && q.x >= $ox && q.x <= $((ox + 100))) for (local k = 0; k < 16; k++) { local d = q.x - $((ox + START)) - k * $SP; if (d < 0) d = -d; if (d >= 1 && d <= 3) out += \"${clim}:H:\" + k + \" \"; }"
+    sq="$sq if (q.x == $((ox + VX)) && q.y >= $((oy + VY)) && q.y <= $((oy + VY + 100))) for (local k = 0; k < 16; k++) { local d = q.y - $((oy + VY + START)) - k * $SP; if (d < 0) d = -d; if (d >= 1 && d <= 3) out += \"${clim}:V:\" + k + \" \"; }"
   done
   sq="$sq } return out;"
   end_at=$((SECONDS + ${WAIT:-1500}))
