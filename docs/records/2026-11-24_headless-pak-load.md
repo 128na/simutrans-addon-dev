@@ -22,7 +22,7 @@ OTRP 本体（fork の `OTRP-KUTAv6`）を画面なしでビルドし、pak を�
 ## やったこと
 
 1. 一時の worktree に `OTRP-KUTAv6` を取り出し、`config.default` に `BACKEND = posix`・`OSTYPE = mingw` を書いて、PowerShell から `make -j16`（`C:\msys64\mingw64\bin;C:\msys64\usr\bin` を `PATH` の先頭に足す）。
-2. 検証用の作業フォルダを一時の場所に作り、`addon_check` の `pak128/`・`text/`・`font/`・`config/`・`script/` と DLL を写し、できた `sim.exe` と AMI の `dist/*.pak` を `addons/pak128/` に置いた。
+2. 検証用の作業フォルダを一時の場所に作り、`addon_check` の `pak128/`・`text/`・`font/`・`config/`・`script/` と DLL を写し（**`settings.xml` は写さない**。使用状況の送信に使われるため）、できた `sim.exe` と AMI の `dist/*.pak` を `addons/pak128/` に置いた。
 3. `sim.exe -use_workdir -singleuser -objects pak128/ -addons -nosound -debug 3` を、標準入力を閉じて（`< /dev/null`）、`timeout 60` を付けて実行。出力は `-debug 3` の Message・Warning・ERROR。
 4. 壊した pak を作って同じに実行（下の表）。壊し方は、AMI の `ami_canal`（way 1 本）を makeobj で pak にして、バイトを書き換える・切る・混ぜる。makeobj の入力（dat）を壊す物（絵のファイルが無い・絵の番号が範囲外・必須の絵のキーが無い・空の絵）と、参照切れの船（存在しない積荷）も作った。
 5. 本体のスクリプトの API（scenario）で、読み込めた way の一覧を出し、`makeobj list` の一覧と比べた。
@@ -36,14 +36,14 @@ OTRP 本体（fork の `OTRP-KUTAv6`）を画面なしでビルドし、pak を�
 |---|---|
 | `make BACKEND=posix`（Windows の MinGW、`-j16`） | 成功。**50 秒**（きれいな worktree からの全部。`sim.exe` は約 11 MB）。`config.default` は `BACKEND=posix`・`OSTYPE=mingw`・`MULTI_THREAD=1`・`USE_ZSTD=1`・`USE_FREETYPE=0`。SDL・FreeType・フォントは要らない |
 | Linux（`ubuntu:24.04` の Docker、`BACKEND=posix`、`OSTYPE=linux`） | 成功。`make -j24` が **28 秒**（apt の導入が別に 20 秒）。`sim` は約 9.7 MB。必要な物は `build-essential`・`libbz2-dev`・`libpng-dev`・`zlib1g-dev`・`libzstd-dev`・`pkg-config` だけ。`config.default` は `BACKEND=posix`・`OSTYPE=linux`・`MULTI_THREAD=1`・`USE_ZSTD=1`・`USE_FREETYPE=0` |
-| CMake の `SIMUTRANS_BACKEND=none` | `none` の分岐は `CMakeLists.txt` にある（`display/simgraph0.cc`・`sys/simsys_posix.cc`・`COLOUR_DEPTH=0`）。ただし構成（`cmake -G "Unix Makefiles"`）が `No SOURCES given to target` で止まる。`build.md` 3 章の「CMake の一覧が実ファイルと合っていない」と同じ原因とみられる（原因の個所までは見ていない）。**`cmake/` は管理対象外**なので、CMake は使わず Make の `posix` を使う |
+| CMake の `SIMUTRANS_BACKEND=none` | `none` の分岐は `CMakeLists.txt` にある（`display/simgraph0.cc`・`sys/simsys_posix.cc`・`COLOUR_DEPTH=0`）。ただし構成（`cmake -G "Unix Makefiles"`）が `No SOURCES given to target` で止まる。OTRP の開発の手元の文書にある「CMake の一覧が実ファイルと合っていない」（2026-10-23 の確認）と同じ原因とみられる（原因の個所までは見ていない）。**`cmake/` は管理対象外**なので、CMake は使わず Make の `posix` を使う |
 | 本体の CI | `otrp-automated-tests.yml` は `BACKEND=sdl2` でビルドする（SDL2・FreeType・miniupnpc・zstd 1.4.4 を入れる）。headless の検査には要らない |
 
 ### 実行（pak128 と AMI の `dist/` の 8 本。全部入りの `ami.pak` は除く）
 
-- 所要 3 秒。出力は約 16,200 行。Warning も ERROR も出ない（`ami_rail_old.pak` を `ami_rail.pak` と同時に読んでも重複しない）。
+- 所要 3 秒。出力は約 16,200 行。重複や読み込みの誤りの行は出ない。出る Warning は毎回同じ（`statistics log is not send.`（`settings.xml` が無いとき）、`no pak texts for language`、`Spurious object`、`get_int_clamped`（threads）、`karte_t::create_rivers`、`cbuffer_t::check_format_strings` の翻訳の警告、`settings.xml` が無いときの `rd_open`）。これらは期待する行として除く（`ami_rail_old.pak` を `ami_rail.pak` と同時に読んでも重複しない）。
 - 最後は、`ERROR: modal_dialogue: called without a display driver => nothing will be shown!` が 1 行出て、世界を作り直して終わる。**これは正常な終わり方**（バナーを出せないため）。この行は無視する。終了コードは 0。
-- 全部入りの `ami.pak` と種類別の pak を一緒に読むと、`Warning: object way::ami_canal is overlaid!` のような行が 180 行ほど出る（way 99・wayobj 27・crossing 19・tunnel 8・bridge 7・roadsign 6・building 6）。`ami.pak` は種類別の pak の全部入りなので当然。**重複の検査になる**（`dist/` を丸ごと読ませるときは、全部入りか種類別のどちらかに分ける）。
+- 全部入りの `ami.pak` と種類別の pak を一緒に読むと、`Warning: object way::ami_canal is overlaid!` のような行が 172 行出る（way 99・wayobj 27・crossing 19・tunnel 8・bridge 7・roadsign 6・building 6）。`ami.pak` は種類別の pak の全部入りなので当然。**重複の検査になる**（`dist/` を丸ごと読ませるときは、全部入りか種類別のどちらかに分ける）。
 - AMI の way は、scenario の `way_desc_x.get_available_ways(wt, st)` で 137 本が出た。`makeobj list` の way 137 本と一致した。
 
 ### 壊した pak の結果
@@ -54,7 +54,7 @@ OTRP 本体（fork の `OTRP-KUTAv6`）を画面なしでビルドし、pak を�
 |---|---|---|
 | 空のファイル（0 バイト） | 見つかる: `ERROR: obj_reader_t::read_file(): unexpected end of file after 1 bytes while reading '…'!` | — |
 | pak でないファイル（文字列） | 見つかる: 同じ `unexpected end of file` | — |
-| ヘッダーの先頭 64 バイトを 0 に | 見つかる（弱い）: **`Message:` の行** `version of '…' is too old, … instead of 1003`。Warning でも ERROR でもない | 物が消える |
+| ヘッダーの先頭 64 バイトを 0 に | 見つかる（弱い）: **`Message:` の行** `version of '…' is too old, … instead of 1003`。Warning でも ERROR でもない。本体より**新しい**版の数だけがこの行を出し、古い版は何も出さずに読む（`obj_reader.cc` の `read_file`） | 物が消える |
 | ROOT ノードの大きさを壊す | 見つかる: `FATAL ERROR: obj_reader_t::read_node() - node of type ROOT must have size 0`。**そのあと終わらない**（60 秒の `timeout` で止めた。終了コード 124） | — |
 | 存在しない積荷を参照する船（xref） | 見つかる: `FATAL ERROR: obj_reader_t::resolve_xrefs - cannot resolve 'GOOD-NoSuchGood_xyz'`。同じく終わらない | — |
 | ランダムに 200 バイト書き換え | 見つかる（運しだい）: `Warning: obj_reader_t::read_nodes(): skipping unknown MG-node` | 物が消える |
@@ -71,7 +71,7 @@ OTRP 本体（fork の `OTRP-KUTAv6`）を画面なしでビルドし、pak を�
 
 - `descriptor/reader/obj_reader.cc` の `obj_reader_t::load` は、ディレクトリを読むとき `read_file(i);` の戻り値を使わない。`read_nodes`・`read_node_info` は、途中で読めなくなると **ログを出さずに `false` を返す**。子のノードの読み込みに失敗すると、その物は `delete` されて**登録されない**。これが「半分で切ると何も出ずに物が消える」理由。
 - `finish_loading` の「Checking … objects」の `successfully_loaded()` は、種類ごとの必須物（積荷の `Passagiere` など）を見る。AMI の pak だけを読ませると `FATAL ERROR: successfully_loaded() - … goods_desc_t-object Passagiere not found.` で止まる。**pakset が要る。**
-- OTRP は、起動のたびに前回の使用状況を外部へ送る（`network/otrp_log_sender.cc`。`settings.xml` に前回の記録が残っているときに送る）。headless の検査では、`settings.xml` を毎回消してから起動する（消せば `statistics log is not send.` と出て送らない）。**これを怠ると、検査のたびに外へ通信する。** この調査の 2 回目以降の実行で気づいた。1 回目から消すようにした後は送っていない（それまでに十数回、記録を付けた起動で送った）。
+- OTRP は、起動のたびに前回の使用状況を外部へ送る。コードで確かめた流れ: `simmain.cc` の 693〜700 行付近で `settings.xml` を読み、`env_t::otrp_statistics_log` に入れる。1241〜1242 行付近の `send_launch_log()`（`network/otrp_log_sender.cc` の 54〜59 行付近）が、値が空でなければ HTTP GET で送る。送信先は `himeshi.ddns.net:15000`。送る中身は 68〜71 行付近の `save_statistics()` が作る、前回の起動の ID・OTRP の版・言語・OS・pak 名・ネットワークの状態・所要時間。**通常の終了のたびに、`simmain.cc` の 1807〜1813 行付近が `settings.xml` を書き出し、そこに送信用の記録が入る。** 作業フォルダを使い回すと 2 回目の起動が送る。headless の検査では、**起動の前に毎回 `settings.xml` を消す**（消せば `statistics log is not send.` と出て送らない）。終了後にも消すか、毎回新しいフォルダで走らせるとさらによい。怠ると、検査のたびに外へ通信する。この調査では 2 回目以降の実行で気づいた。1 回目から消すようにした後は送っていないはずだが、それまでの記録を付けた起動の回数（十数回）は自己申告で、送信の記録は確かめていない。
 - `FATAL ERROR` の後、Windows の `sim.exe` は終わらず待つ（標準入力を閉じても）。**Linux（Docker の `ubuntu:24.04`）では `abort` で終わる（終了コード 134）**。どちらでも `timeout` は付ける。MSYS の `timeout` はまれに子の `sim.exe` を残した（手で消した）。CI の Linux では `timeout` が子を殺す。
 - 「読み込めた物の一覧」を出す API はある（`way_desc_x.get_available_ways`、`get_available_tunnels`・`get_available_bridges`・`get_available_wayobjs`・`get_available_signs`・`get_available_stations`・`get_available_vehicles`）。scenario は、画面なしでも動く（`-scenario <名前>`。`pak/scenario/<名前>/scenario.nut` と地図 `empty-16x16.sve`。後者は fork の `tests/automated-tests/` にある）。**ゲームは終わらない**（`-until` は効かなかった）ので、出力の合図（例: `PAKCHK done`）を待って、外から止める。出力は `script-scenario.log` と標準出力の両方に出る。
 - 一覧で見えない種類もある。crossing（踏切）・building（車庫・駅の建物）・embankment（盛土）などには、一覧の API が無いか、条件が要る。一覧の比較で守れるのは way・橋・トンネル・架線・標識・車両・駅。それ以外は、読み込みの文字列だけ。
@@ -95,7 +95,7 @@ OTRP 本体（fork の `OTRP-KUTAv6`）を画面なしでビルドし、pak を�
 ### 手元での作り方の案
 
 1. 本体（`BACKEND=posix`）は 1 回ビルドして `sim` を置く（`otrp:<ref>` と同じく、コミットかタグで固定する）。`ci.env` に `SIM_HEADLESS=otrp:<ref>` のように書く。
-2. 一時の作業フォルダを作り、pakset（`tests/simutrans-test-base.zip`）を展開して、AMI の `dist/` の pak（`ami.pak` と種類別の pak のどちらか）を `addons/pak/` に置く。`settings.xml` は置かない（置いてあれば消す）。
+2. 一時の作業フォルダを作り、pakset（`tests/simutrans-test-base.zip`）を展開して、AMI の `dist/` の pak（`ami.pak` と種類別の pak のどちらか）を `addons/pak/` に置く。`settings.xml` は置かない（置いてあれば、起動の前に毎回消す。`addon_check` などから写さない）。
 3. `sim -use_workdir -singleuser -objects pak/ -addons -nosound -debug 3 < /dev/null` を `timeout 60` 付きで実行し、出力を次の文字列で探す。1 つでもあれば失敗: `^FATAL ERROR`・`^ERROR: obj_reader`・`skipping unknown`・`is overlaid`・`too old`・`Reading addon object data failed`・`cannot resolve`・タイムアウト。`ERROR: modal_dialogue: called without a display driver` は期待する行。
 4. 第 2 段（任意）: scenario で way（と橋など）の一覧を出し、`makeobj list` の一覧と比べる。足りない物があれば失敗。
 
