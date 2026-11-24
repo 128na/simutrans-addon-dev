@@ -1,5 +1,5 @@
 // 配る pak の読み込みの確認（#91）: pak に入っている全部の物（way・way-object・橋・トンネル）を、1 つずつ道具で敷けるかを確かめる。
-// ingame/beta_check.sh が src/*.dat から ITEMS の行を作って差し替え、flat_512 の温暖側に敷く。見た目は見ない（敷けたかと、敷いた物の名前だけ）。
+// ingame/beta_check.sh が src/*.dat から ITEMS の行を作って差し替え、flat_512_left_v64 の温暖側に敷く。見た目は見ない（敷けたかと、敷いた物の名前だけ）。
 // ITEMS: [名前, obj（way・way-object・bridge・tunnel・crossing・building・roadsign）, waytype（dat の値）, system_type（way だけ。1 は高架）, type（building だけ。depot・stop）]
 // 並べ方（原点 (OX, OY)。1 つの物に 1 行、ROW タイルずつ南へ）:
 //   way: (0)-(5) を東西に敷き、(2) のタイル（高架は 2 段上）の way の名前を読む
@@ -10,7 +10,7 @@
 //   道路標識: 一般道路を (0)-(5) に敷き、(2) に置く。(2) の標識の名前を読む
 //   水路の踏切（ami_crossing_<線路・道路>_canal）: 運河を (0)-(5) に東西に、線路・道路を (2) の南北に横切らせる
 //   トンネル: 別の列（原点 (OX + TUNNEL_DX, OY)。TUNNEL_ROW タイルずつ南へ）で、(3)-(5) を 2 段上げて両端を 2 段の坂にし、(2) から掘る。(2) の坑口のトンネルの名前を読む
-// way の行が 1 列に収まらないときは、東（COL_DX）へ列を増やす（flat_512 は 512 タイル四方。1 列は MAX_Y まで。#177）。
+// way の行が 1 列に収まらないときは、東（COL_DX）へ列を増やす（flat_512_left_v64 は 512 タイル四方。1 列は MAX_Y まで。#177）。
 // 返り値の先頭が ok なら全部敷けた。NG の行に名前と理由が続く。
 local ITEMS = [];
 local OX = 20, OY = 20, ROW = 4;

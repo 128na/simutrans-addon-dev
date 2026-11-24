@@ -4,7 +4,7 @@
 // 通常の版（_base_・_elev_ を含まない名前）は壁を重ねない（比べる相手）。画像の名前は calib_struct.nut で撮ったものと同じになるので、
 // 出力のフォルダを分ける（壁なしの画像と並べて測るときは、名前を替えて同じフォルダに写す。記録 2026-11-21_ami-busyness-ranges.md）。
 // center の壁は行き止まりの端の壁だけ（壁の way-object の絵の決まり。ingame/sample.nut と同じ）。
-// flat_512.sve の温暖側 (20,20) と降雪側 (276,20) に敷く。降雪側は敷いた後に一帯を降雪に塗り直す。
+// flat_512_left_v64.sve の温暖側 (20,20) と降雪側 (276,20) に敷く。降雪側は敷いた後に一帯を降雪に塗り直す。
 // 撮る場所は区画の (5,5)（ingame/calib_capture.sh に NUT=ingame/calib_wall.nut で渡す）。1 回に並べるのは 14 本まで
 // 返り値の先頭が ok なら全部敷けた
 // WAYS は 1 行に書く（calib_capture.sh が WAYS_NUT で行ごと置き換える）

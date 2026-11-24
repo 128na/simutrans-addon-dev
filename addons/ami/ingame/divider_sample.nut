@@ -1,6 +1,6 @@
 // AMI の中央分離帯つきの壁（ami_wall_road_front_divider・ami_wall_road_center_divider・ami_wall_road_twin_divider。#118）の見本。
 // 道路を 2 タイル並べた 4 車線の、手前のタイルに分離帯つきの壁を重ねる。道路 2 種（ROADS）それぞれに、種類ごとに SPACING ずつ南へ敷く。
-// 検証用の flat_512.sve に、温暖側 (20,20) と降雪側 (276,20) の 2 か所へ同じ並びで敷き、降雪側は一帯を降雪に塗り直す（地形を変えたタイルはその場で塗り直す）。
+// 検証用の flat_512_left_v64.sve に、温暖側 (20,20) と降雪側 (276,20) の 2 か所へ同じ並びで敷き、降雪側は一帯を降雪に塗り直す（地形を変えたタイルはその場で塗り直す）。
 // 使い方（アドオンのディレクトリで）: sample_parallel.sh に NUT=ingame/divider_sample.nut を付ける（撮る場所は sample_spots.sh の DIVIDER_SPOTS）。
 // 返り値の先頭が ok なら全部敷けて、[check] で比べた way-object も期待どおり。違えば先頭が check で、「名前 場所=[…]」が続く。最後に確かめた値（[check] の行）が続く。
 //

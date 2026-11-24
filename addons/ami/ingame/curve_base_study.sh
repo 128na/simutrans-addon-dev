@@ -2,7 +2,7 @@
 # 複線の直角のカーブで、角のタイルの版の敷き方を比べる検討用の見本（#94）。ingame/curve_base_study.nut を流す。
 # 起動・終了は ingame/curve_switch_study.sh（work/study_game/<PORT>/ の写しに AMI と iss の線路の pak を足して起動する）に任せる。
 # 使い方（アドオンのディレクトリで。python -X utf8 build.py で dist/ami.pak を作っておく）:
-#   GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe PORT=47200 bash ingame/curve_base_study.sh > work/curve94/launch.log
+#   GAME_DIR=<検証用のフォルダ> PORT=47200 bash ingame/curve_base_study.sh > work/curve94/launch.log
 #                                                       … 起動して敷き、[check] の行を出す（出力は管に通さずファイルへ。
 #                                                         ゲームを起動した子のシェルが管を持ったままになり、ゲームを閉じるまで終わらない）
 #   PORT=47200 CAPTURE=1 OUT=work/curve94/shots bash ingame/curve_base_study.sh  … 輪の角ごとに撮る（<組>_<敷き方>_<角>.png）
@@ -64,5 +64,5 @@ if [ "$CAPTURE" = 1 ]; then
   exit 0
 fi
 
-GAME_DIR=${GAME_DIR:?GAME_DIR に検証用のフォルダを指定する} EXE=${EXE:?EXE を指定する（例: OTRPv64_3.exe）} \
+GAME_DIR=${GAME_DIR:?GAME_DIR に検証用のフォルダを指定する} \
   PORT=$PORT NUT=ingame/curve_base_study.nut bash "$(dirname "$0")/curve_switch_study.sh"

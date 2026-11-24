@@ -1,5 +1,5 @@
 // AMI の盛土の見本（#123）: ami_embankment_front・ami_embankment_back を、高架の脇・台の輪・窪みの輪・坂・斜めに敷く。名札（ASCII）付き。
-// 検証用の flat_512.sve に、温暖側 (20,24) と降雪側 (276,24) の 2 か所へ同じ並びで敷く。降雪側は敷いた後に一帯を降雪に塗り直す。
+// 検証用の flat_512_left_v64.sve に、温暖側 (20,24) と降雪側 (276,24) の 2 か所へ同じ並びで敷く。降雪側は敷いた後に一帯を降雪に塗り直す。
 // 使い方（アドオンのディレクトリで）: sample_parallel.sh に NUT=ingame/embankment_sample.nut を付ける（撮る場所は sample_spots.sh の EMBANKMENT_SPOTS）。
 // 返り値の先頭が ok なら全部敷けて、[check] で比べた値も期待どおり。違えば先頭が check で、「名前 場所=[…]」が続く。最後に確かめた値（[check] の行）が続く。
 //
