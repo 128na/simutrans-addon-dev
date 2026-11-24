@@ -304,10 +304,18 @@ def text(w, h, items):
             ob.color = (*col, 1)
             ob.location = (x + dx, -y + dy, z)
             sc.collection.objects.link(ob)
-    p = os.path.join(R.WORK, "_icon_text.png")
+    # 一時ファイルはプロセスごとの名前にする。render_parallel.py は対象ごとにアイコンの後処理（この icons.py）を同時に動かすので、
+    # 共通の名前だと文字の絵を取り合い、別の対象の札が入ったり欠けたりした（#244）
+    p = os.path.join(R.WORK, f"_icon_text_{os.getpid()}.png")
     sc.render.filepath = p
     bpy.ops.render.render(write_still=True)
-    return R.load_rgba8(p).astype(np.float32) / 255
+    try:
+        return R.load_rgba8(p).astype(np.float32) / 255
+    finally:
+        try:
+            os.remove(p)
+        except OSError:
+            pass
 
 
 # ---------------------------------------------------------------- アイコンとカーソル
