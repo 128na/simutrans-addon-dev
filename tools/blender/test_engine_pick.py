@@ -26,6 +26,16 @@ try:
 except RuntimeError:
     pass
 
+# setup_scene が識別子の一覧を使っていること（固定に戻すと、EEVEE の無い一覧でも止まらずに通ってしまう）
+real_ids = core.engine_ids
+core.engine_ids = lambda render: {"CYCLES", "BLENDER_WORKBENCH"}
+try:
+    core.setup_scene()
+    fails.append("setup_scene が識別子の一覧を使っていない（EEVEE の無い一覧で止まらなかった）")
+except RuntimeError:
+    pass
+core.engine_ids = real_ids
+
 scene = core.setup_scene()
 if scene.render.engine not in core.EEVEE_IDS:
     fails.append(f"setup_scene の engine が想定外: {scene.render.engine}")
