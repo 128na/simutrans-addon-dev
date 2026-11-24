@@ -1,4 +1,4 @@
-"""dat が空のセル（全部透明）を指していないかの検査（#241）。check.sh が呼ぶ。Python の標準ライブラリだけで動く（CI に numpy・Blender は無い）。
+"""dat が空のセル（全部透明）を指していないかの検査（#241）。check.sh が呼ぶ。Python の標準ライブラリだけでも動く（Pillow があれば速い。CI に numpy・Blender は無い）。
 
     python -X utf8 check_cells.py [src のディレクトリ]
     python -X utf8 check_cells.py --self-test
@@ -53,9 +53,11 @@ def empty_cells_pure(path, nrows, cells):
 
 def empty_cells_pil(path, cells):
     """Pillow の読み。セルの全画素が透明色かを、切り出したセルの各チャンネルの最小・最大で見る"""
+    with open(path, "rb") as f:
+        depth = f.read(25)[24:25]  # IHDR のビット深度（Pillow は 16bit を 8bit に落として黙って通すので、純 Python の読みと揃えて自分で弾く）
     with Image.open(path) as im:
-        if im.mode != "RGB" or im.info.get("interlace"):
-            raise SystemExit(f"8bit RGB・インターレースなしの PNG でない（読めない）: {path} mode={im.mode}")
+        if im.mode != "RGB" or im.info.get("interlace") or depth != b"\x08":
+            raise SystemExit(f"8bit RGB・インターレースなしの PNG でない（読めない）: {path} mode={im.mode} depth={depth[0] if depth else None}")
         w, h = im.size
         out = {}
         for r, c in cells:
