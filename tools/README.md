@@ -121,4 +121,5 @@ bash addons/blender-poc/check.sh         # ruff だけ
 - OTRP の fork の makeobj（`OTRP-KUTAv6` の `20ed249`。60.5、「Simutrans 122.0.1 Nightly」用）は、`otrp:` でビルドできるが、近い斜めの画像のキー（`diagonal[close1]`・`[close2]`）を知らず、AMI の pak は作れなかった（2026-11-20）。今の AMI には本家の makeobj が要る
 - `ci/setup-makeobj.sh <指定> <置き場所>`: makeobj を用意する。`upstream:<tag>` は本家のリリースの配布物（Linux 版か Windows 版）、`otrp:<ref>` は OTRP の fork を `<ref>` で取り出して makeobj だけをビルドする（Linux だけ）。キャッシュのキーに指定を使うので、`<ref>` はタグかコミットにする
 - `ci/setup-dat-linter.sh <版> <置き場所>`: dat_linter（Linux 版か Windows 版）を用意する。`fmt`（整形）は使わない（dat は生成するので、整形しても次の生成で戻る）
+- `dat_lint_extra/dat_lint_extra.py <dat かフォルダ>`: `dat_linter` と makeobj が見ない dat の静かな誤り（行末の `# 注記`・数値でない値・行頭の空白・知らない obj・way の絵の綴りと坂の欠け）を見る。`check.sh` から呼ぶ（`--self-test` で検査自身も確かめる）。キー表 `dat_schema.json` は kit の `core/dat_schema.json`（コミット `0bc64b7`）の写しで、直すときは kit の写し直しにする。キー表は simutrans-blender-kit（MIT）から借りたもの（`LICENSE.simutrans-blender-kit`）。差の表は `docs/records/2026-11-24_dat-linter-vs-kit-lint.md`
 - ruff は、動かすと止まる誤りだけを見る（各アドオンと `tools/` の `ruff.toml`）
