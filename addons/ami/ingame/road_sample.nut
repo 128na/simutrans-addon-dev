@@ -28,7 +28,7 @@
 //   偽（今）: 分岐の絵が無いので、自動選択（H）・固定（I）・隣り合う十字（L）がどれも通常の T字・十字と同じ絵なら ok
 //   真（v64 の仕様。KUTA 流の決まりは無くなった: teamhimeh/simutrans#816）: H（隣が T字・十字）の自動選択は通常の T字と同じで、固定の 1・2 は通常と違い互いにも違えば ok、
 //   L の十字は通常の十字（標準の十字の絵）なら ok。M（枝の隣がカーブの T字）の自動選択が 1・2 の絵なら is1・is2（通常なら plain）
-local ROADS = ["ami_road_local", "ami_road_general", "ami_road_expressway"];
+local ROADS = ["ami_road_local", "ami_road_general", "ami_road_trunk", "ami_road_expressway"];
 // ラウンドの版（#56）: AMI の名前（ami_ で始まるもの）の末尾に付ける。例: "_round1"。空なら今の名前（sample_parallel.sh の SUFFIX が置き換える）
 local SUFFIX = "";
 function wdx(n) { return way_desc_x(n.find("ami_") == 0 ? n + SUFFIX : n); }

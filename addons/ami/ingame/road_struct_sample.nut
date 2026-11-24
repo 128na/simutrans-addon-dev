@@ -23,7 +23,7 @@
 //   橋脚のつながり（x=168〜）: P1 南北の高架 (2,0)-(2,10) の真下に pak128 の道路（STANDARD）を並行して敷き、(-2,5)-(6,5) の東西の STANDARD で横切る、
 //     P2 東西の高架 (8,2)-(18,2) の真下に同じ AMI の道路を並行して敷き、(13,-2)-(13,6) の南北の AMI の道路で横切る、
 //     P3 南北の高架 (22,0)-(22,10) の真下を、東西 (19,5)-(25,5) の線路（RAIL）が横切る
-local ROADS = ["ami_road_local", "ami_road_general", "ami_road_expressway"];
+local ROADS = ["ami_road_local", "ami_road_general", "ami_road_trunk", "ami_road_expressway"];
 local STANDARD = "Road_050";
 local RAIL = "ami_rail_ballast";
 local PIER = "ami_pier_road";

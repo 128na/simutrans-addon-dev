@@ -34,7 +34,7 @@ import bpy
 from . import sheetlib as _s
 from .cells import ROAD_CY, make_sheet, render_cell
 from .core import H, TILE, apply_slope, clear_models, material, mesh_object, set_anchor
-from .road_parts import CENTER_DASHES, CENTER_DASH_FRAC, EDGE_CORNER_R, EDGE_LINE, LINE_TOP, LINE_W, SNOW_LAYERS
+from .road_parts import CENTER_DASHES, CENTER_DASHES_WIDE, CENTER_DASH_FRAC, CENTER_DASH_FRAC_WIDE, EDGE_CORNER_R, EDGE_LINE, LINE_TOP, LINE_W, SNOW_LAYERS
 
 # ---------------------------------------------------------------- 寸法（部品の 1 単位 ≈ 1 m。タイル 1 辺 10）
 # 腕の位置は、交差点の向き a の座標で、u（a の向き。タイルの中心が 0、交差点の側の辺が +5）と v（a の左を正。左側通行で入る側）で表す
@@ -59,6 +59,9 @@ MARKING_STRIPE_PERIOD = 1.0
 # 中央の破線: 道路の中央線の破線と同じ周期と位置（タイルの辺がすき間の中ほど）
 MARKING_DASHES = CENTER_DASHES[0]
 MARKING_DASH_FRAC = CENTER_DASH_FRAC
+# 高速道路の中央線の破線（広い破線。下の高速道路の絵と同じ割り方。#257）。分岐・合流の路面表示の破線をこれに合わせる
+MARKING_EXPWY_DASHES = CENTER_DASHES_WIDE[0]
+MARKING_EXPWY_DASH_FRAC = CENTER_DASH_FRAC_WIDE
 # 導流帯の縞: 線に 45° の向きで、間隔（縞に直角に測る）と幅。これより短い縞（三角の先の細い所）は描かない
 MARKING_ZEBRA_STEP = 0.6
 MARKING_ZEBRA_W = 0.25
@@ -192,11 +195,11 @@ class _Plan:
     def line(self, v, u0, u1):
         self.seg((u0, v), (u1, v))
 
-    def dashed(self, v, u0=-MARKING_HALF, u1=MARKING_HALF):
-        """横位置 v の破線。区切りは道路の中央線の破線と同じ（タイルの辺がすき間の中ほど）"""
-        for i in range(MARKING_DASHES):
-            t0 = -MARKING_HALF + TILE * (i + (1 - MARKING_DASH_FRAC) / 2) / MARKING_DASHES
-            t1 = t0 + TILE * MARKING_DASH_FRAC / MARKING_DASHES
+    def dashed(self, v, u0=-MARKING_HALF, u1=MARKING_HALF, count=MARKING_DASHES, frac=MARKING_DASH_FRAC):
+        """横位置 v の破線。区切りは道路の中央線の破線と同じ（タイルの辺がすき間の中ほど）。高速道路の路面表示は広い破線（count・frac を渡す）"""
+        for i in range(count):
+            t0 = -MARKING_HALF + TILE * (i + (1 - frac) / 2) / count
+            t1 = t0 + TILE * frac / count
             if t1 > u0 and t0 < u1:
                 self.line(v, max(t0, u0), min(t1, u1))
 
@@ -725,9 +728,9 @@ def _expwy_curve(plan, f, u0, u1, w=LINE_W):
 
 def _expwy_dashes(plan, f, w, u0=-MARKING_HALF, u1=MARKING_HALF):
     """v = f(u) に沿う破線。区切りは道路の中央線の破線と同じ（タイルの辺がすき間の中ほど）"""
-    for i in range(MARKING_DASHES):
-        t0 = -MARKING_HALF + TILE * (i + (1 - MARKING_DASH_FRAC) / 2) / MARKING_DASHES
-        t1 = t0 + TILE * MARKING_DASH_FRAC / MARKING_DASHES
+    for i in range(MARKING_EXPWY_DASHES):
+        t0 = -MARKING_HALF + TILE * (i + (1 - MARKING_EXPWY_DASH_FRAC) / 2) / MARKING_EXPWY_DASHES
+        t1 = t0 + TILE * MARKING_EXPWY_DASH_FRAC / MARKING_EXPWY_DASHES
         a, b = max(t0, u0), min(t1, u1)
         if b > a:
             pts = [(a + (b - a) * k / 4, f(a + (b - a) * k / 4)) for k in range(5)]
@@ -764,7 +767,7 @@ def _expwy_zebra(plan, lo, hi, u0, u1):
 
 def _expwy_main_lines(plan):
     """本線の 2 車線の中央の破線（下の道路の破線を路面で覆うので描き直す）。右の路側線は下の道路の絵のまま"""
-    plan.dashed(0.0)
+    plan.dashed(0.0, count=MARKING_EXPWY_DASHES, frac=MARKING_EXPWY_DASH_FRAC)
 
 
 def _expwy_taper(plan):

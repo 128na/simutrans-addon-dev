@@ -30,7 +30,7 @@ BT_SPOTS="BT_B1:167:131 BT_B1ns:179:137 BT_B2:164:151 BT_B2ns:186:150 BT_B4:168:
 #   AFC・B・DE・G1・G2 は線路と同じ区画、HV・HH は分岐の自動選択（2 本を並べた渡り口。南北・東西）、K は pak128 標準の道路とのつなぎ目、L は隣り合う十字、
 #   I0〜I4 は分岐の絵の固定（nse・new・nsw・sew・nsew の 1・2）
 ROAD_SPOTS=""
-for v in LO:0 GE:30 EX:60; do
+for v in LO:0 GE:30 TR:60 EX:90; do
   IFS=: read n dy <<< "$v"
   ROAD_SPOTS="$ROAD_SPOTS ${n}_AFC:8:$((2 + dy)) ${n}_B:3:$((7 + dy)) ${n}_DE:14:$((7 + dy)) ${n}_G1:25:$((3 + dy)) ${n}_G2:25:$((15 + dy))"
   ROAD_SPOTS="$ROAD_SPOTS ${n}_HV:34:$((4 + dy)) ${n}_HH:38:$((12 + dy)) ${n}_K:52:$((3 + dy)) ${n}_L:50:$((15 + dy)) ${n}_M:61:$((14 + dy)) ${n}_M2:61:$((22 + dy))"
@@ -44,7 +44,7 @@ for v in LO:0 GE:30; do
 done
 # 交差点の組み合わせ（ingame/road_junction_sample.nut）: 種類ごとに 22 ずつ南。名前は「南北の車線数x東西の車線数」（道路 1 本が 2 車線）
 JUNCTION_SPOTS=""
-for v in LO:0 GE:22 EX:44; do
+for v in LO:0 GE:22 TR:44 EX:66; do
   IFS=: read n dy <<< "$v"
   k=0
   for cb in 2:1 1:2 3:1 1:3 2:2 2:3 3:2 3:3; do
@@ -60,7 +60,7 @@ done
 #   B1・B1ns・B2・B4 は橋、T1・T1ns・T3 はトンネル、P1〜P3 は橋脚のつながり（pak128 の道路・AMI の道路・線路）、
 #   IB0〜IB4・IV0〜IV4 は分岐の絵の固定（基盤の版 single・高架 single。nse・new・nsw・sew・nsew の 1 と 2 を 1 画面に 2 つずつ）
 STRUCT_SPOTS=""
-for v in LO:0 GE:30 EX:60; do
+for v in LO:0 GE:30 TR:60 EX:90; do
   IFS=: read n dy <<< "$v"
   STRUCT_SPOTS="$STRUCT_SPOTS ${n}_WA_AFC:8:$((2 + dy)) ${n}_WA_B:3:$((7 + dy)) ${n}_WA_DE:14:$((7 + dy)) ${n}_WA_G1:25:$((3 + dy)) ${n}_WA_G2:25:$((15 + dy))"
   STRUCT_SPOTS="$STRUCT_SPOTS ${n}_WP:38:$((5 + dy)) ${n}_WP3:34:$((13 + dy)) ${n}_WP2:40:$((15 + dy)) ${n}_V_AFC:58:$((2 + dy)) ${n}_V_B:53:$((7 + dy)) ${n}_V_DE:64:$((7 + dy)) ${n}_V_L:72:$((4 + dy))"
@@ -89,7 +89,7 @@ EMBANKMENT_SPOTS="A:8:8 B:20:9 R:8:14 M:28:7 P:36:7 S:45:8 T:51:8 D:58:7 X:37:13
 # 中央分離帯の見本（ingame/divider_sample.nut。道路 2 種を 16 ずつ南へ。GE 一般道路・EX 高速道路）: P2 東西の 4 車線と十字、PN 南北の坂、
 #   P0 壁の無い 4 車線、P3 6 車線、PE 高架、R 4 車線の輪（カーブ）、PD 近い斜め
 DIVIDER_SPOTS=""
-for v in GE:0 EX:16; do
+for v in GE:0 TR:16 EX:32; do
   IFS=: read n dy <<< "$v"
   DIVIDER_SPOTS="$DIVIDER_SPOTS ${n}_P2:5:$((1 + dy)) ${n}_PN:13:$((4 + dy)) ${n}_P0:5:$((5 + dy)) ${n}_P3:5:$((9 + dy)) ${n}_PE:23:$((1 + dy)) ${n}_R:22:$((7 + dy)) ${n}_PD:35:$((3 + dy))"
 done

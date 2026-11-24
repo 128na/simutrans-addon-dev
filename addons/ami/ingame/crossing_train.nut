@@ -3,7 +3,7 @@
 // 並びの値（ORIGINS・START・SP・LEN・VX・VY）は crossing_sample.nut と同じにする。返り値に列車ごとの車庫の場所を書く
 local ORIGINS = [[20, 24], [276, 24]];
 local START = 10, SP = 6;
-local LEN = START + 12 * SP + 4;
+local LEN = START + 16 * SP + 4;
 local VX = 4, VY = 12;
 local pl = player_x(0);
 local s = "";
