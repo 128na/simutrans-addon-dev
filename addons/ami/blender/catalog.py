@@ -296,3 +296,6 @@ for _v in MONORAIL_SUSPENDED_VARIANTS:  # 懸垂式（#116）: 並びは跨座�
             ELEVATED_WAYS.add(_n)
 BUILT_WAYS += [CANAL, CANAL_SCENIC]  # 運河（近い斜めの絵は持つ）
 BUILT_WAYS = tuple(BUILT_WAYS)
+NO_CLOSE_WAYS = frozenset(NO_CLOSE_WAYS)  # 書き換えられないようにする（ami_dat.py などが別名で持つ）
+ELEVATED_WAYS = frozenset(ELEVATED_WAYS)
+FRONT_WAYS = frozenset(FRONT_WAYS)
