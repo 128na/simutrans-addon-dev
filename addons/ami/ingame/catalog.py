@@ -90,16 +90,26 @@ def rail_cells(style, old):
     return cells
 
 
+# 基盤・高架を single だけ持つ道路（blender/catalog.py の ROAD_LOCAL・ROAD_GENERAL の variants。#260）
+SINGLE_ONLY_ROADS = ("local", "general")
+
+
 def road_cells(kind):
     s = "ami_road_" + kind
+    variants = ("single",) if kind in SINGLE_ONLY_ROADS else ("single", "back", "center", "front")
+    # 一般道路は円弧、生活道路は L 字のカーブの壁（#260）。直線だけの橋・トンネルは ami_wall_road_single のまま
+    single = {"general": "ami_wall_road_single_arc", "local": "ami_wall_road_single_ell"}.get(kind, "ami_wall_road_single")
+    wall = lambda v: single if v == "single" else "ami_wall_road_" + v
     cells = [(s, line_nut(s))]
-    for v in ("single", "back", "center", "front", "twin"):
-        cells.append((f"{s}_base_{v}" if v != "twin" else f"{s}_base_single+twin", line_nut(f"{s}_base_single" if v == "twin" else f"{s}_base_{v}", "ami_wall_road_" + v)))
-    for v in ("center", "front", "twin"):
-        base = "single" if v == "twin" else v
-        cells.append((f"{s}_base_{base}+{v}_divider", line_nut(f"{s}_base_{base}", f"ami_wall_road_{v}_divider")))
-    for v in ("single", "back", "center", "front"):
-        cells.append((f"{s}_elev_{v}", line_nut(f"{s}_elev_{v}", "ami_wall_road_" + v, 10, 2, "ami_pier_road")))
+    for v in variants:
+        cells.append((f"{s}_base_{v}", line_nut(f"{s}_base_{v}", wall(v))))
+    cells.append((f"{s}_base_single+twin", line_nut(f"{s}_base_single", "ami_wall_road_twin")))
+    if kind not in SINGLE_ONLY_ROADS:
+        for v in ("center", "front", "twin"):
+            base = "single" if v == "twin" else v
+            cells.append((f"{s}_base_{base}+{v}_divider", line_nut(f"{s}_base_{base}", f"ami_wall_road_{v}_divider")))
+    for v in variants:
+        cells.append((f"{s}_elev_{v}", line_nut(f"{s}_elev_{v}", wall(v), 10, 2, "ami_pier_road")))
     cells.append((f"{s}_bridge", BRIDGE_NUT % {"bridge": s + "_bridge", "way": s + "_base_single", "wall": "ami_wall_road_single"}))
     cells.append((f"{s}_tunnel", TUNNEL_NUT % {"tunnel": s + "_tunnel", "way": s + "_base_single", "wall": "ami_wall_road_single"}))
     return cells

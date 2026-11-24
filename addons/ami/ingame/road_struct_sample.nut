@@ -151,15 +151,23 @@ function pins(tag, w, wo, ox, oy, iy, z, pier, name) {
 function lay(name, ox, oy) {
   local w = wdx(name), std = way_desc_x(STANDARD), rail = way_desc_x(RAIL), pier = wdx(PIER);  // RAIL は道路のラウンドの pak に無いので今の名前
   local od = {}, ev = {}, bd = {};
+  // 一般道路・生活道路は基盤・高架が single だけ（#260）。複線・端の壁の版の見本は敷かない
+  local multi = !(name == "ami_road_local" || name == "ami_road_general");
   foreach (v in ["single", "back", "center", "front", "twin"]) {
     od[v] <- wodx("ami_wall_road_" + v);
     if (od[v] == null) return "ami_wall_road_" + v + " desc=[missing]\n";
   }
-  foreach (v in ["single", "back", "center", "front"]) {
+  foreach (v in (multi ? ["single", "back", "center", "front"] : ["single"])) {
     ev[v] <- wdx(name + "_elev_" + v);
     if (ev[v] == null) return name + "_elev_" + v + " desc=[missing]\n";
     bd[v] <- wdx(name + "_base_" + v);
     if (bd[v] == null) return name + "_base_" + v + " desc=[missing]\n";
+  }
+  // 一般道路は円弧、生活道路は L 字のカーブの single の壁を重ねる（#260）。幹線・高速道路は斜めの ami_wall_road_single
+  local curved = {ami_road_general = "ami_wall_road_single_arc", ami_road_local = "ami_wall_road_single_ell"};
+  if (name in curved) {
+    od["single"] = wodx(curved[name]);
+    if (od["single"] == null) return curved[name] + " desc=[missing]\n";
   }
   local br = bdx(name + "_bridge");
   if (w == null || br == null || pier == null) return name + " desc=[missing]\n";
@@ -214,12 +222,14 @@ function lay(name, ox, oy) {
     t += r(tag + " front wall again", stair_wo(od["front"], ox + x0 + 1, oy + y0, 5, 1));
     return t;
   };
-  s += pairs("W", px, function(v) { return bd[v]; });
-  foreach (q in [[0, 0], [1, 1], [12, 9], [11, 8]]) checks += "[check] " + name + " W1 (" + q[0] + "," + q[1] + ") " + names(ox + px + q[0], oy + q[1]) + "\n";
-  foreach (k, v in ["back", "center", "front"]) {
-    s += r("W3 way", way2(bd[v], od[v], c(px, 12 + k), c(px + 3, 12 + k)));
+  if (multi) {
+    s += pairs("W", px, function(v) { return bd[v]; });
+    foreach (q in [[0, 0], [1, 1], [12, 9], [11, 8]]) checks += "[check] " + name + " W1 (" + q[0] + "," + q[1] + ") " + names(ox + px + q[0], oy + q[1]) + "\n";
+    foreach (k, v in ["back", "center", "front"]) {
+      s += r("W3 way", way2(bd[v], od[v], c(px, 12 + k), c(px + 3, 12 + k)));
+    }
+    s += close_pair("W2", px + 6, 12, bd);
   }
-  s += close_pair("W2", px + 6, 12, bd);
   // 高架
   mode.z = ELEV_UP;
   mode.pier = pier;
@@ -233,11 +243,13 @@ function lay(name, ox, oy) {
             + " teeE=" + img(ox + ex, oy + 7, ELEV_UP) + " teeW=" + img(ox + ex + 6, oy + 7, ELEV_UP) + "\n";
   // 高架の複線
   local vx = 90;
-  s += pairs("WV", vx, function(v) { return ev[v]; });
-  foreach (q in [[0, 0], [1, 1], [12, 9], [11, 8]]) checks += "[check] " + name + " WV1 (" + q[0] + "," + q[1] + ") " + names(ox + vx + q[0], oy + q[1], ELEV_UP) + "\n";
-  s += close_pair("WV2", vx + 16, 0, ev);
-  foreach (k, v in ["back", "center", "front"]) {
-    s += r("WV3 way", way2(ev[v], od[v], c(vx, 12 + k), c(vx + 3, 12 + k)));
+  if (multi) {
+    s += pairs("WV", vx, function(v) { return ev[v]; });
+    foreach (q in [[0, 0], [1, 1], [12, 9], [11, 8]]) checks += "[check] " + name + " WV1 (" + q[0] + "," + q[1] + ") " + names(ox + vx + q[0], oy + q[1], ELEV_UP) + "\n";
+    s += close_pair("WV2", vx + 16, 0, ev);
+    foreach (k, v in ["back", "center", "front"]) {
+      s += r("WV3 way", way2(ev[v], od[v], c(vx, 12 + k), c(vx + 3, 12 + k)));
+    }
   }
   mode.z = 0;
   mode.pier = null;
@@ -310,12 +322,14 @@ function lay(name, ox, oy) {
   };
   s += tunnel("T1 ew", true, 24, 19, od["single"]);
   s += tunnel("T1 ns", false, 0, 37, od["single"]);
-  s += tunnel("T3 back", true, 24, 24, od["back"]);
-  s += tunnel("T3 front", true, 24, 25, od["front"]);
+  if (multi) {
+    s += tunnel("T3 back", true, 24, 24, od["back"]);
+    s += tunnel("T3 front", true, 24, 25, od["front"]);
+  }
   // 橋の床（z=2）と端のタイル（坂の端は z=0）、坑口とトンネルの中（z=0。地面のタイルは上げた尾根なので高さで引く）の道路と壁
   foreach (q in [[4, 1, 0], [7, 1, 2], [19, 7, 2], [1, 19, 0], [4, 19, 2], [5, 24, 0], [8, 24, 2], [12, 24, 2]])
     checks += "[check] " + name + " BT bridge (" + q[0] + "," + q[1] + ",z=" + q[2] + ") " + names_h(ox + bx + q[0], oy + q[1], q[2]) + "\n";
-  foreach (q in [[26, 19], [28, 19], [37, 3], [37, 5], [26, 24], [28, 25]])
+  foreach (q in (multi ? [[26, 19], [28, 19], [37, 3], [37, 5], [26, 24], [28, 25]] : [[26, 19], [28, 19], [37, 3], [37, 5]]))
     checks += "[check] " + name + " BT tunnel (" + q[0] + "," + q[1] + ") " + names_h(ox + bx + q[0], oy + q[1], 0) + "\n";
   // 橋脚のつながり
   local qx = 168;

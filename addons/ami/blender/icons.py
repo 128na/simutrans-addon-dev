@@ -98,7 +98,7 @@ MARK_PICTURE = {"ami_mark_lane4": "image[ns][0]", "ami_mark_junction2": "image[n
 def describe(d):
     """dat から、アイコンの決まりに使う中身を取る"""
     name, obj = d["name"], d["obj"]
-    m = re.search(r"_(single|back|center|front|twin)(_catenary|_divider|_pole)?$", name)
+    m = re.search(r"_(single|back|center|front|twin)(_arc|_ell)?(_catenary|_divider|_pole)?$", name)
     info = dict(name=name, version=m.group(1) if m else None, speed=None, struct=None, label=None,
                 old=catalog.is_old(name))  # old: 旧描画位置（SIS に合う。#26）の物。アイコンの左下に「旧」
     if name.startswith(("ami_tram", "ami_embankment", "ami_mark_")):  # 盛土・路面表示は tram_track の way（路面軌道の道具の一覧に出る）

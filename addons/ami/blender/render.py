@@ -561,6 +561,11 @@ for _v in catalog.ROAD_WALL_VARIANTS:
         R.ROAD_PROFILES[_WR.key], sheet=f"ami_wall_road_{_v}_way", prefix=f"ami_wall_road_{_v}_", walls=BASE_VARIANTS[_v],
         groups=R.ROAD_PROFILES[_WR.key]["groups"] + ("wall",), wall_sheet=f"ami_wall_road_{_v}", wall_only=True, curve=None,
         wall_label=ROAD_WALL_LABEL)
+# カーブの形ごとの single の壁（#260。ami_wall_road_single_<arc|ell>）: single の壁と同じ作りで、カーブのセル（行 2 の列 5〜8）だけ円弧・L 字の経路に沿う。
+# 一般道路・生活道路の基盤・高架の single と組む
+for _name, _shape in catalog.ROAD_WALL_CURVED.items():
+    R.ROAD_PROFILES["wall_road_" + _name[len("ami_wall_road_"):]] = dict(
+        R.ROAD_PROFILES["wall_road_single"], sheet=f"{_name}_way", prefix=f"{_name}_", wall_sheet=_name, curve=_shape)
 # 中央分離帯つきの壁（ami_wall_road_<front|center>_divider。#118）: 壁の way-object と同じ作りに、側壁の位置に立つ縁石の帯とガードレール
 # （sheetlib の road_parts の median_*）を足す。分離帯は奥の側の 1 本だけが残る（select_walls）。4 車線の手前のタイルに重ねる
 ROAD_DIVIDER_LABEL = "D"  # 描画のアイコンの文字（ゲームのアイコンは icons.py が書き直す）
@@ -574,11 +579,11 @@ for _v, _name in catalog.ROAD_DIVIDERS.items():
 # 近い斜めの絵を持たない（本体が分け合うタイルに way を 2 本置き、ami_wall_road_twin を重ねられる。線路の基盤の版と同じ）。
 # 壁は way-object（ami_wall_road_<版>）を重ねるので、壁のシートは書かない
 for _r in catalog.ROADS:
-    for _v, _walls in BASE_VARIANTS.items():
+    for _v, _walls in ((_v, BASE_VARIANTS[_v]) for _v in _r.variants):
         R.ROAD_PROFILES[_p(_r.base(_v))] = dict(
             R.ROAD_PROFILES[_r.key], sheet=_r.base(_v), prefix=_r.base(_v) + "_", walls=_walls,
             groups=R.ROAD_PROFILES[_r.key]["groups"] + ("wall",), wall_sheet=f"ami_wall_road_{_v}", write_walls=False,
-            curve_cells=True, curve=None)
+            curve_cells=_r.key not in catalog.ROAD_CURVE_SHAPES, curve=catalog.ROAD_CURVE_SHAPES.get(_r.key))
 
 # 高架の 4 版（<道路>_elev_<版>、dat は system_type=1）: 床（路面と基盤）と躯体だけ。橋脚は描かない（道路用の橋脚の way が描く）。
 # 基盤は壁の外の面で止まり、壁の無い側はタイルの端まで（線路の高架と同じ）。躯体は壁のある側で壁の外の面から ELEV_BODY_INSET 内で止める。
@@ -586,11 +591,12 @@ for _r in catalog.ROADS:
 # 持ち分は基盤と躯体の分だけ下へ広げる（道路の基盤は路面の板の下へ ROAD_BASE_DROP 下げてあるので、線路の ELEV_BODY_LOWER より深い）
 ROAD_ELEV_LOWER = math.ceil((R.BASE_H + R.ELEV_BODY_D + R.ROAD_BASE_DROP) * 16 / R.H) + 2
 for _r in catalog.ROADS:
-    for _v, _walls in BASE_VARIANTS.items():
+    for _v, _walls in ((_v, BASE_VARIANTS[_v]) for _v in _r.variants):
         R.ROAD_PROFILES[_p(_r.elev(_v))] = dict(
             R.ROAD_PROFILES[_r.key], sheet=_r.elev(_v), prefix=_r.elev(_v) + "_", walls=_walls,
             groups=R.ROAD_PROFILES[_r.key]["groups"] + ("wall",), wall_sheet=f"ami_wall_road_{_v}", write_walls=False,
-            elevated=True, elev_body=True, lower=ROAD_ELEV_LOWER, band="elevated", curve_cells=True, curve=None)
+            elevated=True, elev_body=True, lower=ROAD_ELEV_LOWER, band="elevated",
+            curve_cells=_r.key not in catalog.ROAD_CURVE_SHAPES, curve=catalog.ROAD_CURVE_SHAPES.get(_r.key))
 
 # 橋（<道路>_bridge）: 欄干を描かず、single の壁の way-object を重ねる（線路の橋と同じ）。床・躯体の高さは高架にそろえる。
 # 桁（POC の C6。見せ方は 2026-11-19 にユーザーが確定）: iss の都市高速の橋（../refs/iss/src/bridge/road/bridge.dat の iss_br_0120_bridge1）と同じく、床の縁の下に青い鋼の帯を見せる。
@@ -687,10 +693,12 @@ for _name, _kind in catalog.MARKINGS.items():
                                                               slush=MARKING_SLUSH))(_name, _kind, _paving)
 for _v in catalog.ROAD_WALL_VARIANTS:
     SHEETS[f"ami_wall_road_{_v}"] = _road_target(f"wall_road_{_v}")
+for _name in catalog.ROAD_WALL_CURVED:
+    SHEETS[_name] = _road_target("wall_road_" + _name[len("ami_wall_road_"):])
 for _v, _name in catalog.ROAD_DIVIDERS.items():
     SHEETS[_name] = _road_target(f"wall_road_{_v}_divider")
 for _r in catalog.ROADS:
-    for _v in BASE_VARIANTS:
+    for _v in _r.variants:
         SHEETS[_r.base(_v)] = _road_target(_p(_r.base(_v)))
         SHEETS[_r.elev(_v)] = _road_target(_p(_r.elev(_v)))
     SHEETS[_r.bridge] = _road_target(_p(_r.bridge))

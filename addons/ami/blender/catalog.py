@@ -46,6 +46,7 @@ class Road:
     通常の版の way・地上の基盤の版と高架の 4 版・橋・トンネル（#21・#22）。基盤の版は 2026-11-19 にユーザーが確定（
     README の「道路の壁・高架・橋脚・橋・トンネルの作り」）"""
     key: str
+    variants: tuple = VARIANTS  # 基盤・高架を作る版（一般道路・生活道路は single だけ。#260）
 
     @property
     def way(self):
@@ -136,14 +137,14 @@ MONORAIL_POWERS = {f"{PREFIX}monorail_power": False, f"{PREFIX}monorail_suspende
 CANAL = "ami_canal"
 CANAL_SCENIC = "ami_canal_scenic"  # 景観の運河（#161）。実用の運河と同じ値（速さ 60 で #117 の跳ね橋を共用）。水面が 13px 下（iss と同じ）
 
-ROAD_LOCAL = Road("road_local")  # 生活道路（40 km/h、中央線なし）
-ROAD_GENERAL = Road("road_general")  # 一般道路（120 km/h、中央線は白の実線）
+ROAD_LOCAL = Road("road_local", ("single",))  # 生活道路（40 km/h、中央線なし）
+ROAD_GENERAL = Road("road_general", ("single",))  # 一般道路（120 km/h、中央線は白の実線）
 ROAD_TRUNK = Road("road_trunk")  # 幹線道路（#257。最高速度 240 km/h（確定）、中央線は白の破線（直線 4・斜め 3 で高速道路より細かい）。4 車線は道路を 2 本並べる。カーブは高速道路と同じ斜めの直線）
 ROAD_EXPRESSWAY = Road("road_expressway")  # 高速道路（360 km/h、中央線は白の広い破線。線 8m・すき間 12m の割り方。#257）
 ROADS = (ROAD_LOCAL, ROAD_GENERAL, ROAD_TRUNK, ROAD_EXPRESSWAY)
 # 道路のカーブの形（#259。#209 の 2 本目）: 種類 → "arc"（円弧。路面軌道と同じ）か "ell"（L 字。直角）。ここに無い種類（高速道路・幹線道路）は斜めの絵。
 # 速さで描き分ける（一般は円弧、生活道路は L 字）。カーブの絵は way のシートの行 2 の列 5〜8 に描き、dat の image[sw] などがそれを指す。
-# 基盤・高架・壁の版は、まだ斜めの形のまま（3 本目の #260 でそろえる）
+# 基盤・高架の single と壁（ROAD_WALL_CURVED）も同じ形にそろえた（3 本目の #260）
 ROAD_CURVE_SHAPES = {ROAD_LOCAL.key: "ell", ROAD_GENERAL.key: "arc"}
 # 多車線と交差点の路面表示の way（#187。ADR 0012）: 道路に重ねて敷く tram_track の way。名前 → 種類（sheetlib の marking の MARKING_KINDS）。
 # 一般道路（ROAD_GENERAL）に重ね、白線と路面を描く（下の道路の線と、帯・交差点の中の雪を覆う）。
@@ -157,6 +158,10 @@ MARKINGS = {f"{PREFIX}mark_{_k}": _k for _k in ("lane4", "junction2", "junction2
 MARKINGS_EXPWY = {f"{PREFIX}mark_{_k}": _k for _k in ("diverge_main", "diverge_ramp", "merge_main", "merge_ramp")}
 MARKINGS.update(MARKINGS_EXPWY)
 WALL_ROAD = ROAD_GENERAL  # 道路の壁のシートを描く元の道路（壁の形は 3 種で同じ。断面とカーブの作りが同じため）
+# カーブの形ごとの壁（#260）: 一般道路（円弧）・生活道路（L 字）の基盤・高架は single だけなので、カーブのセルが円弧・L 字の single の壁を別に持つ。
+# 名前 → 形（ROAD_CURVE_SHAPES の値）。直線・T字・十字・坂・端の壁は ami_wall_road_single と同じ絵で、カーブのセル（行 2 の列 5〜8）だけが違う。
+# 幹線道路・高速道路と、橋・トンネルは ami_wall_road_single（カーブは斜め）を使う
+ROAD_WALL_CURVED = {f"ami_wall_road_single_{_s}": _s for _s in ("arc", "ell")}
 ROAD_WALL_VARIANTS = ("single", "back", "center", "front")  # 道路の壁の way-object の版（README の名前の表。center は行き止まりの端の壁だけ）
 # 近い斜めの分け合うタイル用の道路の壁（名前は 2026-11-19 にユーザーが確定。README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
 ROAD_WALL_TWIN = "ami_wall_road_twin"
@@ -279,16 +284,16 @@ BUILT_WAYS.append(TRAM)  # 路面軌道（通常の版だけ）
 for _r in ROADS:
     BUILT_WAYS.append(_r.way)
 for _r in ROADS:
-    BUILT_WAYS += [_r.base(_v) for _v in VARIANTS]  # 道路の地上の基盤の版（線路と同じ並び）
-    NO_CLOSE_WAYS.update(_r.base(_v) for _v in VARIANTS)
+    BUILT_WAYS += [_r.base(_v) for _v in _r.variants]  # 道路の地上の基盤の版（線路と同じ並び）
+    NO_CLOSE_WAYS.update(_r.base(_v) for _v in _r.variants)
 for _t in ALL_TRACKS:
     BUILT_WAYS += [_t.elev(_v) for _v in VARIANTS]  # 高架の 4 版
     NO_CLOSE_WAYS.update(_t.elev(_v) for _v in VARIANTS)
     ELEVATED_WAYS.update(_t.elev(_v) for _v in VARIANTS)
 for _r in ROADS:
-    BUILT_WAYS += [_r.elev(_v) for _v in VARIANTS]
-    NO_CLOSE_WAYS.update(_r.elev(_v) for _v in VARIANTS)
-    ELEVATED_WAYS.update(_r.elev(_v) for _v in VARIANTS)
+    BUILT_WAYS += [_r.elev(_v) for _v in _r.variants]
+    NO_CLOSE_WAYS.update(_r.elev(_v) for _v in _r.variants)
+    ELEVATED_WAYS.update(_r.elev(_v) for _v in _r.variants)
 BUILT_WAYS += [MONORAIL, *MONORAIL_ELEVS]  # 跨座式（近い斜め無し。高架は system_type=1）
 NO_CLOSE_WAYS.update((MONORAIL, *MONORAIL_ELEVS))
 ELEVATED_WAYS.update(MONORAIL_ELEVS)

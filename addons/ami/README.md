@@ -21,11 +21,11 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 | もの | 名前 |
 |---|---|
 | way（通常の版） | `ami_tram`・`ami_rail_ballast`・`ami_rail_concrete`・`ami_rail_ladder`・`ami_rail_slab`・`ami_road_local`・`ami_road_general`・`ami_road_trunk`・`ami_road_expressway` |
-| 基盤・高架の版 | `<way の名前>_base_<版>`・`<way の名前>_elev_<版>`（版は `single`・`back`・`center`・`front`） |
+| 基盤・高架の版 | `<way の名前>_base_<版>`・`<way の名前>_elev_<版>`（版は `single`・`back`・`center`・`front`。一般道路・生活道路は `single` だけ。#260） |
 | 橋・トンネル | `<way の名前>_bridge`・`<way の名前>_tunnel` |
 | 路面表示 | `ami_mark_<種類>`（`lane4`・`junction2`・`junction2_t`・`junction4_in`・`junction4_out`、6 車線の `lane6_a`・`lane6_b`・`lane6_m`・`junction6_in`・`junction6_out`・`junction6_m`・`junction6_c`。一般道路に重ねる。#187・#189。下の「路面表示の作り」）。高速道路の分岐・合流は `diverge_main`・`diverge_ramp`・`merge_main`・`merge_ramp`（高速道路に重ねる。#188。下の「高速道路の分岐・合流の路面表示の作り」） |
 | 線路の壁 | `ami_wall_rail_<版>`（`single`・`back`・`center`・`front`。`center` は行き止まりの端の壁だけ）、架線つきは `ami_wall_rail_<版>_catenary`（`center` は架線と、行き止まりの端の壁だけ）。近い斜めの分け合うタイル用に `ami_wall_rail_twin`（壁だけ。下の「壁の敷き方」）と `ami_wall_rail_twin_catenary`（架線つき。下の「架線の作り」） |
-| 道路の壁 | `ami_wall_road_<版>`（`single`・`back`・`center`・`front`。`center` は行き止まりの端の壁だけ）。近い斜めの分け合うタイル用に `ami_wall_road_twin`（名前は確定。2026-11-19、ユーザーの決定。下の「道路の壁・高架・橋脚・橋・トンネルの作り」）。中央分離帯つきは `ami_wall_road_front_divider`・`ami_wall_road_center_divider`・`ami_wall_road_twin_divider`（下の「中央分離帯の作り」） |
+| 道路の壁 | `ami_wall_road_<版>`（`single`・`back`・`center`・`front`。`center` は行き止まりの端の壁だけ）。カーブの形ごとの `single` の壁 `ami_wall_road_single_arc`（一般道路の円弧用）・`ami_wall_road_single_ell`（生活道路の L 字用。#260）。近い斜めの分け合うタイル用に `ami_wall_road_twin`（名前は確定。2026-11-19、ユーザーの決定。下の「道路の壁・高架・橋脚・橋・トンネルの作り」）。中央分離帯つきは `ami_wall_road_front_divider`・`ami_wall_road_center_divider`・`ami_wall_road_twin_divider`（下の「中央分離帯の作り」） |
 | 橋脚・歩道 | `ami_pier_rail`（門型は `ami_pier_rail_gate`）・`ami_pier_road`・`ami_sidewalk`。歩道の種類は `ami_sidewalk_<舗装>`（`asphalt`・`brick`・`tile`）、高架の歩道は `ami_sidewalk_elev`（#119） |
 | 歩道の柵 | `ami_wall_sidewalk_<版>`（`single`・`back`・`front`。#119。名前は作業者が決めた。ユーザーが PR で確かめる） |
 | 電柱 | `ami_sidewalk_pole_<版>`（電柱だけ）・`ami_wall_sidewalk_<版>_pole`（柵つき。#120） |
@@ -36,7 +36,7 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 | 車庫 | `ami_rail_depot`・`ami_tram_depot`・`ami_road_depot`・`ami_monorail_depot`・`ami_canal_depot`（ADR 0008） |
 | 操車場 | `ami_rail_yard`（#115） |
 
-dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`・`ami_rail_concrete`・`ami_rail_concrete_base_<版>`（4 版）・`ami_rail_concrete_elev_<版>`（4 版）・`ami_rail_concrete_bridge`・`ami_rail_concrete_tunnel`・`ami_rail_ladder`・`ami_rail_ladder_base_<版>`（4 版）・`ami_rail_ladder_elev_<版>`（4 版）・`ami_rail_ladder_bridge`・`ami_rail_ladder_tunnel`・`ami_road_local`・`ami_road_general`・`ami_road_expressway`・道路 3 種それぞれの `_base_<版>`（4 版）・`_elev_<版>`（4 版）・`_bridge`・`_tunnel`・`ami_wall_road_<版>`（4 版）・`ami_wall_road_twin`・`ami_wall_road_front_divider`・`ami_wall_road_center_divider`・`ami_wall_road_twin_divider`・`ami_pier_road`・`ami_tram`・`ami_embankment_front`・`ami_embankment_back`・`ami_sidewalk`・`ami_sidewalk_<舗装>`（3 種）・`ami_sidewalk_elev`・`ami_wall_sidewalk_<版>`（3 版）・`ami_sidewalk_pole_<版>`（2 版）・`ami_wall_sidewalk_<版>_pole`（2 版）・`ami_monorail_straddle`・`ami_monorail_straddle_elev_<版>`（3 版）・`ami_monorail_straddle_tunnel`・`ami_monorail_suspended_<版>`（3 版）・`ami_monorail_suspended_elev_<版>`（3 版）・`ami_monorail_power`・`ami_monorail_suspended_power`・`ami_canal`・`ami_canal_scenic`・水路の踏切 7 つ（`ami_crossing_<線路|道路>_canal`）・車庫 5 つ・`ami_rail_yard`。
+dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`・`ami_rail_concrete`・`ami_rail_concrete_base_<版>`（4 版）・`ami_rail_concrete_elev_<版>`（4 版）・`ami_rail_concrete_bridge`・`ami_rail_concrete_tunnel`・`ami_rail_ladder`・`ami_rail_ladder_base_<版>`（4 版）・`ami_rail_ladder_elev_<版>`（4 版）・`ami_rail_ladder_bridge`・`ami_rail_ladder_tunnel`・`ami_road_local`・`ami_road_general`・`ami_road_expressway`・道路それぞれの `_base_<版>`（幹線道路・高速道路は 4 版、一般道路・生活道路は `single` だけ。#260）・`_elev_<版>`（4 版）・`_bridge`・`_tunnel`・`ami_wall_road_<版>`（4 版）・`ami_wall_road_twin`・`ami_wall_road_front_divider`・`ami_wall_road_center_divider`・`ami_wall_road_twin_divider`・`ami_pier_road`・`ami_tram`・`ami_embankment_front`・`ami_embankment_back`・`ami_sidewalk`・`ami_sidewalk_<舗装>`（3 種）・`ami_sidewalk_elev`・`ami_wall_sidewalk_<版>`（3 版）・`ami_sidewalk_pole_<版>`（2 版）・`ami_wall_sidewalk_<版>_pole`（2 版）・`ami_monorail_straddle`・`ami_monorail_straddle_elev_<版>`（3 版）・`ami_monorail_straddle_tunnel`・`ami_monorail_suspended_<版>`（3 版）・`ami_monorail_suspended_elev_<版>`（3 版）・`ami_monorail_power`・`ami_monorail_suspended_power`・`ami_canal`・`ami_canal_scenic`・水路の踏切 7 つ（`ami_crossing_<線路|道路>_canal`）・車庫 5 つ・`ami_rail_yard`。
 
 ### 線路（新描画位置）
 
@@ -128,11 +128,12 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 | 種類 | 速度 | 中央線 | way | 版 |
 |---|---|---|---|---|
-| 生活道路 | 40 km/h | なし | `ami_road_local` | 通常・基盤 4 版・高架 4 版・橋・トンネル |
+| 生活道路 | 40 km/h | なし | `ami_road_local` | 通常・基盤 single・高架 single・橋・トンネル（#260） |
 | 一般道路 | 120 km/h | 白線 | `ami_road_general` | 同上 |
 | 幹線道路 | 240 km/h | 破線 | `ami_road_trunk` | 同上 |
 | 高速道路 | 360 km/h | 広い破線 | `ami_road_expressway` | 同上 |
 
+- 一般道路・生活道路の基盤と高架は `single`（両側に壁）だけ（#260。#209 の 3 本目。2026-11-24、ユーザーの判断「バリエーションを減らして整理したい。center などの 4 種類→single のみ、橋、トンネルは残しカーブはそろえる」）。消したのは `ami_road_<general|local>_<base|elev>_<back|center|front>` の 12 個（`catalog.py` の `Road.variants`）。幹線道路・高速道路は 4 版のまま。奥だけ・手前だけ・壁なしの複線や 4 車線の分離帯（`ami_wall_road_*_divider`）は、幹線道路・高速道路で組む。消した物を使った保存データは読み込めなくなる。代わりの物への置き換えはしない（ベータ版のため。リリースの readme に書いた）
 - 断面はどれも blender-poc の高速道路と同じ（片側 1 車線、タイル全面が路面、歩道なし）
 - 通常の版は #21、基盤の版・高架・橋・トンネルと道路の壁・橋脚は #22
 - 地上の道路の基盤の 4 版は、ゲームの画面で要ると判断して作り、置くことが確定した（2026-11-19、ユーザーの決定。理由は「道路の壁・高架・橋脚・橋・トンネルの作り」）
@@ -170,9 +171,9 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
   描くのは `sheetlib` の `road_sheet` のプロファイルのキー `curve`（`"arc"`・`"ell"`）で、通常の版だけが持つ（壁・基盤・高架・橋・トンネルは写して `curve=None` に戻す）。
   L 字の角は、`sweep` が角で断面を細めない `MiterPath` の経路で組む（白線・走行跡・路肩の雪の型が角で細らない）。
   橋とトンネルにはカーブのセルが無い（橋は `BRIDGE_CELLS` が直線と坂だけ、トンネルは坑口の 4 向き）ので、この変更の対象外（本体が橋・トンネルの中を曲げない）。
-  壁の way-object（`ami_wall_road_<版>`）・基盤・高架の版のカーブは、まだ斜めの形のまま（3 本目の #260 で、カーブと壁をそろえる）。
+  壁の way-object・基盤・高架の single のカーブも、3 本目の #260 で円弧・L 字にそろえた（下の「道路の壁・高架・橋脚・橋・トンネルの作り」の「カーブの形ごとの壁」）。
   確かめた見本: `ingame/curve_sample.nut`（`sample_parallel.sh` に `NUT=ingame/curve_sample.nut`。1 本の輪・2 本並べた輪・坂の隣・T字の隣。温暖と降雪）、`road_sample.nut` の B・AFC・K、`tram_sample.nut` の LO_B・GE_B（路面軌道を重ねる）、`marking_sample.nut` の X4（路面表示を重ねる）。
-  以前（#259 の前）は 3 種をそろえていた。理由は、道路の壁（`ami_wall_road_<版>`、#22）を 3 種で共通の way-object にするため（way-object のカーブの絵は 1 つなので、種類ごとにカーブの形が違うと壁が合わない）。この食い違いは 3 本目の #260 で直す。手本では、iss の道路は速さで分かれる（`../refs/iss/src/way/road/ground.dat` の `iss_wrg_0030`・`0050`・`0120_*` は `image[ne]` が曲線のセル、`iss_wrg_1200_*` は `diagonal` と同じセル）。pak128 標準の `Road_030`（`../refs/pak128/infrastructure/roads/road_030.dat`）も曲線のセル。それでも 3 種をそろえたのは、道路の壁（`ami_wall_road_<版>`、#22）を 3 種で共通の way-object にするため（way-object のカーブの絵は 1 つなので、種類ごとにカーブの形が違うと壁が合わない）。断面も blender-poc の高速道路（斜めの絵）と同じ
+  以前（#259 の前）は 3 種をそろえていた。理由は、道路の壁（`ami_wall_road_<版>`、#22）を 3 種で共通の way-object にするため（way-object のカーブの絵は 1 つなので、種類ごとにカーブの形が違うと壁が合わない）。この食い違いは #260 で、カーブの形ごとの壁を足して直した。手本では、iss の道路は速さで分かれる（`../refs/iss/src/way/road/ground.dat` の `iss_wrg_0030`・`0050`・`0120_*` は `image[ne]` が曲線のセル、`iss_wrg_1200_*` は `diagonal` と同じセル）。pak128 標準の `Road_030`（`../refs/pak128/infrastructure/roads/road_030.dat`）も曲線のセル。それでも 3 種をそろえたのは、道路の壁（`ami_wall_road_<版>`、#22）を 3 種で共通の way-object にするため（way-object のカーブの絵は 1 つなので、種類ごとにカーブの形が違うと壁が合わない）。断面も blender-poc の高速道路（斜めの絵）と同じ
 - 路面の色: 生活道路・一般道路は pak128 標準の道路（灰色）とつなぐことが多いので街路の灰色、高速道路は一般の道路と見分けられるよう暗い青み。走行跡と路肩のまだらの雪は、路面と同じ 2 色から作る（`sheetlib` の `asphalt_skin`。路面だけ替えると、暗い路面に明るい帯が乗る）
 - 雪: 車道は除雪されて夏と同じ（路面・白線・走行跡）。路側の白線の外から路肩に雪が積もり、白線の内側をまだらの雪でぼかす（blender-poc の道路と同じ `snow` の部品）
 - 精細化（#56。ラウンド 1〜4 で試し、ラウンド 3 を本番に入れた。2026-11-20、ユーザーの決定。ラウンド 4 の明るい路面はリアルだが色があせて見えた）: 設定は `blender/render.py` の「道路一式の質感」で、道路 3 種とその版・道路の壁・道路用の橋脚・歩道にだけ渡す（`sheetlib` の既定は blender-poc・在来線・スラブ軌道と共通なので変えない）。決め方は `docs/records/2026-11-20_ami-road-refine-round1.md`〜`round3.md`、入れ方は `2026-11-20_ami-road-refine-production.md`
@@ -210,6 +211,11 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 道路 3 種に、共有の壁の way-object（`ami_wall_road_<single|back|center|front>`）、地上の基盤の版（`<道路>_base_<版>`。確定。2026-11-19、ユーザーの決定）、高架の 4 版（`<道路>_elev_<版>`）、橋（`<道路>_bridge`）、トンネル（`<道路>_tunnel`）、道路用の橋脚（`ami_pier_road`）を足した。作りは線路の壁・高架・橋（上の「壁の敷き方」「高架と橋脚の作り」「橋とトンネルの作り」）と同じで、断面と壁の形は blender-poc の高速道路の壁の版（`tools/blender/sheetlib` の `road_sheet` の `walls`）。設定は `blender/render.py` の「道路の壁の way-object・高架の 4 版・橋・トンネル・道路用の橋脚」、値は `blender/ami_dat.py`。
 
+- カーブの形ごとの壁（#260。ユーザーの判断 2026-11-24 「お勧めでOK」）: 一般道路（円弧）・生活道路（L 字）の基盤・高架の `single` と組む壁の way-object を 2 つ足した。`ami_wall_road_single_arc`（一般道路用。円弧）・`ami_wall_road_single_ell`（生活道路用。L 字）。
+  直線・T字・十字・坂・端の壁は `ami_wall_road_single` と同じ絵で、カーブのセル（行 2 の列 5〜8）だけが円弧・L 字の経路に沿う（`catalog.py` の `ROAD_WALL_CURVED`、`render.py` のプロファイル `wall_road_single_arc`・`_ell`）。
+  幹線道路・高速道路は今までどおり斜めの `ami_wall_road_single`。橋・トンネルは直線と坑口だけでカーブが無いので、どの single の壁でもよい。
+  別の案（壁を way の絵に焼き込む）は、橋・トンネルの壁と扱いが食い違い、壁を way-object に分けた方針（ADR 0003）から外れるので採らなかった。
+  壁の外側を削る型（`sheetlib/assemble.py` の `_beyond_prisms`）を直した: L 字（経路の点が 3 つ）は 2 本の直線として削る（始点と終点を結ぶ斜めの線で削ると、タイルの半分が消えた）。円弧の外側は 64 個の薄い柱を 1 つずつ抜くと路面が扇形に欠けて白線の脇に細いすき間が出たので、4 個の柱にまとめた
 - 壁の way-object（`ami_wall_road_<版>`。`waytype=road`・`own_waytype=road`）: iss の都市高速の壁と同じく、タイルの端に立つコンクリートの壁。壁の形は 3 種で同じなので、シートは一般道路（`catalog.WALL_ROAD`）から 1 回だけ描く。上 4 行が奥、下 4 行が手前の絵で、雪の絵は無い（way-object にキーが無い）。`center` は線路の `ami_wall_rail_center` と同じく、側壁を持たず、行き止まりの端の壁だけを持つ（2026-11-19、ユーザーの決定。値・並びは線路の `center` と同じ）。壁の位置の基準は道路の絵と同じ `ROAD_CY`
 - 近い斜めの分け合うタイル用の壁（`ami_wall_road_twin`。名前は確定。2026-11-19、ユーザーの決定）: 線路の `ami_wall_rail_twin` と同じ作り（速さ 1001。`nw`・`sw` の線は `back`、`ne`・`se` の線は `front` の絵）。敷き方も線路と同じ（「壁の敷き方」）
 - 地上の基盤の版（`<道路>_base_<版>`。判断 1、確定。2026-11-19、ユーザーの決定）: 通常の版の路面から壁の外を削り、近い斜めの絵を持たず、カーブを斜めの形の別のセル（行 2 の列 5〜8）に描いて壁の無い側をタイルの端まで延ばしたもの（`tools/blender/sheetlib` の `road_sheet` の `curve_cells`）。壁は way の絵に描かず、同じ版の壁の way-object を重ねる。値は通常の版と同じ
@@ -589,7 +595,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 形: 側壁の位置（経路から `EXPWY_WALL_U` の少し内〜側壁の外の面）に低い縁石の帯を置き、帯の中心に両面のガードレール（2 枚の板と支柱）を立てる。寸法は `tools/blender/sheetlib/road_parts.py` の `MEDIAN_*`。側壁と同じく、T字・十字では横切る道の車道の分を削って開け、斜め・坂・高架でも側壁と同じ位置を通る（見本で見た）。1 タイル（どこにもつながらない way）には立てない（十字と同じ経路で作るので、角の切れ端が点で残った）。左右の両側に作り、壁の版を選ぶ処理（`sheetlib.py` の `select_walls`）が奥の側の 1 本だけを残す（奥の絵に描く）。設定は `blender/render.py` の `ROAD_DIVIDER_LABEL` の所、値は `blender/ami_dat.py` の `DIVIDER_VALUES`
 - 4 車線の輪（直角の曲がり。見本の区画 R、`docs/divider118_GE_R.png`）: 外の輪は北・西の辺が `back`、南・東の辺が `front`、内の輪は逆にする。角のタイルは南北の辺の版（「遊ぶ人向けの敷き方」）。壁は南北の辺を角まで先に敷き、東西の辺を後から敷くが、`front_divider`（1010）は壁 `back`（1000）より速く、角の `back` を置き換えてしまう。東西の辺の `front_divider` は、角が `back` のタイル（外の輪の南西・内の輪の北東）の 1 つ手前で止める。こう敷くと、北西・南東・南西の角では分離帯が角に沿って曲がる。北東の角（内の輪の角が `back`）では、分離帯が角の 1 タイルで途切れる（内の輪の北の辺の分離帯が角の手前で終わり、外の輪の東の辺の分離帯が角の次のタイルから始まる）
 - 値: 速さ 1010（`twin_divider` は 1011）、費用 3000、維持費 60、登場 1900（#110 の一覧）。速さが壁（1000）・`twin`（1001）より大きいので、壁の上に Ctrl を押さずに重ねると分離帯つきに置き換わる。逆に、分離帯つきの上に壁を敷いても置き換わらない（外してから敷く。[way-addon.md](../../docs/reference/way-addon.md) の 10 章）
-- 見本: `ingame/divider_sample.nut`（撮る場所は `ingame/sample_spots.sh` の `DIVIDER_SPOTS`）。一般道路と高速道路で、東西の 4 車線と壁の無い道路の十字（P2）、南北の 4 車線の坂（PN）、壁の無い 4 車線（P0）、3 本並べた道（P3）、高架（PE）、4 車線の輪（R）、近い斜め（PD）を温暖側と降雪側に敷く。残った way-object を `[check]` の行で期待と比べる（違えば返り値の先頭が `check`）
+- 見本: `ingame/divider_sample.nut`（撮る場所は `ingame/sample_spots.sh` の `DIVIDER_SPOTS`）。幹線道路と高速道路で（一般道路は基盤・高架が `single` だけなので敷かない。#260）、東西の 4 車線と壁の無い道路の十字（P2）、南北の 4 車線の坂（PN）、壁の無い 4 車線（P0）、3 本並べた道（P3）、高架（PE）、4 車線の輪（R）、近い斜め（PD）を温暖側と降雪側に敷く。残った way-object を `[check]` の行で期待と比べる（違えば返り値の先頭が `check`）
 - ADR 0008 との違い（2026-11-21、ユーザーの指定による。決めた理由は [ADR 0010](../../docs/adr/0010-ami-divider-between-two-road-tiles.md)）: ADR は「分離帯だけの版を道路の `center` に置く」としていたが、分離帯の位置を 1 タイルの中心線でなく 2 タイルの境にしたので、版は `front_divider`・`center_divider`（と `twin_divider`）にした。`single_divider`・`back_divider` は作らない（1 タイルの道の中心線の分離帯は、一般の道路には要らない）
 - 後から足せるもの（今は作らない）: 植え込みの分離帯、暫定 2 車線の高速道路用の、1 タイルの中心線に立てる簡易な柵・ワイヤーの分離帯
 

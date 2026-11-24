@@ -5,7 +5,7 @@
 # ゲームは work/icon_game/<PORT>/ の写しで起動し、GAME_DIR には書き込まない。写しからは AMI のほかのアドオンの pak を外す
 # （検証用のフォルダには、古い AMI の写し amib.pak が入っていて、同じ形のアイコンが混ざる）。終わったらゲームを閉じる。
 # 撮った画面は OUT（既定 work/icons/）に、menu_<名前>.png（窓の切り抜きを 2 倍）と cursor_<名前>.png（カーソルの辺りを 2 倍）で置く。
-# メニューの中の位置（列, 行）は、pak128 標準と AMI を入れたときの並び（2026-11-21）。並びが変わったら CURSORS を直す
+# メニューの中の位置（列, 行）は、pak128 標準と AMI を入れたときの並び（2026-11-25。#260 で一般・生活道路の基盤・高架が single だけになって並びが変わった）。並びが変わったら CURSORS を直す。環境変数 CURSORS で差し替えられる（位置を探すときに、候補を並べて撮る）
 PORT=${PORT:?PORT に MCP のポートを指定する}
 PAK=${PAK:-dist/ami.pak}
 OUT=${OUT:-work/icons}
@@ -54,10 +54,10 @@ for e in $MENUS; do
 done
 
 # カーソル: 名前 メニュー 列 行。道具を選び、窓の外の地図を 1 回押す（way の道具は始点を置き、その上にカーソルの絵が出る）
-CURSORS="rail_ballast:rail:7:0 rail_ballast_base_back:rail:8:0 rail_ballast_elev_back:rail:5:2 rail_ballast_bridge:rail:1:4
+CURSORS=${CURSORS:-"rail_ballast:rail:7:0 rail_ballast_base_back:rail:8:0 rail_ballast_elev_back:rail:5:2 rail_ballast_bridge:rail:1:4
 rail_ballast_tunnel:rail:18:4 rail_slab:rail:9:1 wall_rail_back:rail:5:6 wall_rail_twin:rail:9:6 wall_rail_single_catenary:rail:13:6
-road_local:road:3:0 road_general_base_back:road:1:2 road_expressway_elev_single:road:11:2 road_general_bridge:road:2:3
-wall_road_twin:road:2:4 tram:tram:4:0 pier_rail:tram:0:0 pier_rail_gate:tram:1:0 pier_road:tram:2:0 sidewalk:ship:0:0"
+road_local:road:3:0 road_general_base_single:road:14:0 road_expressway_elev_single:road:4:2 road_general_bridge:road:13:2
+wall_road_twin:road:15:3 tram:tram:4:0 pier_rail:tram:0:0 pier_rail_gate:tram:1:0 pier_road:tram:2:0 sidewalk:ship:0:0"}
 for e in $CURSORS; do
   IFS=: read n menu col row <<< "$e"
   for m in $MENUS; do [ "${m%%:*}" = "$menu" ] && tx=${m##*:}; done

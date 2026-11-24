@@ -21,7 +21,7 @@ function od(n) { if (!(n in OBJS)) { report += n + " wayobj=[missing]\n"; return
 function way(d, x0, y0, x1, y1) { return command_x.build_way(pl, c(x0, y0), c(x1, y1), d, true); }
 function fence(d, x0, y0, x1, y1, z = 0) { return command_x.build_wayobj(pl, c(x0, y0, z), c(x1, y1, z), d); }
 local road = wd("ami_road_general");
-local relev = wd("ami_road_general_elev_center");
+local relev = wd("ami_road_general_elev_single");
 local pier = wd("ami_pier_road");
 local selev = wd("ami_sidewalk_elev");
 local fs = od("ami_wall_sidewalk_single"), fb = od("ami_wall_sidewalk_back"), ff = od("ami_wall_sidewalk_front");

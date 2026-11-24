@@ -1,5 +1,5 @@
 // AMI の中央分離帯つきの壁（ami_wall_road_front_divider・ami_wall_road_center_divider・ami_wall_road_twin_divider。#118）の見本。
-// 道路を 2 タイル並べた 4 車線の、手前のタイルに分離帯つきの壁を重ねる。道路 2 種（ROADS）それぞれに、種類ごとに SPACING ずつ南へ敷く。
+// 道路を 2 タイル並べた 4 車線の、手前のタイルに分離帯つきの壁を重ねる。道路 2 種（幹線道路・高速道路。ROADS）それぞれに、種類ごとに SPACING ずつ南へ敷く。
 // 検証用の flat_512_left_v64.sve に、温暖側 (20,20) と降雪側 (276,20) の 2 か所へ同じ並びで敷き、降雪側は一帯を降雪に塗り直す（地形を変えたタイルはその場で塗り直す）。
 // 使い方（アドオンのディレクトリで）: sample_parallel.sh に NUT=ingame/divider_sample.nut を付ける（撮る場所は sample_spots.sh の DIVIDER_SPOTS）。
 // 返り値の先頭が ok なら全部敷けて、[check] で比べた way-object も期待どおり。違えば先頭が check で、「名前 場所=[…]」が続く。最後に確かめた値（[check] の行）が続く。
@@ -16,7 +16,7 @@
 //      ただし front_divider の東西の辺は、角が back の所（外の南西・内の北東）の 1 つ手前で止める（速いので角を置き換えるため）
 //   PD 近い斜め: (32,0) から南東へ 5 段、奥の線に back と壁 back、1 タイル東の手前の線に front と front_divider。
 //      分け合うタイル（way 2 本）の way-object を twin_divider に置き換え、壁を敷き直す（road_struct_sample.nut の W2 と同じ敷き方）
-local ROADS = ["ami_road_general", "ami_road_trunk", "ami_road_expressway"];
+local ROADS = ["ami_road_trunk", "ami_road_expressway"];  // 一般道路は基盤・高架が single だけ（#260）なので、複線の見本を敷かない
 local ORIGINS = [[20, 20], [276, 20]];
 local SNOW = 1;
 local SPACING = 16;

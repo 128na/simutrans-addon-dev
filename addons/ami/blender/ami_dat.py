@@ -114,7 +114,7 @@ TRAM_SWITCH_IMAGES = True
 # 道路の地上の基盤の版（#22。2026-11-19 にユーザーが確定）: 線路の基盤の版と同じく近い斜めの絵を持たず、カーブはカーブのセル（斜めの形）。
 # 値は通常の版と同じ（README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
 for _r in catalog.ROADS:
-    for _v in BASE_VARIANTS:
+    for _v in _r.variants:
         _n = _r.base(_v)
         VALUES[_n] = VALUES[_r.way]
 
@@ -130,7 +130,7 @@ for _t in catalog.ALL_TRACKS:
 # 道路の高架の 4 版（#22）: 線路の高架と同じく、近い斜めの絵を持たない（分け合うタイルに way が 2 本置かれ、奥の線と手前の線を別の版にできる）。
 # カーブはカーブのセル（斜めの形で、壁の無い側をタイルの端まで。render.py の curve_cells）。値の倍率も線路と同じ
 for _r in catalog.ROADS:
-    for _v in BASE_VARIANTS:
+    for _v in _r.variants:
         _n = _r.elev(_v)
         VALUES[_n] = dict(VALUES[_r.way], cost=VALUES[_r.way]["cost"] * ELEV_COST_K,
                           maintenance=VALUES[_r.way]["maintenance"] * ELEV_COST_K)
@@ -192,6 +192,7 @@ TWIN_FROM = {"[nw]": "ami_wall_rail_back", "[sw]": "ami_wall_rail_back", "[ne]":
 # 行き止まりの端の壁だけ）。シートの並びは線路の壁と同じ。
 # 近い斜めの分け合うタイル用の ami_wall_road_twin（名前は 2026-11-19 にユーザーが確定）は、線路の twin と同じ作りで、back・front の斜めのセルを指す
 ROAD_WALLS = {f"ami_wall_road_{_v}": f"ami_wall_road_{_v}" for _v in catalog.ROAD_WALL_VARIANTS}
+ROAD_WALLS.update({_n: _n for _n in catalog.ROAD_WALL_CURVED})  # カーブの形ごとの single の壁（#260）
 ROAD_TWIN_FROM = {k: v.replace("ami_wall_rail_", "ami_wall_road_") for k, v in TWIN_FROM.items()}
 # 中央分離帯つきの壁（#118）: 値は #110 で決めた一覧（README の「第 2 弾の物の値」）。速さは壁（1000）・twin（1001）より大きく、壁の上に
 # 重ねると分離帯つきに置き換わる。近い斜めの分け合うタイル用の twin_divider は 1 速くする（壁の twin と同じ理由）。
@@ -379,7 +380,7 @@ def wall_dat_text(name, sheet, twin=False, catenary=False, road=False, donor=Fal
             if not ex:
                 continue
             row, col = EX_CELLS[idx] if donor else cell[("image", PIER_SWITCH[idx])]
-        if key == "image" and idx in CURVE_TO_DIAG:
+        if key == "image" and idx in CURVE_TO_DIAG and name not in catalog.ROAD_WALL_CURVED:  # カーブの形ごとの壁（#260）は、カーブのセルが自分の絵
             row, col = CURVE_TO_DIAG[idx]
         src = sheet
         if twin:

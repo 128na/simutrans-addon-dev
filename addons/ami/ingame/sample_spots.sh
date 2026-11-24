@@ -63,9 +63,11 @@ STRUCT_SPOTS=""
 for v in LO:0 GE:30 TR:60 EX:90; do
   IFS=: read n dy <<< "$v"
   STRUCT_SPOTS="$STRUCT_SPOTS ${n}_WA_AFC:8:$((2 + dy)) ${n}_WA_B:3:$((7 + dy)) ${n}_WA_DE:14:$((7 + dy)) ${n}_WA_G1:25:$((3 + dy)) ${n}_WA_G2:25:$((15 + dy))"
-  STRUCT_SPOTS="$STRUCT_SPOTS ${n}_WP:38:$((5 + dy)) ${n}_WP3:34:$((13 + dy)) ${n}_WP2:40:$((15 + dy)) ${n}_V_AFC:58:$((2 + dy)) ${n}_V_B:53:$((7 + dy)) ${n}_V_DE:64:$((7 + dy)) ${n}_V_L:72:$((4 + dy))"
-  STRUCT_SPOTS="$STRUCT_SPOTS ${n}_VP1:96:$((5 + dy)) ${n}_VP2:109:$((3 + dy)) ${n}_VP3:92:$((13 + dy)) ${n}_B1:132:$((1 + dy)) ${n}_B1ns:144:$((7 + dy)) ${n}_B2:129:$((19 + dy))"
-  STRUCT_SPOTS="$STRUCT_SPOTS ${n}_B4:133:$((24 + dy)) ${n}_T1:153:$((19 + dy)) ${n}_T1ns:162:$((5 + dy)) ${n}_T3:153:$((24 + dy)) ${n}_P1:170:$((5 + dy)) ${n}_P2:181:$((2 + dy)) ${n}_P3:190:$((5 + dy))"
+  # 複線（WP*・VP*）と T3 は、基盤・高架が single だけの生活道路・一般道路（LO・GE。#260）では敷かない
+  case $n in TR | EX) STRUCT_SPOTS="$STRUCT_SPOTS ${n}_WP:38:$((5 + dy)) ${n}_WP3:34:$((13 + dy)) ${n}_WP2:40:$((15 + dy)) ${n}_VP1:96:$((5 + dy)) ${n}_VP2:109:$((3 + dy)) ${n}_VP3:92:$((13 + dy)) ${n}_T3:153:$((24 + dy))" ;; esac
+  STRUCT_SPOTS="$STRUCT_SPOTS ${n}_V_AFC:58:$((2 + dy)) ${n}_V_B:53:$((7 + dy)) ${n}_V_DE:64:$((7 + dy)) ${n}_V_L:72:$((4 + dy))"
+  STRUCT_SPOTS="$STRUCT_SPOTS ${n}_B1:132:$((1 + dy)) ${n}_B1ns:144:$((7 + dy)) ${n}_B2:129:$((19 + dy))"
+  STRUCT_SPOTS="$STRUCT_SPOTS ${n}_B4:133:$((24 + dy)) ${n}_T1:153:$((19 + dy)) ${n}_T1ns:162:$((5 + dy)) ${n}_P1:170:$((5 + dy)) ${n}_P2:181:$((2 + dy)) ${n}_P3:190:$((5 + dy))"
   for j in 0 1 2 3 4; do STRUCT_SPOTS="$STRUCT_SPOTS ${n}_IB$j:$((53 + 12 * j)):$((20 + dy)) ${n}_IV$j:$((53 + 12 * j)):$((25 + dy))"; done
 done
 # 路面軌道の見本（ingame/tram_sample.nut）: 下敷きごとに 30 ずつ南（GR 土の上・LO 生活道路・GE 一般道路・EX 高速道路・ST pak128 標準の Road_050）。
@@ -86,10 +88,10 @@ done
 # 盛土の見本（ingame/embankment_sample.nut。区画の原点は温暖側・降雪側の原点の 4 南）: A 線路の高架（東西）、B 線路の高架（南北）、R 道路の高架、
 #   M 台の輪、P 窪みの輪、S 坂、T 急坂、D 斜め、X 橋脚と同じタイル
 EMBANKMENT_SPOTS="A:8:8 B:20:9 R:8:14 M:28:7 P:36:7 S:45:8 T:51:8 D:58:7 X:37:13"
-# 中央分離帯の見本（ingame/divider_sample.nut。道路 2 種を 16 ずつ南へ。GE 一般道路・EX 高速道路）: P2 東西の 4 車線と十字、PN 南北の坂、
+# 中央分離帯の見本（ingame/divider_sample.nut。道路 2 種を 16 ずつ南へ。TR 幹線道路・EX 高速道路。一般道路は基盤・高架が single だけなので敷かない。#260）: P2 東西の 4 車線と十字、PN 南北の坂、
 #   P0 壁の無い 4 車線、P3 6 車線、PE 高架、R 4 車線の輪（カーブ）、PD 近い斜め
 DIVIDER_SPOTS=""
-for v in GE:0 TR:16 EX:32; do
+for v in TR:0 EX:16; do
   IFS=: read n dy <<< "$v"
   DIVIDER_SPOTS="$DIVIDER_SPOTS ${n}_P2:5:$((1 + dy)) ${n}_PN:13:$((4 + dy)) ${n}_P0:5:$((5 + dy)) ${n}_P3:5:$((9 + dy)) ${n}_PE:23:$((1 + dy)) ${n}_R:22:$((7 + dy)) ${n}_PD:35:$((3 + dy))"
 done

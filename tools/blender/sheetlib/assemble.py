@@ -369,6 +369,14 @@ def _beyond_prisms(walls, paths, k, wu=None, ww=None, zr=(-2, 2), ref_move=None)
                 out = max(0.0, -Vector(ref_move).to_2d().dot(d)) if ref_move is not None else 0.0
                 p0 = path[0] - d * (_reach_edge(path) - out)
             pts = [p0 + n * 30, p0 - n * 30, p0 - n * 30 - d * 30, p0 + n * 30 - d * 30]
+        elif len(path) == 3:  # L 字（MiterPath の経路。2 辺の中点 → 中心 → 辺の中点。#260）: 2 本の直線として、それぞれの外側を削る
+            # （始点と終点を結ぶ斜めの直線で削ると、タイルの半分が消える）
+            for p0, p1 in ((path[0], path[1]), (path[1], path[2])):
+                d = (p1 - p0).normalized()
+                n = Vector((d.y, -d.x)) * s
+                a, b = p0 - d * 30, p1 + d * 30
+                cut.append(prism([(q.x, q.y) for q in (a + n * uw, b + n * uw, b + n * 40, a + n * 40)], *zr))
+            continue
         elif len(path) > 4:  # カーブ
             c, r = _arc_circle(path)
             m = len(path) // 2
@@ -380,7 +388,11 @@ def _beyond_prisms(walls, paths, k, wu=None, ww=None, zr=(-2, 2), ref_move=None)
                 cut.append(prism([(q.x, q.y) for q in ring(r - uw)], *zr))
             elif not w["cut"]:
                 a, b = ring(r + uw), ring(40.0)
-                cut += [prism([(q.x, q.y) for q in (a[i], b[i], b[(i + 1) % 64], a[(i + 1) % 64])], *zr) for i in range(64)]
+                # 4 個の大きな柱にまとめる（64 個の薄い柱を 1 つずつ抜くと、路面が扇形に欠け、白線の脇に細いすき間が出た。#260）
+                for q0 in range(0, 64, 16):
+                    idx = list(range(q0, q0 + 17))
+                    poly = [a[i % 64] for i in idx] + [b[i % 64] for i in reversed(idx)]
+                    cut.append(prism([(q.x, q.y) for q in poly], *zr))
             continue
         else:  # 直線・斜め
             d = (path[-1] - path[0]).normalized()
