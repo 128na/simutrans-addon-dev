@@ -121,10 +121,12 @@ else
   else
     # 種類別の pak は全部一緒に、全部入りの ami.pak は単独で読む（一緒に置くと名前が重複する）
     kinds=(); for f in "$AMI"/dist/ami_*.pak; do kinds+=("$f"); done
-    "$PY" -X utf8 "$ROOT/tools/ci/check_pak_load.py" --sim "$sim" --pakset "$pakset" "${kinds[@]}"
-    "$PY" -X utf8 "$ROOT/tools/ci/check_pak_load.py" --sim "$sim" --pakset "$pakset" "$AMI/dist/ami.pak"
-    # 壊した pak（空・ROOT の大きさ・参照切れ）で失敗することの確かめ（XREF を持つ種類別の pak から作る）
-    "$PY" -X utf8 "$ROOT/tools/ci/check_pak_load.py" --sim "$sim" --pakset "$pakset" --self-test "$AMI/dist/ami_monorail.pak"
+    # --makeobj: 本体に登録された名前（way・橋・トンネル・架線・標識・建物）を makeobj list の名前と比べる（#245）
+    pl=("$PY" -X utf8 "$ROOT/tools/ci/check_pak_load.py" --sim "$sim" --pakset "$pakset" --makeobj makeobj)
+    "${pl[@]}" "${kinds[@]}"
+    "${pl[@]}" "$AMI/dist/ami.pak"
+    # 壊した pak（空・ROOT の大きさ・参照切れ・名前の重複・登録されない物・半分で切れた pak・余る物）で失敗することの確かめ（XREF を持つ種類別の pak から作る）
+    "${pl[@]}" --self-test "$AMI/dist/ami_monorail.pak"
   fi
 fi
 
