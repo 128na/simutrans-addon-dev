@@ -30,10 +30,14 @@ SKIP_KEYS = ("icon", "cursor")
 EMPTY_ROW = bytes(TRANSPARENT) * CELL
 
 
-def layer_group(key):
-    """キーから層（back・front）の接頭辞を除いた、向き・坂・絵の種類の名前。image[ns][0] と backimage[ns][0]・frontimage[ns][0] は同じ向きの別の層
-    （踏切は openimage と front_openimage）"""
-    return re.sub(r"^(back|front)_?", "", key)
+PICTURE_KEY = re.compile(r"^[a-z_]*(image|pillar|ramp|start|diagonal)[a-z_0-9]*(\[|$)")  # 絵を指すキー（値は参照か `-`）
+
+
+def group_key(key):
+    """控えの単位のキー。層（back・front）は残す（片方の層だけ空にした直し忘れを拾うため）。季節の添字（末尾の [0]・[1]。添字が 2 つ以上あるキーだけ）は畳む"""
+    if key.count("[") >= 2:
+        key = re.sub(r"\[[01]\]$", "", key)
+    return key
 
 
 def empty_cells(task):
@@ -52,8 +56,8 @@ def empty_cells(task):
 def scan(src, jobs=None):
     """src の dat が指すセルを読み、(エラー, {物: {空の絵の種類}}, 調べたセルの数, 調べた参照の数) を返す。
 
-    空の絵の種類は、同じ物の同じ向き・坂・絵の種類のすべての層（back・front）が空のセルを指しているもの。
-    奥の層だけ・手前の層だけを描く物（壁・架線・柱・踏切の手前の絵など）は、描かない層が空のセルを指すので、1 つでも描く層があれば数えない"""
+    空の絵の種類は、同じ物の同じキー（層は別。季節の添字 [0]・[1] は畳む）が、全部空のセルを指しているもの。
+    奥の層だけ・手前の層だけを描く物（壁・架線・柱・踏切の手前の絵など）は、描かない層が空のセルを指すので、控えに入る"""
     objs = read_dats(src)
     errors, refs = [], 0
     uses = {}  # セル → [(物, ファイル, キー)]
@@ -65,6 +69,10 @@ def scan(src, jobs=None):
             if cell:
                 refs += 1
                 uses.setdefault(cell, []).append((o["name"], o["file"], k))
+            elif PICTURE_KEY.match(k) and v != "-" and not v.isdigit():  # pillar_distance などの数値は絵でない
+                errors.append(f"{o['name']}（{o['file']}）: {k} の値がセルの参照でも `-` でもない（検査の対象外になる）: {v}")
+    if not refs:
+        errors.append(f"{src} に、セルを指す絵のキーが 1 つも無い（dat が読めていない）")
     per_sheet = {}
     for sheet, r, c in uses:
         per_sheet.setdefault(sheet, []).append((r, c))
@@ -91,11 +99,11 @@ def scan(src, jobs=None):
                 errors.append(f"セル {fmt(cell)} がシートの外（{who(uses[cell])}）")
             else:
                 empty[cell] = e
-    # 物ごと・層を除いたキーごとに、指すセルが全部空のものを探す
+    # 物ごと・キー（季節を畳む）ごとに、指すセルが全部空のものを探す
     groups = {}
     for cell, us in uses.items():
         for name, f, k in us:
-            groups.setdefault((name, f, layer_group(k)), []).append((cell, k))
+            groups.setdefault((name, f, group_key(k)), []).append((cell, k))
     empties = {}
     for (name, f, g), items in groups.items():
         if all(empty.get(cell) for cell, _ in items):
@@ -126,13 +134,17 @@ def compare(empties, allow):
     for name in sorted(empties):
         new = empties[name] - allow.get(name, set())
         if new:
-            errors.append(f"{name}: 空のセル（全部透明）を指す絵が控え（check_cells.allow.txt）に無い: {' '.join(sorted(new))}。"
+            errors.append(f"{name}: 空のセル（全部透明）を指す絵が控え（check_cells.allow.txt）に無い（{len(new)} 件）: {head(sorted(new))}。"
                           f"絵を描き忘れたか、dat の指すセルがずれている。意図して空なら --update で控えに足す")
     for name in sorted(allow):
         gone = allow[name] - empties.get(name, set())
         if gone:
-            errors.append(f"{name}: 控えにあるが、もう空のセルを指していない: {' '.join(sorted(gone))}。--update で控えから外す")
+            errors.append(f"{name}: 控えにあるが、もう空のセルを指していない（{len(gone)} 件）: {head(sorted(gone))}。--update で控えから外す")
     return errors
+
+
+def head(items, n=6):
+    return " ".join(items[:n]) + (f" ほか {len(items) - n} 件" if len(items) > n else "")
 
 
 def who(users):
@@ -172,9 +184,17 @@ def self_test():
         assert not ok, ok  # icon は読まない・`-` は対象外
         bad = run("obj=way\nname=t\nimage[ns]=t.0.0\ndiagonal[ne]=t.0.1,0,0\n")
         assert len(bad) == 1 and "diagonal[ne]" in bad[0] and "image[ns]" not in bad[0], bad
-        assert not run("obj=way-object\nname=t\nbackimage[ns]=t.0.1\nfrontimage[ns]=t.0.0\n")  # 片方の層に絵があれば空でない
-        both = run("obj=way-object\nname=t\nbackimage[ns]=t.0.1\nfrontimage[ns]=t.0.1\n")
-        assert len(both) == 1 and "image[ns]" in both[0], both
+        one = run("obj=way-object\nname=t\nbackimage[ns]=t.0.1\nfrontimage[ns]=t.0.0\n")  # 片方の層だけ空でも、控えに無ければ落ちる（層ごとに見る）
+        assert len(one) == 1 and "backimage[ns]" in one[0] and "frontimage[ns]" not in one[0], one
+        e, empties, _, _ = scan(d, jobs=1)
+        assert compare(empties, {"t": {"backimage[ns]"}}) == []  # 控えにあれば通る
+        assert len(compare(empties, {"t": {"frontimage[ns]"}})) == 2  # 控えの層が違えば、新しいのと古いのの両方で落ちる
+        season = run("obj=way\nname=t\nimage[ns][0]=t.0.1\nimage[ns][1]=t.0.0\n")  # 季節は畳む（片方でも絵があれば空でない）
+        assert not season, season
+        text = run("obj=way\nname=t\nimage[ns]=oops\nimage[ew]=t.0.0\n")  # 参照の形でない値は黙って無視しない
+        assert len(text) == 1 and "image[ns]" in text[0], text
+        none = run("obj=way\nname=t\n")  # 参照が 0 件
+        assert len(none) == 1 and "1 つも無い" in none[0], none
         assert compare({"t": {"image[ns]"}}, {"t": {"image[ns]"}}) == []  # 控えにあれば通る
         assert len(compare({}, {"t": {"image[ns]"}})) == 1  # 空でなくなった控えは古い
         out = run("obj=way\nname=t\nimage[ns]=t.0.2\n")
@@ -192,8 +212,10 @@ def main(src, update=False):
         return 0
     errors += compare(empties, read_allow(ALLOW_FILE))
     if errors:
-        for e in errors:
+        for e in errors[:40]:
             print(e)
+        if len(errors) > 40:
+            print(f"（ほか {len(errors) - 40} 件は省いた）")
         print(f"{'::error::' if os.environ.get('GITHUB_ACTIONS') else ''}空のセルを指す dat の検査で {len(errors)} 件")
         return 1
     print(f"空のセルを指す dat の検査は通った（{nrefs} 参照・{ncells} セル）")
