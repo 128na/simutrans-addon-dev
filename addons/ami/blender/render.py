@@ -535,10 +535,10 @@ ROAD_SETTINGS = {
                                  skin=_road_asphalt_skin("street", R.STREET_ASPHALT, 0.0)),
     catalog.ROAD_GENERAL.key: dict(_ROAD_LOOK, label="120", style="road", center="solid",
                                    skin=_road_asphalt_skin("street", R.STREET_ASPHALT, 0.0)),
-    # 幹線道路（#257）: 高速道路と同じ断面・斜めの直線のカーブ（switch_diag）。中央線は細かい破線（高速道路の半分の周期）、路面は街路と高速道路の中間の明るさ
-    catalog.ROAD_TRUNK.key: dict(_ROAD_LOOK, label="240", style="expressway", center="dash_fine", switch_diag=True,
+    # 幹線道路（#257）: 高速道路と同じ断面・斜めの直線のカーブ（switch_diag）。中央線は破線（直線 4・斜め 3。pak128 標準の高速と同じ割り方。高速道路は dash_wide でもっと広い）、路面は街路と高速道路の中間の明るさ
+    catalog.ROAD_TRUNK.key: dict(_ROAD_LOOK, label="240", style="expressway", center="dash", switch_diag=True,
                                  skin=_road_asphalt_skin("trunk", TRUNK_ASPHALT, 0.0)),
-    catalog.ROAD_EXPRESSWAY.key: dict(_ROAD_LOOK, label="360", style="expressway", center="dash", switch_diag=True,
+    catalog.ROAD_EXPRESSWAY.key: dict(_ROAD_LOOK, label="360", style="expressway", center="dash_wide", switch_diag=True,
                                       skin=_road_asphalt_skin("expwy", R.EXPWY_ASPHALT, 0.0)),
 }
 for _r in catalog.ROADS:
