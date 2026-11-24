@@ -1,20 +1,4 @@
 §# AMI の日本語の名前（#122・#162・#263。道路標識・路面の横断歩道・way・橋・トンネル・踏切・車庫など）。先頭の § は UTF-8 の印、# で始まる行は読まれない（OTRP の dataobj/translator.cc）。後は名前と訳の行が交互
-ami_sign_one_way
-一方通行の標識（AMI）
-ami_sign_stop
-一時停止の標識（AMI。飾り）
-ami_sign_speed_40
-最高速度 40 km/h の標識（AMI。飾りで、速度は変わらない）
-ami_sign_speed_60
-最高速度 60 km/h の標識（AMI。飾りで、速度は変わらない）
-ami_sign_speed_80
-最高速度 80 km/h の標識（AMI。飾りで、速度は変わらない）
-ami_sign_min_50
-最低速度 50 km/h の標識（AMI。50 km/h 未満の車は通れない）
-ami_sign_crosswalk
-横断歩道の標識（AMI。路面に縞と停止線を描く。飾り）
-ami_sign_crosswalk_one_way
-横断歩道の標識・一方通行（AMI。路面に縞と停止線を描き、一方通行にする）
 ami_canal
 運河（AMI）
 ami_canal_depot
@@ -110,25 +94,25 @@ ami_monorail_power
 ami_monorail_straddle
 跨座式モノレール（AMI）
 ami_monorail_straddle_elev_back
-跨座式モノレールの高架（奥）（AMI）
+跨座式モノレールの高架（柱が奥）（AMI）
 ami_monorail_straddle_elev_center
-跨座式モノレールの高架（行き止まりの端）（AMI）
+跨座式モノレールの高架（両側に柱）（AMI）
 ami_monorail_straddle_elev_front
-跨座式モノレールの高架（手前）（AMI）
+跨座式モノレールの高架（柱が手前）（AMI）
 ami_monorail_straddle_tunnel
 跨座式モノレールのトンネル（AMI）
 ami_monorail_suspended_back
-懸垂式モノレール（奥）（AMI）
+懸垂式モノレール（柱が奥）（AMI）
 ami_monorail_suspended_center
-懸垂式モノレール（行き止まりの端）（AMI）
+懸垂式モノレール（両側に柱）（AMI）
 ami_monorail_suspended_elev_back
-懸垂式モノレールの高架（奥）（AMI）
+懸垂式モノレールの高架（柱が奥）（AMI）
 ami_monorail_suspended_elev_center
-懸垂式モノレールの高架（行き止まりの端）（AMI）
+懸垂式モノレールの高架（両側に柱）（AMI）
 ami_monorail_suspended_elev_front
-懸垂式モノレールの高架（手前）（AMI）
+懸垂式モノレールの高架（柱が手前）（AMI）
 ami_monorail_suspended_front
-懸垂式モノレール（手前）（AMI）
+懸垂式モノレール（柱が手前）（AMI）
 ami_monorail_suspended_power
 モノレールの電化（懸垂式）（AMI）
 ami_pier_rail
@@ -146,7 +130,7 @@ ami_rail_ballast
 ami_rail_ballast_base_back
 在来線（バラスト軌道）の基盤（奥）（AMI）
 ami_rail_ballast_base_center
-在来線（バラスト軌道）の基盤（行き止まりの端）（AMI）
+在来線（バラスト軌道）の基盤（中央）（AMI）
 ami_rail_ballast_base_front
 在来線（バラスト軌道）の基盤（手前）（AMI）
 ami_rail_ballast_base_single
@@ -156,7 +140,7 @@ ami_rail_ballast_bridge
 ami_rail_ballast_elev_back
 在来線（バラスト軌道）の高架（奥）（AMI）
 ami_rail_ballast_elev_center
-在来線（バラスト軌道）の高架（行き止まりの端）（AMI）
+在来線（バラスト軌道）の高架（中央）（AMI）
 ami_rail_ballast_elev_front
 在来線（バラスト軌道）の高架（手前）（AMI）
 ami_rail_ballast_elev_single
@@ -166,7 +150,7 @@ ami_rail_ballast_old
 ami_rail_ballast_old_base_back
 在来線（バラスト軌道）（旧位置）の基盤（奥）（AMI）
 ami_rail_ballast_old_base_center
-在来線（バラスト軌道）（旧位置）の基盤（行き止まりの端）（AMI）
+在来線（バラスト軌道）（旧位置）の基盤（中央）（AMI）
 ami_rail_ballast_old_base_front
 在来線（バラスト軌道）（旧位置）の基盤（手前）（AMI）
 ami_rail_ballast_old_base_single
@@ -176,7 +160,7 @@ ami_rail_ballast_old_bridge
 ami_rail_ballast_old_elev_back
 在来線（バラスト軌道）（旧位置）の高架（奥）（AMI）
 ami_rail_ballast_old_elev_center
-在来線（バラスト軌道）（旧位置）の高架（行き止まりの端）（AMI）
+在来線（バラスト軌道）（旧位置）の高架（中央）（AMI）
 ami_rail_ballast_old_elev_front
 在来線（バラスト軌道）（旧位置）の高架（手前）（AMI）
 ami_rail_ballast_old_elev_single
@@ -190,7 +174,7 @@ ami_rail_concrete
 ami_rail_concrete_base_back
 弾性まくらぎ直結軌道の基盤（奥）（AMI）
 ami_rail_concrete_base_center
-弾性まくらぎ直結軌道の基盤（行き止まりの端）（AMI）
+弾性まくらぎ直結軌道の基盤（中央）（AMI）
 ami_rail_concrete_base_front
 弾性まくらぎ直結軌道の基盤（手前）（AMI）
 ami_rail_concrete_base_single
@@ -200,7 +184,7 @@ ami_rail_concrete_bridge
 ami_rail_concrete_elev_back
 弾性まくらぎ直結軌道の高架（奥）（AMI）
 ami_rail_concrete_elev_center
-弾性まくらぎ直結軌道の高架（行き止まりの端）（AMI）
+弾性まくらぎ直結軌道の高架（中央）（AMI）
 ami_rail_concrete_elev_front
 弾性まくらぎ直結軌道の高架（手前）（AMI）
 ami_rail_concrete_elev_single
@@ -210,7 +194,7 @@ ami_rail_concrete_old
 ami_rail_concrete_old_base_back
 弾性まくらぎ直結軌道（旧位置）の基盤（奥）（AMI）
 ami_rail_concrete_old_base_center
-弾性まくらぎ直結軌道（旧位置）の基盤（行き止まりの端）（AMI）
+弾性まくらぎ直結軌道（旧位置）の基盤（中央）（AMI）
 ami_rail_concrete_old_base_front
 弾性まくらぎ直結軌道（旧位置）の基盤（手前）（AMI）
 ami_rail_concrete_old_base_single
@@ -220,7 +204,7 @@ ami_rail_concrete_old_bridge
 ami_rail_concrete_old_elev_back
 弾性まくらぎ直結軌道（旧位置）の高架（奥）（AMI）
 ami_rail_concrete_old_elev_center
-弾性まくらぎ直結軌道（旧位置）の高架（行き止まりの端）（AMI）
+弾性まくらぎ直結軌道（旧位置）の高架（中央）（AMI）
 ami_rail_concrete_old_elev_front
 弾性まくらぎ直結軌道（旧位置）の高架（手前）（AMI）
 ami_rail_concrete_old_elev_single
@@ -236,7 +220,7 @@ ami_rail_ladder
 ami_rail_ladder_base_back
 フローティング・ラダー軌道の基盤（奥）（AMI）
 ami_rail_ladder_base_center
-フローティング・ラダー軌道の基盤（行き止まりの端）（AMI）
+フローティング・ラダー軌道の基盤（中央）（AMI）
 ami_rail_ladder_base_front
 フローティング・ラダー軌道の基盤（手前）（AMI）
 ami_rail_ladder_base_single
@@ -246,7 +230,7 @@ ami_rail_ladder_bridge
 ami_rail_ladder_elev_back
 フローティング・ラダー軌道の高架（奥）（AMI）
 ami_rail_ladder_elev_center
-フローティング・ラダー軌道の高架（行き止まりの端）（AMI）
+フローティング・ラダー軌道の高架（中央）（AMI）
 ami_rail_ladder_elev_front
 フローティング・ラダー軌道の高架（手前）（AMI）
 ami_rail_ladder_elev_single
@@ -256,7 +240,7 @@ ami_rail_ladder_old
 ami_rail_ladder_old_base_back
 フローティング・ラダー軌道（旧位置）の基盤（奥）（AMI）
 ami_rail_ladder_old_base_center
-フローティング・ラダー軌道（旧位置）の基盤（行き止まりの端）（AMI）
+フローティング・ラダー軌道（旧位置）の基盤（中央）（AMI）
 ami_rail_ladder_old_base_front
 フローティング・ラダー軌道（旧位置）の基盤（手前）（AMI）
 ami_rail_ladder_old_base_single
@@ -266,7 +250,7 @@ ami_rail_ladder_old_bridge
 ami_rail_ladder_old_elev_back
 フローティング・ラダー軌道（旧位置）の高架（奥）（AMI）
 ami_rail_ladder_old_elev_center
-フローティング・ラダー軌道（旧位置）の高架（行き止まりの端）（AMI）
+フローティング・ラダー軌道（旧位置）の高架（中央）（AMI）
 ami_rail_ladder_old_elev_front
 フローティング・ラダー軌道（旧位置）の高架（手前）（AMI）
 ami_rail_ladder_old_elev_single
@@ -280,7 +264,7 @@ ami_rail_slab
 ami_rail_slab_base_back
 高速線（スラブ軌道）の基盤（奥）（AMI）
 ami_rail_slab_base_center
-高速線（スラブ軌道）の基盤（行き止まりの端）（AMI）
+高速線（スラブ軌道）の基盤（中央）（AMI）
 ami_rail_slab_base_front
 高速線（スラブ軌道）の基盤（手前）（AMI）
 ami_rail_slab_base_single
@@ -290,7 +274,7 @@ ami_rail_slab_bridge
 ami_rail_slab_elev_back
 高速線（スラブ軌道）の高架（奥）（AMI）
 ami_rail_slab_elev_center
-高速線（スラブ軌道）の高架（行き止まりの端）（AMI）
+高速線（スラブ軌道）の高架（中央）（AMI）
 ami_rail_slab_elev_front
 高速線（スラブ軌道）の高架（手前）（AMI）
 ami_rail_slab_elev_single
@@ -300,7 +284,7 @@ ami_rail_slab_old
 ami_rail_slab_old_base_back
 高速線（スラブ軌道）（旧位置）の基盤（奥）（AMI）
 ami_rail_slab_old_base_center
-高速線（スラブ軌道）（旧位置）の基盤（行き止まりの端）（AMI）
+高速線（スラブ軌道）（旧位置）の基盤（中央）（AMI）
 ami_rail_slab_old_base_front
 高速線（スラブ軌道）（旧位置）の基盤（手前）（AMI）
 ami_rail_slab_old_base_single
@@ -310,7 +294,7 @@ ami_rail_slab_old_bridge
 ami_rail_slab_old_elev_back
 高速線（スラブ軌道）（旧位置）の高架（奥）（AMI）
 ami_rail_slab_old_elev_center
-高速線（スラブ軌道）（旧位置）の高架（行き止まりの端）（AMI）
+高速線（スラブ軌道）（旧位置）の高架（中央）（AMI）
 ami_rail_slab_old_elev_front
 高速線（スラブ軌道）（旧位置）の高架（手前）（AMI）
 ami_rail_slab_old_elev_single
@@ -328,7 +312,7 @@ ami_road_expressway
 ami_road_expressway_base_back
 高速道路の基盤（奥）（AMI）
 ami_road_expressway_base_center
-高速道路の基盤（行き止まりの端）（AMI）
+高速道路の基盤（中央）（AMI）
 ami_road_expressway_base_front
 高速道路の基盤（手前）（AMI）
 ami_road_expressway_base_single
@@ -338,7 +322,7 @@ ami_road_expressway_bridge
 ami_road_expressway_elev_back
 高速道路の高架（奥）（AMI）
 ami_road_expressway_elev_center
-高速道路の高架（行き止まりの端）（AMI）
+高速道路の高架（中央）（AMI）
 ami_road_expressway_elev_front
 高速道路の高架（手前）（AMI）
 ami_road_expressway_elev_single
@@ -370,7 +354,7 @@ ami_road_trunk
 ami_road_trunk_base_back
 幹線道路の基盤（奥）（AMI）
 ami_road_trunk_base_center
-幹線道路の基盤（行き止まりの端）（AMI）
+幹線道路の基盤（中央）（AMI）
 ami_road_trunk_base_front
 幹線道路の基盤（手前）（AMI）
 ami_road_trunk_base_single
@@ -380,7 +364,7 @@ ami_road_trunk_bridge
 ami_road_trunk_elev_back
 幹線道路の高架（奥）（AMI）
 ami_road_trunk_elev_center
-幹線道路の高架（行き止まりの端）（AMI）
+幹線道路の高架（中央）（AMI）
 ami_road_trunk_elev_front
 幹線道路の高架（手前）（AMI）
 ami_road_trunk_elev_single
@@ -434,17 +418,17 @@ ami_wall_rail_old_single
 ami_wall_rail_old_single_catenary
 線路の壁（架線つき。旧位置）（AMI）
 ami_wall_rail_old_twin
-線路の壁（近い斜め用。旧位置）（AMI）
+線路の壁（斜め 2 本用。旧位置）（AMI）
 ami_wall_rail_old_twin_catenary
-線路の壁（近い斜め用。架線つき。旧位置）（AMI）
+線路の壁（斜め 2 本用。架線つき。旧位置）（AMI）
 ami_wall_rail_single
 線路の壁（AMI）
 ami_wall_rail_single_catenary
 線路の壁（架線つき）（AMI）
 ami_wall_rail_twin
-線路の壁（近い斜め用）（AMI）
+線路の壁（斜め 2 本用）（AMI）
 ami_wall_rail_twin_catenary
-線路の壁（近い斜め用。架線つき）（AMI）
+線路の壁（斜め 2 本用。架線つき）（AMI）
 ami_wall_road_back
 道路の壁（奥）（AMI）
 ami_wall_road_center
@@ -458,16 +442,16 @@ ami_wall_road_front_divider
 ami_wall_road_single
 道路の壁（AMI）
 ami_wall_road_twin
-道路の壁（近い斜め用）（AMI）
+道路の壁（斜め 2 本用）（AMI）
 ami_wall_road_twin_divider
-道路の壁（近い斜め用。中央分離帯つき）（AMI）
+道路の壁（斜め 2 本用。中央分離帯つき）（AMI）
 ami_wall_sidewalk_back
-歩道の壁（奥）（AMI）
+歩道の柵（奥）（AMI）
 ami_wall_sidewalk_back_pole
-歩道の壁（奥。電柱つき）（AMI）
+歩道の柵（奥。電柱つき）（AMI）
 ami_wall_sidewalk_front
-歩道の壁（手前）（AMI）
+歩道の柵（手前）（AMI）
 ami_wall_sidewalk_front_pole
-歩道の壁（手前。電柱つき）（AMI）
+歩道の柵（手前。電柱つき）（AMI）
 ami_wall_sidewalk_single
-歩道の壁（AMI）
+歩道の柵（AMI）
