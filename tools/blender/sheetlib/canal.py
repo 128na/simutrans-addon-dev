@@ -49,7 +49,7 @@ SCENIC_STYLE = dict(bank=0.35, coping=0.3, water_z=-13 / 16 * H, wall_bottom=-13
                     # 護岸の水際の染み（#197。精細化のラウンド 1 の 1wl2）: 水面から height だけ上へ薄れる暗い帯（色, 高さ, 強さ）。物の座標の高さで付けるので、
                     # タイルをまたいで連続する
                     waterline=((0.06, 0.12, 0.10), 1.2, 1.0),
-                    # 行き止まりの暗渠（#217。iss の運河に倣う）: 閉じた側の辺に、周りの笠石と同じ幅の蓋（まぐさ）を付け、その下に暗い口を描いて、水が奥へ続いて見えるようにする（だまし絵）。
+                    # 行き止まりの暗渠（#217。iss の運河に倣う）: 閉じた側の辺に、笠石・護岸（辺から 0.35）より 0.1 広い（辺から 0.45）蓋（まぐさ）を付け、その下に暗い口を描いて、水が奥へ続いて見えるようにする（だまし絵）。
                     # 蓋は地面の高さから厚み分だけ下まで（口は暗く見える）
                     culvert=(CULVERT_LINTEL, CULVERT_THICK))
 CANAL_STYLES = {"road": ROAD_STYLE, "scenic": SCENIC_STYLE}
@@ -233,7 +233,7 @@ def _culvert(name, st, coping):
     dark = make_material(lambda: noisy_material("canal_culvert_dark", (0.01, 0.03, 0.04), (0.025, 0.06, 0.07), scale=30, rough=0.5), "canal_culvert_dark")
 
     def box(w, z0, z1, mat, nm):
-        a, b = sorted((-ax * reach - ay * 0, -ax * edge)) if ax else sorted((-ay * reach, -ay * edge))
+        a, b = sorted((-ax * reach, -ax * edge)) if ax else sorted((-ay * reach, -ay * edge))
         poly = [(a, -w), (b, -w), (b, w), (a, w)] if ax else [(-w, a), (w, a), (w, b), (-w, b)]
         return _prism(nm, poly, z0, z1, mat)
 
