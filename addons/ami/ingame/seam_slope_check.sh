@@ -43,6 +43,7 @@ cp "$GAME_DIR/save/$SAVE.sve" "$WORK/save/" || exit 1
 cp "$PAK" "$WORK/addons/pak128/ami.pak" || exit 1
 printf '\nday_night_shift = 0\n' >> "$WORK/config/simuconf.tab"
 [ -f "$GAME_DIR/settings.xml" ] && { cp "$GAME_DIR/settings.xml" "$WORK/settings.xml"; chmod u+w "$WORK/settings.xml"; }
+bash "$(dirname "${BASH_SOURCE[0]:-$0}")/strip_usage_log.sh" "$WORK/settings.xml" || exit 1  # 送信用の記録を外す（#235）
 
 (cd "$WORK" && "./$EXE" -objects pak128/ -addons -load "$SAVE" -mcp-port "$PORT" > /dev/null 2>&1 &)
 for r in $(seq 1 120); do timeout 10 $M --timeout 5 --run-squirrel "return 1;" > /dev/null 2>&1 && break; sleep 1; done

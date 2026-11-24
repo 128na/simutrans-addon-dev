@@ -39,6 +39,7 @@ for d in config font themes text script music pak128 addons; do
 done
 cp "$GAME_DIR/save/$SAVE.sve" "$WORK/save/" || exit 1
 [ -f "$GAME_DIR/settings.xml" ] && { cp "$GAME_DIR/settings.xml" "$WORK/settings.xml"; chmod u+w "$WORK/settings.xml"; }
+bash "$(dirname "${BASH_SOURCE[0]:-$0}")/strip_usage_log.sh" "$WORK/settings.xml" || exit 1  # 送信用の記録を外す（#235）
 # GAME_DIR に入っている AMI の pak（種類別の pak など）を外し、dist/ami.pak だけを入れる（二重に読まないため。icon_capture.sh と同じ）
 rm -f "$WORK"/addons/pak128/ami*.pak
 cp dist/ami.pak "$WORK/addons/pak128/ami.pak" || exit 1

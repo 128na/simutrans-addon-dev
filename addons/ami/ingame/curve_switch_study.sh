@@ -106,6 +106,7 @@ for d in config font themes text script music pak128 addons; do
 done
 cp "$GAME_DIR/save/$SAVE.sve" "$WORK/save/" || exit 1
 [ -f "$GAME_DIR/settings.xml" ] && { cp "$GAME_DIR/settings.xml" "$WORK/settings.xml"; chmod u+w "$WORK/settings.xml"; }
+bash "$(dirname "${BASH_SOURCE[0]:-$0}")/strip_usage_log.sh" "$WORK/settings.xml" || exit 1  # 送信用の記録を外す（#235）
 cp "$PAK" "$WORK/addons/pak128/ami.pak" || exit 1
 for p in $ISS_PAKS; do cp "$p" "$WORK/addons/pak128/" || exit 1; done
 (cd "$WORK" && "./$EXE" -objects pak128/ -addons -load "$SAVE" -mcp-port "$PORT" > /dev/null 2>&1 &)
