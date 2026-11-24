@@ -441,6 +441,10 @@ ami_wall_road_front_divider
 道路の壁（手前。中央分離帯つき）（AMI）
 ami_wall_road_single
 道路の壁（AMI）
+ami_wall_road_single_arc
+道路の壁（円弧のカーブ。一般道路用）（AMI）
+ami_wall_road_single_ell
+道路の壁（L 字のカーブ。生活道路用）（AMI）
 ami_wall_road_twin
 道路の壁（斜め 2 本用）（AMI）
 ami_wall_road_twin_divider
