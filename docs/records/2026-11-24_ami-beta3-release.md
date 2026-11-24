@@ -35,3 +35,4 @@ beta.2 の dat（3e0147e）と今の `src/*.dat` の `name=` を比べた物の�
 - `release/readme.txt` の主な中身（多車線の路面表示に 6 車線・分岐と合流、運河に景観の運河、景観に横断歩道）と `release/readme_old.txt` の同梱の zip の名前を beta.3 に合わせた。`ami_lineup.txt` は dat から自動で作る
 - README の配布の節と ACCEPTANCE（beta.3 の扱い・6-3）を beta.3 に合わせた
 - GitHub のプレリリース（タグ `ami-beta.3`）は、この PR のマージの後、ユーザーの承認を得てから作る。zip は `work/release/` に置いてある（git 管理外）。上げる前に `release.py` で作り直し、readme が今の版であることを確かめる
+- 公開した（ユーザーの承認は進捗管理を通して、2026-11-24）: https://github.com/128na/simutrans-addon-dev/releases/tag/ami-beta.3 （プレリリース。マージ後の main（e6dc1b1）から zip を作り直して上げた。`ami-beta.3.zip` 20,399,444 B・`ami-beta.3-old.zip` 3,871,439 B。readme は修正後で、lineup は 208 行）
