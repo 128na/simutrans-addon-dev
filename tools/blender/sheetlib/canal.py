@@ -39,7 +39,6 @@ _M_WATER = lambda: noisy_material("canal_water", WATER_LO, WATER_HI, scale=30, r
 _M_WALL = lambda: noisy_material("canal_wall", WALL_LO, WALL_HI, scale=55, rough=0.9)
 _M_COPING = lambda: noisy_material("canal_coping", COPING_LO, COPING_HI, scale=55, rough=0.85)
 
-DIAG_PAD = 7.0            # 景観の運河の斜め（画面で縦向き）のセルで、帯をタイルの外へ延ばす量。隣のタイルの壁（このセルの角をかすめる線）の影が、このセルの水面の縦の範囲（菱形 64 行＋深さ 13px、部品の単位で約 5）を全部覆うのに足りる長さ。2.6 では影が途中で切れ、7.0 で組のセルとそろった（他の値は試していない。必要最小値は測っていない）
 # 景観の運河（#161）: iss の運河と同じ見せ方。水面は 13px 下（高さ 1 段 = 16px）で、タイルの辺近くまで広げ、縁は細い笠石。
 # 坂は閘門（iss と同じく、上下の水面を扉枠で分ける。LOCK）。実用の運河（ROAD_STYLE。#114）の寸法は変えない
 ROAD_STYLE = dict(pad=CANAL_PAD, bank=CANAL_BANK, coping=CANAL_COPING, water_z=CANAL_WATER_Z, wall_bottom=CANAL_WALL_BOTTOM, lock=False)
@@ -47,9 +46,7 @@ SCENIC_STYLE = dict(bank=0.35, coping=0.3, water_z=-13 / 16 * H, wall_bottom=-13
                     wall_col=((0.70, 0.70, 0.68), (0.80, 0.80, 0.77)), coping_col=((0.74, 0.74, 0.71), (0.84, 0.84, 0.81)),
                     # 護岸の水際の染み（#197。精細化のラウンド 1 の 1wl2）: 水面から height だけ上へ薄れる暗い帯（色, 高さ, 強さ）。物の座標の高さで付けるので、
                     # タイルをまたいで連続する
-                    waterline=((0.06, 0.12, 0.10), 1.2, 1.0),
-                    # 斜めのセルの壁の延び（#217）: 組になる斜めのセルの壁が落とす影の縦の範囲をそろえる（下の canal_build）
-                    diag_pad=DIAG_PAD)
+                    waterline=((0.06, 0.12, 0.10), 1.2, 1.0))
 CANAL_STYLES = {"road": ROAD_STYLE, "scenic": SCENIC_STYLE}
 SCENIC_DEPTH_PX = 13      # 景観の運河の水面の深さ（画素。つなぎ目の持ち分を下へ広げる量）
 LOCK_GATE = 0.25         # 閘門の扉の半分の厚み（坂の向きの座標 u = ±LOCK_GATE の間）
@@ -67,8 +64,6 @@ _CELLS = {
 # 斜めのセル → 帯の角の向き（つながる 2 辺のあいだの角）
 _DIAG_CORNERS = {"diag_sw": [(-1, -1)], "diag_nw": [(-1, 1)], "diag_ne": [(1, 1)], "diag_se": [(1, -1)],
                  "close1": [(-1, 1), (1, -1)], "close2": [(1, 1), (-1, -1)]}
-# 画面で縦向きの斜め（壁が画面の縦の線になるもの）。この向きだけ、壁の影の縦の範囲が組のセルでずれる（#217）
-_DIAG_VERTICAL = ("diag_sw", "diag_ne", "close2")
 _ARMS = {"n": (0, 1), "s": (0, -1), "e": (1, 0), "w": (-1, 0)}
 
 
@@ -86,9 +81,17 @@ def _slopes():
     return out
 
 
-def _jobs():
-    """描くセル（行, 列）→ (名前, 坂の高さ)。ONLY のときは、その名前と南北の直線だけ"""
-    jobs = {pos: (name, None) for pos, name in _CELLS.items()}
+# 景観の運河（#217）のカーブのセル（行 2 の列 5〜8。iss の運河と同じ L 字）。斜めのセル（行 2 の列 0〜4・9）の代わりに描く。
+# 斜めは壁が画面の縦の線になって面が見えず、直線の壁（面が見える）とのつなぎ目で壁が連続しない（iss も斜めを諦めて L 字のジグザグにしている）
+_CURVE_CELLS = {(2, 5): "curve_sw", (2, 6): "curve_nw", (2, 7): "curve_ne", (2, 8): "curve_se"}
+
+
+def _jobs(scenic=False):
+    """描くセル（行, 列）→ (名前, 坂の高さ)。ONLY のときは、その名前と南北の直線だけ。景観の運河（scenic）は斜めのセルでなく L 字のカーブのセル"""
+    cells = {pos: name for pos, name in _CELLS.items() if not (scenic and name in _DIAG_CORNERS)}
+    if scenic:
+        cells.update(_CURVE_CELLS)
+    jobs = {pos: (name, None) for pos, name in cells.items()}
     jobs.update({pos: (name, slope) for pos, (name, slope) in _slopes().items()})
     if ONLY:
         jobs = {k: v for k, v in jobs.items() if v[0] in ONLY + ("ns",)}
@@ -194,7 +197,7 @@ def _shell(name, name_cell, outer_inset, z0, z1, mat, bank=CANAL_BANK, half_plan
 def canal_build(name, slope, snow, st=ROAD_STYLE, slope_name=None):
     """運河 1 タイルの形。st は寸法（ROAD_STYLE・SCENIC_STYLE）。景観の坂（st["lock"] と slope_name）は閘門"""
     bank, cop, wz, wb = st["bank"], st["coping"], st["water_z"], st["wall_bottom"]
-    pad = st.get("diag_pad", st["pad"]) if name in _DIAG_VERTICAL else st["pad"]
+    pad = st["pad"]
     reach = TILE / 2 + pad
     water, wall, coping = _materials(st, snow)
     lock = bool(slope and st["lock"] and slope_name)
@@ -329,7 +332,7 @@ def canal_sheet(sheet, label="C", style="road", variant="road"):
     st = CANAL_STYLES[variant]  # "scenic" は景観の運河（#161）
     cells = {}
     for is_snow, dr in ((False, 0), (True, CANAL_SNOW_ROWS)):
-        for (r, c), (name, slope) in _jobs().items():
+        for (r, c), (name, slope) in _jobs(variant == "scenic").items():
             cname = f"{sheet}_{'snow_' if is_snow else ''}{name}"
             clear_models()
             canal_build(name, slope, is_snow, st, name)
