@@ -114,7 +114,7 @@ TRAM_SWITCH_IMAGES = True
 # 道路の地上の基盤の版（#22。2026-11-19 にユーザーが確定）: 線路の基盤の版と同じく近い斜めの絵を持たず、カーブはカーブのセル（斜めの形）。
 # 値は通常の版と同じ（README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
 for _r in catalog.ROADS:
-    for _v in BASE_VARIANTS:
+    for _v in _r.variants:
         _n = _r.base(_v)
         VALUES[_n] = VALUES[_r.way]
 
@@ -130,7 +130,7 @@ for _t in catalog.ALL_TRACKS:
 # 道路の高架の 4 版（#22）: 線路の高架と同じく、近い斜めの絵を持たない（分け合うタイルに way が 2 本置かれ、奥の線と手前の線を別の版にできる）。
 # カーブはカーブのセル（斜めの形で、壁の無い側をタイルの端まで。render.py の curve_cells）。値の倍率も線路と同じ
 for _r in catalog.ROADS:
-    for _v in BASE_VARIANTS:
+    for _v in _r.variants:
         _n = _r.elev(_v)
         VALUES[_n] = dict(VALUES[_r.way], cost=VALUES[_r.way]["cost"] * ELEV_COST_K,
                           maintenance=VALUES[_r.way]["maintenance"] * ELEV_COST_K)

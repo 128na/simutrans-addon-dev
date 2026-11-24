@@ -46,6 +46,7 @@ class Road:
     通常の版の way・地上の基盤の版と高架の 4 版・橋・トンネル（#21・#22）。基盤の版は 2026-11-19 にユーザーが確定（
     README の「道路の壁・高架・橋脚・橋・トンネルの作り」）"""
     key: str
+    variants: tuple = VARIANTS  # 基盤・高架を作る版（一般道路・生活道路は single だけ。#260）
 
     @property
     def way(self):
@@ -136,8 +137,8 @@ MONORAIL_POWERS = {f"{PREFIX}monorail_power": False, f"{PREFIX}monorail_suspende
 CANAL = "ami_canal"
 CANAL_SCENIC = "ami_canal_scenic"  # 景観の運河（#161）。実用の運河と同じ値（速さ 60 で #117 の跳ね橋を共用）。水面が 13px 下（iss と同じ）
 
-ROAD_LOCAL = Road("road_local")  # 生活道路（40 km/h、中央線なし）
-ROAD_GENERAL = Road("road_general")  # 一般道路（120 km/h、中央線は白の実線）
+ROAD_LOCAL = Road("road_local", ("single",))  # 生活道路（40 km/h、中央線なし）
+ROAD_GENERAL = Road("road_general", ("single",))  # 一般道路（120 km/h、中央線は白の実線）
 ROAD_TRUNK = Road("road_trunk")  # 幹線道路（#257。最高速度 240 km/h（確定）、中央線は白の破線（直線 4・斜め 3 で高速道路より細かい）。4 車線は道路を 2 本並べる。カーブは高速道路と同じ斜めの直線）
 ROAD_EXPRESSWAY = Road("road_expressway")  # 高速道路（360 km/h、中央線は白の広い破線。線 8m・すき間 12m の割り方。#257）
 ROADS = (ROAD_LOCAL, ROAD_GENERAL, ROAD_TRUNK, ROAD_EXPRESSWAY)
@@ -279,16 +280,16 @@ BUILT_WAYS.append(TRAM)  # 路面軌道（通常の版だけ）
 for _r in ROADS:
     BUILT_WAYS.append(_r.way)
 for _r in ROADS:
-    BUILT_WAYS += [_r.base(_v) for _v in VARIANTS]  # 道路の地上の基盤の版（線路と同じ並び）
-    NO_CLOSE_WAYS.update(_r.base(_v) for _v in VARIANTS)
+    BUILT_WAYS += [_r.base(_v) for _v in _r.variants]  # 道路の地上の基盤の版（線路と同じ並び）
+    NO_CLOSE_WAYS.update(_r.base(_v) for _v in _r.variants)
 for _t in ALL_TRACKS:
     BUILT_WAYS += [_t.elev(_v) for _v in VARIANTS]  # 高架の 4 版
     NO_CLOSE_WAYS.update(_t.elev(_v) for _v in VARIANTS)
     ELEVATED_WAYS.update(_t.elev(_v) for _v in VARIANTS)
 for _r in ROADS:
-    BUILT_WAYS += [_r.elev(_v) for _v in VARIANTS]
-    NO_CLOSE_WAYS.update(_r.elev(_v) for _v in VARIANTS)
-    ELEVATED_WAYS.update(_r.elev(_v) for _v in VARIANTS)
+    BUILT_WAYS += [_r.elev(_v) for _v in _r.variants]
+    NO_CLOSE_WAYS.update(_r.elev(_v) for _v in _r.variants)
+    ELEVATED_WAYS.update(_r.elev(_v) for _v in _r.variants)
 BUILT_WAYS += [MONORAIL, *MONORAIL_ELEVS]  # 跨座式（近い斜め無し。高架は system_type=1）
 NO_CLOSE_WAYS.update((MONORAIL, *MONORAIL_ELEVS))
 ELEVATED_WAYS.update(MONORAIL_ELEVS)

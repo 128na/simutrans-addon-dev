@@ -90,15 +90,22 @@ def rail_cells(style, old):
     return cells
 
 
+# 基盤・高架を single だけ持つ道路（blender/catalog.py の ROAD_LOCAL・ROAD_GENERAL の variants。#260）
+SINGLE_ONLY_ROADS = ("local", "general")
+
+
 def road_cells(kind):
     s = "ami_road_" + kind
+    variants = ("single",) if kind in SINGLE_ONLY_ROADS else ("single", "back", "center", "front")
     cells = [(s, line_nut(s))]
-    for v in ("single", "back", "center", "front", "twin"):
-        cells.append((f"{s}_base_{v}" if v != "twin" else f"{s}_base_single+twin", line_nut(f"{s}_base_single" if v == "twin" else f"{s}_base_{v}", "ami_wall_road_" + v)))
-    for v in ("center", "front", "twin"):
-        base = "single" if v == "twin" else v
-        cells.append((f"{s}_base_{base}+{v}_divider", line_nut(f"{s}_base_{base}", f"ami_wall_road_{v}_divider")))
-    for v in ("single", "back", "center", "front"):
+    for v in variants:
+        cells.append((f"{s}_base_{v}", line_nut(f"{s}_base_{v}", "ami_wall_road_" + v)))
+    cells.append((f"{s}_base_single+twin", line_nut(f"{s}_base_single", "ami_wall_road_twin")))
+    if kind not in SINGLE_ONLY_ROADS:
+        for v in ("center", "front", "twin"):
+            base = "single" if v == "twin" else v
+            cells.append((f"{s}_base_{base}+{v}_divider", line_nut(f"{s}_base_{base}", f"ami_wall_road_{v}_divider")))
+    for v in variants:
         cells.append((f"{s}_elev_{v}", line_nut(f"{s}_elev_{v}", "ami_wall_road_" + v, 10, 2, "ami_pier_road")))
     cells.append((f"{s}_bridge", BRIDGE_NUT % {"bridge": s + "_bridge", "way": s + "_base_single", "wall": "ami_wall_road_single"}))
     cells.append((f"{s}_tunnel", TUNNEL_NUT % {"tunnel": s + "_tunnel", "way": s + "_base_single", "wall": "ami_wall_road_single"}))
