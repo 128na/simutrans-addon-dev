@@ -8,6 +8,8 @@
 local ORIGINS = [[20, 20], [276, 20]];
 local SNOW = 1;
 local AREA = [[-3, -4], [22, 22]];
+// ラウンドの版（#56）: ami_mark_ で始まる名前の末尾に付ける。例: "_round1"。空なら今の名前（sample_parallel.sh の SUFFIX が置き換える）
+local SUFFIX = "";
 local G = "ami_road_general";
 local LA = "ami_mark_lane6_a", LB = "ami_mark_lane6_b", LM = "ami_mark_lane6_m", JI4 = "ami_mark_junction4_in";
 local JI = "ami_mark_junction6_in", JO = "ami_mark_junction6_out", JM = "ami_mark_junction6_m", JC = "ami_mark_junction6_c";
@@ -18,7 +20,7 @@ local OX = 0, OY = 0;
 function r(name, v) { return v == null ? "" : name + "=[" + v + "]\n"; }
 function c(x, y) { return coord3d(OX + x, OY + y, 0); }
 function way(tag, n, x0, y0, x1, y1) {
-  local w = way_desc_x(n);
+  local w = way_desc_x(n.find("ami_mark_") == 0 ? n + SUFFIX : n);
   if (w == null) { report += n + " desc=[missing]\n"; return; }
   report += r(tag + " " + n, command_x.build_way(pl, c(x0, y0), c(x1, y1), w, true));
 }
