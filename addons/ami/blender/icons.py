@@ -308,8 +308,8 @@ def text(w, h, items):
     # 共通の名前だと文字の絵を取り合い、別の対象の札が入ったり欠けたりした（#244）
     p = os.path.join(R.WORK, f"_icon_text_{os.getpid()}.png")
     sc.render.filepath = p
-    bpy.ops.render.render(write_still=True)
     try:
+        bpy.ops.render.render(write_still=True)
         return R.load_rgba8(p).astype(np.float32) / 255
     finally:
         try:

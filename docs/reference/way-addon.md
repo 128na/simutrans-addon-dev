@@ -203,7 +203,7 @@
 - 描画（Python）: `sheetlib/__init__.py` は部品の関数を、モジュールと同じ名前で出す（`monorail_parts` など）。`import sheetlib.monorail_parts as MP` はモジュールでなく関数を返し、`MP._M_MONO_BEAM = ...` は黙って関数の属性になる。モジュールは `sys.modules["sheetlib.monorail_parts"]` から引く（2026-11-22、#154。[記録](../records/2026-11-22_ami-monorail-weathering.md)）
 - ゲームのスクリプト（Squirrel）: `local a = d[1], b = d[2];` のように 1 つの `local` で 2 つ以上を宣言すると、2 つ目以降に違う値が入った（`b` が 2 になった。MCP の `run_squirrel`、`OTRPv64_3.exe`、2026-11-21）。`local` は 1 つずつ書く
 - 描画: `noisy_material`（まだらの材質）は、`material()` の自己発光（`emit`）を引き継がない。`material(...)` で作った一色の材質（例: AMI の白線 `MARKING_LINE` は発光 0.35）を、`noisy_material` のまだらに替えるときは、同じ `emit` を渡す。渡さないと、同じ色の範囲でも灰色に沈み、1px の線が薄く見える（`addons/ami/blender/render.py` の `MARKING_LINE_WORN` で、色を 0.62〜0.84 にしても、発光を付けるまで元より暗いままだった。ゲームで前後を撮って確かめた。2026-11-23、#197）
-- 描画: 並列描画（`render_parallel.py`）で、対象ごとのアイコン・カーソルの後処理（`icons.py --own`）が同時に動く。`icons.py` の文字の一時ファイルが全プロセス共通の名前（`work/_icon_text.png`）だったため、取り合って札の字が欠けたり別の対象の絵が混ざったりして、全対象を並列に描いた回だけシートがコミット済みと違った（#244。高架の 3 枚はこれ）。今はプロセスごとの名前（`_icon_text_<PID>.png`）。新しく一時ファイルを書く道具は、対象や PID の入った名前にする（[記録](../records/2026-11-24_parallel-render-icon-text-race.md)）
+- 描画: 並列描画（`render_parallel.py`）で、対象ごとのアイコン・カーソルの後処理（`icons.py --own`）が同時に動く。`icons.py` の文字の一時ファイルが全プロセス共通の名前（`work/_icon_text.png`）だったため、取り合って札の字が欠けたり別の対象の絵が混ざったりして、並列に描いた回だけシートがコミット済みと違った（2026-11-24、Blender 4.5.16、#244。#229 の高架 3 枚も同じ原因の可能性が高い。未確認）。今はプロセスごとの名前（`_icon_text_<PID>.png`）。新しく一時ファイルを書く道具は、対象や PID の入った名前にする（[記録](../records/2026-11-24_parallel-render-icon-text-race.md)）
 
 ### 8.3 画像を読んで判定するときの限界（2026-11-19）
 
