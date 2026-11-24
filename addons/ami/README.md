@@ -156,7 +156,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
   橋とトンネルにはカーブのセルが無い（橋は `BRIDGE_CELLS` が直線と坂だけ、トンネルは坑口の 4 向き）ので、この変更の対象外（本体が橋・トンネルの中を曲げない）。
   壁の way-object（`ami_wall_road_<版>`）・基盤・高架の版のカーブは、まだ斜めの形のまま（3 本目の #260 で、カーブと壁をそろえる）。
   確かめた見本: `ingame/curve_sample.nut`（`sample_parallel.sh` に `NUT=ingame/curve_sample.nut`。1 本の輪・2 本並べた輪・坂の隣・T字の隣。温暖と降雪）、`road_sample.nut` の B・AFC・K、`tram_sample.nut` の LO_B・GE_B（路面軌道を重ねる）、`marking_sample.nut` の X4（路面表示を重ねる）。
-  以前の理由（3 種をそろえたのは壁を共通にするため）は、3 本目で壁を速さごとにそろえる方針に変わった。手本では、iss の道路は速さで分かれる（`../refs/iss/src/way/road/ground.dat` の `iss_wrg_0030`・`0050`・`0120_*` は `image[ne]` が曲線のセル、`iss_wrg_1200_*` は `diagonal` と同じセル）。pak128 標準の `Road_030`（`../refs/pak128/infrastructure/roads/road_030.dat`）も曲線のセル。それでも 3 種をそろえたのは、道路の壁（`ami_wall_road_<版>`、#22）を 3 種で共通の way-object にするため（way-object のカーブの絵は 1 つなので、種類ごとにカーブの形が違うと壁が合わない）。断面も blender-poc の高速道路（斜めの絵）と同じ
+  以前（#259 の前）は 3 種をそろえていた。理由は、道路の壁（`ami_wall_road_<版>`、#22）を 3 種で共通の way-object にするため（way-object のカーブの絵は 1 つなので、種類ごとにカーブの形が違うと壁が合わない）。この食い違いは 3 本目の #260 で直す。手本では、iss の道路は速さで分かれる（`../refs/iss/src/way/road/ground.dat` の `iss_wrg_0030`・`0050`・`0120_*` は `image[ne]` が曲線のセル、`iss_wrg_1200_*` は `diagonal` と同じセル）。pak128 標準の `Road_030`（`../refs/pak128/infrastructure/roads/road_030.dat`）も曲線のセル。それでも 3 種をそろえたのは、道路の壁（`ami_wall_road_<版>`、#22）を 3 種で共通の way-object にするため（way-object のカーブの絵は 1 つなので、種類ごとにカーブの形が違うと壁が合わない）。断面も blender-poc の高速道路（斜めの絵）と同じ
 - 路面の色: 生活道路・一般道路は pak128 標準の道路（灰色）とつなぐことが多いので街路の灰色、高速道路は一般の道路と見分けられるよう暗い青み。走行跡と路肩のまだらの雪は、路面と同じ 2 色から作る（`sheetlib` の `asphalt_skin`。路面だけ替えると、暗い路面に明るい帯が乗る）
 - 雪: 車道は除雪されて夏と同じ（路面・白線・走行跡）。路側の白線の外から路肩に雪が積もり、白線の内側をまだらの雪でぼかす（blender-poc の道路と同じ `snow` の部品）
 - 精細化（#56。ラウンド 1〜4 で試し、ラウンド 3 を本番に入れた。2026-11-20、ユーザーの決定。ラウンド 4 の明るい路面はリアルだが色があせて見えた）: 設定は `blender/render.py` の「道路一式の質感」で、道路 3 種とその版・道路の壁・道路用の橋脚・歩道にだけ渡す（`sheetlib` の既定は blender-poc・在来線・スラブ軌道と共通なので変えない）。決め方は `docs/records/2026-11-20_ami-road-refine-round1.md`〜`round3.md`、入れ方は `2026-11-20_ami-road-refine-production.md`
@@ -198,7 +198,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 近い斜めの分け合うタイル用の壁（`ami_wall_road_twin`。名前は確定。2026-11-19、ユーザーの決定）: 線路の `ami_wall_rail_twin` と同じ作り（速さ 1001。`nw`・`sw` の線は `back`、`ne`・`se` の線は `front` の絵）。敷き方も線路と同じ（「壁の敷き方」）
 - 地上の基盤の版（`<道路>_base_<版>`。判断 1、確定。2026-11-19、ユーザーの決定）: 通常の版の路面から壁の外を削り、近い斜めの絵を持たず、カーブを斜めの形の別のセル（行 2 の列 5〜8）に描いて壁の無い側をタイルの端まで延ばしたもの（`tools/blender/sheetlib` の `road_sheet` の `curve_cells`）。壁は way の絵に描かず、同じ版の壁の way-object を重ねる。値は通常の版と同じ
   - 作った理由（2026-11-19、ゲームで確かめた）: 直線・T字・十字・坂・1 本の斜めは、通常の版に壁を重ねるだけで合う（`docs/road_struct_GE_WA_B.png`）。合わないのは 2 つ
-    - 並べた車線の直角の曲がり: 通常の版のカーブは斜めの絵で、タイルの半分で切る。外の線と内の線のカーブのタイルの間に草の三角が出る（`docs/road_layout_pair_corner_plain.png`。レイアウト検証用モード、3 倍）
+    - 並べた車線の直角の曲がり（#259 の前の記述。一般・生活道路の通常の版は、今は円弧・L 字で草の三角は出ない。高速道路は今も斜めの絵）: 通常の版のカーブは斜めの絵で、タイルの半分で切る。外の線と内の線のカーブのタイルの間に草の三角が出る（`docs/road_layout_pair_corner_plain.png`。レイアウト検証用モード、3 倍）
     - 近い斜め: 通常の版は近い斜めの絵を持つので、分け合うタイルは way 1 本（向きは十字）になる。way-object は 1 タイルに 1 つで、way-object の近い斜めの絵は makeobj が書けない（[reference](../../docs/reference/way-addon.md) の 10 章）。本体はそのタイルの壁を十字の絵で描き、車道の真ん中に壁の切れ端が立つ（`docs/road_wall_close_plain_zoom.png`。`../simutrans` の `obj/wayobj.cc` の `calc_image` の 542 行付近）
   - 基盤の版では、直角の曲がりのすき間が埋まり（`docs/road_base_pair_corner_zoom.png`）、近い斜めの分け合うタイルに way が 2 本置かれて `twin` の壁が合う（`docs/road_wall_close_base_zoom.png`）
   - 手本: iss の地上の道路も版ごとの way を持つ（`../refs/iss/src/way/road/ground.dat` の 139 行〜の `iss_wrg_0120_single`・`front`・`center`・`back`）。近い斜めの絵を持たず、カーブは斜めのセルと別のセル
