@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 画面を出さない OTRP 本体（Makefile の BACKEND=posix）をビルドする（CI の Linux 用。#236）。
+# 画面を出さない OTRP 本体（Makefile の BACKEND=posix）をビルドする。CI の Linux（apt が使える環境）用で、手元の Windows では使わない（#236）。
 #   bash tools/ci/setup-headless-sim.sh otrp:<ref> <置き場所>
 # <置き場所>/sim と <置き場所>/simutrans-test-base.zip（本体の tests/ にある pakset）ができる。あれば何もしない（キャッシュから戻したとき）。
 # <ref> はタグかコミット（キャッシュのキーに指定をそのまま使う）。
@@ -23,7 +23,7 @@ git init -q "$work/src"
 git -C "$work/src" fetch -q --depth 1 https://github.com/128na/simutrans "$ref"
 git -C "$work/src" checkout -q FETCH_HEAD
 # 本体は libpng・zlib・bzip2・zstd を使う（SDL・FreeType は要らない）
-if ! pkg-config --exists libpng libzstd 2> /dev/null; then
+if ! pkg-config --exists libpng libzstd zlib 2> /dev/null || [ ! -e /usr/include/bzlib.h ]; then
   sudo apt-get install -y -q build-essential pkg-config libbz2-dev libpng-dev zlib1g-dev libzstd-dev > /dev/null
 fi
 printf 'BACKEND = posix\nOSTYPE = linux\nCOLOUR_DEPTH = 16\nDEBUG = 0\nMSG_LEVEL = 3\nOPTIMISE = 1\nMULTI_THREAD = 1\nUSE_ZSTD = 1\nUSE_FREETYPE = 0\n' > "$work/src/config.default"

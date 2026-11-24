@@ -112,6 +112,7 @@ else
     esac
   fi
   if [ -z "$sim" ]; then
+    SKIPPED_HEADLESS=1
     echo "飛ばした（Windows の手元で HEADLESS_SIM_BIN・HEADLESS_PAKSET が無い。addons/ami/README.md の「画面を出さない本体での読み込みの検査」）"
   else
     # 種類別の pak は全部一緒に、全部入りの ami.pak は単独で読む（一緒に置くと名前が重複する）
@@ -124,4 +125,4 @@ else
 fi
 
 [ -n "${GITHUB_ACTIONS:-}" ] && echo "::endgroup::"
-echo "== AMI の検査はすべて通った"
+echo "== AMI の検査はすべて通った${SKIPPED_HEADLESS:+（画面を出さない本体での pak の読み込みは飛ばした）}"
