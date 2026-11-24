@@ -158,6 +158,10 @@ MARKINGS = {f"{PREFIX}mark_{_k}": _k for _k in ("lane4", "junction2", "junction2
 MARKINGS_EXPWY = {f"{PREFIX}mark_{_k}": _k for _k in ("diverge_main", "diverge_ramp", "merge_main", "merge_ramp")}
 MARKINGS.update(MARKINGS_EXPWY)
 WALL_ROAD = ROAD_GENERAL  # 道路の壁のシートを描く元の道路（壁の形は 3 種で同じ。断面とカーブの作りが同じため）
+# カーブの形ごとの壁（#260）: 一般道路（円弧）・生活道路（L 字）の基盤・高架は single だけなので、カーブのセルが円弧・L 字の single の壁を別に持つ。
+# 名前 → 形（ROAD_CURVE_SHAPES の値）。直線・T字・十字・坂・端の壁は ami_wall_road_single と同じ絵で、カーブのセル（行 2 の列 5〜8）だけが違う。
+# 幹線道路・高速道路と、橋・トンネルは ami_wall_road_single（カーブは斜め）を使う
+ROAD_WALL_CURVED = {f"ami_wall_road_single_{_s}": _s for _s in ("arc", "ell")}
 ROAD_WALL_VARIANTS = ("single", "back", "center", "front")  # 道路の壁の way-object の版（README の名前の表。center は行き止まりの端の壁だけ）
 # 近い斜めの分け合うタイル用の道路の壁（名前は 2026-11-19 にユーザーが確定。README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
 ROAD_WALL_TWIN = "ami_wall_road_twin"

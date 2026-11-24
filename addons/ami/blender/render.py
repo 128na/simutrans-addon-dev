@@ -561,6 +561,11 @@ for _v in catalog.ROAD_WALL_VARIANTS:
         R.ROAD_PROFILES[_WR.key], sheet=f"ami_wall_road_{_v}_way", prefix=f"ami_wall_road_{_v}_", walls=BASE_VARIANTS[_v],
         groups=R.ROAD_PROFILES[_WR.key]["groups"] + ("wall",), wall_sheet=f"ami_wall_road_{_v}", wall_only=True, curve=None,
         wall_label=ROAD_WALL_LABEL)
+# カーブの形ごとの single の壁（#260。ami_wall_road_single_<arc|ell>）: single の壁と同じ作りで、カーブのセル（行 2 の列 5〜8）だけ円弧・L 字の経路に沿う。
+# 一般道路・生活道路の基盤・高架の single と組む
+for _name, _shape in catalog.ROAD_WALL_CURVED.items():
+    R.ROAD_PROFILES["wall_road_" + _name[len("ami_wall_road_"):]] = dict(
+        R.ROAD_PROFILES["wall_road_single"], sheet=f"{_name}_way", prefix=f"{_name}_", wall_sheet=_name, curve=_shape)
 # 中央分離帯つきの壁（ami_wall_road_<front|center>_divider。#118）: 壁の way-object と同じ作りに、側壁の位置に立つ縁石の帯とガードレール
 # （sheetlib の road_parts の median_*）を足す。分離帯は奥の側の 1 本だけが残る（select_walls）。4 車線の手前のタイルに重ねる
 ROAD_DIVIDER_LABEL = "D"  # 描画のアイコンの文字（ゲームのアイコンは icons.py が書き直す）
@@ -688,6 +693,8 @@ for _name, _kind in catalog.MARKINGS.items():
                                                               slush=MARKING_SLUSH))(_name, _kind, _paving)
 for _v in catalog.ROAD_WALL_VARIANTS:
     SHEETS[f"ami_wall_road_{_v}"] = _road_target(f"wall_road_{_v}")
+for _name in catalog.ROAD_WALL_CURVED:
+    SHEETS[_name] = _road_target("wall_road_" + _name[len("ami_wall_road_"):])
 for _v, _name in catalog.ROAD_DIVIDERS.items():
     SHEETS[_name] = _road_target(f"wall_road_{_v}_divider")
 for _r in catalog.ROADS:

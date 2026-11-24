@@ -163,6 +163,13 @@ function lay(name, ox, oy) {
     bd[v] <- wdx(name + "_base_" + v);
     if (bd[v] == null) return name + "_base_" + v + " desc=[missing]\n";
   }
+  // 一般道路は円弧、生活道路は L 字のカーブの single の壁を重ねる（#260）。幹線・高速道路は斜めの ami_wall_road_single
+  local curved = {ami_road_general = "ami_wall_road_single_arc", ami_road_local = "ami_wall_road_single_ell"};
+  if (name in curved) {
+    od["single"] = wodx(curved[name]);
+    if (od["single"] == null) return curved[name] + " desc=[missing]
+";
+  }
   local br = bdx(name + "_bridge");
   if (w == null || br == null || pier == null) return name + " desc=[missing]\n";
   local c = function(x, y, z = 0) { return coord3d(ox + x, oy + y, z); };
