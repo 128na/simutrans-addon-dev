@@ -6,7 +6,7 @@
 #   GAME_DIR=<検証用のフォルダ> PORT=47500 bash ingame/catalog.sh           … 起動して catalog.nut を流す
 #   python -X utf8 ingame/catalog.py --port 47500 [--only 帯の名前] [--side temperate|snow]                       … 動いているゲームに敷く（--coverage は src/ の名前が棚に有るかの確認）
 #   GAME_DIR=<検証用のフォルダ> PORT=47500 bash ingame/catalog.sh ALL                                                                       … 起動して catalog.py で全部敷き、保存する（SAVE_AS の既定は ami_catalog）
-#   PORT=47500 SAVE_AS=ami_catalog bash ingame/catalog.sh                                                        … 保存して GAME_DIR/save/ に置く（既にあれば止まる）
+#   GAME_DIR=<検証用のフォルダ> PORT=47500 SAVE_AS=ami_catalog bash ingame/catalog.sh                                                        … 保存して GAME_DIR/save/ に置く（既にあれば止まる）
 #   PORT=47500 STOP=1 bash ingame/catalog.sh                                                                     … このスクリプトが起動したゲームだけ閉じて写しを消す
 PORT=${PORT:?PORT を指定する}
 INGAME=$(cd "$(dirname "$0")" && pwd)
@@ -15,7 +15,7 @@ WORK="work/catalog_game/$PORT"
 source "$INGAME/game_lib.sh"  # 起動・停止・MCP のコマンド M（#243）
 GAME_TAG=catalog
 SAVE=${BASE:-flat_1024_left}  # 土台の保存データ（GAME_DIR/save/）
-COPY_DIRS="config font themes text script music pak128"  # addons/pak128 には AMI の pak だけを入れる
+COPY_DIRS="${COPY_DIRS:-config font themes text script music pak128}"  # addons/pak128 には AMI の pak だけを入れる
 
 script_of() { sed -e 's/\r$//' -e 's/^[[:space:]]*//' -e '/^\/\//d' -e '/^$/d' "$1"; }
 
@@ -32,7 +32,7 @@ if [ -n "$SAVE_AS" ]; then
 fi
 
 PAK=${PAK:-dist/ami.pak}
-GAME_WAIT=90
+GAME_WAIT=${GAME_WAIT:-90}
 game_start "$PAK=ami.pak" ${EXTRA_PAKS:-dist/ami_rail_old.pak} || exit 1
 echo "[catalog] 起動した"
 if [ "$1" = ALL ]; then

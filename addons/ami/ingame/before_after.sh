@@ -54,8 +54,8 @@ s_cwalk 933 211"
 if [ "$STOP" = 1 ]; then game_stop; echo "[ba] stopped"; exit 0; fi
 
 mkdir -p "$OUT"
-GAME_WAIT=60
-COPY_DIRS="config font themes text script music pak128"  # addons/pak128 には前後の pak だけを入れる
+GAME_WAIT=${GAME_WAIT:-60}
+COPY_DIRS="${COPY_DIRS:-config font themes text script music pak128}"  # addons/pak128 には前後の pak だけを入れる
 PAKLIST=""; for p in $PAKS; do PAKLIST="$PAKLIST $PAKDIR/$p"; done
 game_start $PAKLIST || exit 1
 

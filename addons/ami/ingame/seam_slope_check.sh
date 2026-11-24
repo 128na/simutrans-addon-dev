@@ -15,6 +15,7 @@ PAK=${PAK:-dist/ami.pak}
 NUT=${NUT:-ingame/seam_slope.nut}
 OUT=${OUT:-work/seam_slope}
 B=${BLENDER:-${SHEET_BLENDER:-blender}}  # Blender の場所（PATH に無ければ BLENDER か SHEET_BLENDER で渡す）
+command -v "$B" > /dev/null 2>&1 || [ -x "$B" ] || { echo "[seam] Blender が見つからない: $B（BLENDER か SHEET_BLENDER で渡す）"; exit 1; }
 source "$(dirname "$0")/game_lib.sh"   # 起動・停止・MCP のコマンド M（#243）
 WORK="work/seam_game/$PORT"
 [ -f "$PAK" ] || { echo "[seam] $PAK が無い"; exit 1; }

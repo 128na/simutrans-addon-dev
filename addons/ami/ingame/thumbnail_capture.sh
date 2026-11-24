@@ -6,7 +6,7 @@
 # ゲームは work/thumbnail_game/<PORT>/ の写し（GAME_DIR の exe・dll・設定・pak128・addons と保存データ）に dist/ami.pak を足して起動し、
 # 撮り終えたら閉じて写しも消す。GAME_DIR には書き込まない（保存データは写しを読むだけで、保存しない）。
 # 画面の大きさは SCREEN（既定 2560x1400。上の道具欄と下の状態欄を thumbnail_compose.py が切り落として 2560x1340、OGP の 1.91:1 にする）。撮る場所（画面の中心のタイル "x,y"）は VIEW（既定 101,101。空白で区切って複数渡すと、_0・_1… を付けて撮り分ける）。
-# 画像は OUT（既定 work/thumbnail/shot.png）。KEEP=1 を渡すと、撮った後もゲームを閉じない（構図を探すとき。VIEW を替えて shoot だけ呼ぶ）
+# 画像は OUT（既定 work/thumbnail/shot.png）。GAME_KEEP=1 を渡すと、撮った後もゲームを閉じない（構図を探すとき。VIEW を替えて shoot だけ呼ぶ）
 PORT=${PORT:?PORT を指定する（作業ごとに割り当てられた範囲の中）}
 SCREEN=${SCREEN:-2560x1400}
 NUT=${NUT:-ingame/thumbnail.nut}
@@ -21,7 +21,7 @@ trap 'exit 130' INT TERM
 mkdir -p "$(dirname "$OUT")"
 GAME_TAG=thumb
 GAME_ARGS="${GAME_ARGS:-} -screensize $SCREEN"
-GAME_WAIT=90
+GAME_WAIT=${GAME_WAIT:-90}
 game_start dist/ami.pak=ami.pak || exit 1
 
 # コメントと空行を落として 1 本の文字列にする（コマンドラインの長さを抑える）
@@ -42,5 +42,5 @@ for v in $VIEW; do
   if [ "$(echo $VIEW | wc -w)" -eq 1 ]; then shoot "$v" "$OUT"; else shoot "$v" "${OUT%.png}_$i.png"; fi
   i=$((i + 1))
 done
-if [ -n "$KEEP" ]; then echo "[thumb] ゲームは開いたまま（ポート $PORT、写しは $WORK）"; fi
+if [ -n "$GAME_KEEP" ]; then echo "[thumb] ゲームは開いたまま（ポート $PORT、写しは $WORK）"; fi
 [ -z "$FAILED" ]

@@ -31,7 +31,7 @@ iss（Illustrator で作ったインフラアドオン）の作り方を Blender
 | `blender/icons_only.py` | 線路のシートのアイコンだけを描き直して差し替える |
 | `tools/blender/hcat.py` | ゲームの画面を横に並べて 1 枚にする |
 | `ingame/full.nut`・`ingame/full_check.sh` | 全方位の表示確認。way の絵 28 種類を周りとつながった形で出す最小のレイアウトを敷き、way ごとに 5 か所を撮って並べる |
-| `ingame/switch_all.nut` | 分岐の絵（OTRP の switch 画像）を線路の 11 アドオンで全部見る見本。空の平らなマップ（`flat2.sve`）に way ごとに 1 行、標準・選択 1・選択 2 に固定した T字と十字、自動選択の 8 通りを名札つきで敷く |
+| `ingame/switch_all.nut` | 分岐の絵（OTRP の switch 画像）を線路の 11 アドオンで全部見る見本。空の平らなマップ（`flat2.sve`）に way ごとに 1 行、標準・選択 1・選択 2 に固定した T字と十字、自動選択の 8 通りを名札つきで敷く。流す起動スクリプトは消した（#243。`switch_check.sh` は `flat2` と GAME_DIR の直接起動が前提で使えなくなった）ので、今は流す手段が無い |
 | `ingame/switch_ex_shapes.nut` | ex 画像（Y字分岐・三方・渡り線）を本体が自動で選ぶ線路の形を、`flat2.sve` の y=130 から下に敷く。既定は `bpoc_track`（絵は通常のまま）。先頭の `WAY` を `bpoc_track_ex_proto`、`OX` を 100 にすると、試作の way で敷いて分岐の絵を固定する |
 | `ingame/close_diag.nut` | 近い斜め（1 タイルずらして並べた斜め 2 本）の見本。`flat2.sve` の x=105 から右に、線路の全版（壁なし 3 種・側壁・高架の 2 本と 3 本）と道路・高速道路の南東・北東の組を名札つきで敷く |
 | `tools/blender/render_parallel.py` | シートを Blender の別々のプロセスで同時に描く（`--jobs` 既定は `sheet_settings.JOBS` = 16。マシン全体では、作業者どうしで共有する描画の枠 `SHEET_SLOTS` も上限になる）。ふつうの Python で動かす |

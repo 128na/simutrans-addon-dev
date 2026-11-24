@@ -10,6 +10,7 @@ PORT=${PORT:?PORT に MCP のポートを指定する}
 PAK=${PAK:-dist/ami.pak}
 OUT=${OUT:-work/icons}
 B=${BLENDER:-${SHEET_BLENDER:-blender}}  # Blender の場所（PATH に無ければ BLENDER か SHEET_BLENDER で渡す）
+command -v "$B" > /dev/null 2>&1 || [ -x "$B" ] || { echo "[icon] Blender が見つからない: $B（BLENDER か SHEET_BLENDER で渡す）"; exit 1; }
 source "$(dirname "$0")/game_lib.sh"   # 起動・停止・MCP のコマンド M（#243）
 WORK="work/icon_game/$PORT"
 [ -f "$PAK" ] || { echo "[icon] $PAK が無い"; exit 1; }

@@ -6,7 +6,7 @@
 #
 # 使い方: スクリプトで PORT を決めてから `source "$(dirname "$0")/game_lib.sh"`（MCP のクライアントの場所 MCP_CLIENT と、MCP のコマンド M も決まる）。
 #   WORK=work/<名前>/$PORT          … 写しの置き場（アドオンのディレクトリからの相対でよい）
-#   trap game_cleanup EXIT; trap 'exit 130' INT TERM    … 終わりに（KEEP=1 でないとき）、このスクリプトが起動したゲームだけ閉じる
+#   trap game_cleanup EXIT; trap 'exit 130' INT TERM    … 終わりに（GAME_KEEP=1 でないとき）、このスクリプトが起動したゲームだけ閉じる
 #   game_start "dist/ami.pak=ami.pak" extra.pak …       … 写しを作って起動し、MCP が応えるまで待つ。pak は「元」か「元=入れる名前」
 #   game_stop                                           … 写しの中のゲームだけ閉じて、写しを消す（STOP=1 の呼び出しでも使う）
 # 環境変数（既定は v64 の検証。親の AGENTS.md の「Simutrans 本体の検証環境の使い分け」）:
@@ -20,6 +20,7 @@
 #   GAME_WAIT … 起動を待つ回数（2 秒おき。既定 60）
 #   GAME_TAG  … メッセージの先頭の名前（既定 game）
 #   COPY_DIRS … 写すフォルダ（既定 config font themes text script music pak128 addons）
+#   GAME_KEEP=1 … game_cleanup で閉じない（開いたままにする）
 #   NO_SETTINGS=1 … game_copy で settings.xml を写さない（sample_parallel.sh が台ごとに写す）
 _GL_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$_GL_DIR/mcp_client.sh" || return 1
@@ -45,7 +46,7 @@ game_settings() {
 
 # game_copy <写し> [pak …]: 写しを作る（起動はしない）。pak は「元」か「元=入れる名前」
 game_copy() {
-  local dir=$1 p src dest d; shift
+  local dir=${1:?写しの場所を渡す} p src dest d; shift
   game_defaults
   mkdir -p "$dir/save" || return 1
   cp "$GAME_DIR/$EXE" "$GAME_DIR"/*.dll "$dir/" || return 1
@@ -87,6 +88,7 @@ game_kill() {
 
 # game_start [pak …]: PORT のゲームを WORK の写しで起動する。同じポートで別のゲームが動いていたら何もせず 1
 game_start() {
+  : "${WORK:?WORK に写しの置き場を決める}"
   game_up "$PORT" && { echo "[${GAME_TAG:-game}] ポート $PORT で既にゲームが動いている（PORT を替えるか、そのゲームを閉じる）" >&2; return 1; }
   _GL_OWN=1
   rm -rf "$WORK"
@@ -97,14 +99,15 @@ game_start() {
 
 # game_stop: WORK の写しの中のゲームだけ閉じて、写しを消す
 game_stop() {
+  : "${WORK:?WORK に写しの置き場を決める}"
   game_kill "$WORK"
   sleep 1
   rm -rf "$WORK"
 }
 
-# game_cleanup: trap 用。KEEP=1 なら開いたままにする。game_start に着手する前（別のゲームが動いていたとき）は何もしない
+# game_cleanup: trap 用。GAME_KEEP=1 なら開いたままにする。game_start に着手する前（別のゲームが動いていたとき）は何もしない
 game_cleanup() {
-  [ -n "$KEEP" ] && return 0
+  [ -n "$GAME_KEEP" ] && return 0
   [ -n "$_GL_OWN" ] && game_stop
   return 0
 }
