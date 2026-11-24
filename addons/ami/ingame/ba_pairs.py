@@ -28,6 +28,13 @@ def read_crops(path):
     return crops
 
 
+def read_names(path):
+    """spots.txt の名前（# の行・空行を除く）"""
+    if not path:
+        return []
+    return [f[0] for f in (ln.split() for ln in open(path, encoding="utf-8")) if f and not f[0].startswith("#")]
+
+
 def pair(name, before, after, crop, scale):
     ims = []
     for im in (before, after):
@@ -55,23 +62,27 @@ def main():
     a = ap.parse_args()
     crops = read_crops(a.spots)
     os.makedirs(os.path.join(a.out, "pairs"), exist_ok=True)
-    names = sorted(f[:-4] for f in os.listdir(os.path.join(a.out, "before")) if f.endswith(".png"))
-    missing = 0
+    have = {s: {f[:-4] for f in os.listdir(os.path.join(a.out, s)) if f.endswith(".png")} for s in ("before", "after")}
+    # --spots に書いた名前は全部数える（撮れなかった物を黙って飛ばさない）
+    names = sorted(have["before"] | have["after"] | set(read_names(a.spots)))
+    bad = 0
     for n in names:
-        b, af = (os.path.join(a.out, s, n + ".png") for s in ("before", "after"))
-        if not os.path.exists(af):
-            print(f"[pairs] 後の画像が無い: {n}", file=sys.stderr)
-            missing += 1
+        gone = [s for s in ("before", "after") if n not in have[s]]
+        if gone:
+            print(f"[pairs] 警告: {n} の画像が無い（{', '.join(gone)}）", file=sys.stderr)
+            bad += 1
             continue
+        b, af = (os.path.join(a.out, s, n + ".png") for s in ("before", "after"))
+        ib, ia = Image.open(b), Image.open(af)
         crop = crops.get(n)
-        if crop and not (0 <= crop[0] < crop[2] and 0 <= crop[1] < crop[3]):
-            print(f"[pairs] 切り抜きの座標が不正: {n} {crop}", file=sys.stderr)
-            missing += 1
+        if crop and not (0 <= crop[0] < crop[2] <= min(ib.width, ia.width) and 0 <= crop[1] < crop[3] <= min(ib.height, ia.height)):
+            print(f"[pairs] 警告: 切り抜きの座標が画像（{ib.width}×{ib.height}）の外: {n} {crop}", file=sys.stderr)
+            bad += 1
             continue
         p = os.path.join(a.out, "pairs", n + ".png")
-        pair(n, Image.open(b), Image.open(af), crop, a.scale).save(p)
+        pair(n, ib, ia, crop, a.scale).save(p)
         print(f"[pairs] {p}")
-    return 1 if missing or not names else 0
+    return 1 if bad or not names else 0
 
 
 if __name__ == "__main__":

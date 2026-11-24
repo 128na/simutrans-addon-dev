@@ -11,7 +11,8 @@
 #   PAKDIR_BEFORE=work/ba/before PAKDIR_AFTER=work/ba/after OUT=work/ba/shots PORT=47200 LAYOUTS_FILE=layouts.txt SPOTS_FILE=spots.txt bash ingame/before_after.sh
 #   LAYOUTS_FILE（敷き方。1 行 1 つ。# で始まる行は飛ばす）: 「NUT の相対パス  OX  OY  SNOW  [名前=値 …]」。NUT の行頭の
 #     「local OX = …;」「local OY = …;」「local SNOW = …;」を置き換えて、ゲームに流す（SNOW は 0 で降雪に塗る、9 で塗らない。canal.nut と同じ決まりの NUT）。
-#     「名前=値」は、NUT の行頭の「local 名前 = …;」の右辺を値に置き換える（値に空白を入れない。例: W=way_desc_x("ami_canal_scenic")）。
+#     「名前=値」は、NUT の行頭の「local 名前 = …;」の右辺を値に置き換える（値に空白・/・& を入れない。sed の置き換えに使うため。例: W=way_desc_x("ami_canal_scenic")）。
+#     NUT に該当する「local 名前 = …;」の行が無いと警告する（置き換わらないので）。
 #     例: ingame/canal.nut 30 620 9 / ingame/canal.nut 542 620 0 W=way_desc_x("ami_canal_scenic")
 #   SPOTS_FILE（撮る場所。1 行 1 か所）: 「名前 x y [cx0 cy0 cx1 cy1]」。後ろの 4 つは、並べる画像で切り抜く範囲（撮った画面の画素の座標。
 #     左上が原点、画面は 704×560）。切り抜きは差分から自動で探さず、座標で決める。切り抜きは最近傍で CROP_SCALE（既定 6）倍にする。
@@ -26,6 +27,7 @@ OUT=${OUT:?OUT を指定する}; PORT=${PORT:-47200}
 if [ -n "$PAKDIR_BEFORE$PAKDIR_AFTER" ]; then  # 前後を一度に撮る（#227）。自分を 2 回呼び、撮り終えたら並べる
   [ -n "$PAKDIR_BEFORE" ] && [ -n "$PAKDIR_AFTER" ] || { echo "[ba] PAKDIR_BEFORE と PAKDIR_AFTER を両方渡す"; exit 1; }
   me=$(cd "$(dirname "$0")" && pwd)
+  rm -rf "$OUT/pairs"
   for side in before after; do
     eval "pd=\$PAKDIR_$(echo $side | tr a-z A-Z)"
     PAKDIR_BEFORE= PAKDIR_AFTER= PAKDIR="$pd" OUT="$OUT/$side" bash "$me/before_after.sh" || exit 1
@@ -34,6 +36,7 @@ if [ -n "$PAKDIR_BEFORE$PAKDIR_AFTER" ]; then  # 前後を一度に撮る（#227
   exit $?
 fi
 PAKDIR=${PAKDIR:?PAKDIR を指定する}
+mkdir -p "$OUT" && rm -f "$OUT"/*.png  # 前の実行の画像が残って、撮れなかった物が撮れたように見えないようにする
 GAME_DIR=${GAME_DIR:-F:/Simutrans/addon_check}; EXE=${EXE:-sim-WinGDI64-OTRPv64.exe}; SAVE=${SAVE:-ami_catalog}; ZOOM=${ZOOM:-3}
 PAKS=${PAKS:-"ami.pak ami_rail_old.pak"}
 source "$(dirname "$0")/mcp_client.sh"
@@ -99,9 +102,10 @@ if [ -n "$LAYOUTS_FILE" ]; then
   # 敷き方（#227）: NUT の OX・OY・SNOW と、名前=値で渡した行頭の local を置き換えて流す
   grep -v '^#' "$LAYOUTS_FILE" | while read -r nut ox oy snow extra; do
     [ -n "$nut" ] || continue
+    for k in SNOW OX OY; do grep -q "^local $k = " "$nut" || echo "[ba] 警告: $nut に local $k の行が無い（置き換わらない）"; done
     seds=(-e "s/^local SNOW = .*;/local SNOW = $snow;/" -e "s/^local OX = .*;/local OX = $ox;/" -e "s/^local OY = .*;/local OY = $oy;/")
-    for kv in $extra; do seds+=(-e "s/^local ${kv%%=*} = .*;/local ${kv%%=*} = ${kv#*=};/"); done
-    sed "${seds[@]}" "$nut" | sed -e 's/\r$//' -e 's/^[[:space:]]*//' -e '/^\/\//d' -e '/^$/d' > "$W/run.nut"
+    for kv in $extra; do grep -q "^local ${kv%%=*} = " "$nut" || echo "[ba] 警告: $nut に local ${kv%%=*} の行が無い（置き換わらない）"; seds+=(-e "s/^local ${kv%%=*} = .*;/local ${kv%%=*} = ${kv#*=};/"); done
+    sed -e 's/\r$//' "$nut" | sed "${seds[@]}" | sed -e 's/^[[:space:]]*//' -e '/^\/\//d' -e '/^$/d' > "$W/run.nut"
     echo "[ba] layout $nut ($ox,$oy)"
     timeout 300 $M --run-squirrel "$(cat "$W/run.nut")" --timeout 280 < /dev/null | cut -c1-100
   done
