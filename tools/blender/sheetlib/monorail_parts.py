@@ -14,7 +14,7 @@ import math
 
 from mathutils import Vector
 
-from .core import H, TILE, Part, box, merge, sweep, tiled_concrete_material
+from .core import H, SCALE, TILE, Part, box, merge, sweep, tiled_concrete_material
 from .wall_parts import ELEV_STEPS, PIER_FOOT
 
 # ---------------------------------------------------------------- 寸法（部品の 1 単位 ≈ 9px。高さ 1 単位 ≈ 7.8px）
@@ -161,7 +161,7 @@ SUSP_BEAM_BOT = 2.8       # 桁の下面の高さ（way の高さから。約 22
 SUSP_BEAM_TOP = 4.1       # 桁の上面の高さ（約 32px）
 SUSP_BEAM_W = MONO_BEAM_W  # 桁の幅（跨座式と同じ）
 SUSP_ARM_D = 0.6          # 梁の深さ（桁の上に載る。柱の頭は桁の上面 + これ − 食い込み。約 36px）
-SUSP_RISE = 50            # 持ち分を上へ広げる行数（柱の頭 約 39px と余り）
+SUSP_RISE = 50 * SCALE            # 持ち分を上へ広げる行数（柱の頭 約 39px と余り）
 
 _M_SUSP_BEAM = mono_concrete("susp_beam", MONO_BEAM_RGB)
 _M_SUSP_TOP = mono_concrete("susp_top", MONO_BEAM_RGB)

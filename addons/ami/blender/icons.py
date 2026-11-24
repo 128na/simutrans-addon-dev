@@ -35,7 +35,8 @@ sys.path.insert(0, _HERE)  # Blender の --python は、スクリプトのディ
 import catalog  # noqa: E402
 import sheetlib as R  # noqa: E402
 
-SRC = os.path.join(_HERE, "..", "src")
+SCALE = R.SCALE  # pak の大きさ（pak128 を 1 とする倍率。sheet_settings.PAK_SIZE）。アイコン（ICON px）は大きさによらず 32px のまま
+SRC = os.path.join(_HERE, "..", "src" + R.sheet_settings.SUFFIX)
 CELL = R.CELL
 ICON = 32
 SS = 4  # 4 倍で組んで縮める（文字の輪郭をなめらかにする）
@@ -54,12 +55,12 @@ DECK = (215, 215, 220)  # 帯の床・柱の色
 BOLT = [(13, 1), (4, 15), (9, 15), (6, 26), (17, 10), (12, 10), (16, 1)]  # 稲妻（32px の座標）
 TRANSPARENT = np.array(R.TRANSPARENT)
 # カーソルの札の位置（セルの中の上端。横は真ん中）と大きさ（等倍の px）
-PLATE_TOP = 78
+PLATE_TOP = 78 * SCALE
 PLATE_H = 14
 PLATE_CHAR_W = 8
 YARD_LABEL = "操"  # 操車場のアイコンの左上の字と、カーソルの札（#115）
 DEPOT_LABEL = "庫"  # 車庫のアイコンの左上の字と、カーソルの札（#112）
-NS_STEP = (64, -32)  # 南北の直線で、北の隣のタイルの画面のずれ（pak128 のタイルは幅 128・高さ 64）
+NS_STEP = (64 * SCALE, -32 * SCALE)  # 南北の直線で、北の隣のタイルの画面のずれ（pak128 のタイルは幅 128・高さ 64）
 
 
 # ---------------------------------------------------------------- dat を読む
@@ -377,16 +378,17 @@ def make_cursor(info, pic):
     bolt = info["kind"] == "catenary"
     if not label and not bolt:
         return cur
-    w = (len(label) * PLATE_CHAR_W + 8 + (10 if bolt else 0)) * SS
-    h = PLATE_H * SS
+    ss = SS * SCALE  # 札は絵（SCALE 倍）に合わせて大きくする（組む大きさ。縮めるのは SS 倍だけ）
+    w = (len(label) * PLATE_CHAR_W + 8 + (10 if bolt else 0)) * ss
+    h = PLATE_H * ss
     pl = grad(*WAY_BG[info["way"]], h, w)
     if bolt:
-        poly(pl, [(x * 0.45 + 2, y * 0.45 + 1) for x, y in BOLT], (255, 225, 30), SS)
+        poly(pl, [(x * 0.45 + 2, y * 0.45 + 1) for x, y in BOLT], (255, 225, 30), ss)
     if label:
-        x = (w + (10 * SS if bolt else 0)) / 2
-        pl_text = text(w, h, [(label, x, 3 * SS, 8 * SS, (1, 1, 1), "CENTER", True)])
+        x = (w + (10 * ss if bolt else 0)) / 2
+        pl_text = text(w, h, [(label, x, 3 * ss, 8 * ss, (1, 1, 1), "CENTER", True)])
         over(pl, pl_text)
-    pl = down(pl, SS)
+    pl = down(pl, SS)  # SS 倍で組んだものを縮める。札の大きさは SCALE 倍のまま
     over(cur, pl, CELL // 2 - pl.shape[1] // 2, PLATE_TOP)
     return cur
 
@@ -421,17 +423,17 @@ def icon_picture(d, info, dats):
     if info["kind"] == "sign":  # 標識の上の側（板と柱の上）を ICON/2 四方で切り、画素のまま 2 倍にする（板の字がつぶれないように）
         return sign_picture(layers(d, keys))
     if info["kind"] in ("sidewalk", "depot", "yard"):  # 敷石・車庫はタイル 1 枚なので、つなげず、タイル 1 枚を 1/4 にして菱形を見せる
-        return down(center_crop(layers(d, keys), 4 * ICON), 4)
-    return down(center_crop(layers(d, keys, extend=True), 2 * ICON), 2)
+        return down(center_crop(layers(d, keys), 4 * ICON * SCALE), 4 * SCALE)
+    return down(center_crop(layers(d, keys, extend=True), 2 * ICON * SCALE), 2 * SCALE)
 
 
 def crosswalk_picture(c):
     """縞と停止線の全体（外接の四角）を、ICON の中央に 1/3 に縮めて置く"""
     ys, xs = np.nonzero(c[..., 3] > 0.05)
-    out = np.zeros((3 * ICON, 3 * ICON, 4), np.float32)
+    out = np.zeros((3 * ICON * SCALE, 3 * ICON * SCALE, 4), np.float32)
     if len(ys):
-        over(out, c, 3 * ICON // 2 - (xs.min() + xs.max()) // 2, 3 * ICON // 2 - (ys.min() + ys.max()) // 2)
-    return down(out, 3)
+        over(out, c, 3 * ICON * SCALE // 2 - (xs.min() + xs.max()) // 2, 3 * ICON * SCALE // 2 - (ys.min() + ys.max()) // 2)
+    return down(out, 3 * SCALE)
 
 
 def sign_picture(c):

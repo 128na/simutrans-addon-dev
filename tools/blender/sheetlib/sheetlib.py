@@ -23,6 +23,7 @@ from .core import (  # noqa: F401
     ORTHO,
     PATH_EXT,
     PX_PER_UNIT,
+    SCALE,
     ROAD_PROFILES,
     SNOW_SKIN,
     SRC,
@@ -162,7 +163,7 @@ def build_road(paths, lines, slope=None, scale=1.0, clip=True, size=TILE + 4, co
 
 # 高速道路（SIS_E_RG1-1_01S に合わせる）: 白線の位置は一般道と同じで、歩道が無くタイル全面がアスファルト
 # 画面で横向きになる斜めに直交する向きの 1 が、画面の縦で何px か（64/√2/10 ≈ 4.5px）
-DIAG_PX = 64 / math.sqrt(2) / TILE
+DIAG_PX = 64 * SCALE / math.sqrt(2) / TILE
 
 # 画面で横向きになる斜めの中央線を、半画素（0.5px）ずらす量
 DIAG_CENTER_SHIFT = 0.5 / DIAG_PX
@@ -659,7 +660,7 @@ def _road_sheet(style="street"):
     if prof.get("piers"):
         # 橋脚: 橋の下の地面のタイルに立つ柱（高さ 1 段）。道を横切る向きに、両側の壁の下まで長い。(2, 0) が南北の橋、(2, 1) が東西の橋
         # prof["pier_box"]（無くてよい）: (道を横切る向きの長さ, 道に沿う向きの長さ, 材質)。無ければ POC の橋の柱
-        set_anchor(128)
+        set_anchor(128 * SCALE)
         across, along, pmat = prof.get("pier_box", (2 * EXPWY_WALL_U, PIER_W, _M_BASE))
         for col, (sx, sy) in enumerate(((across, along), (along, across))):
             clear_models()
@@ -699,7 +700,7 @@ def _road_sheet(style="street"):
 
 ICON_BADGE = {"both": "S", "back": "B", "center": "C", "front": "F"}  # アイコンの右下の印（single / back / center / front）
 
-WALL_RISE = 11  # 側壁の高さ（画面の px。持ち分を上へ広げる行数）
+WALL_RISE = 11 * SCALE  # 側壁の高さ（画面の px。持ち分を上へ広げる行数）
 
 # 壁を way-object に分ける版（TRACK_PROFILES の wall_sheet）の、壁のシートの行の並び: 奥の絵（dat の backimage）4 行 → 手前の絵（frontimage）4 行。
 # セルの位置は way のシートと同じ。way-object には雪の絵が無いので、雪の行は無い
@@ -716,7 +717,7 @@ SLOPE_WALL_PAD = TALL_PAD * 2
 # 新は走行面（レールとまくらぎ）を 4px、路盤（道床）を 2px 下げる。
 # 道床を下げないと、直線でレールが道床の下寄りに見えた（上の余白 約 11px・下 約 6px）。Rail_100 は道床の中心がレールより約 1px 下。
 # 道床を 4px 下げると、画面で縦向きの斜め（sw・ne）は辺で直線と同じ点を通る位置が無く、道床の角に段が出た。2px では段は出なかった
-BALLAST_DY = -1
+BALLAST_DY = -1 * SCALE
 
 
 def is_median(ob):
@@ -926,7 +927,7 @@ def _track_sheet(profile="new"):
     # 手前のタイルへはみ出した 2〜4 行目を手前の地面が消し、どのつなぎ目にも草の線が出た）
     # prof["anchor"]・prof["cy"]（無くてよい）: 絵の基準位置と持ち分の菱形の中心。路面軌道（道路の上に重ねる）は道路と同じ ROAD_CY
     cy = prof.get("cy", GROUND_CY)
-    anchor = prof.get("anchor", 128 + BALLAST_DY)
+    anchor = prof.get("anchor", 128 * SCALE + BALLAST_DY)
     set_anchor(anchor)
     cells = {}
     parts = track_sheet_parts(prof)
@@ -1123,7 +1124,7 @@ def _track_sheet(profile="new"):
     if prof.get("piers"):
         # 橋脚: 橋の下の地面のタイルに立つ柱（高さ 1 段）。線路の向きに直角に長い。(2, 0) が南北の橋、(2, 1) が東西の橋
         # prof["pier_box"]（無くてよい）: (線路を横切る向きの長さ, 線路に沿う向きの長さ, 材質)。無ければ POC の橋の柱（PIER_L × PIER_W、壁の材質）
-        set_anchor(128)
+        set_anchor(128 * SCALE)
         across, along, pmat = prof.get("pier_box", (PIER_L, PIER_W, _M_WALL))
         for col, (sx, sy) in enumerate(((across, along), (along, across))):
             clear_models()
@@ -1132,7 +1133,7 @@ def _track_sheet(profile="new"):
         set_anchor(anchor)
 
     # 確認用: タイル菱形そのもの（基準位置の検証に使う。シートには入れない）
-    set_anchor(128)
+    set_anchor(128 * SCALE)
     clear_models()
     v, f = box(0, 0, -0.001, TILE, TILE, 0.002)
     mesh_object("tile", v, f, material("tile", (0.5, 0.5, 0.5)))
@@ -1243,14 +1244,14 @@ def _pier_cell(cname, slope, cy=GROUND_CY):
     return path
 
 
-def pier_sheet(sheet, datums, label="P", across=PIER_SIZE * PIER_ACROSS_K, anchor=128 + BALLAST_DY, cy=GROUND_CY, top_drop=0.0,
+def pier_sheet(sheet, datums, label="P", across=PIER_SIZE * PIER_ACROSS_K, anchor=128 * SCALE + BALLAST_DY, cy=GROUND_CY, top_drop=0.0,
                diag_k=1.0, style="track", mat_skin=None):
     """橋脚の way のシート（中身は _pier_sheet）。mat_skin（無くてよい）は描くあいだだけの材質の名前による差し替え（road_sheet と同じ）"""
     with named_materials(mat_skin):
         _pier_sheet(sheet, datums, label, across, anchor, cy, top_drop, diag_k, style)
 
 
-def _pier_sheet(sheet, datums, label="P", across=PIER_SIZE * PIER_ACROSS_K, anchor=128 + BALLAST_DY, cy=GROUND_CY, top_drop=0.0,
+def _pier_sheet(sheet, datums, label="P", across=PIER_SIZE * PIER_ACROSS_K, anchor=128 * SCALE + BALLAST_DY, cy=GROUND_CY, top_drop=0.0,
                 diag_k=1.0, style="track"):
     """高架の真下の地面のタイルに敷く、橋脚の way のシート（AMI。ADR 0003）。セルの位置は線路の way と同じ（行 0〜3）。
     柱は経路の中ほど（直線・行き止まり・T字・十字はタイルの中心、斜めは斜めの部分の中ほど）の下に、線路を横切る向きに長く立つ。
@@ -1461,7 +1462,7 @@ def _pier_gate_sheet(sheet, datums, label="G"):
     _top, bottom = _pier_top_bottom()
     top = ELEV_STEPS * H - BASE_H - ELEV_BODY_D + PIER_GATE_BEAM_EMBED
     btop, bbot = top, top - PIER_GATE_BEAM_D
-    set_anchor(128 + BALLAST_DY)
+    set_anchor(128 * SCALE + BALLAST_DY)
 
     def build(name):
         """[(形, 手前の絵にも描くか)]"""
@@ -1654,7 +1655,7 @@ TUNNEL_BORE = (3.4, 2 * H - 0.6)        # 穴の半幅と高さ（屋根の厚�
 
 TUNNEL_HOOD = (TILE / 2, 2 * H)         # 躯体の半幅と高さ
 
-TUNNEL_RISE = 36      # 躯体の高さ（画面の px。持ち分を上へ広げる行数）
+TUNNEL_RISE = 36 * SCALE      # 躯体の高さ（画面の px。持ち分を上へ広げる行数）
 
 
 def tunnel_sheet(kind="track", profile="new", sheet=None, label="100", road_profile="expressway", mat_skin=None):
@@ -1693,7 +1694,7 @@ def _tunnel_sheet(kind="track", profile="new", sheet=None, label="100", road_pro
         road_lines = lambda p: [(p, -EDGE_LINE)] + ([] if ck is None else [(p, 0.0, {"dash": "cdash", "dash_wide": "cdash_wide"}[ck]) if ck in ("dash", "dash_wide") else (p, 0.0)]) + [(p, EDGE_LINE)]
     else:
         road_lines = lambda p: [(p, -EDGE_LINE), (p, 0.0), (p, EDGE_LINE)]
-    set_anchor(ROAD_CY if expwy else 128 + BALLAST_DY)
+    set_anchor(ROAD_CY if expwy else 128 * SCALE + BALLAST_DY)
     cells = {}
     a0, a1 = -half + TUNNEL_FACE, half  # 坑口の面と、躯体の奥の端（経路に沿った位置）
     snow = dict(ROAD_SNOW_SKIN, **road_prof.get("snow_skin", {})) if expwy else SNOW_SKIN  # 雪の絵の材質は road_sheet と同じ

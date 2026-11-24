@@ -25,6 +25,7 @@ from mathutils import Vector
 from .core import (  # noqa: F401
     H,
     PX_PER_UNIT,
+    SCALE,
     Part,
     TILE,
     box,
@@ -73,7 +74,7 @@ CAT_DROPPER_N = 4        # 直線の 1 タイルのハンガーの数（タイ�
 CAT_DROPPER_N_DIAG = 4   # 画面で横向きの斜めの 1 タイルのハンガーの数（同じく画面の横 16px ごと）。画面で縦向きの斜めは、2 本の線が重なるので無し
 
 # 架線の部品が使う高さの範囲（render_layers の持ち分を上へ広げる行数を決める。柱の上端 + 余白）
-CAT_RISE = int(math.ceil(CAT_POLE_TOP * 7.84)) + 6
+CAT_RISE = int(math.ceil(CAT_POLE_TOP * 7.84 * SCALE)) + 6 * SCALE
 
 _M_POLE = ("cat_pole", (0.55, 0.57, 0.58), 0.6, 0.3)
 _M_BEAM = ("cat_beam", (0.50, 0.52, 0.53), 0.6, 0.3)

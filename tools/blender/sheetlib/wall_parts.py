@@ -12,6 +12,7 @@ from mathutils import Vector
 
 from .core import (  # noqa: F401
     H,
+    SCALE,
     TILE,
     box,
     sweep,
@@ -77,7 +78,7 @@ PIER_ACROSS_K = 2.4   # 高架の橋脚の、線路を横切る向きの長さ�
 # （simmain.cc）。橋脚はこの段数だけ下の地面まで伸ばし、持ち分も同じだけ下へ広げる（lower = 16 行 × 段数）
 ELEV_STEPS = 2
 
-ELEV_LOWER = 16 * ELEV_STEPS
+ELEV_LOWER = 16 * SCALE * ELEV_STEPS
 
 # 橋脚を別の way に分けた高架（AMI。ADR 0003）: 床（基盤の板 BASE_H）の下に、躯体（桁）を足す。橋脚は高架の真下の地面のタイルの
 # 別の way（pier_sheet）が描き、上端を躯体の下面に合わせる。
@@ -90,7 +91,7 @@ ELEV_LOWER = 16 * ELEV_STEPS
 ELEV_BODY_D = 0.25
 ELEV_BODY_INSET = 0.45
 ELEV_BODY_DIAG_INSET = 0.3
-ELEV_BODY_LOWER = math.ceil((BASE_H + ELEV_BODY_D) * 16 / H) + 2
+ELEV_BODY_LOWER = math.ceil((BASE_H + ELEV_BODY_D) * 16 * SCALE / H) + 2
 _M_ELEV_BODY = ("elev_body", (0.56, 0.56, 0.54))
 
 # 高架の橋脚の way（pier_sheet）: 経路の中ほどの下に立つ、線路を横切る向きに長い柱（POC の _pier_box と同じ寸法）。
@@ -98,7 +99,7 @@ _M_ELEV_BODY = ("elev_body", (0.56, 0.56, 0.54))
 # 下端は地面より PIER_FOOT だけ下（持ち分で切る）。PIER_RISE: 持ち分を上へ広げる行数
 PIER_TOP_OVERLAP = 0.2
 PIER_FOOT = 0.5
-PIER_RISE = 16 * ELEV_STEPS + 4
+PIER_RISE = 16 * SCALE * ELEV_STEPS + 4 * SCALE
 _M_PIER = ("pier", (0.56, 0.56, 0.54))
 
 # 門型の橋脚の way（pier_gate_sheet）: 柱をタイルの角の近くに立て、柱の間を空けて上に梁を渡す。直下に並行する道路と、

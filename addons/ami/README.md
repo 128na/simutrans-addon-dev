@@ -944,6 +944,42 @@ python -X utf8 build.py                                                        #
 - 精細化のラウンドの版（#56）: `blender/round.py` が、在来線一式を `_round<n>` の名前で描いて `rounds/ami_round<n>.pak` を作る（`src/`・`dist/` は変えない）。ラウンドの描き分けは `round.py` の `ROUND_SETTINGS`（ラウンド 1〜7 の値は、ラウンド 8 で本番に入れる前の `render.py` に重ねる値。今の `render.py` に重ねると二重にかかる）。在来線のほかの系統（`rail_slab`・`tram`・`road`）は `AMI_FAMILY=<系統>` で選び、描き分けは `blender/round_<系統>.py`、pak は `rounds/ami_<系統>_round<n>.pak`。描かずに `python -X utf8 blender/round.py <n>` だけを流すと、今の `src/` の絵を `_round<n>` の名前にした pak を作る（本番の絵をラウンドの版と並べて撮るとき）。`rounds/` の pak は記録としてコミットする。見本は `SUFFIX=_round<n> EXTRA_PAKS=rounds/ami_round<n>.pak bash ingame/sample_parallel.sh`、くどさは `ingame/calib_capture.sh`（`WAYS_NUT`・`PAKS`・`NUT`。検証用のフォルダの写しで起動する。基盤・高架の版は `NUT=ingame/calib_struct.nut`）と `tools/blender/busy_measure.py`（基盤・高架の版は `BUSY_REF` に通常の版の名前を渡し、その範囲に限った値で判定する）。橋・トンネルは `NUT=ingame/calib_bt.nut`（トンネルは地形を作るので `PRE=1`）、壁・橋脚を重ねた版は `NUT=ingame/calib_wall.nut`（重ねる前と比べるのは `BUSY_PAIR`）、拡大率ごとの値は `ZOOMS` と `BUSY_BYZOOM=1`で測る（物差しは [way-addon.md](../../docs/reference/way-addon.md) の 11 章）。回し方はスキル [way-refine-rounds](../../.claude/skills/way-refine-rounds/SKILL.md)
 - 設定は `blender/catalog.py`（軌道の種類と、そこから導く way・基盤・高架・橋・トンネルの名前）、`blender/render.py`（描き分け・シート名）、`blender/ami_dat.py`（dat と値）、`blender/addon_config.py`（判定の道具が読む対応表）
 
+### pak の大きさ（pak256 などで組む。#261・#266）
+
+pak の大きさは、環境変数 `SHEET_PAK_SIZE`（タイルの幅の画素数。既定は 128 = pak128。いまは 128 の整数倍だけで、整数でない倍率は未対応）の 1 つで選ぶ（`tools/blender/sheet_settings.py` が読む。`PAK_SIZE`・`SCALE`・`PAKSET`・`SUFFIX`）。
+
+- 世界の単位（タイル 1 辺 = 10）で決めた形は変わらず、画素数だけが `SCALE` 倍になる。画素で書いた値（pak128 で測ったもの）には `SCALE` を掛ける。`SCALE` が 1 のとき、掛けた式は掛けない式と同じ値なので、pak128 のシートは変わらない（全シートを変更前のコードで描いた絵と全画素で比べて確かめた。#266）。
+- 大きさに比例させた値:
+
+  | 場所 | pak128 → 256 |
+  |---|---|
+  | `sheetlib/core.py` | セル `CELL` 256 → 512、高さ 1 段 16px → 32px（`H` は世界の単位なので同じ） |
+  | `sheetlib/cells.py` | 地面の菱形の中心 `GROUND_CY` 127 → 254、道路 `ROAD_CY` 128 → 256。持ち分マスクは、pak128 の大きさで作って `SCALE` 倍に拡大する（下） |
+  | `sheetlib/sheetlib.py` | 絵の基準位置 128 → 256、`BALLAST_DY` −1 → −2、`DIAG_PX`、持ち分を上へ広げる行数（`WALL_RISE`・`TUNNEL_RISE`） |
+  | `render.py` | 基準面の下げ幅 `_DATUMS`、`spill` |
+  | dat（`ami_dat.py`） | 位置合わせ `-64,-32` → `-128,-64` |
+  | `build.py` | makeobj の大きさ `pak256` → `pak512`（セルの一辺） |
+  | `icons.py` | アイコンは 32px のまま。絵（直線のセル）を切る大きさ・カーソルの札の位置と大きさを `SCALE` 倍 |
+
+  持ち分マスク（`_ground_mask`）を大きさに合わせて菱形から引き直さないのは、pak256poc の地面が pak128 を画素ごとに 2 倍にしたもので、縁の階段が 4×2 の段になるため。2×1 の細かい段で切ると、坂のタイルと隣のタイルの継ぎ目に、草の画素が 4 画素おきに出た（#266。ゲームで確認。pak128 の絵を 2 倍に引き伸ばした絵では出ない）。マスクを pak128 の大きさで作って最近傍で拡大すると、地面と同じ段になり、出なくなった。絵の中身（路面・白線・敷石のまだら）は大きさに合わせて描いた細かいもの。地面の階段が細かい版（pak256 で描き直した地面）に替わったら、拡大をやめて引き直すか、見直す。
+
+  半画素の位置を画素の行の境にそろえる値（`DIAG_CENTER_SHIFT`・斜めの路側線の丸め）は、出力の画素に合わせたもので、倍率を掛けない。
+- 出力は pak128 と分ける（混ざらず、同時に描いても途中のセルの名前がぶつからない）: シート・dat は `src256/`、途中のセルは `work256/`、pak は `dist256/`、zip は `work/release/ami-256-<版>.zip`。
+- 256 で描けるのは `catalog.SCALED_SHEETS`（いまは生活道路の通常の版 `ami_road_local`）だけ。画素の値を大きさに合わせて確かめたものだけを入れ、`render.py`・`ami_dat.py` は、それ以外を 256 で描こうとすると止まる。雪（シートの行 4〜7 と dat の `[1]`）は同じ作りで描くが、ゲームで確かめていない。残り（基盤・高架・橋・トンネル・壁・踏切・ほかの way・標識・カーソル・整数でない倍率）は #261。
+- 256 で組む手順（アドオンのディレクトリで）:
+
+```powershell
+$env:SHEET_PAK_SIZE = "256"
+python -X utf8 blender/ami_dat.py                                           # src256/ に dat
+python -X utf8 ..\..\tools\blender\render_parallel.py ami_road_local      # src256/ にシート（アイコン・カーソルも。約 2 分）
+python -X utf8 build.py                                                    # dist256/ に pak（makeobj pak512。警告があれば止まる）
+python -X utf8 release.py --version alpha.1 --paks ami_road               # work/release/ami-256-alpha.1.zip
+Remove-Item Env:SHEET_PAK_SIZE
+```
+
+  zip は 256 の pak（`ami_road.pak`）だけを直下に入れる（readme・許諾・一覧は入れない。pak256 の `tools/fetch_ami.py` は zip の中の `.pak` を全部取る）。許諾の文は `release/license.txt`（CC BY 4.0）で、pak256 が写しを持つ。pak128 の zip（`ami-<版>.zip`）とは名前が違い、混ざらない。
+- 256 のゲームでの確認: 地面は pak128 を 2 倍にした `addon_check/pak256poc/`（`-objects pak256poc/`。作り方は親の `AGENTS.md`）。`ingame/game_lib.sh` に `PAKSET=pak256poc`・`PAKSET_SRC=<pak256poc の元>`（1.6GB なので写さずジャンクションにする）を渡すと、その pak と `addons/pak256poc/` で起動する。例: `GAME_DIR=<addon_check> PAKSET=pak256poc PAKSET_SRC=E:\addon_dev\pak256\work\pak256poc PORT=47200 PAK=dist256/ami_road.pak NUT=ingame/road_sample.nut ROAD_NAMES=ami_road_local CLIMATES=temperate bash ingame/game.sh`。撮る・閉じるも同じスクリプト（`PAKSET`・`PAKSET_SRC` を同じ値で渡す）。
+
 ## 導入と検証
 
 ゲームでの確認は、検証用のフォルダ（`addon_check`。親フォルダの `AGENTS.md`）の写しを OTRP（v64）で起動し、MCP のスクリプトを流す。`ingame/` のスクリプトの起動・停止は `ingame/game_lib.sh` の共通の関数で、実行ファイル・地図・設定の既定は v64（`sim-WinGDI64-OTRPv64.exe`・`flat_512_left_v64.sve`・`settings.xml.v64`）。`GAME_DIR` は必ず渡し（絶対パスを既定に持たない）、`PORT` は作業ごとに割り当てられた範囲の中を渡す。

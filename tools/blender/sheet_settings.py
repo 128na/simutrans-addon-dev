@@ -31,3 +31,16 @@ LAYOUT = os.environ.get("SHEET_LAYOUT") == "1"
 
 # 試しに描くとき: SHEET_ONLY=ns,diag_nw,up12 でシートのセルを絞る（ns はいつも描く）。シートは src ではなく work/only/ に書く
 ONLY = tuple(c for c in os.environ.get("SHEET_ONLY", "").split(",") if c)
+
+# pak の大きさ（タイルの幅の画素数）。既定は pak128。環境変数 SHEET_PAK_SIZE で変える（#266）。
+# 地面の菱形は幅 PAK_SIZE・高さ PAK_SIZE/2、セルは幅・高さとも 2×PAK_SIZE、高さ 1 段は PAK_SIZE/8 px になる（pak128 は 128・256・16）。
+# 世界の単位（TILE = 10）で決めた形は、画素数だけが変わる。画素で書いた値は SCALE を掛ける（sheetlib の core.py・cells.py）。
+# いまは 128 の整数倍だけ（整数でない倍率は画素の丸め方が決まっていない。#261）
+BASE_PAK_SIZE = 128
+PAK_SIZE = int(os.environ.get("SHEET_PAK_SIZE") or BASE_PAK_SIZE)
+if PAK_SIZE < BASE_PAK_SIZE or PAK_SIZE % BASE_PAK_SIZE:
+    raise SystemExit(f"SHEET_PAK_SIZE は {BASE_PAK_SIZE} の整数倍だけ（{PAK_SIZE}）。整数でない倍率は未対応（#261）")
+SCALE = PAK_SIZE // BASE_PAK_SIZE  # pak128 に対する倍率（整数）
+PAKSET = f"pak{2 * PAK_SIZE}"  # makeobj に渡す大きさ（セルの一辺。pak128 のアドオンは pak256）
+# 出力先のフォルダ名の後ろ（pak128 は空: src・dist。ほかは 256 なら src256・dist256）。pak128 の出力に混ざらないようにする
+SUFFIX = "" if PAK_SIZE == BASE_PAK_SIZE else str(PAK_SIZE)

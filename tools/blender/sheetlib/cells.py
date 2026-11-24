@@ -14,6 +14,7 @@ from .core import (  # noqa: F401
     ALPHA_THRESHOLD,
     CELL,
     PX_PER_UNIT,
+    SCALE,
     SPECIAL,
     SPECIAL_COLORS,
     TILE,
@@ -110,17 +111,31 @@ def near_frame(name, paths, origin=None):
 
 # ゲームが地面の菱形を塗る位置（セルの中で、タイル中心が何px目か）。dat のオフセット -64,-32 と対応し、
 # 線路の描画位置（TRACK_PROFILES の dy）には関係しない。ゲーム画面との比較（blender/ingame_diff.py）で合わせた
-GROUND_CY = 127
+# 持ち分マスクは pak128 の大きさ（_ground_mask_1x）で作り、SCALE 倍に拡大する。値の _1 は pak128 の画素。
+_GROUND_CY_1 = 127
+GROUND_CY = _GROUND_CY_1 * SCALE
 
 
 # 道路を描く位置。SIS・pak128 標準の道路は、菱形を地面より 1px 下にずらした絵で、自分の菱形の上の1行は描かず、
 # 奥のタイルの絵が下へ1行はみ出して埋める（平らな地面は先にまとめて描かれ、はみ出しは消えない）。
 # 同じ決まりにしないと、標準の道路とのつなぎ目に草の線（手前が標準）や 1px の段（奥が標準）が出る。
 # 持ち分も絵と同じだけ下げるので、形が曲がる所と持ち分の境がそろい、自分どうしのつなぎ目は地面の位置で描いたときと同じになる
-ROAD_CY = 128
+_ROAD_CY_1 = 128
+ROAD_CY = _ROAD_CY_1 * SCALE
 
 
 def _ground_mask(slope, side=None, cy=GROUND_CY, spill=0, solid=False, lower=0):
+    """持ち分マスク（地面の範囲。下の _ground_mask_1x の説明）。pak128 以外の大きさ（SCALE が 2 以上）は、pak128 の大きさで作ったマスクを
+    SCALE 倍に拡大する（最近傍）。地面の菱形の縁の階段は、pak128 を整数倍にした地面（pak256poc）と同じ段になる。
+    大きさに合わせて菱形を引き直すと、細かい段（2×1）が地面の段（4×2）とずれ、坂の継ぎ目に 1 画素の草が 4 画素おきに出た（#266。ゲームで確認）。
+    cy・spill・lower は SCALE 倍の画素で受け取る"""
+    if SCALE == 1:
+        return _ground_mask_1x(slope, side, cy, spill, solid, lower)
+    m = _ground_mask_1x(slope, side, cy / SCALE, spill / SCALE, solid, -(-lower // SCALE))
+    return np.kron(m, np.ones((SCALE, SCALE), dtype=bool))
+
+
+def _ground_mask_1x(slope, side=None, cy=_GROUND_CY_1, spill=0, solid=False, lower=0):
     """タイルの地面（四隅の高さは slope、無ければ平ら）が画面で占める画素。画素の中心が四角形の中なら 255。
     side（top/bottom/left/right）を渡すと、菱形のうち中心を通る横・縦の線のその側だけにする（斜めのタイル）。
     線は隣の菱形の頂点と同じ位置なので、隣の直線・斜めのタイルの縁と同じ行・列で切れる。
@@ -135,11 +150,11 @@ def _ground_mask(slope, side=None, cy=GROUND_CY, spill=0, solid=False, lower=0):
             m |= _ground_mask_at(lambda x, y, k=k: slope(x, y) * k / 32, side, cy)
     if spill:
         m |= _ground_mask_at(slope, side, cy + spill) | _ground_mask_at(slope, side, cy + spill + 0.5)
-    if cy != GROUND_CY:
+    if cy != _GROUND_CY_1:
         # 手前の縁を半行広げる（標準の道路は上の縁を半行ずれた並びで空けるので、1画素おきに草が見えた）
         m |= _ground_mask_at(slope, side, cy + 0.5)
         if slope:
-            m |= _ground_mask_at(slope, side, GROUND_CY)
+            m |= _ground_mask_at(slope, side, _GROUND_CY_1)
     if lower:
         # 下へ広げる（高架: 床の下の橋脚が、床より lower 行下の地面まで見える）
         base = m.copy()
@@ -149,20 +164,22 @@ def _ground_mask(slope, side=None, cy=GROUND_CY, spill=0, solid=False, lower=0):
 
 
 def _ground_mask_at(slope, side, cy):
+    """pak128 の大きさの菱形（_ground_mask_1x が使う）"""
     half = TILE / 2
-    up = PX_PER_UNIT * math.sin(math.radians(60))  # 高さ 1 → 画面で上へ何px（H で 16px）
+    cell = CELL // SCALE
+    up = PX_PER_UNIT / SCALE * math.sin(math.radians(60))  # 高さ 1 → 画面で上へ何px（H で 16px）
     pts = []
     for x, y in ((-half, -half), (half, -half), (half, half), (-half, half)):
         z = slope(x, y) if slope else 0.0
-        pts.append((CELL / 2 + (x + y) * 64 / TILE, cy + (x - y) * 32 / TILE - z * up))
-    yy, xx = np.mgrid[0:CELL, 0:CELL] + 0.5
-    inside = np.ones((CELL, CELL), bool)
+        pts.append((cell / 2 + (x + y) * 64 / TILE, cy + (x - y) * 32 / TILE - z * up))
+    yy, xx = np.mgrid[0:cell, 0:cell] + 0.5
+    inside = np.ones((cell, cell), bool)
     for (x0, y0), (x1, y1) in zip(pts, pts[1:] + pts[:1]):
         # 並びは 左→下→右→上 の角。内側は辺に対して外積が負の側
         inside &= (x1 - x0) * (yy - y0) - (y1 - y0) * (xx - x0) < 0
     if side is not None:
         inside &= {"top": yy < cy, "bottom": yy > cy,
-                   "left": xx < CELL / 2, "right": xx > CELL / 2}[side]
+                   "left": xx < cell / 2, "right": xx > cell / 2}[side]
     return inside
 
 
