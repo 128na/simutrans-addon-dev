@@ -153,4 +153,6 @@ SHEETS["expressway_tunnel"] = lambda: R.tunnel_sheet("expressway")
 SHEETS["tollbooth"] = tollbooth_sheet
 
 if __name__ == "__main__":
+    if R.SCALE != 1:  # 画素の値を大きさに合わせていない（pak128 だけ。#266）
+        raise SystemExit(f"[render] blender-poc は pak128 だけ（SHEET_PAK_SIZE={R.sheet_settings.PAK_SIZE}）")
     R.run_targets(SHEETS, ["track", "track_old", "road", "expressway", "tollbooth"])

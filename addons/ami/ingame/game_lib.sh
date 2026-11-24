@@ -94,9 +94,9 @@ game_kill() {
   powershell.exe -NoProfile -Command "\$d = '$win'.Replace('/', '\') + '\'; Get-Process | Where-Object { \$_.Path -and \$_.Path.StartsWith(\$d, 'OrdinalIgnoreCase') } | Stop-Process -Force" > /dev/null 2>&1
 }
 
-# game_unlink <写し>: PAKSET_SRC のジャンクションだけを外す（rm -rf が元の pak を消さないように。rmdir はジャンクションだけを外し、中身のある普通のフォルダは消さない）
+# game_unlink <写し>: 写しの <PAKSET>/ がジャンクションなら、それだけを外す（PAKSET_SRC の有無によらず呼ぶ。rm -rf が元の pak を消さないように。rmdir はジャンクションだけを外し、中身のある普通のフォルダは消さない）
 game_unlink() {
-  [ -n "$PAKSET_SRC" ] && [ -e "$1/${PAKSET:-pak128}" ] && MSYS2_ARG_CONV_EXCL="*" cmd.exe /c rmdir "$(cygpath -w "$1/${PAKSET:-pak128}")" > /dev/null 2>&1
+  [ -e "$1/${PAKSET:-pak128}" ] && MSYS2_ARG_CONV_EXCL="*" cmd.exe /c rmdir "$(cygpath -w "$1/${PAKSET:-pak128}")" > /dev/null 2>&1
   return 0
 }
 
