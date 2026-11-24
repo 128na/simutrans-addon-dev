@@ -646,7 +646,7 @@ def sidewalk_wall_dat_text(name, sheet, values=None, kind="歩道の柵"):
 
 
 # ---------------------------------------------------------------- 踏切（線路 × 道路。#111）
-# 線路 4 種 × 道路 3 種の 12 個（catalog.CROSSINGS）。本体は踏切を waytype の組と速さだけで選ぶ（dataobj/crossing_logic.cc の get_crossing。
+# 線路 4 種 × 道路 4 種の 16 個（catalog.CROSSINGS）。本体は踏切を waytype の組と速さだけで選ぶ（dataobj/crossing_logic.cc の get_crossing。
 # way の名前は見ない）ので、組ごとに速さの合う踏切を置く。絵は道路の種類ごとのシート（catalog.crossing_sheet）で、線路の 4 種で同じ。
 # 値は仮（#110 で決める）: 速さは両方の way の最高速度（踏切で速度を落とさない）、登場年は 2 つの way の遅い方、音なし（iss と同じ sound=-1）。
 # シートの並び（sheetlib の crossing.py）: 列 = (道路の向き, 閉じた絵か)、行 0・1 が夏の奥・手前、行 2・3 が雪の奥・手前。

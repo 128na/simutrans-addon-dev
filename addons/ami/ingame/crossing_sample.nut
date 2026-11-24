@@ -49,7 +49,7 @@ function lay_line(tag, p, q, road_first) {
     local i = START + k * SP;
     local td = way_desc_x(TRACKS[k % 4]), rd = way_desc_x(ROADS[k / 4]);
     if (td == null || rd == null) { s += tag + " desc=[missing " + TRACKS[k % 4] + " " + ROADS[k / 4] + "]\n"; continue; }
-    s += r(tag + " track " + k, command_x.build_way(pl, p(i - 3), p(k == 11 ? LEN : i + 3), td, true));
+    s += r(tag + " track " + k, command_x.build_way(pl, p(i - 3), p(k == 15 ? LEN : i + 3), td, true));
     if (!road_first) s += r(tag + " road " + k, command_x.build_way(pl, q(i, -2), q(i, 2), rd, true));
   }
   return s;

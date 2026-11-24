@@ -30,7 +30,7 @@ if [ "$JUDGE" = 1 ]; then
   OUT=${OUT:-work/crossing/shots}
   BLENDER=${BLENDER:-blender}
   files=(); want=()
-  for o in $ORIGINS; do for line in H V; do for k in $(seq 0 11); do for st in open closed; do
+  for o in $ORIGINS; do for line in H V; do for k in $(seq 0 15); do for st in open closed; do
     files+=("$OUT/${o%%:*}_${line}_${k}_${st}.png"); want+=(ami)
   done; done; done; done
   set -- $MIXED_EXPECT
@@ -62,7 +62,7 @@ if [ "$COMPOSE" = 1 ]; then
     for line in H V; do
       for st in open closed; do
         files=()
-        for k in $(seq 0 11); do files+=("$OUT/${clim}_${line}_${k}_${st}.png"); done
+        for k in $(seq 0 15); do files+=("$OUT/${clim}_${line}_${k}_${st}.png"); done
         "$BLENDER" -b --factory-startup --python ../../tools/blender/grid.py -- "$OUT/../grid_${clim}_${line}_${st}.png" "$CROP" 4 "${files[@]}" \
           > /dev/null 2>&1 && echo "[compose] $OUT/../grid_${clim}_${line}_${st}.png"
       done
@@ -107,7 +107,7 @@ if [ "$CAPTURE" = open ]; then
   for o in $ORIGINS; do
     IFS=: read -r clim ox oy <<< "$o"
     for line in H V; do
-      for k in $(seq 0 11); do
+      for k in $(seq 0 15); do
         read -r x y <<< "$(tile_of "$ox" "$oy" "$line" "$k")"
         shoot "$x" "$y" "$OUT/${clim}_${line}_${k}_open.png"
       done
@@ -133,7 +133,7 @@ if [ "$CAPTURE" = closed ]; then
   end_at=$((SECONDS + ${WAIT:-1500}))
   while [ $SECONDS -lt $end_at ]; do
     left=0
-    for o in $ORIGINS; do for line in H V; do for k in $(seq 0 11); do
+    for o in $ORIGINS; do for line in H V; do for k in $(seq 0 15); do
       [ -f "$OUT/${o%%:*}_${line}_${k}_closed.png" ] || left=$((left + 1))
     done; done; done
     [ $left = 0 ] && { echo "[capture] 全部撮った"; exit 0; }
@@ -147,7 +147,7 @@ if [ "$CAPTURE" = closed ]; then
     done
     sleep 0.3
   done
-  for o in $ORIGINS; do for line in H V; do for k in $(seq 0 11); do
+  for o in $ORIGINS; do for line in H V; do for k in $(seq 0 15); do
     [ -f "$OUT/${o%%:*}_${line}_${k}_closed.png" ] || echo "[capture] 撮れなかった: ${o%%:*} ${line} ${k}"
   done; done; done
   exit 1

@@ -208,7 +208,7 @@ def coverage():
         if n in text or n.rsplit("_", 1)[0] + '_"' in text:  # 名前の末尾を組み立てる見本（"…_elev_" + 版）
             continue
         if kind == "crossing":
-            continue  # way の組（線路 4 種 × 道路 3 種・運河）で自動に選ばれる
+            continue  # way の組（線路 4 種 × 道路 4 種・運河）で自動に選ばれる
         missing.append((kind, n))
     return missing
 

@@ -20,7 +20,7 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 
 | もの | 名前 |
 |---|---|
-| way（通常の版） | `ami_tram`・`ami_rail_ballast`・`ami_rail_concrete`・`ami_rail_ladder`・`ami_rail_slab`・`ami_road_local`・`ami_road_general`・`ami_road_expressway` |
+| way（通常の版） | `ami_tram`・`ami_rail_ballast`・`ami_rail_concrete`・`ami_rail_ladder`・`ami_rail_slab`・`ami_road_local`・`ami_road_general`・`ami_road_trunk`・`ami_road_expressway` |
 | 基盤・高架の版 | `<way の名前>_base_<版>`・`<way の名前>_elev_<版>`（版は `single`・`back`・`center`・`front`） |
 | 橋・トンネル | `<way の名前>_bridge`・`<way の名前>_tunnel` |
 | 路面表示 | `ami_mark_<種類>`（`lane4`・`junction2`・`junction2_t`・`junction4_in`・`junction4_out`、6 車線の `lane6_a`・`lane6_b`・`lane6_m`・`junction6_in`・`junction6_out`・`junction6_m`・`junction6_c`。一般道路に重ねる。#187・#189。下の「路面表示の作り」）。高速道路の分岐・合流は `diverge_main`・`diverge_ramp`・`merge_main`・`merge_ramp`（高速道路に重ねる。#188。下の「高速道路の分岐・合流の路面表示の作り」） |
@@ -212,12 +212,12 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
   | もの | 費用 | 維持費 | 速さ |
   |---|---|---|---|
   | 基盤の 4 版 | 通常の版と同じ | 同じ | 同じ |
-  | 高架の 4 版（地上の 2 倍） | 10000・16000・40000 | 200・400・1000 | 道路と同じ |
-  | 橋・トンネル（地上の 4 倍） | 20000・32000・80000 | 400・800・2000 | 道路と同じ |
+  | 高架の 4 版（地上の 2 倍） | 10000・16000・28000・40000 | 200・400・700・1000 | 道路と同じ |
+  | 橋・トンネル（地上の 4 倍） | 20000・32000・56000・80000 | 400・800・1400・2000 | 道路と同じ |
   | 道路の壁（線路の壁と同じ） | 3000 | 60 | 1000（`twin` は 1001） |
   | 道路用の橋脚（線路用と同じ） | 1000 | 100 | 1 |
 
-  費用・維持費は生活道路・一般道路・高速道路の順。登場年は道路と同じ（壁と橋脚は 1900）
+  費用・維持費は生活道路・一般道路・幹線道路・高速道路の順。登場年は道路と同じ（壁と橋脚は 1900）
 - 描く対象: `ami_wall_road_<版>`・`<道路>_base_<版>`・`<道路>_elev_<版>`・`<道路>_bridge`・`<道路>_tunnel`・`ami_pier_road`（`blender/render.py`）。`ami_wall_road_twin` は `back`・`front` のシートを指す
 
 ### 版の並び
@@ -690,7 +690,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 道具が無いので、アイコン・カーソルは持たない（`blender/icons.py` は dat に `icon` の無い物を飛ばす）
 - pak は付属（`ami_extra.pak`）に入れる（線路・道路と組で使う）
 - 値（仮。#110 で決める）: 速さは両方の way の最高速度（踏切で速度を落とさない）、登場年は 2 つの way の遅い方、音なし（`sound=-1`。iss と同じ）。`blender/ami_dat.py` の `crossing_dat_text`
-- 見本は `ingame/crossing_sample.sh`（`ingame/crossing_sample.nut`・`crossing_train.nut`）。12 組を、道路が南北の向き（H 線）と東西の向き（V 線）で温暖・降雪に敷き、開いた絵と、列車を走らせて閉じた絵を撮る。撮った画面に AMI の踏切の絵が出ているかは `JUDGE=1` で判定する（`ingame/crossing_judge.py`。AMI の遮断機・警報機の黄色と、pak128 の踏切の標識の赤の画素を数え、どちらも無ければ踏切が写っていないとする。script からは踏切の名前が読めず、ほかの pak の踏切が選ばれても way の速さは変わらないため。#128）。撮った画面は `docs/crossing_<気候>_<線>_<開閉>.png`（左上から、行が道路 local・general・expressway、列が線路 ballast・concrete・ladder・slab）
+- 見本は `ingame/crossing_sample.sh`（`ingame/crossing_sample.nut`・`crossing_train.nut`）。16 組を、道路が南北の向き（H 線）と東西の向き（V 線）で温暖・降雪に敷き、開いた絵と、列車を走らせて閉じた絵を撮る。撮った画面に AMI の踏切の絵が出ているかは `JUDGE=1` で判定する（`ingame/crossing_judge.py`。AMI の遮断機・警報機の黄色と、pak128 の踏切の標識の赤の画素を数え、どちらも無ければ踏切が写っていないとする。script からは踏切の名前が読めず、ほかの pak の踏切が選ばれても way の速さは変わらないため。#128）。撮った画面は `docs/crossing_<気候>_<線>_<開閉>.png`（左上から、行が道路 local・general・expressway、列が線路 ballast・concrete・ladder・slab）
 
 ### 跨座式モノレールの作り（#113）
 
@@ -1047,7 +1047,7 @@ PORT=47300 bash ingame/game.sh STOP
 |---|---|---|
 | 線路 新（ballast・concrete・ladder・slab） | 8, 22, 36, 50 | way、基盤 4 版（single・back・center・front）＋同じ版の壁、同じ 4 版＋架線つきの壁、高架 4 版（壁・橋脚つき）、橋、トンネル、複線の壁（single の上に twin・twin 架線） |
 | 線路 旧描画位置（`_old`。同じ 4 種） | 64, 78, 92, 106 | 同上 |
-| 道路（local・general・expressway） | 120, 134, 148 | way、基盤 4 版＋壁、基盤＋複線の壁、中央分離帯つきの壁 3 種、高架 4 版、橋、トンネル |
+| 道路（local・general・trunk・expressway） | 120, 134, 148, 162 | way、基盤 4 版＋壁、基盤＋複線の壁、中央分離帯つきの壁 3 種、高架 4 版、橋、トンネル |
 | 路面軌道・橋脚・歩道 | 190 | `ami_tram`（土・道路 3 種の上）、橋脚 5 種（門型・旧を含む）、歩道 4 種と歩道の柵 |
 | 景観の見本（既存の見本を原点を替えて流す） | 206 | 歩道（x=8）、盛土（110）、電柱（212）、道路標識（314）、横断歩道の標識（416） |
 | 路面表示・操車場・運河 | 300 | 6 車線の路面表示（8）、交差点の路面表示（110）、高速道路の分岐・合流（212）、操車場（314）、運河（416） |
