@@ -1,7 +1,7 @@
 // 基盤・高架の面の描き込みの段を見比べる見本（#78。blender/surface_calib.py の段）。
 // 段ごとに同じ並びを DX タイルずつ東へずらして敷く。way は ami_rail_ballast_base_<版>_surf<段>・_elev_<版>_surf<段>（rounds/ami_surface_calib.pak）、
 // 壁の way-object（ami_wall_rail_<版>）と橋脚の way（ami_pier_rail）は dist/ami.pak の今の版を重ねる。
-// flat_512.sve の温暖側 (20,20) と降雪側 (276,20) に敷く。降雪側は敷いた後に一帯を降雪に塗り直す。
+// flat_512_left_v64.sve の温暖側 (20,20) と降雪側 (276,20) に敷く。降雪側は敷いた後に一帯を降雪に塗り直す。
 // 区画（段ごと。原点 (ox + i * DX, oy) から）:
 //   G 地上（基盤の版）: 東西の 3 線 (0,0)-(9,0) back・(0,1)-(9,1) center・(0,2)-(9,2) front、1 本 (0,4)-(9,4) single、
 //     南北の 3 線 (12,0)-(12,9) back・(13,..) center・(14,..) front、斜めの 1 本 (17,0) から南東へ 4 段 single

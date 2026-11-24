@@ -1,7 +1,7 @@
 #!/bin/bash
 # 旧描画位置の線路（#26）を、新と並べて SIS の線路につないで撮る（確認画像用。自動の判定は seam_slope_check.sh）。
 # 使い方（アドオンのディレクトリで。python -X utf8 build.py で dist/ami_rail.pak・dist/ami_rail_old.pak を作っておく）:
-#   GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> bash ingame/old_seam.sh
+#   GAME_DIR=<検証用のフォルダ> PORT=<ポート> bash ingame/old_seam.sh
 # ゲームは work/game/<PORT>/ の写し（ingame/game.sh）で起動し、旧の pak（ami_rail_old.pak）と新の pak（ami_rail.pak）を入れる。
 # GAME_DIR の addons/pak128 に SIS の新幹線の線路（way.SIS_ShinkansenTrack_Ballast_E01_ds.pak）を入れておく。
 # 見本は ingame/old_seam.nut（y=100〜 が新、y=200〜 が旧）。撮った画面は OUT（既定 work/old_seam）に <新|旧>_<種類>_<ew|ns|dg|sl>.png。

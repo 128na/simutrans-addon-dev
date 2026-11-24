@@ -1,6 +1,6 @@
 // 斜めの運河の並びの確かめ（#217。2026-11-24）: 景観の運河を (OX,OY) から (OX+4,OY+4) へ敷き、通ったタイルの get_dirs を返す。
 // 12（南＋西）= diagonal[sw]、3（北＋東）= diagonal[ne] が交互に並ぶ。flat_512_left_v64 は 512 四方なので OY は 100 など範囲内にする。
-// 使い方: GAME_DIR=… EXE=… PORT=47200 NUT=ingame/canal_diag_probe.nut bash ingame/game.sh（出力はファイルへ。終わったら PORT=47200 … STOP）
+// 使い方: GAME_DIR=… PORT=47200 NUT=ingame/canal_diag_probe.nut bash ingame/game.sh（出力はファイルへ。終わったら PORT=47200 … STOP）
 local pl = player_x(0);
 local W = way_desc_x("ami_canal_scenic");
 local report = "";

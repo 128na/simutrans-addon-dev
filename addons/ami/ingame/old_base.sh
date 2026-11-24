@@ -1,7 +1,7 @@
 #!/bin/bash
 # 旧描画位置の基盤・壁・架線つきの壁（#26）を、新と並べて撮る。見本は ingame/old_base.nut。
 # 使い方（アドオンのディレクトリで。python -X utf8 build.py で dist/ami_rail.pak・dist/ami_rail_old.pak・dist/ami_extra.pak を作っておく）:
-#   GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> bash ingame/old_base.sh
+#   GAME_DIR=<検証用のフォルダ> PORT=<ポート> bash ingame/old_base.sh
 # ゲームは work/game/<PORT>/ の写し（ingame/game.sh）で起動する。画面は OUT（既定 work/old_base）に o2・o3（旧の複線 + 壁・架線つきの壁）と
 # n2・n3（新の同じ並び）を撮り、docs/old_base.png に 4 枚を並べる（左が旧、右が新。上が壁、下が架線つきの壁）
 PORT=${PORT:?PORT に MCP のポートを指定する}

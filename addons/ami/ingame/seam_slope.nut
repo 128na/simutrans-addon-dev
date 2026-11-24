@@ -1,4 +1,4 @@
-// つなぎ目と坂の判定の見本（ingame/seam_slope_check.sh が撮り、tools/blender/seam_judge.py・slope_measure.py で測る）。flat_512.sve で使う。
+// つなぎ目と坂の判定の見本（ingame/seam_slope_check.sh が撮り、tools/blender/seam_judge.py・slope_measure.py で測る）。flat_512_left_v64.sve で使う。
 // AMI の線路の種類ごとに、REF（pak128 標準の線路）→ AMI → REF の順に 1 本につなげて敷く（blender-poc の seam.nut と同じ並び）。
 //   y = 100 + 30 * i（i は TRACKS の順）: x=130〜 東西の直線・x=146 南北の直線・x=130〜 斜め・x=152 坂（坂だけ AMI）
 // 坂の十字（blender-poc の steep.nut と同じ形）: y=40 に、種類ごとに x を 20 ずつずらして急坂（2 段）、y=60 に 1 段の坂。

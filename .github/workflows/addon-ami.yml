@@ -37,7 +37,7 @@ jobs:
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ env.TOOLS_DIR }}
-          key: ci-tools-${{ runner.os }}-makeobj-${{ env.MAKEOBJ }}-datlinter-${{ env.DAT_LINTER }}
+          key: ci-tools-${{ runner.os }}-makeobj-${{ env.MAKEOBJ }}-datlinter-${{ env.DAT_LINTER }}-headless-${{ env.HEADLESS_SIM }}
 
       - name: 検査
         run: bash addons/ami/check.sh

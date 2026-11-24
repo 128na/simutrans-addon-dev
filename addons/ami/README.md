@@ -832,8 +832,9 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - カーソルは、直線の絵（壁の `center` は行き止まりの端の壁、トンネルは坑口）の上に札を足したもの。前は道路とトンネルだけに札があり、線路・壁・橋脚には無かった。道路の壁の `center` はカーソルが空だった
 - 壁だけの twin（`ami_wall_rail_twin`・`ami_wall_road_twin`）は back の版のシートを借りるので、アイコン・カーソルは back の版のセル（0.0・0.1）を指していて、back と同じ「B」が出ていた。今は back の版のシートの使っていないセル（0.4・1.4。`blender/ami_dat.py` の `TWIN_ICON_CELLS`）に置く
 - 検査: `check.sh` が `check_icons.py` を回す（#97）。icon・cursor のセルをほかのキーが指していないか（重なると `icons.py` が書いたときに相手の絵が消えるか、同じアイコンになる）、icon の 32px とカーソルに絵があるか、waytype の違う物どうしでアイコンの背景の色相が 20 度以上離れているか、を見る（組は dat の waytype なので、どちらも `road` の道路と高速道路は比べない）。`icons.py` が dat の参照先に書いたかは、そのセルに絵があるかで見る（提供用の物 `__ex_donor` は `icons.py` が書かず、元の物のセルを使う）。色は `icons.py` の表を読まず、描かれた画素で比べる。別のシートの絵から作った物が、今の絵のシートから作られているかも見る（上の控え。#141）。意図して共有・借用するもの（提供用の物 `__ex_donor` のセル、橋脚・歩道の背景色）は、`check_icons.py` の `SHARE_SUFFIX`・`BG_BORROW` に理由と一緒に書く
+- 検査: `check.sh` が `check_cells.py` を回す（#241）。dat の絵のキー（`image`・`imageup`・`diagonal`・`frontimage`・`backimage`・`openimage` など）が指すセルを PNG で読み、同じ物の同じ向き・坂の絵が、奥・手前の層とも全部透明なセルを指していないかを見る（icon・cursor は `check_icons.py`）。壁・架線・路面表示の way は、描かない向き・層を意図して空のセルへ向けるので、空のセルを指す絵のキー（層・季節ごと。`backimage[ns]`・`image[ns][1]` など）を物ごとに `check_cells.allow.txt` に控え、控えに無いものが新しく空を指したときと、控えにあるのに空でなくなったときに落ちる。意図して足す・絵を描いて外すときは `python -X utf8 check_cells.py --update` で控えを書き直し、差分を読んでコミットする。シートの読みはシートごとに別のプロセスで行い、手元の 24 コアで約 30 秒かかる（CI の 4 コアでは 1 分前後の見込み）
 - 版の札の漢字は、等倍（13px の札に字の高さ 10px）では細部がつぶれるが、雰囲気で読める（2026-11-21、ユーザーの判断）
-- ゲームで撮るのは `GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> bash ingame/icon_capture.sh`（`work/icons/`。メニューの中の位置はスクリプトの `CURSORS`）
+- ゲームで撮るのは `GAME_DIR=<検証用のフォルダ> PORT=<ポート> bash ingame/icon_capture.sh`（`work/icons/`。メニューの中の位置はスクリプトの `CURSORS`）
 
 ### リリース用のサムネイル（#96）
 
@@ -846,9 +847,9 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 構図を自動で作る仕組み（#103 で詰める）は、次の手順で 1 枚撮れる。
 
-- 見本の街区は `ingame/thumbnail.nut` が `flat_512.sve` の写しに敷く（保存はしない）。並びはスクリプトの冒頭の表
+- 見本の街区は `ingame/thumbnail.nut` が `flat_512_left_v64.sve` の写しに敷く（保存はしない）。並びはスクリプトの冒頭の表
 - どちらもアドオンのディレクトリで動かす。先に `python -X utf8 build.py` で `dist/ami.pak` を作っておく
-- 撮る: `GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> bash ingame/thumbnail_capture.sh`。ゲームを 2560x1400 の画面で起動し、等倍（`gui.set_zoom(3)`）で `work/thumbnail/shot.png` に撮る。敷けなかったときは撮らずに止まる
+- 撮る: `GAME_DIR=<検証用のフォルダ> PORT=<ポート> bash ingame/thumbnail_capture.sh`。ゲームを 2560x1400 の画面で起動し、等倍（`gui.set_zoom(3)`）で `work/thumbnail/shot.png` に撮る。敷けなかったときは撮らずに止まる
 - 文字を重ねる: `uv run ingame/thumbnail_compose.py`（`--plain` で文字なしの `plain.png` だけ）。道具欄と状態欄を切り落とすだけで、拡大・縮小はしない。題名・内容・種類の数（`src/` の dat から数える）はスクリプトの頭にある。フォントは Windows の Segoe UI と游ゴシック。`docs/thumbnail/` の画像を書き換える
 
 ### 後で足すもの
@@ -915,11 +916,11 @@ python -X utf8 build.py                                                        #
 
 ## 導入と検証
 
-ゲームでの確認は blender-poc と同じく、アドオンを確かめるゲームの OTRP 版で `flat_512.sve` を開き、MCP のスクリプトを流す。
+ゲームでの確認は、検証用のフォルダ（`addon_check`。親フォルダの `AGENTS.md`）の写しを OTRP（v64）で起動し、MCP のスクリプトを流す。`ingame/` のスクリプトの起動・停止は `ingame/game_lib.sh` の共通の関数で、実行ファイル・地図・設定の既定は v64（`sim-WinGDI64-OTRPv64.exe`・`flat_512_left_v64.sve`・`settings.xml.v64`）。`GAME_DIR` は必ず渡し（絶対パスを既定に持たない）、`PORT` は作業ごとに割り当てられた範囲の中を渡す。
 makeobj は本家と同じもの（60.12）なので、ふだんの確認は OTRP だけで行う。配る pak の本家 125.0.1 での読み込みは、配る前にユーザーが確かめる（スクリプトが使えない。ACCEPTANCE の 6-4）。
 
 ```bash
-GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe bash ingame/sample_check.sh
+GAME_DIR=<検証用のフォルダ> PORT=<ポート> bash ingame/sample_check.sh   # 閉じるのは PORT=<ポート> STOP=1 を付けて同じスクリプト
 # 高速線の見本は TRACK=ami_rail_slab を前に付ける
 ```
 
@@ -928,13 +929,13 @@ GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe bash ingame/sample_check.sh
 - 返り値の `[check]` の行に、近い斜めの分け合うタイルが way 1 本か（`two_ways=false` なら近い斜めの絵が使われている）と、分岐の絵を固定する道具があるかを出す
 - 基盤の版は `WALLED` に way と壁の組で足す（同じ区画の並びで、壁を同じ経路に重ねる。近い斜めの区画 G は敷かない）。複線と壁の組（輪・近い斜め・行き止まりの並び）は区画 W。架線つきの壁は `CATENARY`（区画 W の後に同じ並びで 4 版）と区画 WE（区画 W と同じ並びで、壁を架線つきの版にしたもの）で、`[check]` の行の way の名前の後ろの `elec` は電化されていること。`[check]` の行には、区画 W・WE の角と分け合うタイルの way と壁の名前も出す（`(2)` は way が 2 本）
 - 高架は地上の区画の東 80 に敷く（`sample.nut` の `ELEVATED`）。区画の並びは基盤の版と同じで、高架の 4 版に壁の 4 版を重ね、真下に橋脚の way を敷く。その南に区画 WV（区画 W の並びを高架で）・WVE（区画 WE の並びを高架で）・高架に架線つきの壁の single・区画 J（高架と地上のつなぎ目）。`[check]` の行の高架の名前の後ろの ` / ami_pier_rail` は、真下の地面の橋脚の way（`(2)` は 2 本）
-- 撮るのは `bash ingame/sample_capture.sh`（`work/sample/` に温暖側・降雪側の区画ごと）。レイアウト検証用モードの pak は `PAK=work/layout/dist/ami.pak` で入れ、`OUT=work/sample_layout` で撮る。終わったら `dist/ami.pak` を入れ直す
-- 全区画をまとめて撮るときは `GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> TRACK=ami_rail_slab bash ingame/sample_parallel.sh`。8 台のゲームを `work/parallel/` の写しで起動し、見本を敷いて撮り、閉じる。208 画面が準備込みで約 40 秒。`sample_check.sh` は要らず、`GAME_DIR` には書き込まない。台数は `JOBS`
-- pak128 標準の線路（`Rail_160_Tracks`）とのつなぎ目と、坂・急坂でのレールの寄りは `GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> bash ingame/seam_slope_check.sh` で測る（#62 で足した）。見本は `ingame/seam_slope.nut`（線路の種類ごとに、東西・南北・斜め・坂のつなぎ目と、急坂・1 段の坂の十字）。ゲームは `work/seam_game/<PORT>/` の写しで起動し、`GAME_DIR` には書き込まない。MCP のクライアントの場所は、ほかの `ingame/` のスクリプトと同じく `ingame/mcp_client.sh` で決める。読み方は `tools/blender/seam_judge.py`・`slope_measure.py` の冒頭。在来線にも、つなぎ目の斜めの 1 か所（草 1px）と、十字の坂のタイル（急坂 3・1 段の坂 2）で寄りの NG が出る（2026-11-21 の値は記録 [2026-11-21_ami-rail-concrete](../../docs/records/2026-11-21_ami-rail-concrete.md)）
-- 分岐の追加画像（#57）は `GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> bash ingame/ex_check.sh` で確かめる。`dist/ami.pak` を入れて起動し、`ingame/ex_sample.nut` を流して開いたままにする。見本は線路の種類（`WAYS`。在来線・弾性まくらぎ直結軌道・高速線・路面軌道と、在来線の基盤 4 版に架線つきの壁）ごとに、Y字分岐と三方分岐を根元の 4 向きで敷き（温暖側 (150,20)、降雪側は x + 256、区画は南へ 40 ずつ）、固定の道具で 26〜35 番に固定した T字・十字と、何もしない T字・十字を並べる。`[check]` の行は、自動で選ばれた絵が固定と同じなら `ok`、通常の絵のままなら `plain`、違えば `got/want`。撮るのは `PORT=<ポート> OUT=work/ex/after bash ingame/ex_capture.sh`
-- 壁つきの線の間の渡り線（#101）は `GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> bash ingame/crossover_wall.sh`。ゲームの写し（`work/crossover_game/<PORT>/`）に `dist/ami.pak`（`PAK` で替えられる）と iss の線路・架線の pak を入れて起動し、`ingame/crossover_wall.nut` を温暖側 (20,20) に流す。AMI の壁・架線つきの壁・iss の架線の 3 組を、線の並び（back+front・back+center・center+front・3 本）と敷き方（本線を敷き直す・渡り線にも壁・上の線の版で渡り線・通常の版で渡り線・壁の後に渡り線を敷いてから本線を敷き直す）ごとに敷く。続けて `SNOW=1`（降雪側に同じ見本）・`CAPTURE=1`（撮る。`SNOW=1` と合わせると降雪側）・`STOP=1`（閉じて写しを消す）を渡す
-- iss の版ごとのカーブ・分岐の絵と並べる検討（#88。決定は「入れない」で、本番の pak には関わらない）は `GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> bash ingame/curve_switch_study.sh`。ゲームの写し（`work/study_game/<PORT>/`）に `dist/ami.pak` と iss の線路の pak を入れて起動し、`ingame/curve_switch_study.nut` を流す。続けて `CLASSIFY=1`（分岐のタイルの自動の絵を読む）・`TRAIN=1`（`ingame/curve_switch_train.nut` で列車を走らせ、渡り線の絵を読む）・`CAPTURE=1`（撮る）・`STOP=1`（閉じて写しを消す）を渡す。結果は記録 `docs/records/2026-11-21_ami-curve-switch-variants-study.md`
-- 同じポートでゲームが動いていると、`sample_check.sh` は止まる（他のゲームに見本を流さない）。閉じるのは自分で起動したゲームだけ
+- 撮るのは `PORT=<ポート> bash ingame/sample_capture.sh`（`work/sample/ に温暖側・降雪側の区画ごと）。レイアウト検証用モードの pak は `PAK=work/layout/dist/ami.pak` で入れ、`OUT=work/sample_layout` で撮る。終わったら `dist/ami.pak` を入れ直す
+- 全区画をまとめて撮るときは `GAME_DIR=<検証用のフォルダ> TRACK=ami_rail_slab bash ingame/sample_parallel.sh`。8 台のゲームを `work/parallel/` の写しで起動し、見本を敷いて撮り、閉じる。208 画面が準備込みで約 40 秒。`sample_check.sh` は要らず、`GAME_DIR` には書き込まない。台数は `JOBS`
+- pak128 標準の線路（`Rail_160_Tracks`）とのつなぎ目と、坂・急坂でのレールの寄りは `GAME_DIR=<検証用のフォルダ> PORT=<ポート> bash ingame/seam_slope_check.sh` で測る（#62 で足した）。見本は `ingame/seam_slope.nut`（線路の種類ごとに、東西・南北・斜め・坂のつなぎ目と、急坂・1 段の坂の十字）。ゲームは `work/seam_game/<PORT>/` の写しで起動し、`GAME_DIR` には書き込まない。MCP のクライアントの場所は、ほかの `ingame/` のスクリプトと同じく `ingame/mcp_client.sh` で決める。読み方は `tools/blender/seam_judge.py`・`slope_measure.py` の冒頭。在来線にも、つなぎ目の斜めの 1 か所（草 1px）と、十字の坂のタイル（急坂 3・1 段の坂 2）で寄りの NG が出る（2026-11-21 の値は記録 [2026-11-21_ami-rail-concrete](../../docs/records/2026-11-21_ami-rail-concrete.md)）
+- 分岐の追加画像（#57）は `GAME_DIR=<検証用のフォルダ> PORT=<ポート> bash ingame/ex_check.sh` で確かめる。`dist/ami.pak` を入れて起動し、`ingame/ex_sample.nut` を流して開いたままにする。見本は線路の種類（`WAYS`。在来線・弾性まくらぎ直結軌道・高速線・路面軌道と、在来線の基盤 4 版に架線つきの壁）ごとに、Y字分岐と三方分岐を根元の 4 向きで敷き（温暖側 (150,20)、降雪側は x + 256、区画は南へ 40 ずつ）、固定の道具で 26〜35 番に固定した T字・十字と、何もしない T字・十字を並べる。`[check]` の行は、自動で選ばれた絵が固定と同じなら `ok`、通常の絵のままなら `plain`、違えば `got/want`。撮るのは `PORT=<ポート> OUT=work/ex/after bash ingame/ex_capture.sh`
+- 壁つきの線の間の渡り線（#101）は `GAME_DIR=<検証用のフォルダ> PORT=<ポート> bash ingame/crossover_wall.sh`。ゲームの写し（`work/crossover_game/<PORT>/`）に `dist/ami.pak`（`PAK` で替えられる）と iss の線路・架線の pak を入れて起動し、`ingame/crossover_wall.nut` を温暖側 (20,20) に流す。AMI の壁・架線つきの壁・iss の架線の 3 組を、線の並び（back+front・back+center・center+front・3 本）と敷き方（本線を敷き直す・渡り線にも壁・上の線の版で渡り線・通常の版で渡り線・壁の後に渡り線を敷いてから本線を敷き直す）ごとに敷く。続けて `SNOW=1`（降雪側に同じ見本）・`CAPTURE=1`（撮る。`SNOW=1` と合わせると降雪側）・`STOP=1`（閉じて写しを消す）を渡す
+- iss の版ごとのカーブ・分岐の絵と並べる検討（#88。決定は「入れない」で、本番の pak には関わらない）は `GAME_DIR=<検証用のフォルダ> PORT=<ポート> bash ingame/curve_switch_study.sh`。ゲームの写し（`work/study_game/<PORT>/`）に `dist/ami.pak` と iss の線路の pak を入れて起動し、`ingame/curve_switch_study.nut` を流す。続けて `CLASSIFY=1`（分岐のタイルの自動の絵を読む）・`TRAIN=1`（`ingame/curve_switch_train.nut` で列車を走らせ、渡り線の絵を読む）・`CAPTURE=1`（撮る）・`STOP=1`（閉じて写しを消す）を渡す。結果は記録 `docs/records/2026-11-21_ami-curve-switch-variants-study.md`
+- 同じポートでゲームが動いていると、`sample_check.sh` は止まる（他のゲームに見本を流さない）。閉じるのは自分で起動したゲームだけ（`STOP=1`。写しの中の exe だけを止める）
 - 斜めと行き止まりの角の壁の暗い縦線を消した前後は `docs/wallseam63_*.png`（`C_*` は区画 C の下の端の角、`B_*` は区画 B の T字・十字の角。上が前|後の画面の切り抜き、下が拡大。#63。経緯は記録 [2026-11-21_ami-wall-diag-end-seam](../../docs/records/2026-11-21_ami-wall-diag-end-seam.md)）
 - 確認画像は `docs/`。在来線の通常の版は `rail_ballast_*.png`（温暖側・降雪側の見本、レイアウト検証用モードの見本、行き止まりの拡大、T字・十字・分岐のセル、道床の色の前後。2026-11-17）。基盤の版と壁は `rail_base_*.png`（区画 W1〜W3 と、back・front の輪と十字。`layout` はレイアウト検証用モード。`fix_*` は継ぎ目を直した前後の拡大（`_before` が前）。2026-11-17）
 - 架線つきの壁は `rail_catenary_*.png`（区画 SE（single）・BE（back）の輪と十字、SE の坂と急坂（`SE_DE`）、区画 WE1（複線の輪）・WE2a（近い斜めの複線）・WE3（行き止まりの並び）、降雪側の WE1（`snow_WE1`）、一部だけ電化した線の境（`upgrade`）、pak128 の `classic_catenary`（上）と並べた直線（`vs_pak128`。画面を 2 倍に拡大）、斜めの線を隣のタイルに並べた 3 本並び（上）と複線（下）の梁のつながり（`diag_beams`。ユーザーの確認用の保存データの (40,346) の辺り。2 倍）、近い斜めの複線で、`twin_catenary` を置く前の分け合うタイルの梁のはみ出しと線の間の柱（`close_pair`。同じ保存データ。2 倍。置いた後は `WE2a`）。`layout` はレイアウト検証用モードで、線を上下 2 本・1px にしてハンガーを足す前の絵（柱・梁の配置とつながりは今と同じ）。2026-11-18）
@@ -945,23 +946,23 @@ GAME_DIR=F:/Simutrans/addon_check EXE=OTRPv64_3.exe bash ingame/sample_check.sh
 - `sample_check.sh` は `sample.nut` をコマンドラインの引数で渡すので、Windows のコマンドラインの長さの上限（32,767 文字）に収まるよう、行頭のコメント・字下げ・空行を除いて渡す（橋とトンネルを足して 34,230 バイトになり、そのままでは `Argument list too long` で渡せなかった。2026-11-18）。行頭の空白と `//` で始まる行を消すので、`sample.nut` に複数行の文字列（`@"..."`）を足すと中身が変わる（足すときは 1 行の文字列にする）
 - 橋とトンネルは `rail_bridge_*.png`・`rail_tunnel_*.png`（`B1`（平地から立ち上がる橋。拡大）・`B2`（坂から始まる橋の 1 段・2 段）・`B4`（高架と橋のつなぎ目。拡大）・`snow_B2`（降雪側）・`T1`（壁だけのトンネル）・`T2`（架線つき。拡大）・`T3`（複線）、`ramp_before`・`ramp_after`（坂の低い側の灰色の帯を直す前と後。ユーザーの確認用の保存データの (190,184) の辺り。拡大）、`ramp_layout_before`・`ramp_layout_after`（同じ所のレイアウト検証用モード）。`rail_tunnel_layout_*` はレイアウト検証用モード。2026-11-18）
 - 保存・ロードやダイアログの見た目はスクリプトで確かめられないので、ユーザーが見る
-- 配る pak の読み込みは `GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe PORT=<ポート> PAKS="<pak>..." bash ingame/beta_check.sh`。`work/beta_game/<PORT>/` の写しに `PAKS`（既定は `build.py` の `KINDS` の種類別の pak 全部から旧描画位置の `ami_rail_old.pak` を除いた 7 つ（ラインナップが増えても追従する。#177）。旧は新と同じ橋・高架に載る way が混ざるので既定に入れず、`PAKS=dist/ami_rail_old.pak` で別に確かめる。zip を確かめるときは `release.py --extract` で展開した pak）だけを入れて起動し、`src/*.dat` の全部の物（way・way-object・橋・トンネル・踏切・車庫・操車場・道路標識）を 1 つずつ道具で敷いて（行は 1 列に収まらなければ東へ列を増やす）、タイルの物の名前を読む（`ingame/beta_check.nut`）。先頭が `ok <数> items` なら全部敷けた。続けて、読んだ AMI の pak と、ログ（`-debug 3`）の AMI の物の警告を出す（ACCEPTANCE の 6-3）
+- 配る pak の読み込みは `GAME_DIR=<検証用のフォルダ> PORT=<ポート> PAKS="<pak>..." bash ingame/beta_check.sh`。`work/beta_game/<PORT>/` の写しに `PAKS`（既定は `build.py` の `KINDS` の種類別の pak 全部から旧描画位置の `ami_rail_old.pak` を除いた 7 つ（ラインナップが増えても追従する。#177）。旧は新と同じ橋・高架に載る way が混ざるので既定に入れず、`PAKS=dist/ami_rail_old.pak` で別に確かめる。zip を確かめるときは `release.py --extract` で展開した pak）だけを入れて起動し、`src/*.dat` の全部の物（way・way-object・橋・トンネル・踏切・車庫・操車場・道路標識）を 1 つずつ道具で敷いて（行は 1 列に収まらなければ東へ列を増やす）、タイルの物の名前を読む（`ingame/beta_check.nut`）。先頭が `ok <数> items` なら全部敷けた。続けて、読んだ AMI の pak と、ログ（`-debug 3`）の AMI の物の警告を出す（ACCEPTANCE の 6-3）
 
 道路の見本は線路と別のゲームで敷く（`sample.nut` はコマンドラインの長さの上限に近いので、道路の区画を足さない）:
 
 ```bash
-GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe NUT=ingame/road_sample.nut OUT=work/road_sample bash ingame/sample_parallel.sh
-# 1 台で敷いて開いたままにするなら NUT=ingame/road_sample.nut bash ingame/sample_check.sh（撮るのは NUT=ingame/road_sample.nut OUT=work/road_sample bash ingame/sample_capture.sh）
+GAME_DIR=<検証用のフォルダ> NUT=ingame/road_sample.nut OUT=work/road_sample bash ingame/sample_parallel.sh
+# 1 台で敷いて開いたままにするなら NUT=ingame/road_sample.nut PORT=<ポート> bash ingame/sample_check.sh（撮るのは PORT=<ポート> NUT=ingame/road_sample.nut OUT=work/road_sample bash ingame/sample_capture.sh）
 ```
 
-- 絞って敷く（#208）: `ingame/game.sh` に `ROAD_NAMES`（敷く道路。空白区切り。例 `"ami_road_expressway"`）・`CLIMATES`（`temperate` と `snow`。空白区切り）を渡すと、その種類・気候だけ敷く（game.sh が `road_sample.nut` の `ROADS`・`ORIGINS` の行を置き換える。既定は全部）。降雪だけでも塗り直す。`SETTINGS` で、写しに入れる GAME_DIR の設定ファイルを替えられる（v64 は `SETTINGS=settings.xml.v64`）。例: `ROAD_NAMES=ami_road_expressway CLIMATES=temperate GAME_DIR=<検証用のフォルダ> EXE=<実行ファイル> PORT=<ポート> NUT=ingame/road_sample.nut bash ingame/game.sh`。`sample_check.sh`・`sample_parallel.sh` には効かない。区画の名前での絞り込みは無い。絞ると残った道路は先頭の枠（南へのずれ 0）に詰まって敷かれるので、`ROAD_SPOTS` の `GE_*`・`EX_*` の座標とはずれる（撮るなら `SPOTS` を自分で指定する）。`road_sample.nut` 以外の NUT に渡すと止まる。`SETTINGS` は #208 の測定のために足した（v64 の設定で起動する）。v64（`flat_512_left_v64`）で、高速道路・温暖だけは起動から敷設まで 14.8 秒、全部は 30.8 秒（1 回ずつ）
+- 絞って敷く（#208）: `ingame/game.sh` に `ROAD_NAMES`（敷く道路。空白区切り。例 `"ami_road_expressway"`）・`CLIMATES`（`temperate` と `snow`。空白区切り）を渡すと、その種類・気候だけ敷く（game.sh が `road_sample.nut` の `ROADS`・`ORIGINS` の行を置き換える。既定は全部）。降雪だけでも塗り直す。`SETTINGS` で、写しに入れる GAME_DIR の設定ファイルを替えられる（v64 は `SETTINGS=settings.xml.v64`）。例: `ROAD_NAMES=ami_road_expressway CLIMATES=temperate GAME_DIR=<検証用のフォルダ> PORT=<ポート> NUT=ingame/road_sample.nut bash ingame/game.sh`。`sample_check.sh`・`sample_parallel.sh` には効かない。区画の名前での絞り込みは無い。絞ると残った道路は先頭の枠（南へのずれ 0）に詰まって敷かれるので、`ROAD_SPOTS` の `GE_*`・`EX_*` の座標とはずれる（撮るなら `SPOTS` を自分で指定する）。`road_sample.nut` 以外の NUT に渡すと止まる。`SETTINGS` は #208 の測定のために足した（v64 の設定で起動する）。v64（`flat_512_left_v64`）で、高速道路・温暖だけは起動から敷設まで 14.8 秒、全部は 30.8 秒（1 回ずつ）
 - `ingame/road_sample.nut` は道路 3 種（`ROADS`）を、温暖側 (20,20) と降雪側 (276,20) に 30 ずつ南へずらして敷く（生活道路・一般道路・高速道路の順）。区画は線路の見本と同じ A・F・C・B・D・E・G に、分岐の自動選択（H。2 本の道路を隣り合わせに並べて渡り口でつないだ形。南北と東西）、分岐の絵の固定（I。T字 4 種と十字を選択 2・1 の順に）、pak128 標準の `Road_050` とのつなぎ目（K）、隣り合う十字（L）。表は `road_sample.nut` の冒頭
 - `[check]` の行: 近い斜めの分け合うタイルが way 1 本か（`two_ways=false`）と、区画 H（自動選択の `auto`）・I（固定の `pin1`・`pin2`）・L（隣り合う十字の `west`・`east`）の絵。値は `way_x.get_image_id()`。判定は `road_sample.nut` の `SWITCH_IMAGES`（`ami_dat.py` の `ROAD_SWITCH_IMAGES` と同じにする）で変わる。今（真。v64 の仕様）は、H（隣が T字・十字）の自動選択（`auto`）が通常の T字と同じで、固定の `pin1`・`pin2` が通常とも互いとも違えば `ok`、L の十字が通常の十字なら `ok`、M（枝の隣がカーブの T字）の自動選択が `pin1` なら `is1`（`pin2` なら `is2`、通常なら `plain`）
 
 道路を何本か並べた交差点の組み合わせ（2×4〜6×6）は別の見本で敷く（温暖側だけ）:
 
 ```bash
-SEASONS=temperate:20:20 GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe NUT=ingame/road_junction_sample.nut OUT=work/junction bash ingame/sample_parallel.sh
+SEASONS=temperate:20:20 GAME_DIR=<検証用のフォルダ> NUT=ingame/road_junction_sample.nut OUT=work/junction bash ingame/sample_parallel.sh
 ```
 
 - `ingame/road_junction_sample.nut` は道路 3 種を (20,20) から 22 ずつ南へ、組み合わせ 8 つ（南北の本数 × 東西の本数が 2×1・1×2・3×1・1×3・2×2・2×3・3×2・3×3）を東へ 12 ずつ敷く。`[check]` の行に、十字のタイルごとに通常の十字（`nsew`）か T字の「2」（`nse2` など）かを出す（判定は、同じ見本の中で固定の道具で固定した T字の絵と比べる。分岐の絵の無い今は、どれも `nsew`）。撮る場所は `sample_spots.sh` の `JUNCTION_SPOTS`
@@ -971,7 +972,7 @@ SEASONS=temperate:20:20 GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe NU
 道路の壁・基盤の版・高架・橋脚・橋・トンネルの見本も別のゲームで敷く:
 
 ```bash
-GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe NUT=ingame/road_struct_sample.nut OUT=work/struct bash ingame/sample_parallel.sh
+GAME_DIR=<検証用のフォルダ> NUT=ingame/road_struct_sample.nut OUT=work/struct bash ingame/sample_parallel.sh
 ```
 
 - `ingame/road_struct_sample.nut` は道路 3 種を、温暖側 (20,20) と降雪側 (276,20) に 30 ずつ南へずらして敷く。1 種ずつ東へ、地上の壁（通常の版に `single` の壁。近い斜めの区画 G は `back`・`front`）・地上の複線（基盤の版と同じ版の壁。輪 W1・行き止まりの並び W3・近い斜め W2）・高架（`single` と壁と真下の橋脚。隣り合う十字 L）・高架の複線（WV1〜WV3）・分岐の絵の固定（IB は基盤の版、IV は高架）・橋とトンネル（B1・B2・B4・T1・T3）・橋脚のつながり（P1 は `Road_050`、P2 は AMI の道路、P3 は地上の線路）。表は `road_struct_sample.nut` の冒頭
@@ -982,7 +983,7 @@ GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe NUT=ingame/road_struct_sam
 路面軌道の見本も別のゲームで敷く:
 
 ```bash
-GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe NUT=ingame/tram_sample.nut OUT=work/tram bash ingame/sample_parallel.sh
+GAME_DIR=<検証用のフォルダ> NUT=ingame/tram_sample.nut OUT=work/tram bash ingame/sample_parallel.sh
 ```
 
 - `ingame/tram_sample.nut` は、線路の見本と同じ区画（A・F・C・B・D・E・G・I・H）を、土の上と、AMI の道路 3 種・pak128 標準の `Road_050` の上（道路を先に敷いて同じ経路に重ねる）に、温暖側 (20,20) と降雪側 (276,20) で 30 ずつ南へずらして敷く。土の上の区画には、橋脚とのつながりの区画 P もある。表は `tram_sample.nut` の冒頭
@@ -993,7 +994,7 @@ GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe NUT=ingame/tram_sample.nut
 歩道の見本も別のゲームで敷く:
 
 ```bash
-GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe NUT=ingame/sidewalk_sample.nut OUT=work/sidewalk bash ingame/sample_parallel.sh
+GAME_DIR=<検証用のフォルダ> NUT=ingame/sidewalk_sample.nut OUT=work/sidewalk bash ingame/sample_parallel.sh
 ```
 
 - `ingame/sidewalk_sample.nut` は、道路 4 種（AMI の 3 種と pak128 標準の `Road_050`）ごとに 14 ずつ南へ、温暖側 (20,24) と降雪側 (276,24) に敷く。区画は交差点の四隅（R）・広場と 1 タイル（Q）・坂（S）・急坂（T）・斜めの道路（D）・道路と運河の横切り（X）。表は `sidewalk_sample.nut` の冒頭
@@ -1004,7 +1005,7 @@ GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe NUT=ingame/sidewalk_sample
 歩道の種類・高架の歩道・歩道の柵の見本（#119）は、1 台のゲームを開いたままにして敷いて撮る:
 
 ```bash
-GAME_DIR=<検証用のフォルダ> EXE=OTRPv64_3.exe PORT=47300 NUT=ingame/sidewalk_struct.nut bash ingame/game.sh
+GAME_DIR=<検証用のフォルダ> PORT=47300 NUT=ingame/sidewalk_struct.nut bash ingame/game.sh
 PORT=47300 OX=276 NUT=ingame/sidewalk_struct.nut bash ingame/game.sh RUN   # 降雪側
 PORT=47300 OUT=work/sw119 SPOTS="F1:22:37 E1:25:48" bash ingame/game.sh CAPTURE
 PORT=47300 bash ingame/game.sh STOP
@@ -1017,12 +1018,24 @@ PORT=47300 bash ingame/game.sh STOP
 
 塗りを実装する前に、レイアウト検証用モード（部品ごとに画像で見分けやすい単色で塗る）で、部品の配置とタイルどうしの接合を確かめる（[ADR 0005](../../docs/adr/0005-ami-render-tool-conventions.md)）。
 
+## 画面を出さない本体での読み込みの検査（#236）
+
+`check.sh` の最後（pak を作った後）で、画面を出さない OTRP 本体（Makefile の `BACKEND=posix`）に配る pak を読ませ、出力の文字列で失敗を見つける（`tools/ci/check_pak_load.py`。調査と判定の表は記録 [2026-11-24_headless-pak-load](../../docs/records/2026-11-24_headless-pak-load.md)）。
+
+- 種類別の pak（`dist/ami_*.pak`）を全部一緒に読み、全部入りの `ami.pak` は単独で読む（一緒に置くと名前が重複する）。pakset は本体の `tests/simutrans-test-base.zip`。所要は 1 回 3〜5 秒
+- 失敗にするのは、`FATAL ERROR`（参照切れ・ROOT の大きさ）・`ERROR:` で始まる行（空・壊れたファイルなど。画面がないことを知らせる `modal_dialogue` の行は除く）・`skipping unknown`・`is overlaid`・`Reading addon object data failed`・`sent query:`（使用状況の送信）など。時間切れ・合図なしの終了（異常終了）・渡した pak ごとの「読んだ」行が無いとき・使用状況を送らない印（`statistics log is not send.`）が無いときも失敗にする。見つけられない物（絵の画素・必須の絵の書き忘れなど）は記録の表のとおり（半分で切れた pak は、下の名前の一覧の比較が見つける）。見た目とつなぎ目は `addon_check` のゲームで見る
+- 検査の自己確認として、`ami_monorail.pak` から壊した pak を作り、6 種（空・ROOT の大きさ・参照切れ・名前の重複・登録されない物・半分で切れた pak）と、余る物の 1 種とも失敗することを、疑似の本体でのハング・すぐ終了・異常終了・合図なしの判定と合わせて毎回確かめる（`--self-test`）
+- **名前の一覧の比較（#245）**: `--makeobj makeobj` を渡すと、scenario（`tools/ci/pak_names_scenario/`）で本体に登録された way・way-object・tunnel・bridge・roadsign・building の名前を出し、`makeobj list` の名前と比べる。pak にあるのに登録されない名前、pak に無いのに登録された名前があれば失敗にする。出力に何も出さずに物を捨てる壊れ方（半分で切れた pak など）を見つける。crossing と、駅系（駅・車庫・桟橋・駅の拡張）以外の building は、本体に一覧の API が無い（または一覧が駅系だけ）ので比べない。アイコンの無い way は本体の一覧に出ないので、「登録されていない」と出たら、dat のアイコン（cursor・icon）も疑う。調査は記録 [2026-11-24_pak-names-compare](../../docs/records/2026-11-24_pak-names-compare.md)
+- 起動の前に毎回 `settings.xml` を消し、作業フォルダは毎回新しく作る（本体は `settings.xml` の記録で使用状況を外へ送るため）
+- **CI（Linux）**: 本体を `ci.env` の `HEADLESS_SIM`（`otrp:<128na/simutrans のコミット>`）から `tools/ci/setup-headless-sim.sh` でビルドし、`actions/cache` に載せる
+- **手元（Windows）**: 本体を MinGW でビルドして渡したときだけ動かす（渡さないと飛ばす）。本体の一時の worktree で `config.default` に `BACKEND = posix`・`OSTYPE = mingw` などを書いて PowerShell から `make`（作り方は親フォルダの `otrp-dev/dev/build.md`）、`HEADLESS_SIM_BIN=<sim.exe> HEADLESS_PAKSET=<本体の tests/simutrans-test-base.zip> bash addons/ami/check.sh`。`sim.exe` の DLL は MSYS2 を入れた場所の `mingw64/bin` から探すので、`PATH` に足しておく。ゲームの検証環境とポートは使わない
+
 ## カタログ（見て回る保存データ。#203）
 
 作成済みの AMI の物を一か所で見て回る保存データ `ami_catalog.sve` を、スクリプトで作る。**v64（`sim-WinGDI64-OTRPv64.exe`）用**（OTRPv64_3 は保存形式が違い読めない）。土台は `addon_check/save/flat_1024_left.sve`（1024 四方・左側通行・平ら。x<512 が温暖、x≥512 が降雪）。
 
 - 作り方（アドオンのディレクトリで。`python -X utf8 build.py` で `dist/` に pak を作っておく）:
-  `GAME_DIR=F:/Simutrans/addon_check PORT=47500 bash ingame/catalog.sh ALL`
+  `GAME_DIR=<検証用のフォルダ> PORT=47500 bash ingame/catalog.sh ALL`
   写し（`work/catalog_game/<PORT>/`）を `settings.xml.v64` で起動し、AMI の pak（`ami.pak` と `ami_rail_old.pak`）だけを入れて、[`ingame/catalog.py`](ingame/catalog.py) で棚を敷き、`world.save_game` で保存して `GAME_DIR/save/ami_catalog.sve` に置く（読み取り専用。既にあれば止まる）。終わったら `PORT=47500 STOP=1 bash ingame/catalog.sh` で閉じる。
 - 置き方: 温暖側は x=8〜、降雪側は同じ配置を x+512。棚の 1 マスは 14×10 マスで、東西 10 マスの直線に 1 つの物（と、重ねる壁・橋脚・橋・トンネル）を置く。`python -X utf8 ingame/catalog.py --list` で、棚の 1 マスごとの座標と名前の一覧が出る。`--coverage` は、`src/` の名前が棚に出てくるか確かめる（今は 233 個すべて）。
 - 新しい物を足したら、`catalog.py` の棚（`rail_cells`・`road_cells`・`misc_cells`・`REUSE`）に足して、流し直す。
@@ -1058,7 +1071,7 @@ PORT=47300 bash ingame/game.sh STOP
 
 ## 今の決まりごと
 
-- 起動スクリプトは、写した `settings.xml` から使用状況の送信用の記録（`<![CDATA[/registerOTRPUsage?...]]>`）を、起動の前に毎回 [`ingame/strip_usage_log.sh`](ingame/strip_usage_log.sh) で空にする（#235）。OTRP の本体は、この記録が空でないと起動のたびに使用状況を外へ送る（記録は終了のたびに書き出される）。空だと、起動のログ（`-debug 3`）に `statistics log is not send.` が出る。ログは `GAME_ARGS="-debug 3" GAME_LOG=<ファイルの絶対パス>` で残せる（相対パスは写しの中に書かれて、写しと一緒に消える）（`game.sh`・`before_after.sh`・`sample_parallel.sh`。並列は台ごとに `.<台番号>` が付く）。検証環境（GAME_DIR）の `settings.xml` は変えない。GAME_DIR で直接起動する `sample_check.sh`・`ex_check.sh`（と blender-poc の `ingame/switch_check.sh`）は写しを使わないので、このとおりには外れない
+- 起動スクリプトは、写した `settings.xml` から使用状況の送信用の記録（`<![CDATA[/registerOTRPUsage?...]]>`）を、起動の前に毎回 [`ingame/strip_usage_log.sh`](ingame/strip_usage_log.sh) で空にする（#235）。OTRP の本体は、この記録が空でないと起動のたびに使用状況を外へ送る（記録は終了のたびに書き出される）。空だと、起動のログ（`-debug 3`）に `statistics log is not send.` が出る。ログは `GAME_ARGS="-debug 3" GAME_LOG=<ファイルの絶対パス>` で残せる（相対パスは写しの中に書かれて、写しと一緒に消える）（`game.sh`・`before_after.sh`・`sample_parallel.sh`。並列は台ごとに `.<台番号>` が付く）。検証環境（GAME_DIR）の `settings.xml` は変えない。起動と停止（写しの作成・上の記録の除去・起動・待ち・閉じる）は `ingame/game_lib.sh` の 1 か所にあり、`ingame/` の起動するスクリプトは全部これを使う（#243）。以前 GAME_DIR で直接起動して使用状況を送っていた `sample_check.sh`・`ex_check.sh` は、写し（`work/sample_game/<PORT>/`・`work/ex_game/<PORT>/`）で起動する形にし、blender-poc の `ingame/switch_check.sh` は（`flat2` と GAME_DIR の直接起動の前提で、今は使えないので）消した。新しく起動するスクリプトも `game_lib.sh` を source して `game_start`・`game_stop` を使う
 
 - 値は次のとおり決めた（2026-11-15）。費用・維持費は pak128 の way と同じ単位（1/100 cr）で、iss の線路（15000・300）を基準にした。`blender/ami_dat.py` の `VALUES` と同じにする
 
