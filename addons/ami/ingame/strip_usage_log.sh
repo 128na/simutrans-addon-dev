@@ -6,5 +6,5 @@
 # 使い方: bash strip_usage_log.sh <写した settings.xml>（無ければ何もしない）。検証環境の本物の settings.xml には使わない。
 f=${1:?usage: strip_usage_log.sh <settings.xml>}
 [ -f "$f" ] || exit 0
-sed -i 's#<!\[CDATA\[/registerOTRPUsage[^]]*\]\]>#<![CDATA[]]>#' "$f"
+sed -i 's#<!\[CDATA\[/registerOTRPUsage.*\]\]>#<![CDATA[]]>#' "$f"
 if grep -q registerOTRPUsage "$f"; then echo "strip_usage_log: 送信用の記録が残っている: $f" >&2; exit 1; fi

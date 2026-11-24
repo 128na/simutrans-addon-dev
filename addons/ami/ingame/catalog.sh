@@ -49,7 +49,7 @@ done
 printf '\nday_night_shift = 0\n' >> "$WORK/config/simuconf.tab"
 cp "$GAME_DIR/save/$BASE.sve" "$WORK/save/" || exit 1
 cp "$GAME_DIR/settings.xml.v64" "$WORK/settings.xml" || exit 1; chmod u+w "$WORK/settings.xml"
-bash "$(dirname "${BASH_SOURCE[0]:-$0}")/strip_usage_log.sh" "$WORK/settings.xml" || exit 1  # 送信用の記録を外す（#235）
+bash "$INGAME/strip_usage_log.sh" "$WORK/settings.xml" || exit 1  # 送信用の記録を外す（#235）
 cp "$PAK" "$WORK/addons/pak128/ami.pak" || exit 1
 for p in ${EXTRA_PAKS:-dist/ami_rail_old.pak}; do cp "$p" "$WORK/addons/pak128/$(basename "$p")" || exit 1; done
 (cd "$WORK" && "./$EXE" -objects pak128/ -addons -load "$BASE" -mcp-port "$PORT" > /dev/null 2>&1 &)

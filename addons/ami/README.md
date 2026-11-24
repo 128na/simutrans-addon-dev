@@ -1058,7 +1058,7 @@ PORT=47300 bash ingame/game.sh STOP
 
 ## 今の決まりごと
 
-- 起動スクリプトは、写した `settings.xml` から使用状況の送信用の記録（`<![CDATA[/registerOTRPUsage?...]]>`）を、起動の前に毎回 [`ingame/strip_usage_log.sh`](ingame/strip_usage_log.sh) で空にする（#235）。OTRP の本体は、この記録が空でないと起動のたびに使用状況を外へ送る（記録は終了のたびに書き出される）。空だと、起動のログ（`-debug 3`）に `statistics log is not send.` が出る。ログは `GAME_ARGS="-debug 3" GAME_LOG=<ファイル>` で残せる（`game.sh`・`before_after.sh`・`sample_parallel.sh`。並列は台ごとに `.<台番号>` が付く）。検証環境（GAME_DIR）の `settings.xml` は変えない。GAME_DIR で直接起動する `sample_check.sh`・`ex_check.sh` は写しを使わないので、このとおりには外れない
+- 起動スクリプトは、写した `settings.xml` から使用状況の送信用の記録（`<![CDATA[/registerOTRPUsage?...]]>`）を、起動の前に毎回 [`ingame/strip_usage_log.sh`](ingame/strip_usage_log.sh) で空にする（#235）。OTRP の本体は、この記録が空でないと起動のたびに使用状況を外へ送る（記録は終了のたびに書き出される）。空だと、起動のログ（`-debug 3`）に `statistics log is not send.` が出る。ログは `GAME_ARGS="-debug 3" GAME_LOG=<ファイルの絶対パス>` で残せる（相対パスは写しの中に書かれて、写しと一緒に消える）（`game.sh`・`before_after.sh`・`sample_parallel.sh`。並列は台ごとに `.<台番号>` が付く）。検証環境（GAME_DIR）の `settings.xml` は変えない。GAME_DIR で直接起動する `sample_check.sh`・`ex_check.sh`（と blender-poc の `ingame/switch_check.sh`）は写しを使わないので、このとおりには外れない
 
 - 値は次のとおり決めた（2026-11-15）。費用・維持費は pak128 の way と同じ単位（1/100 cr）で、iss の線路（15000・300）を基準にした。`blender/ami_dat.py` の `VALUES` と同じにする
 

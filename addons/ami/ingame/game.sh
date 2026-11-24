@@ -76,7 +76,7 @@ printf '\nday_night_shift = 0\n' >> "$WORK/config/simuconf.tab"
 cp "$GAME_DIR/save/$SAVE.sve" "$WORK/save/" || exit 1
 SETTINGS=${SETTINGS:-settings.xml.v64}  # 写しに入れる設定（GAME_DIR の中のファイル名。v64 は settings.xml.v64）
 [ -f "$GAME_DIR/$SETTINGS" ] && { cp "$GAME_DIR/$SETTINGS" "$WORK/settings.xml"; chmod u+w "$WORK/settings.xml"; }
-bash "$(dirname "${BASH_SOURCE[0]:-$0}")/strip_usage_log.sh" "$WORK/settings.xml" || exit 1  # 送信用の記録を外す（#235）
+bash "$INGAME/strip_usage_log.sh" "$WORK/settings.xml" || exit 1  # 送信用の記録を外す（#235）
 cp "$PAK" "$WORK/addons/pak128/ami.pak" || exit 1
 for p in ${EXTRA_PAKS:-}; do cp "$p" "$WORK/addons/pak128/$(basename "$p")" || exit 1; done
 # 訳のファイル（addons/pak128/text/<言語>_<名前>.tab。本体は名前の先頭 2 文字で言語を決める: dataobj/translator.cc）

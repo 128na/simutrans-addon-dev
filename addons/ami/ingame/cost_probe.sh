@@ -9,7 +9,7 @@ W=work/cost/$PORT; rm -rf $W; mkdir -p $W/save
 cp $GAME_DIR/$EXE $GAME_DIR/*.dll $W/
 for d in config font themes text script music pak128 addons; do [ -d $GAME_DIR/$d ] && cp -r $GAME_DIR/$d $W/; done
 cp $GAME_DIR/save/$SAVE.sve $W/save/; cp dist/ami.pak $W/addons/pak128/ami.pak
-[ -f $GAME_DIR/settings.xml ] && cp $GAME_DIR/settings.xml $W/
+[ -f $GAME_DIR/settings.xml ] && cp $GAME_DIR/settings.xml $W/ && chmod u+w $W/settings.xml
 bash "$(dirname "${BASH_SOURCE[0]:-$0}")/strip_usage_log.sh" "$W/settings.xml" || exit 1  # 送信用の記録を外す（#235）
 WIN=$(cd $W && pwd -W)
 (cd $W && "./$EXE" -objects pak128/ -addons -load "$SAVE" -mcp-port $PORT > /dev/null 2>&1 &)
