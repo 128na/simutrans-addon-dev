@@ -39,7 +39,7 @@ ERRORS = [
 # 読み込みが終わった合図（ゲームの起動の最後）。pakset が無い・言語が無いときも出るので、これだけでは通さない（READ も要る）
 DONE = re.compile(r"modal_dialogue:\s+called without a display driver")
 FATAL = re.compile(r"FATAL ERROR")
-# 渡した pak を本体が読んだ行（-debug 3。実測: obj_reader_t::read_file():<タブ>filename='addons/pak/<名前>'）
+# 渡した pak を本体が読んだ行。本体が pak を開こうとした印で、読めた証拠ではない（読めたかは ERRORS と一覧で見る）（-debug 3。実測: obj_reader_t::read_file():<タブ>filename='addons/pak/<名前>'）
 READ = "obj_reader_t::read_file():"
 # 使用状況を送らない印（settings.xml が無いときに出る）。FATAL で止まったときは出ないので要求しない
 NOT_SENT = "statistics log is not send."

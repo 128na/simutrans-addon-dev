@@ -102,6 +102,10 @@ if [ -n "${SKIP_BUILD:-}" ]; then
 else
   step "画面を出さない本体で配る pak を読む（tools/ci/check_pak_load.py。#236）"
   sim="${HEADLESS_SIM_BIN:-}"; pakset="${HEADLESS_PAKSET:-}"
+  if [ -n "$sim" ] && [ -z "$pakset" ]; then
+    echo "HEADLESS_SIM_BIN だけで HEADLESS_PAKSET が無い（本体の tests/simutrans-test-base.zip を渡す）" >&2
+    exit 1
+  fi
   if [ -z "$sim" ]; then
     case "$(uname -s)" in
       MINGW*|MSYS*|CYGWIN*) ;;
