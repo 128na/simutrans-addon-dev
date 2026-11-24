@@ -16,7 +16,7 @@
 //      ただし front_divider の東西の辺は、角が back の所（外の南西・内の北東）の 1 つ手前で止める（速いので角を置き換えるため）
 //   PD 近い斜め: (32,0) から南東へ 5 段、奥の線に back と壁 back、1 タイル東の手前の線に front と front_divider。
 //      分け合うタイル（way 2 本）の way-object を twin_divider に置き換え、壁を敷き直す（road_struct_sample.nut の W2 と同じ敷き方）
-local ROADS = ["ami_road_general", "ami_road_expressway"];
+local ROADS = ["ami_road_general", "ami_road_trunk", "ami_road_expressway"];
 local ORIGINS = [[20, 20], [276, 20]];
 local SNOW = 1;
 local SPACING = 16;

@@ -113,7 +113,7 @@ def bands():
         for st in ("ballast", "concrete", "ladder", "slab"):
             out["rail_%s%s" % (st, "_old" if old else "")] = (y, rail_cells(st, old))
             y += CELL_H + 4
-    for k in ("local", "general", "expressway"):
+    for k in ("local", "general", "trunk", "expressway"):
         out["road_" + k] = (y, road_cells(k))
         y += CELL_H + 4
     out["misc"] = (190, misc_cells())
@@ -123,7 +123,7 @@ def bands():
 def misc_cells():
     """路面軌道・橋脚（棚の 1 マス）"""
     cells = [("ami_tram (土の上)", line_nut("ami_tram"))]
-    for k in ("local", "general", "expressway"):
+    for k in ("local", "general", "trunk", "expressway"):
         cells.append((f"ami_tram (ami_road_{k} の上)", 'line(wy("ami_road_%s"), null, 10, 0, null); line(wy("ami_tram"), null, 10, 0, null);' % k))
     for n in ("ami_pier_rail", "ami_pier_rail_gate", "ami_pier_rail_old", "ami_pier_rail_old_gate", "ami_pier_road",
               "ami_sidewalk", "ami_sidewalk_asphalt", "ami_sidewalk_brick", "ami_sidewalk_tile"):
@@ -208,7 +208,7 @@ def coverage():
         if n in text or n.rsplit("_", 1)[0] + '_"' in text:  # 名前の末尾を組み立てる見本（"…_elev_" + 版）
             continue
         if kind == "crossing":
-            continue  # way の組（線路 4 種 × 道路 3 種・運河）で自動に選ばれる
+            continue  # way の組（線路 4 種 × 道路 4 種・運河）で自動に選ばれる
         missing.append((kind, n))
     return missing
 

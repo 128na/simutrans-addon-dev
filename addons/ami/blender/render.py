@@ -496,10 +496,12 @@ DRIVE_LEFT = True
 # sheetlib の既定（blender-poc・在来線・スラブ軌道も使う）は変えない
 #   路面: 照り返しを切り（生活道路・一般道路。高速道路はもともと切ってある）、2 色を明るくして（生活道路・一般道路 2.4 倍、高速道路 1.6 倍）
 #     平均から 1.4 倍離し、色の段を 0.47〜0.53 に狭めて 1 画素の粒にする。走行跡の寄せ具合は半分（高速道路は 4 分の 1。暗い路面では明るく出る）
-ROAD_ASPHALT_LIFT = {"street": 2.4, "expwy": 1.6}
+#   幹線道路（#257）の路面は、街路と高速道路の 2 色の間（元の色を幾何平均。明るさの倍率・寄せ具合も間）にして、並べたときに見分ける
+TRUNK_ASPHALT = tuple(tuple(math.sqrt(a * b) for a, b in zip(s, e)) for s, e in zip(R.STREET_ASPHALT, R.EXPWY_ASPHALT))
+ROAD_ASPHALT_LIFT = {"street": 2.4, "trunk": 2.0, "expwy": 1.6}
 ROAD_ASPHALT_AWAY = 1.4
 ROAD_ASPHALT_RAMP = (0.47, 0.53)
-ROAD_WEAR_T = {"street": 0.5, "expwy": 0.25}
+ROAD_WEAR_T = {"street": 0.5, "trunk": 0.35, "expwy": 0.25}
 
 
 def _road_asphalt_skin(tag, rgb, spec):
@@ -533,7 +535,10 @@ ROAD_SETTINGS = {
                                  skin=_road_asphalt_skin("street", R.STREET_ASPHALT, 0.0)),
     catalog.ROAD_GENERAL.key: dict(_ROAD_LOOK, label="120", style="road", center="solid",
                                    skin=_road_asphalt_skin("street", R.STREET_ASPHALT, 0.0)),
-    catalog.ROAD_EXPRESSWAY.key: dict(_ROAD_LOOK, label="360", style="expressway", center="dash", switch_diag=True,
+    # 幹線道路（#257）: 高速道路と同じ断面・斜めの直線のカーブ（switch_diag）。中央線は破線（直線 4・斜め 3。pak128 標準の高速と同じ割り方。高速道路は dash_wide でもっと広い）、路面は街路と高速道路の中間の明るさ
+    catalog.ROAD_TRUNK.key: dict(_ROAD_LOOK, label="240", style="expressway", center="dash", switch_diag=True,
+                                 skin=_road_asphalt_skin("trunk", TRUNK_ASPHALT, 0.0)),
+    catalog.ROAD_EXPRESSWAY.key: dict(_ROAD_LOOK, label="360", style="expressway", center="dash_wide", switch_diag=True,
                                       skin=_road_asphalt_skin("expwy", R.EXPWY_ASPHALT, 0.0)),
 }
 for _r in catalog.ROADS:
@@ -743,7 +748,7 @@ for _r in catalog.ROADS:
 
 # 水路の踏切（#117）: 跳ね橋。道路の種類ごとに 1 枚と、線路の 4 種で共通の 1 枚（sheetlib の canal_crossing.py）。奥の絵の下地に運河の直線のセル
 # （道路は道路の直線のセルも）を写すので、運河・道路のシートの後に描く。線路のレールは線路の way と同じ基準面・横の範囲・高さ（線路×道路の踏切と同じ）
-for _r in catalog.ROADS:
+for _r in catalog.CANAL_ROADS:
     SHEETS[catalog.canal_crossing_sheet(_r)] = (lambda r: lambda: R.canal_crossing_sheet(
         catalog.canal_crossing_sheet(r), catalog.CANAL + ".png", "road", road_sheet=r.way + ".png"))(_r)
 SHEETS[catalog.CANAL_CROSSING_RAIL_SHEET] = lambda: R.canal_crossing_sheet(

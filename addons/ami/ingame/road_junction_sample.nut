@@ -13,7 +13,7 @@
 // 区画 P（y=14）: 判定に使う絵。T字 4 種と十字を固定の道具で「1」「2」に固定したもの（road_sample.nut の区画 I と同じ）と、通常の十字。
 // [check] の行: 組み合わせごとに、十字のタイルの絵を北の行から順に、西から東へ並べる（nsew は通常の十字、nse2 などは T字の「2」、
 // ? はどれでもない）。「1」と「2」が同じ絵なら「2」の名前で出す
-local ROADS = ["ami_road_local", "ami_road_general", "ami_road_expressway"];
+local ROADS = ["ami_road_local", "ami_road_general", "ami_road_trunk", "ami_road_expressway"];
 // ラウンドの版（#56）: AMI の名前（ami_ で始まるもの）の末尾に付ける。例: "_round1"。空なら今の名前（sample_parallel.sh の SUFFIX が置き換える）
 local SUFFIX = "";
 function wdx(n) { return way_desc_x(n.find("ami_") == 0 ? n + SUFFIX : n); }

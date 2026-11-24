@@ -138,8 +138,9 @@ CANAL_SCENIC = "ami_canal_scenic"  # 景観の運河（#161）。実用の運河
 
 ROAD_LOCAL = Road("road_local")  # 生活道路（40 km/h、中央線なし）
 ROAD_GENERAL = Road("road_general")  # 一般道路（120 km/h、中央線は白の実線）
-ROAD_EXPRESSWAY = Road("road_expressway")  # 高速道路（360 km/h、中央線は白の破線）
-ROADS = (ROAD_LOCAL, ROAD_GENERAL, ROAD_EXPRESSWAY)
+ROAD_TRUNK = Road("road_trunk")  # 幹線道路（#257。最高速度 240 km/h（確定）、中央線は白の破線（直線 4・斜め 3 で高速道路より細かい）。4 車線は道路を 2 本並べる。カーブは高速道路と同じ斜めの直線）
+ROAD_EXPRESSWAY = Road("road_expressway")  # 高速道路（360 km/h、中央線は白の広い破線。線 8m・すき間 12m の割り方。#257）
+ROADS = (ROAD_LOCAL, ROAD_GENERAL, ROAD_TRUNK, ROAD_EXPRESSWAY)
 # 多車線と交差点の路面表示の way（#187。ADR 0012）: 道路に重ねて敷く tram_track の way。名前 → 種類（sheetlib の marking の MARKING_KINDS）。
 # 一般道路（ROAD_GENERAL）に重ね、白線と路面を描く（下の道路の線と、帯・交差点の中の雪を覆う）。
 # lane4 は 4 車線の直線（2 列とも）、junction2 は 2 車線の腕と中心（4 車線 × 2 車線の中心も）、
@@ -204,7 +205,7 @@ def crossing_sheet(road):
     return f"{PREFIX}crossing_{road.key}"
 
 
-CROSSINGS = {crossing(_t, _r): (_t, _r) for _t in TRACKS for _r in ROADS}  # 踏切の名前 → (線路, 道路)。12 個
+CROSSINGS = {crossing(_t, _r): (_t, _r) for _t in TRACKS for _r in ROADS}  # 踏切の名前 → (線路, 道路)。16 個
 
 
 # 水路の踏切（#117。ADR 0008 の軌道 6）: 線路 4 種・道路 3 種 × 運河の 7 個。跳ね橋（2026-11-22、ユーザーの決定。#117 のコメント）。
@@ -222,7 +223,8 @@ def canal_crossing_sheet(way):
     return f"{PREFIX}crossing_canal_{way.key}" if isinstance(way, Road) else CANAL_CROSSING_RAIL_SHEET
 
 
-CANAL_CROSSINGS = {canal_crossing(_w): _w for _w in TRACKS + ROADS}  # 水路の踏切の名前 → 線路か道路。7 個
+CANAL_ROADS = tuple(_r for _r in ROADS if _r is not ROAD_TRUNK)  # 水路の踏切を作る道路（幹線道路の版は #257 の範囲外）
+CANAL_CROSSINGS = {canal_crossing(_w): _w for _w in TRACKS + CANAL_ROADS}  # 水路の踏切の名前 → 線路か道路。7 個
 
 
 class Depot:
@@ -252,7 +254,7 @@ ROADSIGN_CROSSWALKS = {f"{PREFIX}sign_crosswalk": False, f"{PREFIX}sign_crosswal
 # カーブを斜めの絵で表すシート（pak128 標準の線路と同じ。dat の image[sw]・[nw]・[ne]・[se] が diagonal と同じセルを指す）。
 # 唯一の定義。dat を書く ami_dat.py（DIAG_CURVES）と、判定・比較の道具が読む addon_config.py（DIAG_CURVE_SHEETS）がここから引く（#227。別々に書いて片方を直し忘れた）
 # 基盤の版・高架の版（線路・道路）はカーブを斜めの形の別のセル（基盤の壁の無い側を削らない）に描くので、ここには入れない。render.py の diag_curves と同じにする
-DIAG_CURVE_WAYS = {_t.way for _t in ALL_TRACKS} | {_r.way for _r in ROADS}  # 道路 3 種もカーブは斜めの絵（README の「道路の作り」）
+DIAG_CURVE_WAYS = {_t.way for _t in ALL_TRACKS} | {_r.way for _r in ROADS}  # 道路 4 種もカーブは斜めの絵（README の「道路の作り」）
 DIAG_CURVE_WAYS |= {MONORAIL, *MONORAIL_ELEVS}  # 跨座式モノレールは高架の版もカーブを斜めの絵（#113。手本の iss の跨座式の dat と同じ）
 DIAG_CURVE_WAYS.add(CANAL)  # 運河もカーブは斜めの絵（#114）
 DIAG_CURVE_WAYS |= {*MONORAIL_SUSPENDEDS, *MONORAIL_SUSPENDED_ELEVS}  # 懸垂式（#116）も跨座式と同じ

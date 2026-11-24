@@ -88,6 +88,7 @@ from .road_parts import (  # noqa: F401
     CURB_W,
     DIAG_EDGE,
     EDGE_LINE,
+    CENTER_DASHES_WIDE,
     EXPWY_WALL_U,
     EXPWY_WALL_W,
     ROAD_CUT_Z,
@@ -184,7 +185,7 @@ def _road_sheet(style="street"):
     snow_skin: 雪の絵の材質の差し替え（部品の名前 → 材質）。ROAD_SNOW_SKIN（歩道・縁石と路肩の雪 snowbank）に重ねる。坑口（tunnel_sheet）も使う
     mat_skin: 材質の名前（material() に渡す名前）→ 材質を返す関数。壁・基盤・躯体・橋脚など、部品の名前の skin で届かない材質を替える
         （road_sheet が core の named_materials で入れる。坑口も使う）
-    center: 中央線の種類。"solid"（実線。既定）・"dash"（破線。区切りはタイルの辺。tile_dashes）・None（中央線なし）
+    center: 中央線の種類。"solid"（実線。既定）・"dash"（破線。区切りはタイルの辺。tile_dashes）・"dash_wide"（広い破線。#257）・None（中央線なし）
     switches: 真なら分岐の絵（OTRP の switch 画像。dat の image[nse1]〜image[nsew2]）を行 2・3 の列 10〜14 に描く（シートは 15 列）。
         expressway（歩道なし）の道路だけ。絵の中身は下の switch_lines
     priority_cross: 真なら十字の分岐の絵（nsew1・nsew2。固定の道具・詳細ダイアログでだけ選べる）を、優先道路のある十字にする
@@ -215,13 +216,15 @@ def _road_sheet(style="street"):
     arc_se = arc((half, -half), 90, 180)
     sn, we = straight(S, N), straight(W, E)
     center_kind = prof.get("center", "solid")
-    if center_kind not in ("solid", "dash", None):
-        raise SystemExit(f"[road_sheet] {style}: center は solid・dash・None のどれか: {center_kind}")
+    if center_kind not in ("solid", "dash", "dash_wide", None):
+        raise SystemExit(f"[road_sheet] {style}: center は solid・dash・dash_wide・None のどれか: {center_kind}")
 
     def center(p, u=0.0):
-        """中央線（無しなら空）。破線は区切りをタイルの辺にそろえる"""
+        """中央線（無しなら空）。破線は区切りをタイルの辺にそろえる。広い破線（dash_wide。高速道路。線が長くすき間も広い。CENTER_DASHES_WIDE・CENTER_DASH_FRAC_WIDE）"""
         if center_kind is None:
             return []
+        if center_kind == "dash_wide":
+            return [(p, u, "cdash_wide")]
         return [(p, u, "cdash")] if center_kind == "dash" else [(p, u)]
 
     both = lambda p: [(p, -EDGE_LINE)] + center(p) + [(p, EDGE_LINE)]  # 両側の白線と中央線
@@ -1667,7 +1670,7 @@ def _tunnel_sheet(kind="track", profile="new", sheet=None, label="100", road_pro
     pre = (sheet or "expwy_tunnel") if expwy else (sheet or "tunnel")
     if expwy and sheet:
         ck = road_prof.get("center", "solid")
-        road_lines = lambda p: [(p, -EDGE_LINE)] + ([] if ck is None else [(p, 0.0, "cdash") if ck == "dash" else (p, 0.0)]) + [(p, EDGE_LINE)]
+        road_lines = lambda p: [(p, -EDGE_LINE)] + ([] if ck is None else [(p, 0.0, {"dash": "cdash", "dash_wide": "cdash_wide"}[ck]) if ck in ("dash", "dash_wide") else (p, 0.0)]) + [(p, EDGE_LINE)]
     else:
         road_lines = lambda p: [(p, -EDGE_LINE), (p, 0.0), (p, EDGE_LINE)]
     set_anchor(ROAD_CY if expwy else 128 + BALLAST_DY)

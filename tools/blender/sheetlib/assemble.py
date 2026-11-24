@@ -43,7 +43,9 @@ from .wall_parts import (  # noqa: F401
 )
 from .road_parts import (  # noqa: F401
     CENTER_DASHES,
+    CENTER_DASHES_WIDE,
     CENTER_DASH_FRAC,
+    CENTER_DASH_FRAC_WIDE,
     LINE_W,
     STOP_LINE_W,
 )
@@ -72,6 +74,8 @@ class RoadTile:
                 out.append((path, u, STOP_LINE_W))
             elif kind and kind[0] == "cdash":
                 out += [(d, u, LINE_W) for d in tile_dashes(path, CENTER_DASHES, CENTER_DASH_FRAC)]
+            elif kind and kind[0] == "cdash_wide":
+                out += [(d, u, LINE_W) for d in tile_dashes(path, CENTER_DASHES_WIDE, CENTER_DASH_FRAC_WIDE)]
             else:
                 out.append((path, u, LINE_W))
         return out

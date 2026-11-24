@@ -1,4 +1,4 @@
-// AMI の踏切の見本（#111）: 線路 4 種 × 道路 3 種の 12 組の踏切を、道路が南北の向き（H 線）と東西の向き（V 線）で敷く。
+// AMI の踏切の見本（#111）: 線路 4 種 × 道路 4 種の 16 組の踏切を、道路が南北の向き（H 線）と東西の向き（V 線）で敷く。
 // 検証用の flat_512_left_v64.sve に、温暖側 ORIGINS[0] と降雪側 ORIGINS[1] の 2 か所へ同じ並びで敷く。降雪側は敷いた後に一帯を降雪に塗り直す。
 // 使い方（アドオンのディレクトリで）: ingame/crossing_sample.sh が流す。返り値の先頭が ok なら全部敷けた。続けて [check] の行。
 //
@@ -11,11 +11,11 @@
 // [check] の行: 踏切ごとに、線路と道路の way の名前と、両方が踏切になっているか（is_crossing）。踏切の物の名前は script から読めない
 //   （crossing_t の get_name は固定の "Kreuzung"）ので、どの踏切が選ばれたかは画面で見る
 local TRACKS = ["ami_rail_ballast", "ami_rail_concrete", "ami_rail_ladder", "ami_rail_slab"];
-local ROADS = ["ami_road_local", "ami_road_general", "ami_road_expressway"];
+local ROADS = ["ami_road_local", "ami_road_general", "ami_road_trunk", "ami_road_expressway"];
 local ORIGINS = [[20, 24], [276, 24]];
 local SNOW = 1;
 local START = 10, SP = 6;
-local LEN = START + 12 * SP + 4;
+local LEN = START + 16 * SP + 4;
 local VX = 4, VY = 12;
 local pl = player_x(0);
 local marker = command_x(tool_set_marker);
@@ -41,15 +41,15 @@ function state(x, y) {
 function lay_line(tag, p, q, road_first) {
   local s = "";
   if (road_first)
-    for (local k = 0; k < 12; k++)
+    for (local k = 0; k < 16; k++)
       s += r(tag + " road " + k, command_x.build_way(pl, q(START + k * SP, -2), q(START + k * SP, 2), way_desc_x(ROADS[k / 4]), true));
   local first = way_desc_x(TRACKS[0]);
   s += r(tag + " head", command_x.build_way(pl, p(0), p(START - 3), first, true));
-  for (local k = 0; k < 12; k++) {
+  for (local k = 0; k < 16; k++) {
     local i = START + k * SP;
     local td = way_desc_x(TRACKS[k % 4]), rd = way_desc_x(ROADS[k / 4]);
     if (td == null || rd == null) { s += tag + " desc=[missing " + TRACKS[k % 4] + " " + ROADS[k / 4] + "]\n"; continue; }
-    s += r(tag + " track " + k, command_x.build_way(pl, p(i - 3), p(k == 11 ? LEN : i + 3), td, true));
+    s += r(tag + " track " + k, command_x.build_way(pl, p(i - 3), p(k == 15 ? LEN : i + 3), td, true));
     if (!road_first) s += r(tag + " road " + k, command_x.build_way(pl, q(i, -2), q(i, 2), rd, true));
   }
   return s;
@@ -63,7 +63,7 @@ function lay(ox, oy) {
   local vq = function(i, d) { return coord3d(ox + VX + d, oy + VY + i, 0); };
   s += lay_line("H", h, hq, false);
   s += lay_line("V", v, vq, true);
-  for (local k = 0; k < 12; k++) {
+  for (local k = 0; k < 16; k++) {
     local i = START + k * SP;
     local label = short(TRACKS[k % 4]) + "/" + short(ROADS[k / 4]);
     s += r("label H " + k, marker.work(pl, hq(i, -4), label));

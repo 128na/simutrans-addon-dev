@@ -71,6 +71,7 @@ VALUES = {
     "ami_rail_slab": dict(waytype="track", speed=480, cost=40000, maintenance=800, intro_year=2000),
     "ami_road_local": dict(waytype="road", speed=40, cost=5000, maintenance=100, intro_year=1900),
     "ami_road_general": dict(waytype="road", speed=120, cost=8000, maintenance=200, intro_year=1930),
+    "ami_road_trunk": dict(waytype="road", speed=240, cost=14000, maintenance=350, intro_year=1960),  # 値は確定（#257。2026-11-24、ユーザーの判断）
     "ami_road_expressway": dict(waytype="road", speed=360, cost=20000, maintenance=500, intro_year=1990),
     # 跨座式モノレール（#113）。値は #110 の一覧（在来線の高架と同じ費用・維持費。速さは pak128 のモノレールの車両の最高 150）
     "ami_monorail_straddle": dict(waytype="monorail_track", speed=150, cost=30000, maintenance=600, intro_year=1900),
@@ -645,7 +646,7 @@ def sidewalk_wall_dat_text(name, sheet, values=None, kind="歩道の柵"):
 
 
 # ---------------------------------------------------------------- 踏切（線路 × 道路。#111）
-# 線路 4 種 × 道路 3 種の 12 個（catalog.CROSSINGS）。本体は踏切を waytype の組と速さだけで選ぶ（dataobj/crossing_logic.cc の get_crossing。
+# 線路 4 種 × 道路 4 種の 16 個（catalog.CROSSINGS）。本体は踏切を waytype の組と速さだけで選ぶ（dataobj/crossing_logic.cc の get_crossing。
 # way の名前は見ない）ので、組ごとに速さの合う踏切を置く。絵は道路の種類ごとのシート（catalog.crossing_sheet）で、線路の 4 種で同じ。
 # 値は仮（#110 で決める）: 速さは両方の way の最高速度（踏切で速度を落とさない）、登場年は 2 つの way の遅い方、音なし（iss と同じ sound=-1）。
 # シートの並び（sheetlib の crossing.py）: 列 = (道路の向き, 閉じた絵か)、行 0・1 が夏の奥・手前、行 2・3 が雪の奥・手前。
