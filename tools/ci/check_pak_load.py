@@ -39,6 +39,7 @@ ERRORS = [
     (re.compile(r"Reading addon object data failed"), "アドオンの物を読めなかった"),
     (re.compile(r"cannot resolve"), "参照切れ"),
     (re.compile(r"sent query:"), "使用状況を外へ送った（settings.xml を消せていない）"),
+    (re.compile(r"An error occurred within a script"), "scenario の実行の誤り（API の名前の違いなど）"),
 ]
 # 読み込みが終わった合図（ゲームの起動の最後）。pakset が無い・言語が無いときも出るので、これだけでは通さない（READ も要る）
 DONE = re.compile(r"modal_dialogue:\s+called without a display driver")
@@ -173,7 +174,10 @@ def makeobj_names(makeobj, paks):
     """makeobj list の (種類, 名前) の集合と、比べない種類ごとの件数。pak ごとに別々に呼ぶ"""
     names, skipped = set(), {}
     for p in paks:
-        out = subprocess.run([makeobj, "list", p], capture_output=True, text=True, encoding="utf8", errors="replace", timeout=60)
+        try:
+            out = subprocess.run([makeobj, "list", p], capture_output=True, text=True, encoding="utf8", errors="replace", timeout=60)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            sys.exit(f"[pak-load] makeobj を動かせない（--makeobj {makeobj}）: {e}")
         if out.returncode != 0:
             sys.exit(f"[pak-load] makeobj list が失敗: {p}\n{out.stdout}{out.stderr}")
         rows = 0
@@ -215,16 +219,20 @@ def compare_names(lines, expected, base):
     if timeline:
         bad.append("年表（timeline）が有効（intro_year が先の物が一覧に出ず、比べられない）")
     for t, n in sorted(expected - got):
-        bad.append(f"pak にあるが登録されていない: {t} {n}")
+        bad.append(f"pak にあるが登録されていない: {t} {n}" + ("（アイコンの無い way は一覧に出ない）" if t == "way" else ""))
     for t, n in sorted(got - base - expected):
         bad.append(f"pak に無いのに登録されている: {t} {n}")
     return bad
+
+
+LAST_BAD = []  # 直前の report の失敗の理由（自己確認が文面を照合する）
 
 
 def report(lines, end, rc, paks, secs, expected=None, base=None, skipped=None):
     bad = judge(lines, end, rc, paks)
     if expected is not None and end == "done":
         bad += compare_names(lines, expected, base)
+    LAST_BAD[:] = bad
     print(f"[pak-load] {len(paks)} pak, {len(lines)} 行, {secs:.1f} 秒, 終わり方 {end}"
           + (f", 名前の一覧: {len(expected)} 個を比べた" if expected is not None else "")
           + (f"（比べない種類: {', '.join(f'{k} {v}' for k, v in sorted(skipped.items()))}）" if skipped else ""))
@@ -344,6 +352,14 @@ def drop_last_object(data):
     return bytes(b)
 
 
+# 自己確認で、失敗の理由に含まれるはずの文字列（別の理由で失敗していても通らないように）
+WANT_MSG = {"空のファイル": "unexpected end of file", "ROOT の大きさ": "ROOT must have size 0", "参照切れ（xref）": "cannot resolve",
+            "名前の重複（同じ pak を 2 本）": "is overlaid",
+            "登録されない物が 1 つ（ROOT の最後の物を削る）": "pak にあるが登録されていない",
+            "半分で切れた pak": "pak にあるが登録されていない",
+            "余る物が 1 つ（makeobj list の側が 1 つ少ない）": "pak に無いのに登録されている"}
+
+
 def self_test(sim, pakset, src, timeout, makeobj=None):
     ok = judge_self_test()
     work = tempfile.mkdtemp(prefix="pakbreak_")
@@ -380,6 +396,9 @@ def self_test(sim, pakset, src, timeout, makeobj=None):
             got = check(sim, pakset, paths, timeout, makeobj, expected or [src])
             if got != want_pass:
                 print(f"  期待と違う: {'通った' if got else '失敗した'}（期待は{'通る' if want_pass else '失敗'}）")
+                ok = False
+            elif name in WANT_MSG and not any(WANT_MSG[name] in b for b in LAST_BAD):
+                print(f"  失敗の理由が違う（期待は「{WANT_MSG[name]}」を含む）")
                 ok = False
         return ok
     finally:

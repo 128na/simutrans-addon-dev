@@ -29,7 +29,7 @@
 ## 推測・未確認事項
 
 - CI（Linux）での通過。CI の `makeobj` は本家 125.0 の 60.10 で、手元は 60.12。`list` の出力の形が同じことは、PR の CI で確かめる。
-- CI の本体のコミット（`ci.env` の `HEADLESS_SIM`）は、手元で使った本体より古い。scenario の API 名（`wayobj_desc_x`・`sign_desc_x`・`building_desc_x.get_building_list`）が通ることも CI で確かめる。
+- CI の本体のコミット（`ci.env` の `HEADLESS_SIM`、`0ef69091f`）は、手元で使った本体と違う。scenario の API 名（`wayobj_desc_x`・`sign_desc_x`・`building_desc_x.get_building_list` など）が `0ef69091f` に揃うことは、`script/api/api_obj_desc.cc` のソースで確かめた（レビュー）。実行は CI で初めて確かめる。
 - 余る側の確かめは、基準との差で求めるので、pakset が pak と同じ名前を持つとき（上書き）は見えない（名前の重複の検査が先に失敗にする）。
 
 ## 結果どうしたか

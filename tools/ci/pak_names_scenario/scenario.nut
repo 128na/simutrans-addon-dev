@@ -1,6 +1,6 @@
 // 登録された物の名前を出すだけの scenario（tools/ci/check_pak_load.py が使う。#245）。
 // 出力は「PAKNAMES <種類> <名前>」の行。種類は makeobj list の種類名（way・way-object・tunnel・bridge・roadsign・building）。
-// 最後に「PAKNAMES done」を出す（check_pak_load.py が終わりの合図に使う）。地図 empty-16x16.sve は本体の tests/automated-tests/ の写し。
+// 最後に「PAKNAMES done」を出す（check_pak_load.py が終わりの合図に使う）。地図 empty-16x16.sve は、128na/simutrans の 0ef69091f の tests/automated-tests/empty-16x16.sve の写し（Simutrans 本体と同じ Artistic License）。
 map.file = "empty-16x16.sve"
 scenario.short_description = "pak names"
 scenario.author = "simutrans-addon-dev"
