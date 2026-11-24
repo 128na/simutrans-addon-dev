@@ -1,7 +1,7 @@
 AMI（AI Marunage Infrastructure）{version}
 
 旧描画位置の線路です。SIS など、レールが地面の位置にある旧描画位置の線路につなぐための別配布で、
-ほかの AMI の zip（ami-beta.2.zip）と一緒に使います。新描画位置の線路（pak128 標準・ISS に合う）には入れないでください。
+ほかの AMI の zip（ami-beta.3.zip）と一緒に使います。新描画位置の線路（pak128 標準・ISS に合う）には入れないでください。
 
 ■ 注意点
 まだベータ版です。設定値は仮です。
