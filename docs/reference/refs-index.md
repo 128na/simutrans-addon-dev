@@ -20,6 +20,7 @@ way 系アドオンを作るときに、既存のアドオンや本家のどこ�
 | `../refs/rtg` | 正方形のテクスチャを菱形のタイルへ変換する道具 | 路面の画像変換の実例 | MIT | 手法の参考。線路には使わない |
 | `../refs/Simutrans_KUTA_211212` | OTRP v30 系の改造本体の配布物 | 当時の機能の説明（`README.md`） | Artistic License に従うと記載 | 文書だけ読む。exe は動かさない |
 | `../refs/image` | 実物の構造の参考画像 | スラブ軌道、架線、車止めの形 | 記載なし | 形を文章に書き起こすだけ。リポジトリにコピーしない |
+| `../refs/simutrans-blender-kit` | Blender から Simutrans の絵と dat を作るアドオン（kit。Dkijas/simutrans-blender-kit、コミット `0bc64b7`、0.10.1）。6 つの部品を回して 16 通りの絵を作る。pak64・pak128 向け | dat の linter（kit 内の lint_dat.py）と、本体のソースから作ったキー表（`core/dat_schema.json`）、特殊色の近似の検査（`core/colorcheck.py`）、way・橋・トンネルの dat の枠。経緯は [blender-kit-survey](../records/2026-11-24_blender-kit-survey.md) | コード・テンプレートは MIT（`assets/` の 3D モデルは CC BY 4.0 などで別） | 考え方を借りる。置き換え・取り込みはしない。コードやキー表を使うときは MIT の著作権表示と許諾の文を残す（例: `tools/dat_lint_extra/LICENSE.simutrans-blender-kit`）。`assets/` は使わない。way の坂の綴り `imageup[n\|w\|e\|s]` はこの fork の writer（3・6・9・12）と合わないので借りない |
 
 ## 2. 作るものから引く
 
