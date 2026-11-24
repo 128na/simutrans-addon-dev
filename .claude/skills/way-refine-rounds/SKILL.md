@@ -43,7 +43,7 @@ description: できあがった way アドオン（線路・道路と、その�
 
 ### 4. ラウンドの版を作って撮る
 
-1. 採った葉を合わせたラウンドの設定（`ROUND_SETTINGS["<n>"]`）で対象一式を描き、pak にする（AMI は `AMI_FAMILY=<系統> python -X utf8 blender/round.py <n>` で `rounds/ami_<系統>_round<n>.pak`。在来線だけ `rounds/ami_round<n>.pak`）。ラウンド 0 は描かずに pak だけ作る（今の `src/` の絵）
+1. 採った葉を合わせたラウンドの設定（`ROUND_SETTINGS["<n>"]`）で対象一式を描き、pak にする（AMI は `AMI_FAMILY=<系統> python -X utf8 blender/round.py <n>` で `rounds/ami_<系統>_round<n>.pak`。在来線だけ `rounds/ami_round<n>.pak`）。ラウンド 0 は描かずに pak だけ作る（今の `src/` の絵）。pak を作る前に `work/rounds/<系統>/` を消さない（描いていないシートが `src/` のまま入り、ラウンドの絵に見えてしまう。#197）
 2. 見本をゲームで撮る（AMI は `SUFFIX=_round<n> EXTRA_PAKS=<ラウンドの pak> bash ingame/sample_parallel.sh`、見本は `NUT=` で系統のものを選ぶ。見本が `SUFFIX` を引けないときは、`sample.nut` の `wdx` と同じ作りを足す）。種類違い（AMI はスラブ軌道の `TRACK=`）にも効く変更なら、その見本も撮る
 3. 前のラウンドの画面と画素で比べ、違いが出た区画だけを拡大して見る。変えていない区画に差が出たら、共通部品の巻き添えを疑う
 4. くどさを撮って測る: 前のラウンドと今のラウンドを並べて `ingame/calib_capture.sh`（`WAYS_NUT`・`PAKS`・`PORT`、見本は `NUT=`）、`busy_measure.py` で測る。判定と雪の扱いはリファレンス 11 章。物差しの境は在来線の温暖の絵で合わせたもので、ほかの way には前のラウンドからの動きと手本の幅で判定し、「物差しが無い」ことを判断できない点として報告する
