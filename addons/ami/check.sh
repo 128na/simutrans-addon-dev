@@ -84,6 +84,10 @@ fi
 step "dat_linter"
 (cd "$AMI/src" && dat_linter lint --tile-size 256 .)
 
+step "dat の静かな誤り（行末の # 注記・数値でない値・行頭の空白・知らない obj・way の絵の綴りと坂。dat_lint_extra.py）"
+"$PY" -X utf8 "$ROOT/tools/dat_lint_extra/dat_lint_extra.py" --self-test
+"$PY" -X utf8 "$ROOT/tools/dat_lint_extra/dat_lint_extra.py" "$AMI/src"
+
 if [ -n "${SKIP_BUILD:-}" ]; then
   step "pak のビルドは飛ばした（SKIP_BUILD）"
 else
