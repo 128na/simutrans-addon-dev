@@ -88,6 +88,13 @@ function lay(name, ox, oy) {
   s += r("T bend", bw(pl, c(24, 18), c(28, 18), w, true));
   local wo = square_x(ox + 4, oy).get_ground_tile().find_object(mo_wayobj);
   checks += "[check] " + name + " wall at (4,0)=" + (wo == null ? "-" : wo.get_desc().get_name()) + " way=" + w.get_name() + "\n";
+  // カーブの角のタイルの壁（WALLED のとき、一般道路は ami_wall_road_single_arc、生活道路は _ell になる。#260）
+  local cw = "";
+  foreach (q in [[0, 0], [8, 0], [8, 8], [0, 8]]) {
+    local o = square_x(ox + q[0], oy + q[1]).get_ground_tile().find_object(mo_wayobj);
+    cw += " " + (o == null ? "-" : o.get_desc().get_name());
+  }
+  checks += "[check] " + name + " R1 corner walls=" + cw + "\n";
   checks += "[check] " + name + " R1 corners nw=" + dirs(ox, oy) + " ne=" + dirs(ox + 8, oy) + " se=" + dirs(ox + 8, oy + 8) + " sw=" + dirs(ox, oy + 8) + "\n";
   return s;
 }
