@@ -393,10 +393,34 @@ def merge(parts):
     return verts, faces
 
 
+class MiterPath(list):
+    """折れ線の角を、断面の幅を保ったまま折る経路（sweep がマイターで押し出す）。ふつうの経路は、角の前後の向きの平均で断面を向けるので、
+    90° の角では横幅が 1/√2 に細る。L 字の道路（AMI の生活道路のカーブ。#259）のように、角を直角に折りたい経路だけ、これで渡す"""
+
+
+def _miter_normal(path, i):
+    """MiterPath の頂点 i の断面の横向き（単位ベクトル）と、横幅の倍率（角の外側で 1/cos(折れ角の半分)）"""
+    ns = []
+    if i > 0:
+        t = (path[i] - path[i - 1]).normalized()
+        ns.append(Vector((t.y, -t.x, 0)))
+    if i < len(path) - 1:
+        t = (path[i + 1] - path[i]).normalized()
+        ns.append(Vector((t.y, -t.x, 0)))
+    if len(ns) == 1:
+        return ns[0], 1.0
+    m = (ns[0] + ns[1]).normalized()
+    return m, 1.0 / m.dot(ns[0])
+
+
 def sweep(path, profile):
     """平面上の折れ線 path に沿って断面 profile(u=横, v=高さ) を押し出す。"""
     rings = []
     for i, p in enumerate(path):
+        if isinstance(path, MiterPath):
+            n, scale = _miter_normal(path, i)
+            rings.append([Vector((p.x, p.y, 0)) + n * (u * scale) + Vector((0, 0, v)) for u, v in profile])
+            continue
         a = path[max(i - 1, 0)]
         b = path[min(i + 1, len(path) - 1)]
         t = (b - a).normalized()

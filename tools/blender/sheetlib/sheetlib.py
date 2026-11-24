@@ -17,6 +17,7 @@ from .core import (  # noqa: F401
     DIAG_OVERFILL,
     FLAT,
     H,
+    MiterPath,
     NEAR_AXIS,
     ONLY,
     ORTHO,
@@ -194,6 +195,9 @@ def _road_sheet(style="street"):
         （どちらも優先道路に見せない）。無ければ、東西の中央線と両側の点線（高速道路の十字の作り）
     corner_arcs: 真なら分岐の絵（T字・十字・1・2・優先道路の十字）で、隣り合う腕の路側線を角で円弧（EDGE_CORNER_R）でつなぐ
     switch_diag: 真なら switch_ruts の轍の枝を、カーブでなく斜めの直線にする（線路の diag_curves と同じ。高速道路だけ。#205）
+    curve: expressway（歩道なし）の道路で、カーブのセル（行 2 の列 5〜8）を描く形（#259）。"arc" は 4 分の 1 の円弧（路面軌道と同じ。
+        タイルの角を中心に半径がタイルの半分）、"ell" は 2 辺の中点から中心まで直線で来て、中心で直角に折れる L 字（MiterPath）。
+        無ければ描かず、dat の image[sw] などは斜めのセルを指す（高速道路・幹線道路。壁・基盤・高架・橋は、この版では持たない）
     switch_ruts: 真なら T字の分岐の絵の 1・2 を、どちらも「1」と同じ T字の白線にし、走行跡（轍）を直進と右左折のカーブ 1 本だけにする
         （カーブは下の SWITCH_RUT_ARCS）。1 と 2 の違いは轍だけ
     drive_left: priority_cross の停止線の通行の側。真（既定）なら左側通行、偽なら右側通行（停止線が進入する車線の反対の半分へ移る）
@@ -367,6 +371,22 @@ def _road_sheet(style="street"):
         })
         for pos in ((2, 5), (2, 6), (2, 7), (2, 8)):
             del jobs[pos]
+        curve_kind = prof.get("curve")
+        if curve_kind not in (None, "arc", "ell"):
+            raise SystemExit(f"[road_sheet] {style}: curve は arc・ell・None のどれか: {curve_kind}")
+        if curve_kind == "arc":
+            curve_paths = {"curve_sw": arc_sw, "curve_nw": arc_nw, "curve_ne": arc_ne, "curve_se": arc_se}
+        elif curve_kind == "ell":
+            # L 字: 2 辺の中点から中心まで直線で来て、中心で直角に折れる。辺の外へは円弧・直線と同じ PATH_EXT だけ延ばす
+            def ell_path(a, b):
+                a, b = Vector(a), Vector(b)
+                return MiterPath([a + a.normalized() * PATH_EXT, Vector((0, 0)), b + b.normalized() * PATH_EXT])
+            curve_paths = {"curve_sw": ell_path(S, W), "curve_nw": ell_path(N, W), "curve_ne": ell_path(N, E),
+                           "curve_se": ell_path(S, E)}
+        else:
+            curve_paths = {}
+        for (pos, (cname_, path_)) in zip(((2, 5), (2, 6), (2, 7), (2, 8)), curve_paths.items()):
+            jobs[pos] = (cname_, [path_], both(path_), None)
         if prof.get("switches"):
             # 分岐の絵（OTRP の switch 画像）。行 2 の列 10〜14 が「1」（本体の nw=false）、行 3 が「2」（nw=true）。並びは nse・new・nsw・sew・nsew
             # （線路の track_sheet と同じ）。道路の自動選択（本体の weg_t::select_switch_road_image）は、T字の枝の側の隣も T字（sew は十字も）で、
