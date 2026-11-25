@@ -12,6 +12,7 @@ from mathutils import Vector
 
 from .core import (  # noqa: F401
     H,
+    SCALE,
     along,
     Part,
     _SNOW,
@@ -259,7 +260,7 @@ def asphalt_skin(tag, lo, hi, spec=None, ramp=(0.35, 0.65), wear_t=1.0):
     同じ 2 色（lo・hi）から作る（走行跡と雪のぼかしは路面の色から混ぜるので、路面だけ替えると暗い路面に明るい帯が乗る）。
     blender-poc の高速道路（tag="expwy"、暗く青みのある色）と AMI の道路 3 種が使う。
     ramp は路面のまだらの色の段の位置（noisy_material の ramp）、wear_t は走行跡の寄せ具合（WEAR_LAYERS の t）にかける倍率"""
-    return dict({"asphalt": lambda: noisy_material(f"{tag}_asphalt", lo, hi, scale=60, rough=0.9, spec=spec, ramp=ramp)},
+    return dict({"asphalt": lambda: noisy_material(f"{tag}_asphalt", lo, hi, scale=60 * SCALE, rough=0.9, spec=spec, ramp=ramp)},
                 **{f"wear{i}": _wear_material(tag, lo, hi, t * wear_t, spec) for i, (_, t, _) in enumerate(WEAR_LAYERS)},
                 **{n: _slush_material(tag, lo, hi, t, spec) for n, _, t, _, _ in SNOW_LAYERS if t is not None})
 
