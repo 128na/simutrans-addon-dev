@@ -263,6 +263,8 @@ ROADSIGN_KEYS = ("one_way", "stop", "speed_40", "speed_60", "speed_80", "min_50"
 ROADSIGNS = {f"{PREFIX}sign_{_k}": _k for _k in ROADSIGN_KEYS}
 # 路面の横断歩道（#162）: 柱の無い路面の標示。両方向と一方通行（single_way は物ごとの設定で、1 マスに標識は 1 つしか置けないので分ける）
 ROADSIGN_CROSSWALKS = {f"{PREFIX}sign_crosswalk": False, f"{PREFIX}sign_crosswalk_one_way": True}  # 名前 → 一方通行か
+# 線路の信号（roadsign の is_signal=1・waytype=track。#278。ADR 0014 の第 5 弾は閉塞信号 1 種）。名前の頭 ami_rail_ で、build.py が線路の pak（ami_rail.pak）に入れる
+RAIL_SIGNAL = f"{PREFIX}rail_signal"
 
 # カーブを斜めの絵で表すシート（pak128 標準の線路と同じ。dat の image[sw]・[nw]・[ne]・[se] が diagonal と同じセルを指す）。
 # 唯一の定義。dat を書く ami_dat.py（DIAG_CURVES）と、判定・比較の道具が読む addon_config.py（DIAG_CURVE_SHEETS）がここから引く（#227。別々に書いて片方を直し忘れた）
@@ -343,7 +345,7 @@ SCALED_WALLS = (
     + SIDEWALK_WALLS + tuple(SIDEWALK_POLES) + SCALED_TWIN_DATS
 )
 SCALED_PIERS = tuple(pier_rail(_g, _o) for _o in (False, True) for _g in (False, True)) + (PIER_ROAD,)
-SCALED_OTHERS = tuple(EMBANKMENTS) + (SIDEWALK_ELEV,)
+SCALED_OTHERS = tuple(EMBANKMENTS) + (SIDEWALK_ELEV, RAIL_SIGNAL)
 
 # D: 運河・踏切・車庫・操車場・モノレール。踏切の dat（線路 × 道路・水路。16 + 7）は絵のシートを持たず、踏切のシート 8 枚（道路の種類ごとと線路で共通の水路のもの）を指す
 SCALED_CANALS = (CANAL, CANAL_SCENIC)

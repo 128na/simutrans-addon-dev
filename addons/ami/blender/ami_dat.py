@@ -915,6 +915,32 @@ def crosswalk_dat_text(name, one_way):
     return NL.join(out) + NL
 
 
+# 線路の信号（#278。閉塞信号）。値は #110 の一覧と道路標識に合わせる（cost は roadsign なので cr 単位）。画像は 向き + 状態 * 4 の 8 枚（obj/signal.cc。状態 0 が停止、1 が進行）
+RAIL_SIGNAL_COST = 500
+RAIL_SIGNAL_STATES = 2
+
+
+def rail_signal_dat_text(name):
+    out = [
+        f"# AMI: {name}（CC BY 4.0）。線路の閉塞信号。シートは blender/render.py が描く（sheetlib の roadsign.py。#278）",
+        "obj=roadsign",
+        f"name={name}",
+        "copyright=AMI (CC BY 4.0)",
+        "waytype=track",
+        "is_signal=1",
+        f"intro_year={ROADSIGN_INTRO_YEAR}",
+        "intro_month=1",
+        "retire_year=2999",
+        "retire_month=1",
+        f"cost={RAIL_SIGNAL_COST}",
+        f"offset_left={ROADSIGN_OFFSET_LEFT}",
+        f"icon=> {name}.{ROADSIGN_ICON_CELL}",
+        f"cursor={name}.{ROADSIGN_CURSOR_CELL}",
+    ]
+    out += [f"image[{s * 4 + i}]={name}.{s}.{i},{ROADSIGN_OFFSET}" for s in range(RAIL_SIGNAL_STATES) for i in range(4)]
+    return NL.join(out) + NL
+
+
 def put(name, text):
     """dat を書く。pak128 以外の大きさは、catalog.SCALED_SHEETS の物だけ（#266。#261 の B・C・D で全部に広げた）"""
     if sheet_settings.SCALE != 1 and name not in catalog.SCALED_SHEETS:
@@ -982,6 +1008,7 @@ def main():
         put(name, roadsign_dat_text(name, key))
     for name, one_way in catalog.ROADSIGN_CROSSWALKS.items():
         put(name, crosswalk_dat_text(name, one_way))
+    put(catalog.RAIL_SIGNAL, rail_signal_dat_text(catalog.RAIL_SIGNAL))
 
 
 if __name__ == "__main__":

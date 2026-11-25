@@ -37,6 +37,7 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 | 車庫 | `ami_rail_depot`・`ami_tram_depot`・`ami_road_depot`・`ami_monorail_depot`・`ami_canal_depot`（ADR 0008） |
 | 操車場 | `ami_rail_yard`（#115） |
 | 道路の停留所 | `ami_road_bus_stop`（旅客・郵便）・`ami_road_truck_stop`（貨物）（ADR 0014。#277） |
+| 線路の信号 | `ami_rail_signal`（閉塞信号 1 種。ADR 0014。#278） |
 
 dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`・`ami_rail_concrete`・`ami_rail_concrete_base_<版>`（4 版）・`ami_rail_concrete_elev_<版>`（4 版）・`ami_rail_concrete_bridge`・`ami_rail_concrete_tunnel`・`ami_rail_ladder`・`ami_rail_ladder_base_<版>`（4 版）・`ami_rail_ladder_elev_<版>`（4 版）・`ami_rail_ladder_bridge`・`ami_rail_ladder_tunnel`・`ami_road_local`・`ami_road_general`・`ami_road_expressway`・道路それぞれの `_base_<版>`（幹線道路・高速道路は 4 版、一般道路・生活道路は `single` だけ。#260）・`_elev_<版>`（4 版）・`_bridge`・`_tunnel`・`ami_wall_road_<版>`（4 版）・`ami_wall_road_twin`・`ami_wall_road_front_divider`・`ami_wall_road_center_divider`・`ami_wall_road_twin_divider`・`ami_pier_road`・`ami_tram`・`ami_embankment_front`・`ami_embankment_back`・`ami_sidewalk`・`ami_sidewalk_<舗装>`（3 種）・`ami_sidewalk_elev`・`ami_wall_sidewalk_<版>`（3 版）・`ami_sidewalk_pole_<版>`（2 版）・`ami_wall_sidewalk_<版>_pole`（2 版）・`ami_monorail_straddle`・`ami_monorail_straddle_elev_<版>`（3 版）・`ami_monorail_straddle_tunnel`・`ami_monorail_suspended_<版>`（3 版）・`ami_monorail_suspended_elev_<版>`（3 版）・`ami_monorail_power`・`ami_monorail_suspended_power`・`ami_canal`・`ami_canal_scenic`・水路の踏切 7 つ（`ami_crossing_<線路|道路>_canal`）・車庫 5 つ・`ami_rail_yard`・`ami_road_bus_stop`・`ami_road_truck_stop`。
 
@@ -873,6 +874,22 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
   - 確認（2026-11-25、`sim-WinGDI64-OTRPv64.exe`・`flat_512_left_v64.sve`、道路 3 種 × 2 気候の 36 か所）: すべて駅になり、バス停は旅客・郵便だけ、荷役所は貨物だけを扱った。3 タイルの連なり（南北・東西・歩道つき）は 1 つの駅になり、建物は AMI の物だった（2026-11-25 にレビューの指摘で見本の検査を足して再確認）。画像は `docs/road_stop277_temperate_AB.png`（生活道路の南北のバス停と荷役所）、`road_stop277_temperate_D.png`（歩道つき）、`road_stop277_snow_C.png`（降雪側の東西）
   - 高速道路（`ami_road_expressway`）の上、斜め・坂・高架の上は確かめていない。右側通行の地図でも確かめていない（検証の地図は左側通行の `flat_512_left_v64`）。ホームは通行の向きによらず、見える側（南北の道路なら東、東西の道路なら南）に固定で、左右で絵は変わらない
   - 建てた直後は本体の建設中の絵（黄と黒の縞）が出る。ゲームを進めてから（速さ 64 で約 20 秒）撮る
+
+### 線路の信号の作り（#278）
+
+[ADR 0014](../../docs/adr/0014-ami-scope-stations-and-signals.md) の第 5 弾の信号。閉塞信号 1 種 `ami_rail_signal`（`obj=roadsign`・`waytype=track`・`is_signal=1`）。前方注意・優先・長閉塞・選択信号は後（ADR 0014）。pak128 の `rail_signals` は測るだけで、絵は流用していない。
+
+- 画像は 8 枚（`image[0]〜[7]`）。番号は `向き + 状態 * 4`（本体の `obj/signal.cc`。向きは道路標識と同じ北・南・西・東の並び、状態 0 が停止（赤）、1 が進行（青））。シートは 2 行 × 5 列（行 0 が状態 0、行 1 が状態 1 の 4 向き、列 4 がアイコン・カーソル）。柱の位置と板（灯器）の押し方は道路標識と同じ（`sheetlib/roadsign.py` の `_pole_cell`）で、灯器は二灯式（上が赤、下が青。点いていない灯は暗い）。裏から見える向きは灰色の板
+- 左右: 線路の信号は本体の `signals_on_left`（既定は右）で決まり、ずらしは `offset_left`（既定 14。単位はタイルの幅の 1/64 なので 256 でも 14。道路標識と同じ）。`ROADSIGN_OFFSET_LEFT` をそのまま使った。`signals_on_left` を立てた確認はしていない
+- 雪の絵は無い。roadsign は季節の絵を持たない（`roadsign_writer.cc`・`roadsign_desc.h` に季節の枝が無い。道路標識と同じ）。降雪側でも同じ絵が出る（確認画像）。issue #278 の受け入れ条件の「雪の絵が出る」は、この意味では満たせない
+- 値: 費用 500 cr（roadsign の `cost` は cr 単位）、登場年 1900、引退 2999 年。維持費のキーは無い（`roadsign_writer.cc`）。電化の組（画像 12 枚）は作らない: 本体が offset 8・12 を使うのは前方注意・優先信号だけで、閉塞信号は 8 枚で足りる（`obj/signal.cc`）。架線は壁の way-object が持つので、柱と重ならないかは後の種類で見る
+- pak は名前の頭 `ami_rail_` で `ami_rail.pak` に入る。128・256 とも `SHEET_PAK_SIZE` で同じ道具で描く（`catalog.SCALED_OTHERS` に入れた）。256 の dat は `src256/` に置き、PNG はコミットしない。アイコンは道路標識と同じ決まり（板を 2 倍にした絵）で、色は線路の緑
+- 見本は `ingame/signal_sample.nut`（状態の読み取りは `signal_status.nut`）。`game.sh` に `NUT=` で渡す。区画: P 線（列車 1 本）、Q 線（列車 2 本。1 本目は終点で止まり続ける）、R・S（絵を見る信号の列。降雪側にも敷く）、T（路面軌道）、U（踏切）
+  - 確認（2026-11-25、`sim-WinGDI64-OTRPv64.exe`・`flat_512_left_v64.sve`、`docs/rail_signal278_pak128_AB.png`・`_CD.png`）: 信号は置け、列車が通る間は状態が 1（進行）に変わり、通り過ぎると 0 に戻った。P 線の列車（160 km/h）は信号の前で減速せずに通り抜けた。Q 線は、1 本目が終点の駅で止まっている間、2 本目が信号の前で停止（速度 0）し、1 本目を消すと発車して信号を通り抜けた
+  - 1 マスに標識は 1 つしか置けない: 線路 × 道路の踏切では、信号を置いた後の道路標識も、道路標識を置いた後の信号も「Tool has no effects」で拒まれた（信号と道路標識は同じタイルに置けない）。路面軌道（`ami_tram`、`waytype=tram_track`）の上には信号が置けた（`has_way(wt_rail)` が真で、信号の絵も出た）
+  - 256: `docs/rail_signal278_pak256.png`。256 の線路・道路のシートはほかの作業（#210）で描き直し中のため、信号の pak（`dist256/ami_rail.pak`）だけを pak256poc の地面と pak256poc の線路で確かめた。信号が置けて、タイルに対する位置は 128 と同じ。AMI の 256 の線路との組み合わせ、256 での列車の閉塞は確かめていない
+  - 確かめていない: 右側通行の地図、`signals_on_left` を立てた地図、坂・斜め・高架・橋・トンネルの上、複数の閉塞が連なる線での長い運転
+
 
 ### アイコン・カーソル（#25）
 
