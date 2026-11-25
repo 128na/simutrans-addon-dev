@@ -856,7 +856,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 値: 費用 80000（800 cr）、維持費 3600、`level=2`、登場年 1900、引退 2999 年（`blender/ami_dat.py` の `ROAD_STOP_VALUES`）。本体の道路の停留所の既定（`building_desc.cc`: 費用 = `cost_multiply_roadstop`（pak128・pak256 とも 400 cr）× level、維持費 = `maintenance_building`（1800）× level）を明示した値で、`cost`・`maintenance` を書かない pak256 の仮の物と同じ額になる（建てたときの実額は測っていない）。`noinfo=1`・`allow_underground=2`・`needs_ground=1`。下に敷く道路の費用は別にかかる
 - 大きさ: 128 でも 256 でも同じ道具で描く（`SHEET_PAK_SIZE`。#261）。256 の dat は `src256/` に置く（PNG はコミットしない）。`catalog.SCALED_DEPOTS` に入れてあり、`check_scaled.py` が dat と突き合わせる。箱積み駅舎の箱 1 段に収まるかは `check_depot.py` が見る
 - pak は名前の頭 `ami_road_` で `ami_road.pak` に入る。アイコンは左上に「停」（バス停）・「荷」（荷役所）。名前の訳は `release/text/ja_ami.tab`
-- 見本は `ingame/road_stop_sample.nut`（`game.sh` に `NUT=` で渡して流し、`SPOTS` で撮る）。道路 3 種（生活・一般・幹線）に、南北の 1 タイルと 3 タイル、東西、歩道（`ami_sidewalk`）つきの区画を、温暖側と降雪側に敷く。駅になること・旅客・郵便・貨物の扱いを `[check]` で返す
+- 見本は `ingame/road_stop_sample.nut`（`game.sh` に `NUT=` で渡して流し、`SPOTS` で撮る）。道路 3 種（生活・一般・幹線）に、南北の 1 タイルと 3 タイル、東西、歩道（`ami_sidewalk`）つきの区画を、温暖側と降雪側に敷く。駅になること・旅客・郵便・貨物の扱いを `[check]` で返す（使った本体のスクリプト API と、連なりは端から順に建てる決まりは [script-api.md](../../docs/reference/script-api.md)）
   - 確認（2026-11-25、`sim-WinGDI64-OTRPv64.exe`・`flat_512_left_v64.sve`、道路 3 種 × 2 気候の 36 か所）: すべて駅になり、バス停は旅客・郵便だけ、荷役所は貨物だけを扱った。3 タイルの連なり（南北・東西・歩道つき）は 1 つの駅になり、建物は AMI の物だった（2026-11-25 にレビューの指摘で見本の検査を足して再確認）。画像は `docs/road_stop277_temperate_AB.png`（生活道路の南北のバス停と荷役所）、`road_stop277_temperate_D.png`（歩道つき）、`road_stop277_snow_C.png`（降雪側の東西）
   - 高速道路（`ami_road_expressway`）の上、斜め・坂・高架の上は確かめていない。右側通行の地図でも確かめていない（検証の地図は左側通行の `flat_512_left_v64`）。ホームは通行の向きによらず、見える側（南北の道路なら東、東西の道路なら南）に固定で、左右で絵は変わらない
   - 建てた直後は本体の建設中の絵（黄と黒の縞）が出る。ゲームを進めてから（速さ 64 で約 20 秒）撮る
