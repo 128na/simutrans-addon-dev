@@ -31,7 +31,7 @@
 import os
 import sys
 
-from check_icons import CELL, SCALE, SRC, TRANSPARENT, cell_of, fmt, read_dats, read_rows, size_error
+from check_lib import CELL, SCALE, SRC, TRANSPARENT, cell_of, fmt, read_dats, read_rows, size_error
 
 # 画素で書いた値は、pak128 の値に SCALE（pak の大きさの倍率。256 は 2）を掛ける（#261）。形の座標は pak128 の 128px で書き、expected が SCALE 倍に写す
 TOL = 2 * SCALE          # 輪郭の許し（px）

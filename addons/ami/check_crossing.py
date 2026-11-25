@@ -9,11 +9,10 @@
 ここでは、控えのセルを今の道路・運河のシートから読み直して sha256 を比べ、違えば「道路のシートの後に踏切を描き直す」と言って 1 で終わる。
 """
 import glob
-import hashlib
 import os
 import sys
 
-from check_icons import CELL, SRC, read_rows
+from check_lib import CELL, SRC, cell_digest, read_rows
 
 STAMP_SUFFIX = ".road_cells.txt"  # tools/blender/sheetlib/crossing.py の ROAD_STAMP_SUFFIX と同じ
 # 控えに無ければならないセル（道路・運河の直線の ns・ew と、その雪の行。blender/render.py の crossing_sheet の既定）。
@@ -29,14 +28,6 @@ def expected_sources(name):
         rest = name[len("ami_crossing_canal_"):]
         return {"ami_canal.png"} | ({"ami_" + rest} if rest.startswith("road_") else set())
     return {name.replace("ami_crossing_", "ami_")}
-
-
-def cell_digest(rows, row, col):
-    """read_rows の行（RGB）から、セル (row, col) の画素を上の行から並べた sha256"""
-    h = hashlib.sha256()
-    for y in range(row * CELL, (row + 1) * CELL):
-        h.update(bytes(rows[y][col * CELL * 3:(col + 1) * CELL * 3]))
-    return h.hexdigest()
 
 
 def main(src):
