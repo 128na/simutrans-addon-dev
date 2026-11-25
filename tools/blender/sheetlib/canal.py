@@ -18,7 +18,7 @@ import numpy as np
 
 from . import sheetlib as _s
 from .cells import ROAD_CY, _ground_mask, exits_of, make_sheet, render_cell, save_rgba
-from .core import H, LAYOUT, ONLY, TILE, _SNOW, apply_slope, boolean, clear_models, make_material, mesh_object, noisy_material, set_anchor
+from .core import H, LAYOUT, ONLY, SCALE, TILE, _SNOW, apply_slope, boolean, clear_models, make_material, mesh_object, noisy_material, set_anchor
 
 # ---------------------------------------------------------------- 寸法（部品の 1 単位 ≈ 9px。高さ 1 単位 ≈ 7.8px）
 CANAL_BANK = 0.5         # タイルの辺から水面の縁（護岸の内の面）まで。iss・pak128 と同じく水面をタイルいっぱい近くにする
@@ -53,7 +53,7 @@ SCENIC_STYLE = dict(bank=0.35, coping=0.3, water_z=-13 / 16 * H, wall_bottom=-13
                     # 蓋は地面の高さから厚み分だけ下まで（口は暗く見える）
                     culvert=(CULVERT_LINTEL, CULVERT_THICK))
 CANAL_STYLES = {"road": ROAD_STYLE, "scenic": SCENIC_STYLE}
-SCENIC_DEPTH_PX = 13      # 景観の運河の水面の深さ（画素。つなぎ目の持ち分を下へ広げる量）
+SCENIC_DEPTH_PX = 13 * SCALE  # 景観の運河の水面の深さ（画素。つなぎ目の持ち分を下へ広げる量。高さ 1 段 = 16px の 13/16 なので pak の大きさに比例。#261 の D）
 LOCK_GATE = 0.25         # 閘門の扉の半分の厚み（坂の向きの座標 u = ±LOCK_GATE の間）
 LOCK_PILLAR = 0.5        # 扉枠の柱の幅（水路の幅の端から）
 LOCK_FRAME_Z = 2.2       # 扉枠の柱の高さ（上の水面側の縁から）
@@ -339,11 +339,12 @@ def _earth_sheared(name, bank, wb, slope, water, pad=CANAL_PAD, eps=CANAL_EARTH_
 
 
 def _own(cname, slope, depth_px=0):
-    """持ち分: 道路と同じ菱形（ROAD_CY）を上へ 1 行広げる（笠石の厚み）。depth_px > 0 のとき（景観の運河。水面が深い）は、
+    """持ち分: 道路と同じ菱形（ROAD_CY）を上へ SCALE 行（pak128 は 1 行）広げる（笠石の厚み）。depth_px > 0 のとき（景観の運河。水面が深い）は、
     菱形を depth_px だけ下へずらした分も足す: つながる辺の向こうの水面は、深いぶん手前のタイルの菱形の上の端へはみ出して見えるため
     （足さないと、タイルのつなぎ目に地面の帯が出る）"""
     m = _ground_mask(slope, None, ROAD_CY)
-    m[:-1] |= m[1:]
+    for _ in range(SCALE):  # 笠石の厚み 1 行は画素の値（pak の大きさに比例。#261 の D）
+        m[:-1] |= m[1:]
     if depth_px:
         base = m.copy()
         for k in range(1, depth_px + 1):

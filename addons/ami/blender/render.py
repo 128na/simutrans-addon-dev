@@ -784,7 +784,7 @@ if __name__ == "__main__":
         _asked = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
         _bad = [t for t in _asked if t not in catalog.SCALED_TARGETS]
         if _bad:
-            raise SystemExit(f"[render] pak{R.sheet_settings.PAK_SIZE} で描ける対象は catalog.SCALED_TARGETS の物だけ（#261 の D で足す。壁の単独の名前は基盤の版と一緒に描かれる）: {' '.join(_bad)}")
+            raise SystemExit(f"[render] pak{R.sheet_settings.PAK_SIZE} で描ける対象は catalog.SCALED_TARGETS の物だけ（壁の単独の名前は基盤の版と一緒に描かれる）: {' '.join(_bad)}")
         if not _asked:
             sys.argv += ["--"] + list(catalog.SCALED_TARGETS)
     R.run_targets(SHEETS, list(SHEETS))

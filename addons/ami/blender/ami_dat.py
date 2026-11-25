@@ -870,7 +870,7 @@ def crosswalk_dat_text(name, one_way):
 
 
 def put(name, text):
-    """dat を書く。pak128 以外の大きさは、catalog.SCALED_SHEETS の物だけ（#266。ほかは画素の値を大きさに合わせていない。#261 で増やす）"""
+    """dat を書く。pak128 以外の大きさは、catalog.SCALED_SHEETS の物だけ（#266。#261 の B・C・D で全部に広げた）"""
     if sheet_settings.SCALE != 1 and name not in catalog.SCALED_SHEETS:
         return
     with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
@@ -915,12 +915,11 @@ def main():
     for name, kind in catalog.MARKINGS.items():
         put(name, marking_dat_text(name, kind))
     # 分岐の追加画像の提供用の物（build.py が別の pak に作り、ex_graft.py で写す）。1 つの dat に --- で区切って並べる
-    if sheet_settings.SCALE == 1:  # pak128 以外の大きさの分岐の追加画像は #261 の D（ex）で作る
-        donors = [dat_text(n, BUILT[n], donor=True) for n in EX_WAYS]
-        donors += [wall_dat_text(n, CATENARY[n], catenary=True, donor=True) for n in EX_WAYOBJS]
-        with open(os.path.join(SRC, EX_DONORS_DAT), "w", encoding="utf8", newline=NL) as f:
-            f.write(("---" + NL).join(donors))
-        print(f"[dat] {EX_DONORS_DAT}（{len(donors)} 個）")
+    donors = [dat_text(n, BUILT[n], donor=True) for n in EX_WAYS]
+    donors += [wall_dat_text(n, CATENARY[n], catenary=True, donor=True) for n in EX_WAYOBJS]
+    with open(os.path.join(SRC, EX_DONORS_DAT), "w", encoding="utf8", newline=NL) as f:
+        f.write(("---" + NL).join(donors))
+    print(f"[dat] {EX_DONORS_DAT}（{len(donors)} 個）")
     for table, text in ((BRIDGES, bridge_dat_text), (TUNNELS, tunnel_dat_text)):
         for name, (base, sheet) in table.items():
             put(name, text(name, base, sheet))
