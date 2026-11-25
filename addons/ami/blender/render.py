@@ -772,6 +772,9 @@ SHEETS[catalog.RAIL_YARD] = lambda: R.yard_sheet(R.sheet_path(catalog.RAIL_YARD 
 # 道路の停留所（#277）: 道路の見える側の脇のホーム・積み降ろし場。形と寸法は sheetlib の road_stop.py
 for _n, (_k, _w) in catalog.ROAD_STOPS.items():
     SHEETS[_n] = (lambda n, k: lambda: R.road_stop_sheet(R.sheet_path(n + ".png"), k, R.WORK))(_n, _k)
+# 線路の駅（#279）: 線路の奥の側のホーム。同じ道具で描く
+for _n, (_k, _w) in catalog.RAIL_STATIONS.items():
+    SHEETS[_n] = (lambda n, k: lambda: R.road_stop_sheet(R.sheet_path(n + ".png"), k, R.WORK))(_n, _k)
 
 # 道路標識（#122）: 標識ごとに 1 枚。柱を描き、板の 2D の絵を押す（sheetlib の roadsign.py）
 for _n, _k in catalog.ROADSIGNS.items():

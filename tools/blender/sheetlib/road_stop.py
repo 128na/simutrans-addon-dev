@@ -21,7 +21,8 @@ import numpy as np
 
 from .cells import GROUND_CY, make_sheet, save_rgba
 from .core import CELL, TILE, TRANSPARENT, clear_models, material, merge, mesh_object, set_anchor
-from .depot import BUILDING_DROP, _depot_box, _depot_render_layer
+from .depot import BUILDING_DROP, _depot_render_layer
+from .depot import _depot_box as _depot_box_raw
 from .road_parts import ROAD_HW
 from .yard import yard_layout
 
@@ -43,6 +44,12 @@ ROAD_STOP_SHAPES = {
     "bus": dict(deck_z=0.35, ramp_steps=2, deck_rgb=(0.66, 0.66, 0.64), edge_rgb=(0.95, 0.80, 0.18)),
     # トラックの荷役所: 高い積み降ろし場に木箱と標識
     "truck": dict(deck_z=1.0, ramp_steps=4, deck_rgb=(0.56, 0.57, 0.58), edge_rgb=(0.95, 0.70, 0.10)),
+    # 線路の駅（#279）: 線路の奥の側（-x。南北なら西、東西なら北）に置く。ホームの線路の側の縁は操車場と同じ（まくらぎの端 = 1.0）。
+    # 旅客・郵便は待合の屋根と標識、貨物は木箱と標識。床は奥の絵（車両の下）なので、車両はホームの上に重なる
+    "rail_pax": dict(deck_z=0.55, ramp_steps=3, deck_rgb=(0.70, 0.69, 0.66), edge_rgb=(0.95, 0.80, 0.18),
+                     u0=1.0, u1=4.4, side=-1, roof="pax"),
+    "rail_freight": dict(deck_z=0.75, ramp_steps=3, deck_rgb=(0.56, 0.57, 0.58), edge_rgb=(0.95, 0.70, 0.10),
+                         u0=1.0, u1=4.4, side=-1, roof=None),
 }
 RS_ROOF_Z = 2.7                       # バス停の屋根の下面
 RS_ROOF_T = 0.16                      # 屋根の厚み
@@ -79,7 +86,12 @@ def build_road_stop(kind, snow, open_minus, open_plus):
     open_minus・open_plus は -y・+y の端が切れているか（斜路を付ける）"""
     s = ROAD_STOP_SHAPES[kind]
     z1 = s["deck_z"]
-    x0, x1 = PLATFORM_U0, PLATFORM_U1
+    side = s.get("side", 1)                    # 1 = +x（道路の見える側）、-1 = -x（線路の奥の側）
+    x0, x1 = s.get("u0", PLATFORM_U0), s.get("u1", PLATFORM_U1)
+    pax = s.get("roof", "pax" if kind == "bus" else None) == "pax"   # 待合の屋根を付けるか
+
+    def _depot_box(xa, xb, *rest):             # 側が -x のときは x を反転する（以下の寸法は +x 側で書く）
+        return _depot_box_raw(*((xa, xb) if side > 0 else (-xb, -xa)), *rest)
     y0, y1 = _rs_span(open_minus, open_plus)
     deck = [_depot_box(x0 + 0.3, x1, y0, y1, 0.0, z1)]
     edge = [_depot_box(x0, x0 + 0.3, y0, y1, 0.0, z1)]  # 道路の側の縁の帯（黄）
@@ -100,8 +112,8 @@ def build_road_stop(kind, snow, open_minus, open_plus):
     px, py = x1 - 0.5, y0 + 1.0 if not open_minus else 0.0
     pole = [_depot_box(px, px + RS_POST_W, py, py + RS_POST_W, z1, z1 + RS_SIGN_H)]
     plate = [_depot_box(px - 0.3, px + RS_POST_W + 0.3, py - 0.04, py + RS_POST_W + 0.04, z1 + RS_SIGN_H - 0.9, z1 + RS_SIGN_H)]
-    front += [_rs_obj("rs_pole", pole, _M_RS_FRAME), _rs_obj("rs_plate", plate, _M_RS_PLATE if kind == "bus" else _M_RS_PLATE_TRUCK)]
-    if kind == "bus":
+    front += [_rs_obj("rs_pole", pole, _M_RS_FRAME), _rs_obj("rs_plate", plate, _M_RS_PLATE if pax else _M_RS_PLATE_TRUCK)]
+    if pax:
         # 待合: 2 本の柱と屋根。背（外の縁）に板
         ya, yb = max(y0 + 0.8, -2.2), min(y1 - 0.8, 2.2)
         if yb - ya > 1.5:

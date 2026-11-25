@@ -822,19 +822,24 @@ ROAD_STOP_SNOW_ROW = 2  # sheetlib の road_stop.ROAD_STOP_SNOW_ROW と同じ
 ROAD_STOP_ICON_CELL = f"0.{ROAD_STOP_LAYOUTS}"
 ROAD_STOP_CURSOR_CELL = f"1.{ROAD_STOP_LAYOUTS}"
 ROAD_STOP_ENABLES = {"pax": "enables_pax=1", "post": "enables_post=1", "ware": "enables_ware=1"}
+# 線路の駅（#279）。同じ作り・同じシートの並び（sheetlib の road_stop.py の rail_pax・rail_freight）。費用 = cost_multiply_station（pak128・pak256 とも
+# 600 cr）× level、維持費 = maintenance_building（1800）× level（building_desc.cc）。level 4（容量 128。pak128 の旅客の駅は 9、仮の 2 は小さい）
+RAIL_STATION_VALUES = dict(cost=240000, maintenance=7200, level=4)
+RAIL_STATION_INTRO_YEAR = 1900
 
 
-def road_stop_dat_text(name, enables):
-    v = ROAD_STOP_VALUES
+def road_stop_dat_text(name, enables, rail=False):
+    v = RAIL_STATION_VALUES if rail else ROAD_STOP_VALUES
+    what = "線路の駅" if rail else "道路の停留所"
     out = [
-        f"# AMI: {name}（CC BY 4.0）。道路の停留所。シートは blender/render.py が描く（sheetlib の road_stop.py。#277）",
+        f"# AMI: {name}（CC BY 4.0）。{what}。シートは blender/render.py が描く（sheetlib の road_stop.py。#{279 if rail else 277}）",
         "obj=building",
         f"name={name}",
         "copyright=AMI (CC BY 4.0)",
         "type=stop",
-        "waytype=road",
+        f"waytype={'track' if rail else 'road'}",
     ] + [ROAD_STOP_ENABLES[e] for e in enables] + [
-        f"intro_year={ROAD_STOP_INTRO_YEAR}",
+        f"intro_year={RAIL_STATION_INTRO_YEAR if rail else ROAD_STOP_INTRO_YEAR}",
         "intro_month=1",
         "retire_year=2999",
         "retire_month=1",
@@ -842,11 +847,11 @@ def road_stop_dat_text(name, enables):
         f"maintenance={v['maintenance']}",
         f"level={v['level']}",
         "noinfo=1",
-        "allow_underground=2",
+        f"allow_underground={0 if rail else 2}",  # 線路の駅は pak128 と同じく地上だけ
         f"dims=1,1,{ROAD_STOP_LAYOUTS}",
         "needs_ground=1",
         f"icon=> {name}.{ROAD_STOP_ICON_CELL}",
-        f"cursor={name}.{ROAD_STOP_CURSOR_CELL}",
+        f"cursor={name}.{ROAD_STOP_CURSOR_CELL},{DEPOT_OFFSET}",
     ]
     for season in (0, 1):
         row = season * ROAD_STOP_SNOW_ROW
@@ -1004,6 +1009,8 @@ def main():
     put(catalog.RAIL_YARD, yard_dat_text(catalog.RAIL_YARD))
     for name, (_kind, enables) in catalog.ROAD_STOPS.items():
         put(name, road_stop_dat_text(name, enables))
+    for name, (_kind, enables) in catalog.RAIL_STATIONS.items():
+        put(name, road_stop_dat_text(name, enables, rail=True))
     for name, key in catalog.ROADSIGNS.items():
         put(name, roadsign_dat_text(name, key))
     for name, one_way in catalog.ROADSIGN_CROSSWALKS.items():

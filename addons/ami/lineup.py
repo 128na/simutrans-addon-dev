@@ -112,6 +112,8 @@ def _kind_label(o):
         return f"{wt}の車庫"
     if t == "building" and o.get("type") == "stop" and o.get("waytype") == "road":
         return "道路の停留所（荷役所）" if o.get("enables_ware") else "道路の停留所（バス停）"  # #277
+    if t == "building" and o.get("type") == "stop" and o.get("name") in ("ami_rail_station", "ami_rail_freight_station"):
+        return "線路の駅（貨物）" if o.get("enables_ware") else "線路の駅（旅客・郵便）"  # #279
     if t == "building" and o.get("type") == "stop":
         return f"{wt}の操車場"  # 荷を扱わない駅の建物（ami_rail_yard。#115）
     if t == "roadsign" and o.get("is_signal"):

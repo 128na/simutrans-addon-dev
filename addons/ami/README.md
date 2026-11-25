@@ -37,9 +37,10 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 | 車庫 | `ami_rail_depot`・`ami_tram_depot`・`ami_road_depot`・`ami_monorail_depot`・`ami_canal_depot`（ADR 0008） |
 | 操車場 | `ami_rail_yard`（#115） |
 | 道路の停留所 | `ami_road_bus_stop`（旅客・郵便）・`ami_road_truck_stop`（貨物）（ADR 0014。#277） |
+| 線路の駅 | `ami_rail_station`（旅客・郵便）・`ami_rail_freight_station`（貨物）（ADR 0014。#279） |
 | 線路の信号 | `ami_rail_signal`（閉塞信号 1 種。ADR 0014。#278） |
 
-dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`・`ami_rail_concrete`・`ami_rail_concrete_base_<版>`（4 版）・`ami_rail_concrete_elev_<版>`（4 版）・`ami_rail_concrete_bridge`・`ami_rail_concrete_tunnel`・`ami_rail_ladder`・`ami_rail_ladder_base_<版>`（4 版）・`ami_rail_ladder_elev_<版>`（4 版）・`ami_rail_ladder_bridge`・`ami_rail_ladder_tunnel`・`ami_road_local`・`ami_road_general`・`ami_road_expressway`・道路それぞれの `_base_<版>`（幹線道路・高速道路は 4 版、一般道路・生活道路は `single` だけ。#260）・`_elev_<版>`（4 版）・`_bridge`・`_tunnel`・`ami_wall_road_<版>`（4 版）・`ami_wall_road_twin`・`ami_wall_road_front_divider`・`ami_wall_road_center_divider`・`ami_wall_road_twin_divider`・`ami_pier_road`・`ami_tram`・`ami_embankment_front`・`ami_embankment_back`・`ami_sidewalk`・`ami_sidewalk_<舗装>`（3 種）・`ami_sidewalk_elev`・`ami_wall_sidewalk_<版>`（3 版）・`ami_sidewalk_pole_<版>`（2 版）・`ami_wall_sidewalk_<版>_pole`（2 版）・`ami_monorail_straddle`・`ami_monorail_straddle_elev_<版>`（3 版）・`ami_monorail_straddle_tunnel`・`ami_monorail_suspended_<版>`（3 版）・`ami_monorail_suspended_elev_<版>`（3 版）・`ami_monorail_power`・`ami_monorail_suspended_power`・`ami_canal`・`ami_canal_scenic`・水路の踏切 7 つ（`ami_crossing_<線路|道路>_canal`）・車庫 5 つ・`ami_rail_yard`・`ami_road_bus_stop`・`ami_road_truck_stop`。
+dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`・`ami_rail_concrete`・`ami_rail_concrete_base_<版>`（4 版）・`ami_rail_concrete_elev_<版>`（4 版）・`ami_rail_concrete_bridge`・`ami_rail_concrete_tunnel`・`ami_rail_ladder`・`ami_rail_ladder_base_<版>`（4 版）・`ami_rail_ladder_elev_<版>`（4 版）・`ami_rail_ladder_bridge`・`ami_rail_ladder_tunnel`・`ami_road_local`・`ami_road_general`・`ami_road_expressway`・道路それぞれの `_base_<版>`（幹線道路・高速道路は 4 版、一般道路・生活道路は `single` だけ。#260）・`_elev_<版>`（4 版）・`_bridge`・`_tunnel`・`ami_wall_road_<版>`（4 版）・`ami_wall_road_twin`・`ami_wall_road_front_divider`・`ami_wall_road_center_divider`・`ami_wall_road_twin_divider`・`ami_pier_road`・`ami_tram`・`ami_embankment_front`・`ami_embankment_back`・`ami_sidewalk`・`ami_sidewalk_<舗装>`（3 種）・`ami_sidewalk_elev`・`ami_wall_sidewalk_<版>`（3 版）・`ami_sidewalk_pole_<版>`（2 版）・`ami_wall_sidewalk_<版>_pole`（2 版）・`ami_monorail_straddle`・`ami_monorail_straddle_elev_<版>`（3 版）・`ami_monorail_straddle_tunnel`・`ami_monorail_suspended_<版>`（3 版）・`ami_monorail_suspended_elev_<版>`（3 版）・`ami_monorail_power`・`ami_monorail_suspended_power`・`ami_canal`・`ami_canal_scenic`・水路の踏切 7 つ（`ami_crossing_<線路|道路>_canal`）・車庫 5 つ・`ami_rail_yard`・`ami_road_bus_stop`・`ami_road_truck_stop`・`ami_rail_station`・`ami_rail_freight_station`。
 
 ### 線路（新描画位置）
 
@@ -874,6 +875,20 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
   - 確認（2026-11-25、`sim-WinGDI64-OTRPv64.exe`・`flat_512_left_v64.sve`、道路 3 種 × 2 気候の 36 か所）: すべて駅になり、バス停は旅客・郵便だけ、荷役所は貨物だけを扱った。3 タイルの連なり（南北・東西・歩道つき）は 1 つの駅になり、建物は AMI の物だった（2026-11-25 にレビューの指摘で見本の検査を足して再確認）。画像は `docs/road_stop277_temperate_AB.png`（生活道路の南北のバス停と荷役所）、`road_stop277_temperate_D.png`（歩道つき）、`road_stop277_snow_C.png`（降雪側の東西）
   - 高速道路（`ami_road_expressway`）の上、斜め・坂・高架の上は確かめていない。右側通行の地図でも確かめていない（検証の地図は左側通行の `flat_512_left_v64`）。ホームは通行の向きによらず、見える側（南北の道路なら東、東西の道路なら南）に固定で、左右で絵は変わらない
   - 建てた直後は本体の建設中の絵（黄と黒の縞）が出る。ゲームを進めてから（速さ 64 で約 20 秒）撮る
+
+### 線路の駅の作り（#279）
+
+[ADR 0014](../../docs/adr/0014-ami-scope-stations-and-signals.md) の第 5 弾の 3 つめ。線路の上に建てる駅の建物（building の `stop`・`waytype=track`）で、`ami_rail_station`（`enables_pax`・`enables_post`）と `ami_rail_freight_station`（`enables_ware`）の 2 つ。作りは道路の停留所と同じ（`road_stop_dat_text(rail=True)`・sheetlib の `road_stop.py` の `rail_pax`・`rail_freight`）で、物を増やさず、描き分けで向き・連なりの端を表す。
+
+- 形（2026-11-26 に決めた。進捗管理へ question を送り、おすすめで進めた）: 線路の奥の側（南北なら西、東西なら北）の片側だけの低いホーム。pak128 の `trainstop` と同じく片側で、線路の側の縁は操車場と同じ（`u=1.0`。まくらぎの端）、外の縁は `u=4.4`。道床（±1.9）の肩に載る。旅客・郵便は床の高さ 0.55 に青い屋根の待合と青い標識、貨物は床 0.75 に木箱と黄色の標識。線路の側の縁に黄色の帯。連なりの切れた端には斜路の段。床は奥の絵（車両の下）、屋根・標識・木箱は手前の絵
+- 配置: 道路の停留所と同じ 8 通り（`dims=1,1,8`。南北・東西 × 中ほど・端・1 タイル）。pak128 の線路の駅は 2 通りだが、端の斜路で連なりの長さを 1 つの物の描き分けで表せるので 8 通りにした
+- 値: 費用 240000（2400 cr）、維持費 7200、`level=4`（容量 128）、登場年 1900、引退 2999 年、`allow_underground=0`（pak128 と同じ地上だけ）。費用 = `cost_multiply_station`（600 cr）× level、維持費 = `maintenance_building`（1800）× level（本体の既定。建てたときの実額は測っていない）。pak128 の旅客の駅は level 9 だが、最初の物は 4 で始める（容量が足りるかは遊んで決める）
+- 大きさ: 128 は絵を描いて確かめた。256 の dat は `src256/` に置く（PNG は描かない。256 は pak256 が受け持つ）。`catalog.SCALED_DEPOTS` に入れてあり、`check_scaled.py` が dat と突き合わせる
+- pak は名前の頭 `ami_rail_` で `ami_rail.pak` に入る。アイコンは左上に「駅」（旅客・郵便）・「荷」（貨物）。名前の訳は `release/text/ja_ami.tab`
+- 見本は `ingame/rail_station_sample.nut`（`game.sh` に `NUT=` で渡して流し、`SPOTS` で撮る）。線路 4 種（砂利・スラブ・コンクリート・はしご）に、南北の 1 タイルと 3 タイル、東西、駅・貨物駅・駅の混ぜた連なりを、温暖側と降雪側に敷く。3 タイルの連なりは端から順に建てる（[script-api.md](../../docs/reference/script-api.md)）
+  - 確認（2026-11-26、`sim-WinGDI64-OTRPv64.exe`・`flat_512_left_v64.sve`、線路 4 種 × 2 気候の 64 か所の検査）: すべて駅になり、駅は旅客・郵便だけ、貨物駅は貨物だけを扱った。3 タイルの連なりは 1 つの駅になり、建物は AMI の物だった。駅・貨物駅・駅の混ぜた連なりは 1 つの駅で、旅客・郵便・貨物のすべてを扱った。画像は `docs/rail_station279_temperate_AB.png`・`rail_station279_temperate_C.png`・`rail_station279_snow_AB.png`
+  - 確かめていない: 電化線（架線の壁の way-object と屋根が重ならないか）・斜め・坂・高架・トンネルの上・ホームに列車が着いたときの重なり・旧描画位置の線路（ADR 0014 のとおり作らない）
+  - 建てた直後は本体の建設中の絵が出る。ゲームを進めてから撮る
 
 ### 線路の信号の作り（#278）
 

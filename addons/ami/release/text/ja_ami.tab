@@ -215,6 +215,8 @@ ami_rail_concrete_tunnel
 弾性まくらぎ直結軌道のトンネル（AMI）
 ami_rail_depot
 鉄道の車庫（AMI）
+ami_rail_freight_station
+貨物駅（AMI）
 ami_rail_ladder
 フローティング・ラダー軌道（AMI）
 ami_rail_ladder_base_back
@@ -305,6 +307,8 @@ ami_rail_slab_old_tunnel
 高速線（スラブ軌道）（旧位置）のトンネル（AMI）
 ami_rail_slab_tunnel
 高速線（スラブ軌道）のトンネル（AMI）
+ami_rail_station
+駅（AMI）
 ami_rail_yard
 操車場（AMI）
 ami_road_bus_stop
