@@ -305,8 +305,6 @@ ami_rail_slab_tunnel
 高速線（スラブ軌道）のトンネル（AMI）
 ami_rail_yard
 操車場（AMI）
-ami_road_bus_stop
-バス停（AMI）
 ami_road_depot
 道路の車庫（AMI）
 ami_road_expressway
@@ -351,8 +349,6 @@ ami_road_local_elev_single
 生活道路の高架（AMI）
 ami_road_local_tunnel
 生活道路のトンネル（AMI）
-ami_road_truck_stop
-トラックの荷役所（AMI）
 ami_road_trunk
 幹線道路（AMI）
 ami_road_trunk_base_back

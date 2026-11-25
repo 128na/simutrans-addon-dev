@@ -769,9 +769,6 @@ for _d in catalog.DEPOTS:
     SHEETS[_d.name] = (lambda d: lambda: R.depot_sheet(R.sheet_path(d.name + ".png"), d.kind, R.WORK))(_d)
 # 操車場（#115）: 線路の脇の構内通路。形と寸法は sheetlib の yard.py
 SHEETS[catalog.RAIL_YARD] = lambda: R.yard_sheet(R.sheet_path(catalog.RAIL_YARD + ".png"), R.WORK)
-# 道路の停留所（#277）: 道路の見える側の脇のホーム・積み降ろし場。形と寸法は sheetlib の road_stop.py
-for _n, (_k, _w) in catalog.ROAD_STOPS.items():
-    SHEETS[_n] = (lambda n, k: lambda: R.road_stop_sheet(R.sheet_path(n + ".png"), k, R.WORK))(_n, _k)
 
 # 道路標識（#122）: 標識ごとに 1 枚。柱を描き、板の 2D の絵を押す（sheetlib の roadsign.py）
 for _n, _k in catalog.ROADSIGNS.items():
