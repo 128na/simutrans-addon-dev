@@ -255,26 +255,40 @@ TUNNELS.update({_r.tunnel: (_r.way, _r.tunnel) for _r in catalog.ROADS})  # 道�
 TUNNELS[catalog.MONORAIL_TUNNEL] = (catalog.MONORAIL, catalog.MONORAIL_TUNNEL)  # 跨座式モノレールのトンネル（#113）。中の way は地上の版
 
 
-def _head(name, kind, obj, base, cost_k, sheet):
-    v = VALUES[base]
+def _head(comment, obj, name, intro_year, before=(), after=()):
+    """dat の頭の行（どの dat も共通の並び）: 注記・obj・name・copyright → before → 登場年・退役年 → after。
+    before は登場年の前に置くキー（building の type・waytype など）、after は退役年の後のキー（waytype・値・icon・cursor など）。
+    before・after に分けるのは、dat のキーの並びを前と変えないため（並びが変わると、比べで差分が出る）"""
     return [
-        f"# AMI: {name}（CC BY 4.0）。{v['speed']} km/h の{kind}。シートは blender/render.py が描く",
+        comment,
         f"obj={obj}",
         f"name={name}",
         "copyright=AMI (CC BY 4.0)",
-        f"intro_year={v['intro_year']}",
+        *before,
+        f"intro_year={intro_year}",
         "intro_month=1",
         "retire_year=2999",
         "retire_month=1",
-        f"waytype={v['waytype']}",
-        f"cost={v['cost'] * cost_k}",
-        f"maintenance={v['maintenance'] * cost_k}",
-        f"topspeed={v['speed']}",
+        *after,
     ]
 
 
+def _way_values(v, cost_k=1, topspeed=None):
+    """waytype・費用・維持費・最高速度の 4 行。cost_k は費用・維持費の倍率。
+    最高速度は、v が "topspeed" を持つ表（PIER_VALUES など）ならそれ、VALUES の値（"speed" が最高速度）なら topspeed=v["speed"] を渡す"""
+    return [f"waytype={v['waytype']}", f"cost={v['cost'] * cost_k}", f"maintenance={v['maintenance'] * cost_k}",
+            f"topspeed={v['topspeed'] if topspeed is None else topspeed}"]
+
+
+def _head_base(name, kind, obj, base, cost_k):
+    """地上の way（base）の値から作る頭の行（橋・トンネル）。最高速度は地上と同じ"""
+    v = VALUES[base]
+    return _head(f"# AMI: {name}（CC BY 4.0）。{v['speed']} km/h の{kind}。シートは blender/render.py が描く", obj, name, v["intro_year"],
+                 after=_way_values(v, cost_k, topspeed=v["speed"]))
+
+
 def bridge_dat_text(name, base, sheet):
-    out = _head(name, "橋（欄干なし。壁は way-object を重ねる）", "bridge", base, BRIDGE_COST_K, sheet)
+    out = _head_base(name, "橋（欄干なし。壁は way-object を重ねる）", "bridge", base, BRIDGE_COST_K)
     out += ["pillar_distance=1", f"icon=> {sheet}.0.0", f"cursor={sheet}.0.1,{OFFSET}"]
     for season in (0, 1):
         dr = season * BRIDGE_SNOW_ROWS
@@ -290,7 +304,7 @@ def bridge_dat_text(name, base, sheet):
 
 
 def tunnel_dat_text(name, base, sheet):
-    out = _head(name, "トンネル", "tunnel", base, TUNNEL_COST_K, sheet)
+    out = _head_base(name, "トンネル", "tunnel", base, TUNNEL_COST_K)
     out += [f"way={base}", f"icon=> {sheet}.0.0", f"cursor={sheet}.0.1,{OFFSET}"]
     for season in (0, 1):
         for d, c in TUNNEL_DIRS:
@@ -302,24 +316,12 @@ def tunnel_dat_text(name, base, sheet):
 def dat_text(name, sheet, donor=False):
     """way の dat。donor なら分岐の追加画像の提供用の物（名前 + DONOR_SUFFIX。1・2 の 10 枚のキーが EX_CELLS を指す）"""
     v = VALUES[name]
-    out = [
+    out = _head(
         f"# AMI: {name}（CC BY 4.0）。{v['speed']} km/h。シートは blender/render.py が描く"
         + ("。分岐の追加画像の提供用（build.py が ex_graft.py で写す。ゲームには入れない）" if donor else ""),
-        "obj=way",
-        f"name={name}{DONOR_SUFFIX if donor else ''}",
-        "copyright=AMI (CC BY 4.0)",
-        f"intro_year={v['intro_year']}",
-        "intro_month=1",
-        "retire_year=2999",
-        "retire_month=1",
-        f"waytype={v['waytype']}",
-        f"cost={v['cost']}",
-        f"maintenance={v['maintenance']}",
-        f"topspeed={v['speed']}",
-        f"system_type={1 if name in ELEVATED else 0}",
-        f"icon=> {sheet}.0.0",
-        f"cursor={sheet}.0.1,{OFFSET}",
-    ]
+        "way", f"{name}{DONOR_SUFFIX if donor else ''}", v["intro_year"],
+        after=[*_way_values(v, topspeed=v["speed"]), f"system_type={1 if name in ELEVATED else 0}",
+               f"icon=> {sheet}.0.0", f"cursor={sheet}.0.1,{OFFSET}"])
     front = name in FRONT_WAYS
     snow_rows = FRONT_SNOW_ROWS if front else SNOW_ROWS
     for season in (0, 1):
@@ -361,24 +363,14 @@ def wall_dat_text(name, sheet, twin=False, catenary=False, road=False, donor=Fal
         twin_from = {k: s.replace("ami_wall_rail_", "ami_wall_rail_old_") for k, s in twin_from.items()}
     kind = "道路の中央分離帯つきの壁" if divider else "道路の壁" if road else "線路の壁の way-object（架線つき（電化））" if catenary else "線路の壁の way-object（壁だけ、架線なし）"
     wt = "road" if road else "track"
-    out = [
+    out = _head(
         f"# AMI: {name}（CC BY 4.0）。{kind}。シートは blender/render.py が描く"
         + ("。分岐の追加画像の提供用（build.py が ex_graft.py で写す。ゲームには入れない）" if donor else ""),
-        "obj=way-object",
-        f"name={name}{DONOR_SUFFIX if donor else ''}",
-        "copyright=AMI (CC BY 4.0)",
-        f"intro_year={v['intro_year']}",
-        "intro_month=1",
-        "retire_year=2999",
-        "retire_month=1",
-        f"waytype={wt}",
-        f"own_waytype={'electrified_track' if catenary else wt}",
-        f"cost={v['cost']}",
-        f"maintenance={v['maintenance']}",
-        f"topspeed={(CATENARY_TWIN_TOPSPEED if catenary else DIVIDER_TWIN_TOPSPEED if divider else WALL_TWIN_TOPSPEED) if twin else v['topspeed']}",
-        f"icon=> {sheet}.{icon_cell}",
-        f"cursor={sheet}.{cursor_cell},{OFFSET}",
-    ]
+        "way-object", f"{name}{DONOR_SUFFIX if donor else ''}", v["intro_year"],
+        after=[f"waytype={wt}", f"own_waytype={'electrified_track' if catenary else wt}",
+               f"cost={v['cost']}", f"maintenance={v['maintenance']}",
+               f"topspeed={(CATENARY_TWIN_TOPSPEED if catenary else DIVIDER_TWIN_TOPSPEED if divider else WALL_TWIN_TOPSPEED) if twin else v['topspeed']}",
+               f"icon=> {sheet}.{icon_cell}", f"cursor={sheet}.{cursor_cell},{OFFSET}"])
     ex = name in EX_WAYOBJS or donor
     cell = {(key, idx): (row, col) for key, idx, row, col in IMAGES}
     for key, idx, row, col in IMAGES:
@@ -410,23 +402,9 @@ def monorail_power_dat_text(name, suspended):
     セルは跨座式の way と同じ位置。カーブは斜めのセル（跨座式と同じ）。分岐の絵・近い斜めは持たない"""
     v = MONORAIL_POWER_VALUES
     kind = "懸垂式モノレールの電化（桁の下面の給電レールと碍子）" if suspended else "跨座式モノレールの電化（桁の側面の給電レールと碍子）"
-    out = [
-        f"# AMI: {name}（CC BY 4.0）。{kind}の way-object。シートは blender/render.py が描く",
-        "obj=way-object",
-        f"name={name}",
-        "copyright=AMI (CC BY 4.0)",
-        f"intro_year={v['intro_year']}",
-        "intro_month=1",
-        "retire_year=2999",
-        "retire_month=1",
-        "waytype=monorail_track",
-        "own_waytype=electrified_track",
-        f"cost={v['cost']}",
-        f"maintenance={v['maintenance']}",
-        f"topspeed={v['topspeed']}",
-        f"icon=> {name}.0.0",
-        f"cursor={name}.0.1,{OFFSET}",
-    ]
+    out = _head(f"# AMI: {name}（CC BY 4.0）。{kind}の way-object。シートは blender/render.py が描く", "way-object", name, v["intro_year"],
+                after=["waytype=monorail_track", "own_waytype=electrified_track", f"cost={v['cost']}", f"maintenance={v['maintenance']}",
+                       f"topspeed={v['topspeed']}", f"icon=> {name}.0.0", f"cursor={name}.0.1,{OFFSET}"])
     for key, idx, row, col in IMAGES:
         if key not in WAYOBJ_KEYS or idx.startswith("[close") or (key == "image" and idx in SWITCH_IDX):
             continue
@@ -442,23 +420,8 @@ def pier_dat_text(name, sheet):
     PIER_FRONT_ROW にある橋脚は、同じキーの手前の絵（front<キー>）を、行を下げたセルで足す"""
     v = PIER_VALUES
     cell = {(key, idx): (row, col) for key, idx, row, col in IMAGES}
-    out = [
-        f"# AMI: {name}（CC BY 4.0）。高架の真下の地面に敷く橋脚の way。シートは blender/render.py が描く",
-        "obj=way",
-        f"name={name}",
-        "copyright=AMI (CC BY 4.0)",
-        f"intro_year={v['intro_year']}",
-        "intro_month=1",
-        "retire_year=2999",
-        "retire_month=1",
-        f"waytype={v['waytype']}",
-        f"cost={v['cost']}",
-        f"maintenance={v['maintenance']}",
-        f"topspeed={v['topspeed']}",
-        "system_type=0",
-        f"icon=> {sheet}.0.0",
-        f"cursor={sheet}.0.1,{OFFSET}",
-    ]
+    out = _head(f"# AMI: {name}（CC BY 4.0）。高架の真下の地面に敷く橋脚の way。シートは blender/render.py が描く", "way", name, v["intro_year"],
+                after=[*_way_values(v), "system_type=0", f"icon=> {sheet}.0.0", f"cursor={sheet}.0.1,{OFFSET}"])
     front_rows = (0, PIER_FRONT_ROW[name]) if name in PIER_FRONT_ROW else (0,)
     for dr in front_rows:
         for season in (0, 1):
@@ -483,23 +446,8 @@ def embankment_dat_text(name, sheet):
     雪の絵（[1]）は EMBANKMENT_SNOW_ROWS 下の行"""
     v = EMBANKMENT_VALUES
     cell = {(key, idx): (row, col) for key, idx, row, col in IMAGES}
-    out = [
-        f"# AMI: {name}（CC BY 4.0）。高架の脇の地面に敷く盛土（法面）の way。シートは blender/render.py が描く",
-        "obj=way",
-        f"name={name}",
-        "copyright=AMI (CC BY 4.0)",
-        f"intro_year={v['intro_year']}",
-        "intro_month=1",
-        "retire_year=2999",
-        "retire_month=1",
-        f"waytype={v['waytype']}",
-        f"cost={v['cost']}",
-        f"maintenance={v['maintenance']}",
-        f"topspeed={v['topspeed']}",
-        "system_type=0",
-        f"icon=> {sheet}.0.0",
-        f"cursor={sheet}.0.1,{OFFSET}",
-    ]
+    out = _head(f"# AMI: {name}（CC BY 4.0）。高架の脇の地面に敷く盛土（法面）の way。シートは blender/render.py が描く", "way", name, v["intro_year"],
+                after=[*_way_values(v), "system_type=0", f"icon=> {sheet}.0.0", f"cursor={sheet}.0.1,{OFFSET}"])
     for season in (0, 1):
         for key, idx, row, col in IMAGES:
             if key == "diagonal":
@@ -545,23 +493,9 @@ def marking_dat_text(name, kind):
     雪の絵（[1]）は夏と同じセル（車道は除雪した想定で、路面・白線は夏と同じ。路肩の雪は下の道路の絵。ADR 0012）"""
     v = MARKING_VALUES
     cell = {(key, idx): (row, col) for key, idx, row, col in IMAGES}
-    out = [
-        f"# AMI: {name}（CC BY 4.0）。道路に重ねて敷く路面表示（白線と路面）の way。種類は {kind}。シートは blender/render.py が描く",
-        "obj=way",
-        f"name={name}",
-        "copyright=AMI (CC BY 4.0)",
-        f"intro_year={v['intro_year']}",
-        "intro_month=1",
-        "retire_year=2999",
-        "retire_month=1",
-        f"waytype={v['waytype']}",
-        f"cost={v['cost']}",
-        f"maintenance={v['maintenance']}",
-        f"topspeed={v['topspeed']}",
-        "system_type=0",
-        f"icon=> {name}.0.0",
-        f"cursor={name}.0.1,{OFFSET}",
-    ]
+    out = _head(f"# AMI: {name}（CC BY 4.0）。道路に重ねて敷く路面表示（白線と路面）の way。種類は {kind}。シートは blender/render.py が描く",
+                "way", name, v["intro_year"],
+                after=[*_way_values(v), "system_type=0", f"icon=> {name}.0.0", f"cursor={name}.0.1,{OFFSET}"])
     for season in (0, 1):
         for key, idx, row, col in IMAGES:
             if key == "diagonal":
@@ -600,24 +534,11 @@ def sidewalk_dat_text(name, sheet):
     高架の歩道（catalog.SIDEWALK_ELEV）は system_type=1 と高架の値"""
     elevated = name == catalog.SIDEWALK_ELEV
     v = SIDEWALK_ELEV_VALUES if elevated else SIDEWALK_VALUES
-    out = [
+    out = _head(
         f"# AMI: {name}（CC BY 4.0）。{'高架の歩道の way（道路の高架の隣に敷く）' if elevated else '道路の隣のタイルに敷く歩道の way'}。"
         "シートは blender/render.py が描く",
-        "obj=way",
-        f"name={name}",
-        "copyright=AMI (CC BY 4.0)",
-        f"intro_year={v['intro_year']}",
-        "intro_month=1",
-        "retire_year=2999",
-        "retire_month=1",
-        f"waytype={v['waytype']}",
-        f"cost={v['cost']}",
-        f"maintenance={v['maintenance']}",
-        f"topspeed={v['topspeed']}",
-        f"system_type={1 if elevated else 0}",
-        f"icon=> {sheet}.0.0",
-        f"cursor={sheet}.0.1,{OFFSET}",
-    ]
+        "way", name, v["intro_year"],
+        after=[*_way_values(v), f"system_type={1 if elevated else 0}", f"icon=> {sheet}.0.0", f"cursor={sheet}.0.1,{OFFSET}"])
     for season in (0, 1):
         for key, idx, row, col in IMAGES:
             if key in SIDEWALK_KEYS and idx not in SWITCH_IDX:
@@ -629,23 +550,10 @@ def sidewalk_wall_dat_text(name, sheet, values=None, kind="歩道の柵"):
     """歩道の柵の way-object の dat（waytype=water・own_waytype=water）。奥の絵は行 0〜3、手前の絵は WALL_FRONT_ROW 下の行。
     カーブは歩道の way と同じくカーブのセル（斜めのキーは持たない。本体は斜めの絵の無い way-object にカーブの絵を使う）"""
     v = values or SIDEWALK_WALL_VALUES
-    out = [
-        f"# AMI: {name}（CC BY 4.0）。{kind}（歩道の way に重ねる way-object）。シートは blender/render.py が描く",
-        "obj=way-object",
-        f"name={name}",
-        "copyright=AMI (CC BY 4.0)",
-        f"intro_year={v['intro_year']}",
-        "intro_month=1",
-        "retire_year=2999",
-        "retire_month=1",
-        "waytype=water",
-        "own_waytype=water",
-        f"cost={v['cost']}",
-        f"maintenance={v['maintenance']}",
-        f"topspeed={v['topspeed']}",
-        f"icon=> {sheet}.0.0",
-        f"cursor={sheet}.0.1,{OFFSET}",
-    ]
+    out = _head(f"# AMI: {name}（CC BY 4.0）。{kind}（歩道の way に重ねる way-object）。シートは blender/render.py が描く",
+                "way-object", name, v["intro_year"],
+                after=["waytype=water", "own_waytype=water", f"cost={v['cost']}", f"maintenance={v['maintenance']}",
+                       f"topspeed={v['topspeed']}", f"icon=> {sheet}.0.0", f"cursor={sheet}.0.1,{OFFSET}"])
     for key, idx, row, col in IMAGES:
         if key not in SIDEWALK_WALL_KEYS or idx in SWITCH_IDX or idx.startswith("[close"):
             continue
@@ -667,21 +575,9 @@ CROSSING_SNOW_ROW = 2  # crossing.py の CROSSING_SNOW_ROW と同じ
 def crossing_dat_text(name, track, road):
     t, r = VALUES[track.way], VALUES[road.way]
     sheet = catalog.crossing_sheet(road)
-    out = [
-        f"# AMI: {name}（CC BY 4.0）。{track.way} × {road.way} の踏切。値は仮（#110）。シートは blender/render.py が描く",
-        "obj=crossing",
-        f"name={name}",
-        "copyright=AMI (CC BY 4.0)",
-        f"intro_year={max(t['intro_year'], r['intro_year'])}",
-        "intro_month=1",
-        "retire_year=2999",
-        "retire_month=1",
-        "sound=-1",
-        "waytype[0]=road",
-        f"speed[0]={r['speed']}",
-        "waytype[1]=track",
-        f"speed[1]={t['speed']}",
-    ]
+    out = _head(f"# AMI: {name}（CC BY 4.0）。{track.way} × {road.way} の踏切。値は仮（#110）。シートは blender/render.py が描く",
+                "crossing", name, max(t["intro_year"], r["intro_year"]),
+                after=["sound=-1", "waytype[0]=road", f"speed[0]={r['speed']}", "waytype[1]=track", f"speed[1]={t['speed']}"])
     for season in (0, 1):
         row = season * CROSSING_SNOW_ROW
         for d in ("ns", "ew"):
@@ -702,21 +598,9 @@ def crossing_dat_text(name, track, road):
 def canal_crossing_dat_text(name, way):
     w, c = VALUES[way.way], VALUES[catalog.CANAL]
     sheet = catalog.canal_crossing_sheet(way)
-    out = [
-        f"# AMI: {name}（CC BY 4.0）。{way.way} × {catalog.CANAL} の踏切（跳ね橋）。シートは blender/render.py が描く",
-        "obj=crossing",
-        f"name={name}",
-        "copyright=AMI (CC BY 4.0)",
-        f"intro_year={max(w['intro_year'], c['intro_year'])}",
-        "intro_month=1",
-        "retire_year=2999",
-        "retire_month=1",
-        "sound=-1",
-        f"waytype[0]={w['waytype']}",
-        f"speed[0]={w['speed']}",
-        "waytype[1]=water",
-        f"speed[1]={c['speed']}",
-    ]
+    out = _head(f"# AMI: {name}（CC BY 4.0）。{way.way} × {catalog.CANAL} の踏切（跳ね橋）。シートは blender/render.py が描く",
+                "crossing", name, max(w["intro_year"], c["intro_year"]),
+                after=["sound=-1", f"waytype[0]={w['waytype']}", f"speed[0]={w['speed']}", "waytype[1]=water", f"speed[1]={c['speed']}"])
     for season in (0, 1):
         row = season * CROSSING_SNOW_ROW
         for d in ("ns", "ew"):
@@ -743,25 +627,10 @@ DEPOT_OFFSET = f"{-64 * sheet_settings.SCALE},{-96 * sheet_settings.SCALE}"  # s
 def depot_dat_text(depot):
     v = DEPOT_VALUES[depot.waytype]
     sheet = depot.name
-    out = [
-        f"# AMI: {depot.name}（CC BY 4.0）。車庫。シートは blender/render.py が描く（sheetlib の depot.py）",
-        "obj=building",
-        f"name={depot.name}",
-        "copyright=AMI (CC BY 4.0)",
-        "type=depot",
-        f"waytype={depot.waytype}",
-        f"intro_year={DEPOT_INTRO_YEAR}",
-        "intro_month=1",
-        "retire_year=2999",
-        "retire_month=1",
-        f"cost={v['cost']}",
-        f"maintenance={v['maintenance']}",
-        "noinfo=1",
-        f"dims=1,1,{DEPOT_LAYOUTS}",
-        "needs_ground=1",
-        f"icon=> {sheet}.{DEPOT_ICON_CELL}",
-        f"cursor={sheet}.{DEPOT_CURSOR_CELL},{DEPOT_OFFSET}",
-    ]
+    out = _head(f"# AMI: {depot.name}（CC BY 4.0）。車庫。シートは blender/render.py が描く（sheetlib の depot.py）",
+                "building", depot.name, DEPOT_INTRO_YEAR, before=["type=depot", f"waytype={depot.waytype}"],
+                after=[f"cost={v['cost']}", f"maintenance={v['maintenance']}", "noinfo=1", f"dims=1,1,{DEPOT_LAYOUTS}", "needs_ground=1",
+                       f"icon=> {sheet}.{DEPOT_ICON_CELL}", f"cursor={sheet}.{DEPOT_CURSOR_CELL},{DEPOT_OFFSET}"])
     for season in (0, 1):
         for layout in range(DEPOT_LAYOUTS):
             row = season * DEPOT_SNOW_ROW
@@ -784,27 +653,11 @@ YARD_CURSOR_CELL = f"1.{YARD_LAYOUTS}"
 
 def yard_dat_text(name):
     v = YARD_VALUES
-    out = [
-        f"# AMI: {name}（CC BY 4.0）。操車場（荷を扱わない線路の駅の建物）。シートは blender/render.py が描く（sheetlib の yard.py）",
-        "obj=building",
-        f"name={name}",
-        "copyright=AMI (CC BY 4.0)",
-        "type=stop",
-        "waytype=track",
-        f"intro_year={YARD_INTRO_YEAR}",
-        "intro_month=1",
-        "retire_year=2999",
-        "retire_month=1",
-        f"cost={v['cost']}",
-        f"maintenance={v['maintenance']}",
-        f"level={v['level']}",
-        "noinfo=1",
-        "noconstruction=1",
-        f"dims=1,1,{YARD_LAYOUTS}",
-        "needs_ground=1",
-        f"icon=> {name}.{YARD_ICON_CELL}",
-        f"cursor={name}.{YARD_CURSOR_CELL},{DEPOT_OFFSET}",
-    ]
+    out = _head(f"# AMI: {name}（CC BY 4.0）。操車場（荷を扱わない線路の駅の建物）。シートは blender/render.py が描く（sheetlib の yard.py）",
+                "building", name, YARD_INTRO_YEAR, before=["type=stop", "waytype=track"],
+                after=[f"cost={v['cost']}", f"maintenance={v['maintenance']}", f"level={v['level']}", "noinfo=1", "noconstruction=1",
+                       f"dims=1,1,{YARD_LAYOUTS}", "needs_ground=1", f"icon=> {name}.{YARD_ICON_CELL}",
+                       f"cursor={name}.{YARD_CURSOR_CELL},{DEPOT_OFFSET}"])
     for season in (0, 1):
         for layout in range(YARD_LAYOUTS):
             out.append(f"backimage[{layout}][0][0][0][0][{season}]={name}.{season * YARD_SNOW_ROW}.{layout},{DEPOT_OFFSET}")
@@ -823,19 +676,9 @@ ROADSIGN_OFFSET = OFFSET  # 道路の way と同じ（sheetlib の ROAD_CY）
 
 
 def roadsign_dat_text(name, key):
-    out = [
-        f"# AMI: {name}（CC BY 4.0）。道路標識。シートは blender/render.py が描く（sheetlib の roadsign.py）",
-        "obj=roadsign",
-        f"name={name}",
-        "copyright=AMI (CC BY 4.0)",
-        "waytype=road",
-        f"intro_year={ROADSIGN_INTRO_YEAR}",
-        "intro_month=1",
-        "retire_year=2999",
-        "retire_month=1",
-        f"cost={ROADSIGN_COST}",
-        f"offset_left={ROADSIGN_OFFSET_LEFT}",
-    ]
+    out = _head(f"# AMI: {name}（CC BY 4.0）。道路標識。シートは blender/render.py が描く（sheetlib の roadsign.py）",
+                "roadsign", name, ROADSIGN_INTRO_YEAR, before=["waytype=road"],
+                after=[f"cost={ROADSIGN_COST}", f"offset_left={ROADSIGN_OFFSET_LEFT}"])
     if key in ROADSIGN_EFFECT:
         out.append(ROADSIGN_EFFECT[key])
     out += [f"icon=> {name}.{ROADSIGN_ICON_CELL}", f"cursor={name}.{ROADSIGN_CURSOR_CELL},{ROADSIGN_OFFSET}"]
@@ -848,23 +691,11 @@ ROADSIGN_CROSSWALK_OFFSET_LEFT = 0  # 点対称（180° 回すと重なる）の
 
 def crosswalk_dat_text(name, one_way):
     """路面の横断歩道の標識（#162）。両方向は image[0]（南北）・[2]（東西）だけ、一方通行は 4 向き（北・南・西・東行き）"""
-    out = [
-        f"# AMI: {name}（CC BY 4.0）。路面の横断歩道の標識。シートは blender/render.py が描く（sheetlib の roadsign.py。#162）",
-        "obj=roadsign",
-        f"name={name}",
-        "copyright=AMI (CC BY 4.0)",
-        "waytype=road",
-        f"intro_year={ROADSIGN_INTRO_YEAR}",
-        "intro_month=1",
-        "retire_year=2999",
-        "retire_month=1",
-        f"cost={ROADSIGN_COST}",
-        f"offset_left={ROADSIGN_CROSSWALK_OFFSET_LEFT}",
-        f"single_way={1 if one_way else 0}",
-        "no_foreground=1",  # 路面の標示は車両の下に描く（#187・#189 の路面表示と同じ。向きによって手前になるのを防ぐ）
-        f"icon=> {name}.{ROADSIGN_ICON_CELL}",
-        f"cursor={name}.{ROADSIGN_CURSOR_CELL},{ROADSIGN_OFFSET}",
-    ]
+    out = _head(f"# AMI: {name}（CC BY 4.0）。路面の横断歩道の標識。シートは blender/render.py が描く（sheetlib の roadsign.py。#162）",
+                "roadsign", name, ROADSIGN_INTRO_YEAR, before=["waytype=road"],
+                after=[f"cost={ROADSIGN_COST}", f"offset_left={ROADSIGN_CROSSWALK_OFFSET_LEFT}", f"single_way={1 if one_way else 0}",
+                       "no_foreground=1",  # 路面の標示は車両の下に描く（#187・#189 の路面表示と同じ。向きによって手前になるのを防ぐ）
+                       f"icon=> {name}.{ROADSIGN_ICON_CELL}", f"cursor={name}.{ROADSIGN_CURSOR_CELL},{ROADSIGN_OFFSET}"])
     cell = {0: 0, 1: 1, 2: 2, 3: 3} if one_way else {0: 0, 1: None, 2: 1, 3: None}
     out += [f"image[{i}]={name}.0.{c},{ROADSIGN_OFFSET}" if c is not None else f"image[{i}]=-" for i, c in cell.items()]
     return NL.join(out) + NL

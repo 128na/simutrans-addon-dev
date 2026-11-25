@@ -10,7 +10,7 @@
   絵は、その物の直線のセルを北と南の隣のタイルの位置にもつないで、半分の大きさにしたもの（歩道はタイル 1 枚を 1/4 に）。
   等倍で真ん中を切ると、壁の single は片側しか入らず、橋脚は灰色の塊になって見分けにくかった。
   壁は版の札だけ（中央分離帯つきは左上に「分」、電柱と柵つきの電柱は左上に「柱」）、架線は左上に稲妻、橋脚は左上に「脚」「門」、歩道は左上に「歩」、車庫は左上に「庫」（絵は道が南へ出る向きの建物を 1/4 に）、
-  盛土は左上に「盛」と版の札（背景は路面軌道の色。tram_track の way）、路面表示は左上に MARK_LABELS の字（背景は路面軌道の色。#187）、
+  盛土は左上に「盛」と版の札（背景は路面軌道の色。tram_track の way）、路面表示は左上に catalog.MARK_LABELS の字（背景は路面軌道の色。#187）、
   道路標識は道路の色に標識の板を 2 倍にした絵だけ（#122）
 - カーソル（256px のセル）: その物の直線の絵（トンネルは坑口）に、アイコンと同じ背景色の札で「速度 + 版」（例 160後）
 - 絵と札の中身は dat から読む（名前・obj・waytype・topspeed と、image[ns] などのキーが指すセル）。dat の icon・cursor が指すセルに書く
@@ -82,13 +82,7 @@ def ref(v):
     return sheet, int(r), int(c)
 
 
-# 路面表示（#187）の左上の字と、絵にするセル（北へ向かう腕・北南の直線・北が閉じた T字の中心）
-MARK_LABELS = {"ami_mark_lane4": "線", "ami_mark_junction2": "交", "ami_mark_junction2_t": "丁",
-               "ami_mark_junction4_in": "入", "ami_mark_junction4_out": "出",
-               "ami_mark_lane6_a": "甲", "ami_mark_lane6_b": "乙", "ami_mark_lane6_m": "央", "ami_mark_junction6_in": "入",
-               "ami_mark_junction6_out": "出", "ami_mark_junction6_m": "中", "ami_mark_junction6_c": "心",
-               # 高速道路の分岐・合流（#188）
-               "ami_mark_diverge_main": "分", "ami_mark_diverge_ramp": "岐", "ami_mark_merge_main": "合", "ami_mark_merge_ramp": "流"}
+# 路面表示（#187）の、絵にするセル（北へ向かう腕・北南の直線・北が閉じた T字の中心）。左上の字は catalog.MARK_LABELS
 MARK_PICTURE = {"ami_mark_lane4": "image[ns][0]", "ami_mark_junction2": "image[n][0]", "ami_mark_junction2_t": "image[sew][0]",
                 "ami_mark_junction4_in": "image[nse][0]", "ami_mark_junction4_out": "image[nsw][0]",
                 "ami_mark_lane6_a": "image[ns][0]", "ami_mark_lane6_b": "image[ns][0]", "ami_mark_lane6_m": "image[ns][0]", "ami_mark_junction6_in": "image[nse][0]", "ami_mark_junction6_out": "image[nsw][0]",
@@ -134,8 +128,8 @@ def describe(d):
         info["kind"] = "sign"
     elif name.startswith("ami_embankment"):  # 盛土（#123）: 左上に「盛」、右下に版（前・後）
         info.update(kind="embankment", label="盛")
-    elif name.startswith("ami_mark_"):  # 路面表示（#187）: 左上に MARK_LABELS の字。速度は出さない
-        info.update(kind="marking", label=MARK_LABELS[name])
+    elif name.startswith("ami_mark_"):  # 路面表示（#187）: 左上に catalog.MARK_LABELS の字。速度は出さない
+        info.update(kind="marking", label=catalog.MARK_LABELS[name])
     else:
         info["kind"] = {"bridge": "bridge", "tunnel": "tunnel"}.get(obj, "way")
         info["speed"] = d["topspeed"]
