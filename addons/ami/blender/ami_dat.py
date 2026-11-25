@@ -810,6 +810,50 @@ def yard_dat_text(name):
     return NL.join(out) + NL
 
 
+# 道路の停留所（building の stop・waytype=road。#277。ADR 0014）。シートの並びは sheetlib の road_stop.py（列 = layout 0〜7、行 0・1 が夏の
+# 奥・手前、行 2・3 が雪の奥・手前、列 8 の行 0・1 がアイコン・カーソル）。layout の決め方は操車場と同じ。
+# 値: 費用 60000（600 cr。pak128 の cost_multiply_station × 1 タイル）・維持費 1800・level 2（pak256 の仮の停留所に合わせた。容量 = level × 32）
+ROAD_STOP_VALUES = dict(cost=60000, maintenance=1800, level=2)
+ROAD_STOP_INTRO_YEAR = 1900
+ROAD_STOP_LAYOUTS = 8
+ROAD_STOP_SNOW_ROW = 2  # sheetlib の road_stop.ROAD_STOP_SNOW_ROW と同じ
+ROAD_STOP_ICON_CELL = f"0.{ROAD_STOP_LAYOUTS}"
+ROAD_STOP_CURSOR_CELL = f"1.{ROAD_STOP_LAYOUTS}"
+ROAD_STOP_ENABLES = {"pax": "enables_pax=1", "post": "enables_post=1", "ware": "enables_ware=1"}
+
+
+def road_stop_dat_text(name, enables):
+    v = ROAD_STOP_VALUES
+    out = [
+        f"# AMI: {name}（CC BY 4.0）。道路の停留所。シートは blender/render.py が描く（sheetlib の road_stop.py。#277）",
+        "obj=building",
+        f"name={name}",
+        "copyright=AMI (CC BY 4.0)",
+        "type=stop",
+        "waytype=road",
+    ] + [ROAD_STOP_ENABLES[e] for e in enables] + [
+        f"intro_year={ROAD_STOP_INTRO_YEAR}",
+        "intro_month=1",
+        "retire_year=2999",
+        "retire_month=1",
+        f"cost={v['cost']}",
+        f"maintenance={v['maintenance']}",
+        f"level={v['level']}",
+        "noinfo=1",
+        "allow_underground=2",
+        f"dims=1,1,{ROAD_STOP_LAYOUTS}",
+        "needs_ground=1",
+        f"icon=> {name}.{ROAD_STOP_ICON_CELL}",
+        f"cursor={name}.{ROAD_STOP_CURSOR_CELL}",
+    ]
+    for season in (0, 1):
+        row = season * ROAD_STOP_SNOW_ROW
+        for layout in range(ROAD_STOP_LAYOUTS):
+            out.append(f"backimage[{layout}][0][0][0][0][{season}]={name}.{row}.{layout},{DEPOT_OFFSET}")
+            out.append(f"frontimage[{layout}][0][0][0][0][{season}]={name}.{row + 1}.{layout},{DEPOT_OFFSET}")
+    return NL.join(out) + NL
+
+
 # 道路標識（roadsign。#122）。値は #110 の一覧（費用 500 cr。roadsign の cost は cr 単位で、makeobj が 100 倍する。維持費のキーは無い）。
 # 効き目は一方通行（single_way）と最低速度（min_speed）だけ。止まれ・最高速度は飾り（本体に速さの上限のキーが無い。#122 の案 A）
 ROADSIGN_COST = 500
@@ -930,6 +974,8 @@ def main():
     for depot in catalog.DEPOTS:
         put(depot.name, depot_dat_text(depot))
     put(catalog.RAIL_YARD, yard_dat_text(catalog.RAIL_YARD))
+    for name, (_kind, enables) in catalog.ROAD_STOPS.items():
+        put(name, road_stop_dat_text(name, enables))
     for name, key in catalog.ROADSIGNS.items():
         put(name, roadsign_dat_text(name, key))
     for name, one_way in catalog.ROADSIGN_CROSSWALKS.items():

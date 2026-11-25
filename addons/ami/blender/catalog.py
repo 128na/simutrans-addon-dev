@@ -252,6 +252,10 @@ DEPOTS = (Depot("rail", "track"), Depot("tram", "tram_track"), Depot("road", "ro
 # 名前の頭 ami_rail_ で、build.py が線路の pak（ami_rail.pak）に入れる
 RAIL_YARD = f"{PREFIX}rail_yard"
 
+# 道路の停留所（building の stop・waytype=road。#277。ADR 0014）。名前 → (種類, 扱う荷)。種類は sheetlib の road_stop.SHAPES のキー。
+# 名前の頭 ami_road_ で、build.py が道路の pak（ami_road.pak）に入れる。pak256 の仮の pak256_bus_stop・pak256_truck_stop の置き換え先
+ROAD_STOPS = {f"{PREFIX}road_bus_stop": ("bus", ("pax", "post")), f"{PREFIX}road_truck_stop": ("truck", ("ware",))}
+
 
 # 道路標識（roadsign。#122）。名前は ami_sign_<名前>（ADR 0008）で、build.py の振り分けで ami_scenery.pak に入る。
 # 値は 6 種（2026-11-21、ユーザーの決定。#122 の案 A）。キーは sheetlib の roadsign.ROADSIGN_PLATES のキー（板の絵）
@@ -346,7 +350,7 @@ SCALED_CANALS = (CANAL, CANAL_SCENIC)
 SCALED_CROSSING_SHEETS = (tuple(crossing_sheet(_r) for _r in ROADS) + tuple(canal_crossing_sheet(_w) for _w in CANAL_ROADS)
                           + (CANAL_CROSSING_RAIL_SHEET,))
 SCALED_CROSSING_DATS = tuple(CROSSINGS) + tuple(CANAL_CROSSINGS)
-SCALED_DEPOTS = tuple(_d.name for _d in DEPOTS) + (RAIL_YARD,)
+SCALED_DEPOTS = tuple(_d.name for _d in DEPOTS) + (RAIL_YARD,) + tuple(ROAD_STOPS)
 SCALED_MONORAILS = ((MONORAIL,) + MONORAIL_ELEVS + (MONORAIL_TUNNEL,) + MONORAIL_SUSPENDEDS + MONORAIL_SUSPENDED_ELEVS
                     + tuple(MONORAIL_POWERS))
 
