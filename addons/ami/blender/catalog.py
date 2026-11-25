@@ -311,9 +311,32 @@ NO_CLOSE_WAYS = frozenset(NO_CLOSE_WAYS)  # 書き換えられないようにす
 ELEVATED_WAYS = frozenset(ELEVATED_WAYS)
 FRONT_WAYS = frozenset(FRONT_WAYS)
 
-# pak128 以外の大きさ（sheet_settings.PAK_SIZE が 128 でない。#261）で描き・組める物（#266 の生活道路。#261 の B で道路の通常の版・路面軌道・歩道・標識・路面表示。残りは #261 で足す）。
+# pak128 以外の大きさ（sheet_settings.PAK_SIZE が 128 でない。#261）で描き・組める物（#266 の生活道路。#261 の B で道路の通常の版・路面軌道・歩道・標識・路面表示。
+# C で線路 4 種（新旧）と、道路・線路の基盤・高架・橋・トンネル・壁・架線・橋脚・盛土・高架の歩道・電柱。残り（踏切・車庫・運河・モノレール・操車場・分岐の追加画像）は #261 の D で足す）。
 # 画素で書いた値を大きさに合わせて確かめたものだけを入れる。ここに無い物は、render.py・ami_dat.py が pak128 以外では止まる（絵が合わないものを作らない）
-SCALED_SHEETS = (
+SCALED_WAYS_B = (
     tuple(_r.way for _r in ROADS) + (TRAM, SIDEWALK) + tuple(sidewalk(_p) for _p in SIDEWALK_PAVINGS)
     + tuple(ROADSIGNS) + tuple(ROADSIGN_CROSSWALKS) + tuple(MARKINGS)
 )
+# C: 線路・道路の、基盤・高架・橋・トンネル（名前は Track・Road が導く）
+SCALED_RAILS = tuple(_t.way for _t in ALL_TRACKS)
+SCALED_BASES = (tuple(_t.base(_v) for _t in ALL_TRACKS for _v in VARIANTS)
+                + tuple(_r.base(_v) for _r in ROADS for _v in _r.variants))
+SCALED_ELEVS = (tuple(_t.elev(_v) for _t in ALL_TRACKS for _v in VARIANTS)
+                + tuple(_r.elev(_v) for _r in ROADS for _v in _r.variants))
+SCALED_BRIDGES_TUNNELS = tuple(_w.bridge for _w in ALL_TRACKS + ROADS) + tuple(_w.tunnel for _w in ALL_TRACKS + ROADS)
+# C: way-object（壁・架線・柵・電柱・分離帯）・橋脚・盛土・高架の歩道
+SCALED_WALLS = (
+    tuple(wall_rail(_v, _old) + _sfx for _old in (False, True) for _v in VARIANTS for _sfx in ("", "_catenary"))
+    + tuple(f"{PREFIX}wall_rail_{'old_' if _old else ''}twin_catenary_{_v}" for _old in (False, True) for _v in ("back", "front"))
+    + tuple(f"{PREFIX}wall_road_{_v}" for _v in ROAD_WALL_VARIANTS) + tuple(ROAD_WALL_CURVED) + tuple(ROAD_DIVIDERS.values())
+    + SIDEWALK_WALLS + tuple(SIDEWALK_POLES)
+    # 近い斜めの分け合うタイル用（twin）の dat は絵のシートを持たず、back・front の壁のシートの絵とアイコンを指す
+    + tuple(f"{PREFIX}wall_rail_{'old_' if _old else ''}twin{_sfx}" for _old in (False, True) for _sfx in ("", "_catenary"))
+    + (ROAD_WALL_TWIN, ROAD_DIVIDER_TWIN)
+)
+SCALED_PIERS = tuple(pier_rail(_g, _o) for _o in (False, True) for _g in (False, True)) + (PIER_ROAD,)
+SCALED_OTHERS = tuple(EMBANKMENTS) + (SIDEWALK_ELEV,)
+
+SCALED_SHEETS = (SCALED_WAYS_B + SCALED_RAILS + SCALED_BASES + SCALED_ELEVS + SCALED_BRIDGES_TUNNELS
+                 + SCALED_WALLS + SCALED_PIERS + SCALED_OTHERS)
