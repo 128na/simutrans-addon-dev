@@ -16,7 +16,7 @@
 import os
 import sys
 
-from check_icons import CELL, SCALE, SRC, TRANSPARENT, cell_of, fmt, read_dats, read_rows, size_error
+from check_lib import CELL, SCALE, SRC, TRANSPARENT, cell_of, fmt, offset_of, read_dats, read_rows, size_error
 
 # 箱 1 段の六角形（pak128 のセルの座標を SCALE 倍した座標。時計回り）。256 は 2 倍（#261）
 HEX = [(x * SCALE, y * SCALE) for x, y in [(64, 32), (128, 64), (128, 96), (64, 128), (0, 96), (0, 64)]]
@@ -29,12 +29,6 @@ def inside(x, y):
         if (x1 - x0) * (y - y0) - (y1 - y0) * (x - x0) < -1e-6:
             return False
     return True
-
-
-def offset_of(value):
-    """'sheet.r.c,-64,-96' → (-64, -96)。無ければ (0, 0)"""
-    parts = value.split(",")
-    return (int(parts[1]), int(parts[2])) if len(parts) >= 3 else (0, 0)
 
 
 def main(src):
@@ -59,7 +53,7 @@ def main(src):
                     sys.exit(f"[check_depot] {bad}")
                 sheets[sheet] = read_rows(path, h)[2]
             rows = sheets[sheet]
-            dx, dy = offset_of(value)
+            dx, dy = offset_of(value) or (0, 0)  # offset が無ければ (0, 0)
             out, top = 0, None
             for y in range(r * CELL, (r + 1) * CELL):
                 line = rows[y]

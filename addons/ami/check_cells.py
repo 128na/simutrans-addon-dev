@@ -8,7 +8,7 @@ dat の絵のキー（image・imageup・diagonal・frontimage・backimage・open
 シートの PNG で読み、全部の画素が透明色（231,255,255）なら失敗にする。セルを描き忘れたり、dat の指すセルがずれたりすると、
 その向き・坂の絵が空になって本体で見えなくなる（#217・#227 で、設定が 2 か所に分かれていて片方を直し忘れた取りこぼし）。
 icon・cursor は check_icons.py が見るので、ここでは読まない。値が `-`（絵なし。dat が意図して空にしたもの）はセルの参照でないので対象外。
-PNG は Pillow があればそれで読み（CI は pip install Pillow。約 1.4 ギガ画素を数秒で読める）、無ければ check_icons.py の read_rows（純 Python。数分かかる）で読む。結果は同じ（`CHECK_CELLS_PURE=1` で純 Python に固定できる。Blender は使わない）。
+PNG は Pillow があればそれで読み（CI は pip install Pillow。約 1.4 ギガ画素を数秒で読める）、無ければ check_lib.py の read_rows（純 Python。数分かかる）で読む。結果は同じ（`CHECK_CELLS_PURE=1` で純 Python に固定できる。Blender は使わない）。
 
 ほとんどの物は、描かない向き・坂・層を空のセルに向ける（壁・架線は奥の層か手前の層だけ、路面表示の way は使わない向きなど。意図して空）ので、
 「空のセルを指してはならない」とは言えない。そこで、空のセルを指す絵のキー（層・季節は別々に）を物ごとに check_cells.allow.txt に控え、控えに無い物が新しく
@@ -21,7 +21,7 @@ import re
 import sys
 import tempfile
 
-from check_icons import CELL, SCALE, SRC, TRANSPARENT, cell_of, drop_missing, fmt, png_size, read_dats, read_rows, size_error
+from check_lib import CELL, SCALE, SRC, TRANSPARENT, cell_of, drop_missing, fmt, png_size, read_dats, read_rows, size_error
 
 ALLOW_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "check_cells.allow.txt")
 
@@ -41,7 +41,7 @@ except ImportError:
 
 
 def empty_cells_pure(path, nrows, cells):
-    """純 Python（check_icons.read_rows）の読み。Pillow が無いとき、と Pillow の読みとの突き合わせに使う"""
+    """純 Python（check_lib.read_rows）の読み。Pillow が無いとき、と Pillow の読みとの突き合わせに使う"""
     w, h, rows = read_rows(path, nrows)
     out = {}
     for r, c in cells:

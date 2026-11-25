@@ -416,7 +416,7 @@ def used_cells(d, keys):
 
 
 def cell_digest(sheet, r, c):
-    """セルの RGB の sha256（行を上から。check_icons.py の source_digest と同じ並び）"""
+    """セルの RGB の sha256（行を上から。check_lib.py の cell_digest と同じ並び）"""
     x = load_sheet(sheet)[r * CELL:(r + 1) * CELL, c * CELL:(c + 1) * CELL, :3]
     return hashlib.sha256(np.ascontiguousarray(x, dtype=np.uint8).tobytes()).hexdigest()
 
