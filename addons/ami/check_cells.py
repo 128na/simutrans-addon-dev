@@ -21,7 +21,7 @@ import re
 import sys
 import tempfile
 
-from check_icons import CELL, SCALE, SRC, TRANSPARENT, cell_of, drop_missing, fmt, png_size, read_dats, read_rows
+from check_icons import CELL, SCALE, SRC, TRANSPARENT, cell_of, drop_missing, fmt, png_size, read_dats, read_rows, size_error
 
 ALLOW_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "check_cells.allow.txt")
 
@@ -107,8 +107,9 @@ def scan(src, jobs=None):
             errors.append(f"シートが無い: {sheet}.png（{who([u for cell, us in uses.items() if cell[0] == sheet for u in us])}）")
             continue
         w, h = png_size(path)
-        if w % CELL or h % CELL:  # 別の大きさのシート（128 のシートを 256 で検査した、など）は、セルの切りが全部ずれる
-            errors.append(f"シート {sheet}.png の大きさ {w}x{h} が、セルの大きさ {CELL}px の倍数でない（SHEET_PAK_SIZE と合わないシート）")
+        bad = size_error(path, w, h)
+        if bad:
+            errors.append(bad)
             continue
         tasks.append((path, (max(r for r, _ in cells) + 1) * CELL, cells))
         sheets.append(sheet)
@@ -232,6 +233,20 @@ def self_test():
         assert len(out) == 1 and "外" in out[0], out
         gone = run("obj=way\nname=t\nimage[ns]=u.0.0\n")
         assert len(gone) == 1 and "シートが無い" in gone[0], gone
+        # シートの大きさがセルの倍数でないとき（別の大きさのシート）は、セルを読まずに落とす
+        write_png(os.path.join(d, "odd.png"), CELL + 1, CELL, lambda y: bytes(3 * (CELL + 1)))
+        odd = run("obj=way\nname=t\nimage[ns]=odd.0.0\n")
+        assert len(odd) == 1 and "倍数でない" in odd[0], odd
+        # CHECK_SKIP_MISSING=1: シートの無い物（u）だけを飛ばし、シートのある物（t）は見る。付けなければ飛ばさない
+        two = "obj=way\nname=t\nimage[ns]=t.0.0\n---\nobj=way\nname=v\nimage[ns]=u.0.0\n"
+        assert len(run(two)) == 1 and "シートが無い" in run(two)[0]
+        os.environ["CHECK_SKIP_MISSING"] = "1"
+        try:
+            assert run(two) == [], run(two)
+            e, empties, _, refs = scan(d, jobs=1)
+            assert refs == 1 and not e, (refs, e)  # v の参照は数えない
+        finally:
+            del os.environ["CHECK_SKIP_MISSING"]
     print("check_cells.py の自己検査は通った")
 
 

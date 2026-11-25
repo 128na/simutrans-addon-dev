@@ -9,14 +9,14 @@
    セルの座標に dat のオフセットを足すと 128px の座標（256px のセルを切る AMI の決まり。build.py の PAKSET）。
    256（SHEET_PAK_SIZE=256。src256/）は座標が全部 2 倍（箱 1 段 = 64px。#261）。
    外へ出ると、隣や上に積んだ箱と重なる
-2. 奥の絵の上端が y32 より下か。本体は奥の絵の不透明な上端から建物の高さ（段）を出し、その上に高架を引けるかを決める
+2. 奥の絵の上端が y32（256 は y64）より下か。本体は奥の絵の不透明な上端から建物の高さ（段）を出し、その上に高架を引けるかを決める
    （OTRP の building_desc.cc の get_drawn_height: 段 = (64 - 上端) / 16 の切り捨て。wegbauer.cc は車庫も見る）。
    y32 なら 2 段で、箱の 2 段目（高架の運河、+2 段）を上に積める
 """
 import os
 import sys
 
-from check_icons import CELL, SCALE, SRC, TRANSPARENT, cell_of, fmt, read_dats, read_rows
+from check_icons import CELL, SCALE, SRC, TRANSPARENT, cell_of, fmt, read_dats, read_rows, size_error
 
 # 箱 1 段の六角形（pak128 のセルの座標を SCALE 倍した座標。時計回り）。256 は 2 倍（#261）
 HEX = [(x * SCALE, y * SCALE) for x, y in [(64, 32), (128, 64), (128, 96), (64, 128), (0, 96), (0, 64)]]
@@ -24,7 +24,7 @@ BOX_TOP = 32 * SCALE  # 奥の絵の上端の下限（同じ座標）
 
 
 def inside(x, y):
-    """128px の座標 (x, y) の点が六角形の中か（辺の上を含む）"""
+    """セルの座標 (x, y)（pak の大きさに合わせた画素。128 は 128px の座標）の点が六角形の中か（辺の上を含む）"""
     for (x0, y0), (x1, y1) in zip(HEX, HEX[1:] + HEX[:1]):
         if (x1 - x0) * (y - y0) - (y1 - y0) * (x - x0) < -1e-6:
             return False
@@ -53,7 +53,10 @@ def main(src):
             sheet, r, c = cell
             if sheet not in sheets:
                 path = os.path.join(src, sheet + ".png")
-                _, h, _ = read_rows(path, 1)
+                w, h, _ = read_rows(path, 1)
+                bad = size_error(path, w, h)
+                if bad:
+                    sys.exit(f"[check_depot] {bad}")
                 sheets[sheet] = read_rows(path, h)[2]
             rows = sheets[sheet]
             dx, dy = offset_of(value)

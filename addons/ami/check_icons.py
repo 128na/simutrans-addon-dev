@@ -28,7 +28,7 @@ import zlib
 from ex_graft import DONOR_SUFFIX as SHARE_SUFFIX
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "..", "..", "tools", "blender"))
+sys.path.append(os.path.join(HERE, "..", "..", "tools", "blender"))
 import sheet_settings  # noqa: E402  pak の大きさ（環境変数 SHEET_PAK_SIZE。既定は pak128。256 の検査は SHEET_PAK_SIZE=256 で流す。#261）
 
 SCALE = sheet_settings.SCALE  # pak128 に対する倍率。検査の対象は、128 は src/、256 は src256/（blender/ami_dat.py の SRC と同じ）
@@ -161,6 +161,14 @@ def png_size(path):
     if head[:8] != b"\x89PNG\r\n\x1a\n":
         raise SystemExit(f"PNG でない: {path}")
     return struct.unpack(">II", head[16:24])
+
+
+def size_error(path, w, h):
+    """シートの大きさ w x h がセルの大きさ CELL の倍数でなければ、その文を返す（別の大きさのシート。128 のシートを 256 で検査した、など。
+    セルの切りが全部ずれて、ほかの検査が分かりにくい文で落ちる）。倍数なら None"""
+    if w % CELL or h % CELL:
+        return f"シート {os.path.basename(path)} の大きさ {w}x{h} が、セルの大きさ {CELL}px の倍数でない（SHEET_PAK_SIZE と合わないシート）"
+    return None
 
 
 def pixel(rows, x, y):
@@ -341,6 +349,10 @@ def main(src):
             errors.append(f"シートが無い: {sheet}.png")
             continue
         sheets[sheet] = read_rows(path, nrows)
+        bad = size_error(path, *sheets[sheet][:2])
+        if bad:
+            errors.append(bad)
+            del sheets[sheet]
     hues = {}  # 名前 → (色相, 色を比べる waytype)
     for o, key, cell in targets:
         sheet, r, c = cell
@@ -383,12 +395,15 @@ def main(src):
     errors += check_sources(src, objs, skipped_names)
 
     n = len(objs)
+    if skipped and not n:  # 絵のある物が 1 つも無い（dat の綴りやシートの名前が崩れて、全部飛ばされた）なら、通さない
+        errors.append(f"CHECK_SKIP_MISSING で、シートのある物が 1 つも残らなかった（{skipped} 物を飛ばした）")
     if errors:
         for e in errors:
             print(e)
         print(f"{'::error::' if os.environ.get('GITHUB_ACTIONS') else ''}アイコン・カーソルの検査で {len(errors)} 件（{n} 物）")
         return 1
-    note = f"。シートの無い {skipped} 物は飛ばした" if skipped else ""
+    gone = sorted(skipped_names)
+    note = f"。シートの無い {skipped} 物は飛ばした（{' '.join(gone[:4])}{'…' if len(gone) > 4 else ''}）" if skipped else ""
     print(f"アイコン・カーソルの検査は通った（{n} 物・{len(need)} シート{note}）")
     return 0
 

@@ -13,11 +13,12 @@
   （[nse1]・[nse2]）は T字・十字、imageup[12] などは坂（imageup2 は 2 段の坂）。雪の絵（[1]）も同じ形
 - そろっているか: front と back の両方の dat があり、どちらも KEYS のキーを夏・雪とも持つ。オフセットは -64,-32（way の決まり）
 - 比べ方: 形を細かい点に分けて 128px の座標に写し（地面の菱形は (64,64)(128,96)(64,128)(0,96)、1 段は 16px）、塗る画素の集まりを作る。
-  （256 は座標・段・許しを全部 SCALE 倍。SHEET_PAK_SIZE=256 で流すと src256/ を見る）
   絵の塗った画素のうち、期待の範囲から TOL px より離れた画素と、期待の範囲を TOL px 削った内側で塗られていない画素を数える
   （輪郭の 1〜2px の差は、つなぎ目で隣へ延ばす分（EMB_OVERLAP）・持ち分の切り方・輪郭の半透明の画素を捨てる分）
 - 雪: 雪の絵（[1]）が夏の絵の 4 行下（ami_dat.py の EMBANKMENT_SNOW_ROWS）を指すかと、塗った画素の平均の色が雪（白に近い）か、
   夏の絵が芝（緑が青より強い）かを見る
+
+256（SHEET_PAK_SIZE=256。src256/ を見る）は、座標・段・許しを全部 SCALE 倍にする（#261）。
 
 見分けられないもの（輪郭が同じで、面の色でしか違わない。#148 のレビュー）:
 - 直線と行き止まり（行き止まりの端の三角の面は、直線の楔の輪郭の内側に描かれる）
@@ -30,7 +31,7 @@
 import os
 import sys
 
-from check_icons import CELL, SCALE, SRC, TRANSPARENT, cell_of, fmt, read_dats, read_rows
+from check_icons import CELL, SCALE, SRC, TRANSPARENT, cell_of, fmt, read_dats, read_rows, size_error
 
 # 画素で書いた値は、pak128 の値に SCALE（pak の大きさの倍率。256 は 2）を掛ける（#261）。形の座標は pak128 の 128px で書き、expected が SCALE 倍に写す
 TOL = 2 * SCALE          # 輪郭の許し（px）
@@ -180,7 +181,11 @@ def check_obj(o, side, src, sheets, cache, errors):
                 if not os.path.exists(path):
                     errors.append(f"{o['name']}: {key} のシート {sheet}.png が無い")
                     continue
-                _, h, _ = read_rows(path, 1)
+                w, h, _ = read_rows(path, 1)
+                bad = size_error(path, w, h)
+                if bad:
+                    errors.append(f"{o['name']}: {bad}")
+                    continue
                 sheets[sheet] = read_rows(path, h)[2]
             rows = sheets[sheet]
             if (r + 1) * CELL > len(rows) or (c + 1) * CELL * 3 > len(rows[0]):

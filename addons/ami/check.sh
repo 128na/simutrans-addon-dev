@@ -9,6 +9,7 @@
 # 要るもの: Python（と Pillow。check_cells.py が PNG を速く読む。無くても通るが数分かかる）、gh（道具を取るとき。サインイン済み）、uvx か pipx（ruff）。
 # シートの描画（Blender）はしない（#50）。
 set -euo pipefail
+unset CHECK_SKIP_MISSING  # 環境に残っていると、128 の検査もシートの無い物を黙って飛ばす。256 の検査の行だけで付ける
 
 AMI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$AMI/../.." && pwd)"
@@ -107,7 +108,7 @@ step "盛土の絵の形と割り当て（向き・角・T字・十字・1 タ�
 # （CHECK_SKIP_MISSING=1: シートの無い物は飛ばす）。全部のシートを描いた手元では CHECK_256_FULL=1 を付けて、全部を厳しく見る
 # （絵の無い物があると落ちる。踏切・車庫・盛土のシートの検査も含む）
 export SHEET_PAK_SIZE=256
-if [ -n "${CHECK_256_FULL:-}" ]; then
+if [ "${CHECK_256_FULL:-}" = "1" ]; then
   step "256 のシートの検査（全部。アイコン・カーソル・空のセル・踏切・車庫・盛土。SHEET_PAK_SIZE=256。#261）"
   "$PY" -X utf8 "$AMI/check_icons.py"
   "$PY" -X utf8 "$AMI/check_cells.py"
