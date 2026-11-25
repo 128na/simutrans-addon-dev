@@ -2,12 +2,14 @@
 # AMI の検査を全部回す。CI（.github/workflows/addon-ami.yml）はこれを呼ぶだけなので、手元で回しても同じ検査になる。
 #   bash addons/ami/check.sh           # リポジトリのどこからでもよい（Windows は Git Bash）
 #   SKIP_BUILD=1 bash addons/ami/check.sh   # pak のビルドを飛ばす
+#   CHECK_256_FULL=1 bash addons/ami/check.sh   # 256 のシート（src256/）を全部そろえた手元で、256 の検査を全部の物に厳しく流す（#261）
 #   MAKEOBJ_FROM_PATH=1 bash addons/ami/check.sh   # ci.env の makeobj でなく、PATH の makeobj を使う
 #   HEADLESS_SIM_BIN=<sim> HEADLESS_PAKSET=<simutrans-test-base.zip> bash addons/ami/check.sh   # 画面を出さない本体で pak を読む検査（下記）。Windows の手元はこれを渡す。渡さないと飛ばす
 # 道具の版は ci.env。makeobj と dat_linter は TOOLS_DIR（既定は ~/.cache/simutrans-addon-dev/ci-tools）に取ってくる。
 # 要るもの: Python（と Pillow。check_cells.py が PNG を速く読む。無くても通るが数分かかる）、gh（道具を取るとき。サインイン済み）、uvx か pipx（ruff）。
 # シートの描画（Blender）はしない（#50）。
 set -euo pipefail
+unset CHECK_SKIP_MISSING  # 環境に残っていると、128 の検査もシートの無い物を黙って飛ばす。256 の検査の行だけで付ける
 
 AMI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$AMI/../.." && pwd)"
@@ -101,6 +103,24 @@ step "物の一覧が全部の dat から作れるか、種類別の pak で全�
 
 step "盛土の絵の形と割り当て（向き・角・T字・十字・1 タイル・坂が期待のセルと形か。check_embankment.py）"
 "$PY" -X utf8 "$AMI/check_embankment.py"
+
+# 256 のシート（src256/。SHEET_PAK_SIZE=256。#261）。256 の PNG は dat と生活道路だけをコミットする（全部は大きすぎる）ので、CI は絵のある物だけを見る
+# （CHECK_SKIP_MISSING=1: シートの無い物は飛ばす）。全部のシートを描いた手元では CHECK_256_FULL=1 を付けて、全部を厳しく見る
+# （絵の無い物があると落ちる。踏切・車庫・盛土のシートの検査も含む）
+export SHEET_PAK_SIZE=256
+if [ "${CHECK_256_FULL:-}" = "1" ]; then
+  step "256 のシートの検査（全部。アイコン・カーソル・空のセル・踏切・車庫・盛土。SHEET_PAK_SIZE=256。#261）"
+  "$PY" -X utf8 "$AMI/check_icons.py"
+  "$PY" -X utf8 "$AMI/check_cells.py"
+  "$PY" -X utf8 "$AMI/check_crossing.py"
+  "$PY" -X utf8 "$AMI/check_depot.py"
+  "$PY" -X utf8 "$AMI/check_embankment.py"
+else
+  step "256 のシートの検査（絵のある物だけ。アイコン・カーソル・空のセル。SHEET_PAK_SIZE=256。#261）"
+  CHECK_SKIP_MISSING=1 "$PY" -X utf8 "$AMI/check_icons.py"
+  CHECK_SKIP_MISSING=1 "$PY" -X utf8 "$AMI/check_cells.py"
+fi
+unset SHEET_PAK_SIZE
 
 step "道具を用意する（makeobj: $MAKEOBJ、dat_linter: $DAT_LINTER）"
 bash "$ROOT/tools/ci/setup-dat-linter.sh" "$DAT_LINTER" "$TOOLS_DIR/dat_linter"

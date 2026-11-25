@@ -18,6 +18,8 @@
 - 雪: 雪の絵（[1]）が夏の絵の 4 行下（ami_dat.py の EMBANKMENT_SNOW_ROWS）を指すかと、塗った画素の平均の色が雪（白に近い）か、
   夏の絵が芝（緑が青より強い）かを見る
 
+256（SHEET_PAK_SIZE=256。src256/ を見る）は、座標・段・許しを全部 SCALE 倍にする（#261）。
+
 見分けられないもの（輪郭が同じで、面の色でしか違わない。#148 のレビュー）:
 - 直線と行き止まり（行き止まりの端の三角の面は、直線の楔の輪郭の内側に描かれる）
 - T字・十字のうち、開いた辺の違いが輪郭に出ないもの（例: 南北東と北東西。開いた辺から見える底が、側面と同じ範囲を塗る）
@@ -29,15 +31,16 @@
 import os
 import sys
 
-from check_icons import CELL, TRANSPARENT, cell_of, fmt, read_dats, read_rows
+from check_icons import CELL, SCALE, SRC, TRANSPARENT, cell_of, fmt, read_dats, read_rows, size_error
 
-TOL = 2          # 輪郭の許し（px）
-MAX_BAD = 6      # 許しの外に出た画素の数の上限（輪郭の端の数画素。今の絵は最悪 2）
-STEPS = 160      # タイル 1 辺を割る数（1 つの点が約 0.4px）
+# 画素で書いた値は、pak128 の値に SCALE（pak の大きさの倍率。256 は 2）を掛ける（#261）。形の座標は pak128 の 128px で書き、expected が SCALE 倍に写す
+TOL = 2 * SCALE          # 輪郭の許し（px）
+MAX_BAD = 6 * SCALE      # 許しの外に出た画素の数の上限（輪郭の端の数画素。今の絵は最悪 2。輪郭の長さが SCALE 倍になる）
+STEPS = 160 * SCALE      # タイル 1 辺を割る数（1 つの点が約 0.4px）
 OVERLAP = 0.025  # つながる辺で隣のタイルへ延ばす長さ（タイル 1 辺 = 1。sheetlib の EMB_OVERLAP 0.25 / TILE 10）
-LEVEL = 16       # 1 段の高さ（px）
+LEVEL = 16 * SCALE  # 1 段の高さ（px。タイルの幅 ÷ 8）
 HIGH = 2         # 楔の高い辺の段数（高架と同じ）
-OFFSET = (-64, -32)  # way の絵のオフセット（256px のセルを切る AMI の決まり。ami_dat.py）
+OFFSET = (-64 * SCALE, -32 * SCALE)  # way の絵のオフセット（セルを切る AMI の決まり。ami_dat.py）
 SNOW_ROWS = 4    # 雪の絵の行のずらし（ami_dat.py の EMBANKMENT_SNOW_ROWS）
 SIDES = ("front", "back")
 
@@ -104,8 +107,8 @@ def expected(name, side, exits, slope_hi, slope_n):
             ex, ey = -0.5 + i / n, -0.5 + j / n   # 辺の元の点（高さはここで決める）
             x = lo["w"] if i == 0 else hi["e"] if i == n else ex
             y = lo["s"] if j == 0 else hi["n"] if j == n else ey
-            sx = 64 + 64 * (x + y)
-            base = 96 - 32 * (y - x) - LEVEL * slope_n * g(ex, ey)
+            sx = SCALE * (64 + 64 * (x + y))
+            base = SCALE * (96 - 32 * (y - x)) - LEVEL * slope_n * g(ex, ey)
             top = base - LEVEL * HIGH * min(1.0, max(0.0, h(ex, ey)))
             put(sx, top, top)    # 上の面
             put(sx, base, base)  # 底
@@ -178,7 +181,11 @@ def check_obj(o, side, src, sheets, cache, errors):
                 if not os.path.exists(path):
                     errors.append(f"{o['name']}: {key} のシート {sheet}.png が無い")
                     continue
-                _, h, _ = read_rows(path, 1)
+                w, h, _ = read_rows(path, 1)
+                bad = size_error(path, w, h)
+                if bad:
+                    errors.append(f"{o['name']}: {bad}")
+                    continue
                 sheets[sheet] = read_rows(path, h)[2]
             rows = sheets[sheet]
             if (r + 1) * CELL > len(rows) or (c + 1) * CELL * 3 > len(rows[0]):
@@ -227,4 +234,4 @@ def main(src):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
+    main(sys.argv[1] if len(sys.argv) > 1 else SRC)

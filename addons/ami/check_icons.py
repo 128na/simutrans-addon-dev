@@ -27,8 +27,14 @@ import zlib
 
 from ex_graft import DONOR_SUFFIX as SHARE_SUFFIX
 
-CELL = 256
-ICON = 32
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(HERE, "..", "..", "tools", "blender"))
+import sheet_settings  # noqa: E402  pak の大きさ（環境変数 SHEET_PAK_SIZE。既定は pak128。256 の検査は SHEET_PAK_SIZE=256 で流す。#261）
+
+SCALE = sheet_settings.SCALE  # pak128 に対する倍率。検査の対象は、128 は src/、256 は src256/（blender/ami_dat.py の SRC と同じ）
+SRC = os.path.join(HERE, "src" + sheet_settings.SUFFIX)
+CELL = 256 * SCALE  # 1 セルの画素数（pak128 は 256、256 は 512）
+ICON = 32  # アイコンは大きさによらず 32px（pak256 の menuconf.tab も icon_width = 32）
 TRANSPARENT = (231, 255, 255)
 REF = re.compile(r"^>?\s*([A-Za-z0-9_\-]+)\.(\d+)\.(\d+)\s*(?:,|$)")
 
@@ -75,6 +81,16 @@ def read_dats(src):
             k, v = line.split("=", 1)
             block[k.strip().lower()] = v.strip()
     return objs
+
+
+def drop_missing(src, objs):
+    """環境変数 CHECK_SKIP_MISSING=1 のとき、絵のシート（dat のセルの参照が指す PNG）が src に無い物を除く。除いた物の数も返す。
+    256 は PNG をコミットせず（dat と生活道路だけ。#261）、描いた分だけ検査したいときに使う（CI。シートが全部そろった手元では付けない）"""
+    if not os.environ.get("CHECK_SKIP_MISSING"):
+        return objs, 0
+    kept = [o for o in objs
+            if all(os.path.exists(os.path.join(src, cell[0] + ".png")) for cell in (cell_of(v) for v in o["keys"].values()) if cell)]
+    return kept, len(objs) - len(kept)
 
 
 def cell_of(value):
@@ -138,6 +154,23 @@ def read_rows(path, nrows):
     return w, h, rows
 
 
+def png_size(path):
+    """PNG の幅・高さ（IHDR だけ読む）"""
+    with open(path, "rb") as f:
+        head = f.read(24)
+    if head[:8] != b"\x89PNG\r\n\x1a\n":
+        raise SystemExit(f"PNG でない: {path}")
+    return struct.unpack(">II", head[16:24])
+
+
+def size_error(path, w, h):
+    """シートの大きさ w x h がセルの大きさ CELL の倍数でなければ、その文を返す（別の大きさのシート。128 のシートを 256 で検査した、など。
+    セルの切りが全部ずれて、ほかの検査が分かりにくい文で落ちる）。倍数なら None"""
+    if w % CELL or h % CELL:
+        return f"シート {os.path.basename(path)} の大きさ {w}x{h} が、セルの大きさ {CELL}px の倍数でない（SHEET_PAK_SIZE と合わないシート）"
+    return None
+
+
 def pixel(rows, x, y):
     i = x * 3
     return tuple(rows[y][i:i + 3])
@@ -194,9 +227,10 @@ def source_digest(rows, row, col):
     return h.hexdigest()
 
 
-def check_sources(src, objs):
+def check_sources(src, objs, skipped_names=()):
     """icons.py が <シート>.icon_sources.txt に控えた、ほかのシートの絵のセルの sha256 を、今のシートと比べる。
-    控えが要る物（expected_sources）に控えがあり、控えのセルが今の dat の指すセルか、も見る"""
+    控えが要る物（expected_sources）に控えがあり、控えのセルが今の dat の指すセルか、も見る。
+    skipped_names は、シートが無くて飛ばした物（CHECK_SKIP_MISSING）の名前。その控えの行は見ない"""
     errors, cache, stamped = [], {}, {}
     names = {o["name"] for o in objs}
     for path in sorted(glob.glob(os.path.join(src, "*" + STAMP_SUFFIX))):
@@ -209,6 +243,8 @@ def check_sources(src, objs):
                 errors.append(f"{stamp}: 控えの行の形が違う（物 icon|cursor 絵のシート 行 列 sha256）: {line.strip()}")
                 continue
             name, kind, sheet, row, col, digest = t[0], t[1], t[2], int(t[3]), int(t[4]), t[5]
+            if name in skipped_names:
+                continue
             if name not in names:
                 errors.append(f"{stamp}: dat に無い物 {name} の行がある。blender/icons.py を流し直す")
                 continue
@@ -266,7 +302,9 @@ def expected_sources(objs):
 
 
 def main(src):
-    objs = read_dats(src)
+    all_objs = read_dats(src)
+    objs, skipped = drop_missing(src, all_objs)
+    skipped_names = {o["name"] for o in all_objs} - {o["name"] for o in objs}
     errors = []
     users = {}  # セル → [(名前, キー)]
     for o in objs:
@@ -311,6 +349,10 @@ def main(src):
             errors.append(f"シートが無い: {sheet}.png")
             continue
         sheets[sheet] = read_rows(path, nrows)
+        bad = size_error(path, *sheets[sheet][:2])
+        if bad:
+            errors.append(bad)
+            del sheets[sheet]
     hues = {}  # 名前 → (色相, 色を比べる waytype)
     for o, key, cell in targets:
         sheet, r, c = cell
@@ -350,18 +392,21 @@ def main(src):
                       f"差の下限 {HUE_MIN_DIFF} 度）。意図して借りる色なら check_icons.py の BG_BORROW に書く")
 
     # 4. ほかのシートの絵から作ったアイコン・カーソルが、今の絵のシートから作られているか（#141）
-    errors += check_sources(src, objs)
+    errors += check_sources(src, objs, skipped_names)
 
     n = len(objs)
+    if skipped and not n:  # 絵のある物が 1 つも無い（dat の綴りやシートの名前が崩れて、全部飛ばされた）なら、通さない
+        errors.append(f"CHECK_SKIP_MISSING で、シートのある物が 1 つも残らなかった（{skipped} 物を飛ばした）")
     if errors:
         for e in errors:
             print(e)
         print(f"{'::error::' if os.environ.get('GITHUB_ACTIONS') else ''}アイコン・カーソルの検査で {len(errors)} 件（{n} 物）")
         return 1
-    print(f"アイコン・カーソルの検査は通った（{n} 物・{len(need)} シート）")
+    gone = sorted(skipped_names)
+    note = f"。シートの無い {skipped} 物は飛ばした（{' '.join(gone[:4])}{'…' if len(gone) > 4 else ''}）" if skipped else ""
+    print(f"アイコン・カーソルの検査は通った（{n} 物・{len(need)} シート{note}）")
     return 0
 
 
 if __name__ == "__main__":
-    here = os.path.dirname(os.path.abspath(__file__))
-    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, "src")))
+    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else SRC))

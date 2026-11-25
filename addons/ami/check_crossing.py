@@ -13,9 +13,8 @@ import hashlib
 import os
 import sys
 
-from check_icons import read_rows
+from check_icons import CELL, SRC, read_rows
 
-CELL = 256
 STAMP_SUFFIX = ".road_cells.txt"  # tools/blender/sheetlib/crossing.py の ROAD_STAMP_SUFFIX と同じ
 # 控えに無ければならないセル（道路・運河の直線の ns・ew と、その雪の行。blender/render.py の crossing_sheet の既定）。
 # 一部の向きだけ描いた控え（SHEET_ONLY）を src に持ち込んだときにも気づけるように、全部そろっているかを見る
@@ -93,4 +92,4 @@ def main(src):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")))
+    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else SRC))
