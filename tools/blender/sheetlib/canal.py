@@ -339,7 +339,7 @@ def _earth_sheared(name, bank, wb, slope, water, pad=CANAL_PAD, eps=CANAL_EARTH_
 
 
 def _own(cname, slope, depth_px=0):
-    """持ち分: 道路と同じ菱形（ROAD_CY）を上へ 1 行広げる（笠石の厚み）。depth_px > 0 のとき（景観の運河。水面が深い）は、
+    """持ち分: 道路と同じ菱形（ROAD_CY）を上へ SCALE 行（pak128 は 1 行）広げる（笠石の厚み）。depth_px > 0 のとき（景観の運河。水面が深い）は、
     菱形を depth_px だけ下へずらした分も足す: つながる辺の向こうの水面は、深いぶん手前のタイルの菱形の上の端へはみ出して見えるため
     （足さないと、タイルのつなぎ目に地面の帯が出る）"""
     m = _ground_mask(slope, None, ROAD_CY)

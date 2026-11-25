@@ -125,7 +125,8 @@ def main():
             outs.append(out)
     # 分岐の追加画像は線路・路面軌道の物の継ぎ足し。256 の PNG をコミットしない CI（BUILD_SKIP_MISSING）は、
     # 提供用の dat が指すシートが欠けているので継ぎ足さない（全部のシートを描いた手元では継ぎ足す。#261）
-    if not (os.environ.get("BUILD_SKIP_MISSING") and not has_sheets(os.path.join(SRC, EX_DONORS))):
+    ex_ok = not os.environ.get("BUILD_SKIP_MISSING") or has_sheets(os.path.join(SRC, EX_DONORS))
+    if ex_ok:
         graft_ex(outs)
 
 

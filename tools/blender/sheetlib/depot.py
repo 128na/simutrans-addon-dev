@@ -13,8 +13,9 @@
     列 0〜3: layout 0〜3
     行 0: 夏の奥の絵、行 1: 夏の手前の絵、行 2・3: 雪の奥・手前（dat の季節 [1]）
     列 4: 行 0 がアイコン、行 1 がカーソル（AMI の blender/icons.py が、描いた絵から作って書く。ここでは空けておく）
-絵の位置: タイルの中心をセルの (128, GROUND_CY + BUILDING_DROP) に置き、dat のオフセットは -64,-96（BUILDING_OFFSET）。
-pak128 のタイルの中心は (64, 95)（線路・踏切の絵と同じ。cells の GROUND_CY = 127 にオフセット -32）なので、上へ 191px の余白がある。
+絵の位置: タイルの中心をセルの (CELL / 2, GROUND_CY + BUILDING_DROP) に置き、dat のオフセットは BUILDING_OFFSET（pak128 は -64,-96。256 は倍）。
+pak128 のタイルの中心は (64, 95)（線路・踏切の絵と同じ。cells の GROUND_CY = 127 にオフセット -32）なので、上へ 191px の余白がある（256 は倍）。
+BUILDING_OFFSET は dat を書く側（addons/ami/blender/ami_dat.py の DEPOT_OFFSET）と同じ値で、ここでは描画に使わない（対応を示す）。
 """
 import math
 import os

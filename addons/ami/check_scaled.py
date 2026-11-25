@@ -3,6 +3,7 @@
 純 Python（Blender・256 の PNG が要らないので、CI でも動く）。256 の PNG はコミットしないため、名前の書き間違い・過不足は
 256 の検査では見つからない。次を見る:
 - 名前に重複が無い
+- src/ の dat が、分岐の追加画像の提供用（ex_donors）を除いて全部 SCALED_SHEETS に入っている（入れ忘れると、256 では ami_dat.py の put が黙って飛ばす）
 - dat を持つ物は、src/<名前>.dat がある（dat を持たない SCALED_NO_DAT は、src/<名前>.png がある）
 - 描く対象（SCALED_TARGETS）は、pak128 の src/<名前>.png がある（描く物が実在する）
 - 描く対象でない名前（SCALED_NO_TARGET）は、壁の単独の名前なら src/<名前>.png が、絵を持たない dat（twin・踏切）なら src/<名前>.dat がある
@@ -15,6 +16,7 @@ sys.path.append(os.path.join(HERE, "blender"))
 import catalog  # noqa: E402
 
 SRC = os.path.join(HERE, "src")
+EX_DONORS = "ex_donors"  # 分岐の追加画像の提供用の dat（物ではなく、build.py が継ぎ足す。blender/ami_dat.py の EX_DONORS_DAT）
 
 
 def has(name, ext):
@@ -43,6 +45,10 @@ def main():
             continue
         if not has(n, ".png"):
             errors.append(f"{n}: 壁の単独の名前だが src/ に絵（png）が無い")
+    for dat in sorted(os.listdir(SRC)):  # src/ の dat が全部入っているか（入れ忘れると、256 では ami_dat.py の put が黙って飛ばす）
+        n, ext = os.path.splitext(dat)
+        if ext == ".dat" and n not in seen and n != EX_DONORS:
+            errors.append(f"{n}: src/ に dat があるが SCALED_SHEETS に入っていない（256 で描き・組めるようにして、catalog.SCALED_SHEETS に足す）")
     for n in catalog.SCALED_NO_TARGET + catalog.SCALED_NO_DAT:
         if n not in seen:
             errors.append(f"{n}: SCALED_NO_TARGET・SCALED_NO_DAT にあるが SCALED_SHEETS に無い")
