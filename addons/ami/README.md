@@ -958,7 +958,7 @@ pak の大きさは、環境変数 `SHEET_PAK_SIZE`（タイルの幅の画素�
   | `sheetlib/sheetlib.py` | 絵の基準位置 128 → 256、`BALLAST_DY` −1 → −2、`DIAG_PX`、持ち分を上へ広げる行数（`WALL_RISE`・`TUNNEL_RISE`） |
   | `render.py` | 基準面の下げ幅 `_DATUMS`、`spill` |
   | `sheetlib/roadsign.py` | 標識の板（画素の絵）を最近傍で `SCALE` 倍に拡大して押す（#261 の B）。柱の高さ・太さは世界の単位なので同じ |
-  | dat（`ami_dat.py`） | 位置合わせ `-64,-32` → `-128,-64`、標識の左側通行のずらし `offset_left` 14 → 28（本体が画素で足す。`obj/roadsign.cc`） |
+  | dat（`ami_dat.py`） | 位置合わせ `-64,-32` → `-128,-64`。標識の左側通行のずらし `offset_left` は 14 のまま（単位がタイルの幅の 1/64 で、pak の大きさによらない。倍にすると標識が道路の外へずれる） |
   | `build.py` | makeobj の大きさ `pak256` → `pak512`（セルの一辺） |
   | `icons.py` | アイコンは 32px のまま。絵（直線のセル）を切る大きさ・カーソルの札の位置と大きさを `SCALE` 倍 |
 

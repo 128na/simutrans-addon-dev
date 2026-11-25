@@ -815,7 +815,7 @@ def yard_dat_text(name):
 ROADSIGN_COST = 500
 ROADSIGN_INTRO_YEAR = 1900
 ROADSIGN_EFFECT = {"one_way": "single_way=1", "min_50": "min_speed=50"}
-ROADSIGN_OFFSET_LEFT = 14 * sheet_settings.SCALE  # 左側通行のときのずらし（本体の既定 14 を明示する。obj/roadsign.cc の calc_image は画素で足すので、pak の大きさに比例させる。#261）
+ROADSIGN_OFFSET_LEFT = 14  # 左側通行のときのずらし（本体の既定と同じ値を明示する。obj/roadsign.cc の calc_image）。単位はタイルの幅の 1/64（描くときに tile_raster_scale_x で現在のタイルの幅に直す）なので、pak の大きさによらず同じ値（256 でも 14。倍にすると標識が 1 タイル近く外へずれる。#261 の B で確かめた）
 ROADSIGN_ICON_CELL = "0.4"  # sheetlib の roadsign.ROADSIGN_ICON_CELL と同じ
 ROADSIGN_CURSOR_CELL = "1.4"  # sheetlib の roadsign.ROADSIGN_CURSOR_CELL と同じ
 ROADSIGN_OFFSET = OFFSET  # 道路の way と同じ（sheetlib の ROAD_CY）
