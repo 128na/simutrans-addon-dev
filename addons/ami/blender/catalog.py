@@ -312,7 +312,8 @@ ELEVATED_WAYS = frozenset(ELEVATED_WAYS)
 FRONT_WAYS = frozenset(FRONT_WAYS)
 
 # pak128 以外の大きさ（sheet_settings.PAK_SIZE が 128 でない。#261）で描き・組める物（#266 の生活道路。#261 の B で道路の通常の版・路面軌道・歩道・標識・路面表示。
-# C で線路 4 種（新旧）と、道路・線路の基盤・高架・橋・トンネル・壁・架線・橋脚・盛土・高架の歩道・電柱。残り（踏切・車庫・運河・モノレール・操車場・分岐の追加画像）は #261 の D で足す）。
+# C で線路 4 種（新旧）と、道路・線路の基盤・高架・橋・トンネル・壁・架線つきの壁・twin の壁・柵・電柱・分離帯・橋脚・盛土・高架の歩道。
+# D で運河・踏切・車庫・操車場・モノレール。分岐の追加画像（ex）は物ではなく、線路の物の画像リストへの継ぎ足し（build.py）。
 # 画素で書いた値を大きさに合わせて確かめたものだけを入れる。ここに無い物は、render.py・ami_dat.py が pak128 以外では止まる（絵が合わないものを作らない）
 SCALED_WAYS_B = (
     tuple(_r.way for _r in ROADS) + (TRAM, SIDEWALK) + tuple(sidewalk(_p) for _p in SIDEWALK_PAVINGS)
@@ -340,12 +341,25 @@ SCALED_WALLS = (
 SCALED_PIERS = tuple(pier_rail(_g, _o) for _o in (False, True) for _g in (False, True)) + (PIER_ROAD,)
 SCALED_OTHERS = tuple(EMBANKMENTS) + (SIDEWALK_ELEV,)
 
+# D: 運河・踏切・車庫・操車場・モノレール。踏切の dat（線路 × 道路・水路。16 + 7）は絵のシートを持たず、踏切のシート 8 枚（道路の種類ごとと線路で共通の水路のもの）を指す
+SCALED_CANALS = (CANAL, CANAL_SCENIC)
+SCALED_CROSSING_SHEETS = (tuple(crossing_sheet(_r) for _r in ROADS) + tuple(canal_crossing_sheet(_w) for _w in CANAL_ROADS)
+                          + (CANAL_CROSSING_RAIL_SHEET,))
+SCALED_CROSSING_DATS = tuple(CROSSINGS) + tuple(CANAL_CROSSINGS)
+SCALED_DEPOTS = tuple(_d.name for _d in DEPOTS) + (RAIL_YARD,)
+SCALED_MONORAILS = ((MONORAIL,) + MONORAIL_ELEVS + (MONORAIL_TUNNEL,) + MONORAIL_SUSPENDEDS + MONORAIL_SUSPENDED_ELEVS
+                    + tuple(MONORAIL_POWERS))
+
 SCALED_SHEETS = (SCALED_WAYS_B + SCALED_RAILS + SCALED_BASES + SCALED_ELEVS + SCALED_BRIDGES_TUNNELS
-                 + SCALED_WALLS + SCALED_PIERS + SCALED_OTHERS)
+                 + SCALED_WALLS + SCALED_PIERS + SCALED_OTHERS
+                 + SCALED_CANALS + SCALED_CROSSING_SHEETS + SCALED_CROSSING_DATS + SCALED_DEPOTS + SCALED_MONORAILS)
 
 # render.py の描く対象（SHEETS のキー）でない名前: 壁の単独の名前（基盤の版を描くと一緒に書かれる）と、絵を持たない twin の dat。
 # 256 で対象を渡さずに render.py を流すと、SCALED_TARGETS を描く（check_scaled.py が実在を確かめる）
-SCALED_NO_TARGET = tuple(wall_rail(_v, _old) for _old in (False, True) for _v in VARIANTS) + SCALED_TWIN_DATS
+# 絵のシートを持たない dat（twin の壁・踏切）は SCALED_DAT_ONLY
+SCALED_DAT_ONLY = SCALED_TWIN_DATS + SCALED_CROSSING_DATS
+SCALED_NO_TARGET = tuple(wall_rail(_v, _old) for _old in (False, True) for _v in VARIANTS) + SCALED_DAT_ONLY
 SCALED_TARGETS = tuple(_n for _n in SCALED_SHEETS if _n not in SCALED_NO_TARGET)
-# dat を持たないシート（twin の架線つきの壁の絵。dat は twin の dat が指す）
-SCALED_NO_DAT = tuple(f"{PREFIX}wall_rail_{'old_' if _old else ''}twin_catenary_{_v}" for _old in (False, True) for _v in ("back", "front"))
+# dat を持たないシート（twin の架線つきの壁の絵・踏切の絵。dat は twin の dat・踏切の dat が指す）
+SCALED_NO_DAT = (tuple(f"{PREFIX}wall_rail_{'old_' if _old else ''}twin_catenary_{_v}" for _old in (False, True) for _v in ("back", "front"))
+                 + SCALED_CROSSING_SHEETS)

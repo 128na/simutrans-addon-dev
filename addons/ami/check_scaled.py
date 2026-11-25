@@ -5,7 +5,7 @@
 - 名前に重複が無い
 - dat を持つ物は、src/<名前>.dat がある（dat を持たない SCALED_NO_DAT は、src/<名前>.png がある）
 - 描く対象（SCALED_TARGETS）は、pak128 の src/<名前>.png がある（描く物が実在する）
-- 描く対象でない名前（SCALED_NO_TARGET）は、壁の単独の名前なら src/<名前>.png が、twin の dat なら src/<名前>.dat がある
+- 描く対象でない名前（SCALED_NO_TARGET）は、壁の単独の名前なら src/<名前>.png が、絵を持たない dat（twin・踏切）なら src/<名前>.dat がある
 """
 import os
 import sys
@@ -39,7 +39,7 @@ def main():
         if not has(n, ".png"):
             errors.append(f"{n}: 描く対象だが src/ に絵（png）が無い（render.py の SHEETS のキーか）")
     for n in catalog.SCALED_NO_TARGET:
-        if n in catalog.SCALED_TWIN_DATS:
+        if n in catalog.SCALED_DAT_ONLY:
             continue
         if not has(n, ".png"):
             errors.append(f"{n}: 壁の単独の名前だが src/ に絵（png）が無い")

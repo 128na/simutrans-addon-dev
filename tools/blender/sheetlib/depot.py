@@ -23,10 +23,10 @@ import numpy as np
 from mathutils import Vector
 
 from .cells import GROUND_CY, load_rgba8, make_sheet, render_cell, save_rgba
-from .core import CELL, H, TILE, TRANSPARENT, clear_models, material, merge, mesh_object, set_anchor
+from .core import CELL, H, SCALE, TILE, TRANSPARENT, clear_models, material, merge, mesh_object, set_anchor
 
-BUILDING_DROP = 64                  # 建物の絵のタイルの中心を、線路の絵（GROUND_CY）より何 px 下に置くか（上に余白を作る）
-BUILDING_OFFSET = (-64, -96)        # dat のオフセット。GROUND_CY + BUILDING_DROP - 96 = 95 が、線路の絵（GROUND_CY - 32）と同じ行
+BUILDING_DROP = 64 * SCALE          # 建物の絵のタイルの中心を、線路の絵（GROUND_CY）より何 px 下に置くか（上に余白を作る。画素の値なので pak の大きさに比例。#261 の D）
+BUILDING_OFFSET = (-64 * SCALE, -96 * SCALE)  # dat のオフセット（画素）。GROUND_CY + BUILDING_DROP - 96 = 95 が、線路の絵（GROUND_CY - 32）と同じ行（128 のとき。大きな pak は倍）
 DEPOT_SNOW_ROW = 2                  # 雪の絵の行のずらし（夏の奥・手前が行 0・1）
 DEPOT_ICON_CELL = (0, 4)            # アイコンのセル（行, 列）
 DEPOT_CURSOR_CELL = (1, 4)          # カーソルのセル
