@@ -13,6 +13,7 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 - [ADR 0006](../../docs/adr/0006-ami-track-variants-by-track-form.md): 線路のバリエーションを軌道の形式で足す
 - [ADR 0007](../../docs/adr/0007-ami-beta-distribution.md): 第 1 弾のベータの配り方（場所・版の名前・zip の中身）
 - [ADR 0008](../../docs/adr/0008-ami-scope-second-phase.md): 第 2 弾の範囲（入れる物・入れない物・順番・名前・pak）。ADR 0002 を置き換える
+- [ADR 0014](../../docs/adr/0014-ami-scope-stations-and-signals.md): 駅・停留所・線路の信号を範囲に入れる（空港・電線は後）。ADR 0008 を置き換える（承認待ち）
 
 ## 目的と中身
 
