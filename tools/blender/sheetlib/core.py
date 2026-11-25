@@ -163,7 +163,7 @@ def noisy_material(name, rgb_a, rgb_b, scale=40.0, rough=0.8, emit=0.0, spec=Non
     nt = m.node_tree
     bsdf = nt.nodes["Principled BSDF"]
     noise = nt.nodes.new("ShaderNodeTexNoise")
-    noise.inputs["Scale"].default_value = scale
+    noise.inputs["Scale"].default_value = scale * SCALE  # 模様の細かさは物の座標で決まるので、pak の大きさに比例させる（呼ぶ所は掛けない。#298。SCALE 1 は同じ値）
     noise.inputs["Detail"].default_value = 2.0
     ramp_lo, ramp_hi = ramp
     ramp = nt.nodes.new("ShaderNodeValToRGB")
