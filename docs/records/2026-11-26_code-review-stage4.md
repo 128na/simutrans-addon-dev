@@ -51,7 +51,7 @@
 | 道路の停留所の雪の行 | `road_stop.py:29` の `ROAD_STOP_SNOW_ROW = 2` | `ami_dat.py:821` | **#281 で増えた** |
 | 路面表示の雪の種類・空のセル | `marking.py:48`・`:125` | `ami_dat.py:539`・`:537` | — |
 
-- 表に無い対が、ほかにもある: 歩道の柵の手前の絵の行（`sidewalk.py:59` の `FENCE_FRONT_ROW = 4`。dat は `ami_dat.py:652` で壁の `WALL_FRONT_ROW` を借りる）、橋の雪の行（`ami_dat.py:241` の `BRIDGE_SNOW_ROWS = 4`）、手前の絵を持つ way の雪の行（`ami_dat.py:105` の `FRONT_SNOW_ROWS = 8`）、踏切の下の道路の雪の行（`crossing.py:208` の既定 `road_snow_rows=4`）。少なくとも 14 対ある。
+- 表に無い対が、ほかにもある: 歩道の柵の手前の絵の行（`sidewalk.py:59` の `FENCE_FRONT_ROW = 4`。dat は `ami_dat.py:652` で壁の `WALL_FRONT_ROW` を借りる）、橋の雪の行（`ami_dat.py:241` の `BRIDGE_SNOW_ROWS = 4`）、手前の絵を持つ way の雪の行（`ami_dat.py:105` の `FRONT_SNOW_ROWS = 8`）、踏切の下の道路の雪の行（`crossing.py:208` の既定 `road_snow_rows=4`。dat の側ではなく、道路のシートの雪の行との対）。注記でそろえている値は、少なくとも 14 ある。
 
 - 前回の案 4 は「`sheetlib` は import すると Blender を読むので、`ami_dat.py` からは直接引けない」を前提にしていた。今は `ami_dat.py:32` が `tools/blender/sheet_settings.py`（Blender を使わない。#270 で pak の大きさを足した）を import している。Blender を使わない置き場への道は、既にある。
 - 対が食い違ったときに拾う検査は、指す先が空のセルになる形だけ（`check_cells.py`）。行のずらしの食い違いは、指す先に別の絵があると拾えない（前回と同じ）。
@@ -82,14 +82,14 @@
 | `tools/blender/sheetlib/roadsign.py`・`tools/README.md`・`addons/ami/lineup.py`・`ingame/sample_spots.sh` | 各 3 | — |
 | `tools/blender/sheetlib/core.py`・`road_parts.py`・`assemble.py`・`__init__.py` | 各 2 | 土台・描くコード |
 
-- 物を 1 つ足す・消すときに触るファイル: 幹線道路（#258）は 18 ファイル（`ingame/` の見本 8 本を含む。セルの控えの `*.txt` 6 本を含めると 24）、道路の停留所（#281）は 12、閉塞信号の追加（#283）は 12、その削除（#293）は 14（ADR を含む）。足した物を消すのにも、同じ表を全部たどった（#293 の後、`signal` の残りが無いことを grep で確かめた）。
+- 物を 1 つ足す・消すときに触るファイル: 幹線道路（#258）は 18 ファイル（`ingame/` の 9 本を含む。セルの控えと許可リストの `*.txt` 6 本を含めると 24）、道路の停留所（#281）は 12、閉塞信号の追加（#283）は 12、その削除（#293）は 14（ADR を含む）。足した物を消すのにも、同じ表を全部たどった（#293 の後、`signal` の残りが無いことを grep で確かめた）。
 - 土台の `sheetlib.py` は、前回は 40 件中 2 件だったが、今回は 19 件中 5 件（#258・#262・#270・#272・#280）。道路の関数 `_road_sheet`（`sheetlib.py:188-744`）は約 495 行から 557 行に増えた（カーブの形 `curve`・`curve_cells`、pak の大きさ）。線路の `_track_sheet`（`:879-1232`）は 354 行で変わらない。
 
 ### 5. pak の大きさ（256）で増えた物
 
 - `catalog.py:321-368` の `SCALED_*`（256 で描き・組める物の表）は、#266〜#274 で段階的に広げたときの「入れた物だけ通す」表。今は `src/*.dat` のうち外れているのは `ex_donors`（分岐の追加画像の提供用で、物ではない）だけで、全部の物が入っている（import して比べた）。新しい物を足すと、この表にも足す（足し忘れは `check_scaled.py` が CI で止める。黙っては誤らない）。
-- 模様の細かさ（`core.noisy_material` の `scale`）は部品の座標で決まるので、256 では粒が 2 倍の大きさになる（#288 の本文）。#288 は道路の路面（`road_parts.py:263`、#289）と歩道の舗装（`render.py:724`、#290）を、呼ぶ所で `* SCALE` を掛けて直した。`SCALE` を掛けていない呼び出しが、ほかに残っている: `canal.py:38-40`・`:233`・`:280`・`:283`（水・壁・笠石・暗渠）、`road_parts.py:66`・`:70`・`:75`・`:101`、`track_parts.py:142`（線路のバラスト）、`render.py:519`・`:526`（道路の雪）・`:674`・`:685`・`:747`、ラウンドの `round_road.py`・`round_road4.py`・`round_wave3.py`。
-  - #288 の追加のコメント（pak256 の進捗管理）は、走行跡・雪・路面表示は「路面の直しで足りる」としている。#288 の本文は、線路のバラストは元から粒が細かく目立たないとしている。運河などのほかの物が 256 で粗いという報告は、#288 では見ていない（issue の全体は探していない）。どれが 256 で目立つかは見ていない（256 の見た目は pak256 が確かめる取り決め）。
+- 模様の細かさ（`core.noisy_material` の `scale`）は部品の座標で決まるので、256 では粒が 2 倍の大きさになる（#288 の本文）。#288 は道路の路面（`road_parts.py:263`、#289）と歩道の舗装（`render.py:724`、#290）を、呼ぶ所で `* SCALE` を掛けて直した。`SCALE` を掛けていない呼び出しが、ほかに残っている: `canal.py:38-40`・`:233`・`:280`・`:283`（水・壁・笠石・暗渠）、`road_parts.py:66`・`:70`・`:75`・`:101`、`road_parts.py:107` の `_mix_material`（`:113` の走行跡が `90`、`:179` のまだらの雪が `45`。`:263` の `asphalt_skin` は路面だけ掛けていて、同じ辞書の `wear`・`slush` はこれを通る）、`track_parts.py:142`（線路のバラスト）、`render.py:519`（道路のコンクリート）・`:526`（道路の雪）・`:674`・`:685`・`:747`、ラウンドの `round_road.py`・`round_road4.py`・`round_wave3.py`。
+  - #288 の追加のコメント（pak256 の進捗管理）は、走行跡・雪・路面表示は「路面の直しで足りる」としている。コードでは、走行跡とまだらの雪は路面と別の `scale`（`90`・`45`）で、路面の直しでは変わっていない。見た目で目立たないという意味か、コメントの読み違いかは確かめていない。#288 の本文は、線路のバラストは元から粒が細かく目立たないとしている。運河などのほかの物が 256 で粗いという報告は、#288 では見ていない（issue の全体は探していない）。どれが 256 で目立つかは見ていない（256 の見た目は pak256 が確かめる取り決め）。
 - 256 の検査（#271）は `check_icons.py` を道具の置き場として使っている。`check_cells.py:24`・`check_crossing.py:16`・`check_depot.py:19`・`check_embankment.py:34` が `check_icons` から `CELL`・`SCALE`・`SRC`・`read_rows`・`read_dats` などを import する。
   - 同じ名前で違う物: `offset_of` が `check_icons.py:312`（無ければ `None`。#295 で足した）と `check_depot.py:34`（無ければ `(0, 0)`）にある。
   - 同じ中身の写し: セルの sha256 が `check_icons.py:230` の `source_digest`、`check_crossing.py:34` の `cell_digest`、`blender/icons.py` の `cell_digest`（控えを書く側）の 3 か所にある。並びを変えると 3 か所とも直すことになる（ずれれば検査が落ちるので、黙っては誤らない）。
