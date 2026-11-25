@@ -33,3 +33,14 @@
 
 - ゲームで確認（2026-11-25、`addons/ami/ingame/road_stop_sample.nut`、`flat_512_left_v64`）: 4 → 6 → 5 の順で建てると、`halt.get_tile_list().len()` が 2 で、駅の名前が 2 つに分かれた（建設後の画面でも隣り合う 2 つの駅名の札が出た）。4 → 5 → 6 の順で建てると 3 になり、1 つの駅になった（道路 3 種 × 温暖・降雪の 30 か所）
 - 原因は、本体の駅の建て方の読みでは未確認（推測: 建てるタイルに隣り合う駅が複数あるとき、つなげるのは 1 つだけ）。つなげたい操作は、端から順に建てて回避する
+
+## 4. way・標識の desc と信号の状態
+
+| 使い方 | 意味 | 確かめた場所（日付） |
+|---|---|---|
+| `way_desc_x("名前")` | **pak に無い名前でも null にならない**（中身が空の desc が返る）。`command_x.build_way` に渡すと「No way provided」で失敗する。使えるかは、一覧から名前で探して確かめる | ゲームで確認（2026-11-25、#278。AMI の線路が無い pak256poc だけの起動で、`way_desc_x("ami_rail_ballast") != null` が真になり、`build_way` が失敗した） |
+| `foreach (w in way_desc_x.get_available_ways(wt_rail, st_flat)) { … w.get_name() … }` | 使える way の一覧。線路（`wt_rail`）・道路（`wt_road`）はここで名前を探せる。**路面軌道（`ami_tram`。`waytype=tram_track`）は、`wt_rail`・`wt_tram`・`wt_road` のどの一覧にも出なかった**ので、名前で `way_desc_x` を引く（pak に無いときは `build_way` が失敗する） | ゲームで確認（2026-11-25、#278。AMI の dist/ami.pak で `ami_` で始まる名前を 3 つの一覧から集めた。線路と道路は出て、`ami_tram` は出なかった。本体のコードでは読んでいない） |
+| `sign_desc_x.get_available_signs(wt_rail)` | 使える信号・標識の一覧（`wt_road` は道路標識）。`d.is_signal()`・`d.get_cost()` が読める（`cost` は dat の値の 100 倍） | ゲームで確認（2026-11-25、#278）。`is_signal` は `api_obj_desc.cc` |
+| `command_x.build_sign_at(pl, coord3d, sign_desc)` | 置けたら null、置けなければ文字列を返すこともあるが、**標識が既にある踏切などでは例外「Tool has no effects」を投げる**ので、`try`/`catch` で包む。1 マスに標識は 1 つで、信号と道路標識はどちらを先に置いても同じタイルに置けない | ゲームで確認（2026-11-25、#278。本体の `simtool.cc` の標識の置き方も reviewer が読んだ） |
+| `sign_x(x, y, z).get_state()` | 信号の状態（0 = 停止、1 = 進行）。列車が通る間だけ 1 になる | ゲームで確認（2026-11-25、#278。`api_map_objects.cc` の `roadsign_get_state`） |
+| `vehicle_desc_x.get_available_vehicles(wt_rail)` の機関車 | 電化が要る機関車（`v.needs_electrification()` が真）は、架線の無い線路では出庫しても動かない（`convoy.get_state()` が 0 のまま）。試しの列車は電化不要の機関車を選ぶ | ゲームで確認（2026-11-25、#278。pak128 の先頭の機関車が `aceG_Head`（電化）で、車庫から動かなかった） |
