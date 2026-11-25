@@ -218,63 +218,6 @@ def roadsign_sheet(sheet, plate, work):
     make_sheet(cells, 2, 5, sheet)
 
 
-# ---------------------------------------------------------------- 線路の信号（#278。ADR 0014）
-# 閉塞信号 1 種（is_signal=1・waytype=track）。柱と板（ここでは信号の灯器）の組み立ては道路標識と同じで、灯器だけが状態ごとに違う。
-# 本体の画像の番号は 向き + 状態 * 4（obj/signal.cc。向きは image[0]〜[3] = 北・南・西・東 = 道路標識と同じ並びと位置）。状態 0 が停止（赤）、1 が進行（青）。
-# シートの並び: 行 0 = 状態 0（停止）の 4 向き、行 1 = 状態 1（進行）の 4 向き、列 4 の行 0 がアイコン、行 1 がカーソル（AMI の blender/icons.py が書く）
-# 左右は本体の signals_on_left（既定は右）で決まり、ずらしは道路標識と同じ offset_left（1/64 タイルの単位）。雪の絵は無い（roadsign は季節の絵を持たない）
-RAIL_SIGNAL_STATES = 2
-_SIG_HOUSING = (44, 46, 50)       # 灯器の筐体
-_SIG_RED_ON = (236, 40, 36)
-_SIG_RED_OFF = (96, 34, 34)
-_SIG_GREEN_ON = (46, 214, 96)
-_SIG_GREEN_OFF = (30, 76, 46)
-
-
-def plate_signal(state):
-    """二灯式の灯器（上が赤、下が青）。state 0 は赤、1 は青が点く。幅 5・高さ 13"""
-    w, h = 5, 13
-    img = _canvas(w, h)
-    img[..., :3] = _SIG_HOUSING
-    img[..., 3] = 255
-    img[0, (0, w - 1), 3] = 0     # 角を落とす
-    img[h - 1, (0, w - 1), 3] = 0
-    red = _SIG_RED_ON if state == 0 else _SIG_RED_OFF
-    green = _SIG_GREEN_ON if state == 1 else _SIG_GREEN_OFF
-    img[2:5, 1:4, :3] = red
-    img[8:11, 1:4, :3] = green
-    img[2, (1, 3), :3] = _SIG_HOUSING  # 灯を丸く（角の画素を筐体に戻す）
-    img[4, (1, 3), :3] = _SIG_HOUSING
-    img[8, (1, 3), :3] = _SIG_HOUSING
-    img[10, (1, 3), :3] = _SIG_HOUSING
-    return img
-
-
-def rail_signal_sheet(sheet, work):
-    """線路の信号のシート（2 行 × 5 列）。work は描いたセルを置くディレクトリ"""
-    set_anchor(ROAD_CY)
-    base = os.path.basename(sheet)[:-4]
-    z = ROADSIGN_PLATE_PX * H / 16
-    heads = [np.kron(plate_signal(s), np.ones((SCALE, SCALE, 1), np.uint8)) for s in range(RAIL_SIGNAL_STATES)]
-    cells = {}
-    for i in range(4):
-        pole_path, pole, cx, cy, slope = _pole_cell(base, i, z)
-        shown = ROADSIGN_FACE_SHOWN[i]
-        for s, face in enumerate(heads):
-            im = pole.copy()
-            _stamp(im, face if shown else plate_back(face), cx, cy, slope, None if shown else im[..., 3] > 0)
-            path = os.path.join(work, f"{base}_{s}_{i}.png")
-            save_rgba(path, im)
-            cells[(s, i)] = path
-    empty = np.zeros((CELL, CELL, 4), np.uint8)
-    empty[..., :3] = TRANSPARENT
-    empty_path = os.path.join(work, f"{base}_empty.png")
-    save_rgba(empty_path, empty)
-    for cell in (ROADSIGN_ICON_CELL, ROADSIGN_CURSOR_CELL):
-        cells[cell] = empty_path
-    make_sheet(cells, RAIL_SIGNAL_STATES, 5, sheet)
-
-
 # ---------------------------------------------------------------- 路面の横断歩道の標識（#162）
 # 柱も板も無く、路面の白い縞と停止線だけを描く（iss の iss_sr_crosswalk・iss_sr_oneway_crosswalk と同じ使い方）。
 # 縞・白の材質は #187・#189 の路面表示（marking.py）と同じ。絵の座標は、向き a（その向きの車の進む向き）の u（進む向き。タイルの中心が 0）と

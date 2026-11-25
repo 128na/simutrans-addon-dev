@@ -1,6 +1,6 @@
 # ADR: AMI の範囲に駅・停留所・線路の信号を入れ、空港・滑走路と電線は第 5 弾の後に回す
 
-> ステータス: Accepted (2026-11-25)。ADR 0008 の範囲の項を置き換える（0008 は Superseded）
+> ステータス: Superseded by ADR-0015（[0015-ami-scope-back-to-iss.md](0015-ami-scope-back-to-iss.md)、2026-11-26）。2026-11-25 に Accepted。ADR 0008 の範囲の項を置き換えていた（0008 は Superseded）
 > 由来: [#264](https://github.com/128na/simutrans-addon-dev/issues/264)（範囲の見直し）・[#261](https://github.com/128na/simutrans-addon-dev/issues/261)（pak の大きさの対応）・[ADR 0008](0008-ami-scope-second-phase.md)
 
 ## 背景と問題

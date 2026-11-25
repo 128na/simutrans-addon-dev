@@ -811,7 +811,7 @@ def yard_dat_text(name):
     return NL.join(out) + NL
 
 
-# 道路の停留所（building の stop・waytype=road。#277。ADR 0014）。シートの並びは sheetlib の road_stop.py（列 = layout 0〜7、行 0・1 が夏の
+# 道路の停留所（building の stop・waytype=road。#277。ADR 0015）。シートの並びは sheetlib の road_stop.py（列 = layout 0〜7、行 0・1 が夏の
 # 奥・手前、行 2・3 が雪の奥・手前、列 8 の行 0・1 がアイコン・カーソル）。layout の決め方は操車場と同じ。
 # 値: 本体の道路の停留所の既定（building_desc.cc: 費用 = cost_multiply_roadstop × level、維持費 = maintenance_building × level）に合わせて明示する。
 # pak128・pak256 の cost_multiply_roadstop は 400 cr、maintenance_building は 1800、level 2（pak256 の仮の停留所と同じ。容量 = level × 32）なので、費用 800 cr・維持費 3600
@@ -915,32 +915,6 @@ def crosswalk_dat_text(name, one_way):
     return NL.join(out) + NL
 
 
-# 線路の信号（#278。閉塞信号）。値は道路標識（#122）に合わせる（#110 の一覧に信号は無い。pak128 の閉塞信号は費用 500）（cost は roadsign なので cr 単位）。画像は 向き + 状態 * 4 の 8 枚（obj/signal.cc。状態 0 が停止、1 が進行）
-RAIL_SIGNAL_COST = 500
-RAIL_SIGNAL_STATES = 2
-
-
-def rail_signal_dat_text(name):
-    out = [
-        f"# AMI: {name}（CC BY 4.0）。線路の閉塞信号。シートは blender/render.py が描く（sheetlib の roadsign.py。#278）",
-        "obj=roadsign",
-        f"name={name}",
-        "copyright=AMI (CC BY 4.0)",
-        "waytype=track",
-        "is_signal=1",
-        f"intro_year={ROADSIGN_INTRO_YEAR}",
-        "intro_month=1",
-        "retire_year=2999",
-        "retire_month=1",
-        f"cost={RAIL_SIGNAL_COST}",
-        f"offset_left={ROADSIGN_OFFSET_LEFT}",
-        f"icon=> {name}.{ROADSIGN_ICON_CELL}",
-        f"cursor={name}.{ROADSIGN_CURSOR_CELL},{ROADSIGN_OFFSET}",  # カーソルも絵と同じ位置合わせ（付けないと置く前の絵がタイルから右下へずれる。#282）
-    ]
-    out += [f"image[{s * 4 + i}]={name}.{s}.{i},{ROADSIGN_OFFSET}" for s in range(RAIL_SIGNAL_STATES) for i in range(4)]
-    return NL.join(out) + NL
-
-
 def put(name, text):
     """dat を書く。pak128 以外の大きさは、catalog.SCALED_SHEETS の物だけ（#266。#261 の B・C・D で全部に広げた）"""
     if sheet_settings.SCALE != 1 and name not in catalog.SCALED_SHEETS:
@@ -1008,7 +982,6 @@ def main():
         put(name, roadsign_dat_text(name, key))
     for name, one_way in catalog.ROADSIGN_CROSSWALKS.items():
         put(name, crosswalk_dat_text(name, one_way))
-    put(catalog.RAIL_SIGNAL, rail_signal_dat_text(catalog.RAIL_SIGNAL))
 
 
 if __name__ == "__main__":
