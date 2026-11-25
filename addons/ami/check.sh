@@ -146,8 +146,12 @@ else
   step "pak を作る"
   { makeobj || true; } | head -1
   (cd "$AMI" && "$PY" -X utf8 build.py)
-  step "256 の pak を作る（SHEET_PAK_SIZE=256。makeobj pak512。警告があれば止まる。#266）"
-  (cd "$AMI" && SHEET_PAK_SIZE=256 "$PY" -X utf8 build.py)
+  step "256 の pak を作る（SHEET_PAK_SIZE=256。makeobj pak512。警告があれば止まる。#266。256 の PNG は dat と生活道路だけなので、CHECK_256_FULL=1 が無いときは BUILD_SKIP_MISSING=1 で絵のある物だけを組む。#261）"
+  if [ "${CHECK_256_FULL:-}" = "1" ]; then
+    (cd "$AMI" && SHEET_PAK_SIZE=256 "$PY" -X utf8 build.py)
+  else
+    (cd "$AMI" && SHEET_PAK_SIZE=256 BUILD_SKIP_MISSING=1 "$PY" -X utf8 build.py)
+  fi
 fi
 
 if [ -n "${SKIP_BUILD:-}" ]; then

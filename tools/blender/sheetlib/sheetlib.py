@@ -165,8 +165,10 @@ def build_road(paths, lines, slope=None, scale=1.0, clip=True, size=TILE + 4, co
 # 画面で横向きになる斜めに直交する向きの 1 が、画面の縦で何px か（64/√2/10 ≈ 4.5px）
 DIAG_PX = 64 * SCALE / math.sqrt(2) / TILE
 
-# 画面で横向きになる斜めの中央線を、半画素（0.5px）ずらす量
-DIAG_CENTER_SHIFT = 0.5 / DIAG_PX
+# 画面で横向きになる斜めの中央線を、半画素（0.5px）ずらす量。線の画面での太さ（LINE_W × DIAG_PX = 0.68px × SCALE）が奇数の画素に収まる
+# pak128 は、線の中心を画素の行の中心に置くための半画素。偶数の画素（SCALE が偶数）は行の境に置くので、ずらさない（#261）
+DIAG_HALF_PX = 0.5 if SCALE % 2 else 0.0
+DIAG_CENTER_SHIFT = DIAG_HALF_PX / DIAG_PX
 
 # 斜めの道路の経路をタイルの辺の中点からどれだけ外へ延ばすか（車道・縁石の型と白線）
 DIAG_EXT = 8.0
@@ -628,7 +630,7 @@ def _road_sheet(style="street"):
             if name in ("diag_se", "diag_nw"):
                 # 路側の白線も、経路（画素の行の境）からの距離を「整数 + 0.5」px に丸めて1行に収める（約 0.3px 内へ）。
                 # 縦向きの斜め（sw・ne）はそのままで列に収まる。両方を同時に収める EDGE_LINE は無い
-                e = (math.floor(EDGE_LINE * DIAG_EDGE * DIAG_PX) + 0.5) / DIAG_PX / ROAD_DIAG
+                e = (math.floor(EDGE_LINE * DIAG_EDGE * DIAG_PX) + DIAG_HALF_PX) / DIAG_PX / ROAD_DIAG
             lines = [(path, -e)] + center(path, c) + [(path, e)]
             return build_road([path], lines, scale=ROAD_DIAG,
                               half=path if cut_half else None, hw=ROAD_HW * k, curb_w=CURB_W * DIAG_EDGE, half_over=over, **kw)

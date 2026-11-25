@@ -19,6 +19,7 @@ SHEET_LAYOUT=1 を付けると、work/layout/ のシートと dat から work/la
 """
 import glob
 import os
+import re
 import subprocess
 import sys
 
@@ -74,9 +75,21 @@ def makeobj(out, dats, dist=DIST):
     print(f"[build] {out}: {len(dats)} dat")
 
 
+def has_sheets(dat):
+    """dat が指す絵のシート（`<シート>.<行>.<列>` の <シート>.png）が、全部 SRC にあるか"""
+    with open(dat, encoding="utf8") as f:
+        names = set(re.findall(r"=\s*>?\s*([A-Za-z0-9_\-]+)\.\d+\.\d+", f.read()))
+    return all(os.path.exists(os.path.join(SRC, n + ".png")) for n in names)
+
+
 def main():
     os.makedirs(DIST, exist_ok=True)
     dats = sorted(glob.glob(os.path.join(SRC, "ami_*.dat")))
+    if os.environ.get("BUILD_SKIP_MISSING"):
+        # 256 の PNG は dat と生活道路だけをコミットする（#261）ので、CI は絵のある物だけを組む。全部のシートを描いた手元では付けない
+        n = len(dats)
+        dats = [d for d in dats if has_sheets(d)]
+        print(f"[build] BUILD_SKIP_MISSING: シートの無い {n - len(dats)} 個の dat は組まない")
     if not dats:
         sys.exit("[build] src/ に ami_*.dat が無い（先に blender/ami_dat.py）")
     stem = lambda d: os.path.splitext(os.path.basename(d))[0]

@@ -815,7 +815,7 @@ def yard_dat_text(name):
 ROADSIGN_COST = 500
 ROADSIGN_INTRO_YEAR = 1900
 ROADSIGN_EFFECT = {"one_way": "single_way=1", "min_50": "min_speed=50"}
-ROADSIGN_OFFSET_LEFT = 14  # 左側通行のときのずらし（本体の既定と同じ値を明示する。obj/roadsign.cc の calc_image）
+ROADSIGN_OFFSET_LEFT = 14 * sheet_settings.SCALE  # 左側通行のときのずらし（本体の既定 14 を明示する。obj/roadsign.cc の calc_image は画素で足すので、pak の大きさに比例させる。#261）
 ROADSIGN_ICON_CELL = "0.4"  # sheetlib の roadsign.ROADSIGN_ICON_CELL と同じ
 ROADSIGN_CURSOR_CELL = "1.4"  # sheetlib の roadsign.ROADSIGN_CURSOR_CELL と同じ
 ROADSIGN_OFFSET = OFFSET  # 道路の way と同じ（sheetlib の ROAD_CY）
@@ -869,115 +869,72 @@ def crosswalk_dat_text(name, one_way):
     return NL.join(out) + NL
 
 
+def put(name, text):
+    """dat を書く。pak128 以外の大きさは、catalog.SCALED_SHEETS の物だけ（#266。ほかは画素の値を大きさに合わせていない。#261 で増やす）"""
+    if sheet_settings.SCALE != 1 and name not in catalog.SCALED_SHEETS:
+        return
+    with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
+        f.write(text)
+    print(f"[dat] {name}.dat" + (f"（pak{sheet_settings.PAK_SIZE}）" if sheet_settings.SCALE != 1 else ""))
+
+
 def main():
     os.makedirs(SRC, exist_ok=True)
-    if sheet_settings.SCALE != 1:
-        # pak128 以外の大きさは、catalog.SCALED_SHEETS の way だけ（#266）。ほかは画素の値を大きさに合わせていない
-        for name in catalog.SCALED_SHEETS:
-            with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-                f.write(dat_text(name, BUILT[name]))
-            print(f"[dat] {name}.dat（pak{sheet_settings.PAK_SIZE}）")
-        return
     for name, sheet in BUILT.items():
-        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(dat_text(name, sheet))
-        print(f"[dat] {name}.dat")
+        put(name, dat_text(name, sheet))
     for name, sheet in WALLS.items():
-        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(wall_dat_text(name, sheet, old=catalog.is_old(name)))
-        print(f"[dat] {name}.dat")
+        put(name, wall_dat_text(name, sheet, old=catalog.is_old(name)))
     for _o in (False, True):  # 新と旧（#26）
         _tw = f"ami_wall_rail_{'old_' if _o else ''}twin"
-        with open(os.path.join(SRC, _tw + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(wall_dat_text(_tw, catalog.wall_rail("back", _o), twin=True, old=_o))
-        print(f"[dat] {_tw}.dat")
+        put(_tw, wall_dat_text(_tw, catalog.wall_rail("back", _o), twin=True, old=_o))
     for name, sheet in CATENARY.items():
-        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(wall_dat_text(name, sheet, catenary=True, old=catalog.is_old(name)))
-        print(f"[dat] {name}.dat")
+        put(name, wall_dat_text(name, sheet, catenary=True, old=catalog.is_old(name)))
     for name, suspended in catalog.MONORAIL_POWERS.items():
-        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(monorail_power_dat_text(name, suspended))
-        print(f"[dat] {name}.dat")
+        put(name, monorail_power_dat_text(name, suspended))
     for _o in (False, True):  # 新と旧（#26）
         _tw = f"ami_wall_rail_{'old_' if _o else ''}twin_catenary"
-        with open(os.path.join(SRC, _tw + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(wall_dat_text(_tw, _tw + "_back", twin=True, catenary=True, old=_o))
-        print(f"[dat] {_tw}.dat")
+        put(_tw, wall_dat_text(_tw, _tw + "_back", twin=True, catenary=True, old=_o))
     for name, sheet in ROAD_WALLS.items():
-        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(wall_dat_text(name, sheet, road=True))
-        print(f"[dat] {name}.dat")
-    with open(os.path.join(SRC, catalog.ROAD_WALL_TWIN + ".dat"), "w", encoding="utf8", newline=NL) as f:
-        f.write(wall_dat_text(catalog.ROAD_WALL_TWIN, "ami_wall_road_back", twin=True, road=True))
-    print(f"[dat] {catalog.ROAD_WALL_TWIN}.dat")
+        put(name, wall_dat_text(name, sheet, road=True))
+    put(catalog.ROAD_WALL_TWIN, wall_dat_text(catalog.ROAD_WALL_TWIN, "ami_wall_road_back", twin=True, road=True))
     for name, sheet in ROAD_DIVIDERS.items():
-        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(wall_dat_text(name, sheet, road=True, divider=True))
-        print(f"[dat] {name}.dat")
+        put(name, wall_dat_text(name, sheet, road=True, divider=True))
     # twin_divider のアイコン・カーソルは front_divider のシートの、どの dat も指さないセル（TWIN_ICON_CELLS。壁の twin は back のシートの同じセル）
-    with open(os.path.join(SRC, catalog.ROAD_DIVIDER_TWIN + ".dat"), "w", encoding="utf8", newline=NL) as f:
-        f.write(wall_dat_text(catalog.ROAD_DIVIDER_TWIN, catalog.ROAD_DIVIDERS["front"], twin=True, road=True, divider=True))
-    print(f"[dat] {catalog.ROAD_DIVIDER_TWIN}.dat")
+    put(catalog.ROAD_DIVIDER_TWIN, wall_dat_text(catalog.ROAD_DIVIDER_TWIN, catalog.ROAD_DIVIDERS["front"], twin=True, road=True, divider=True))
     for name, sheet in PIERS.items():
-        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(pier_dat_text(name, sheet))
-        print(f"[dat] {name}.dat")
+        put(name, pier_dat_text(name, sheet))
     for name in catalog.SIDEWALKS:
-        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(sidewalk_dat_text(name, name))
-        print(f"[dat] {name}.dat")
+        put(name, sidewalk_dat_text(name, name))
     for name in catalog.SIDEWALK_WALLS:
-        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(sidewalk_wall_dat_text(name, name))
-        print(f"[dat] {name}.dat")
+        put(name, sidewalk_wall_dat_text(name, name))
     for name, (variant, fence) in catalog.SIDEWALK_POLES.items():
-        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(sidewalk_wall_dat_text(name, name, SIDEWALK_WALL_POLE_VALUES if fence else SIDEWALK_POLE_VALUES,
-                                           f"歩道の柵（{variant}）と電柱" if fence else f"電柱（{variant}。タイルのわきに立てる）"))
-        print(f"[dat] {name}.dat")
+        put(name, sidewalk_wall_dat_text(name, name, SIDEWALK_WALL_POLE_VALUES if fence else SIDEWALK_POLE_VALUES,
+                                       f"歩道の柵（{variant}）と電柱" if fence else f"電柱（{variant}。タイルのわきに立てる）"))
     for name in catalog.EMBANKMENTS:
-        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(embankment_dat_text(name, name))
-        print(f"[dat] {name}.dat")
+        put(name, embankment_dat_text(name, name))
     for name, kind in catalog.MARKINGS.items():
-        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(marking_dat_text(name, kind))
-        print(f"[dat] {name}.dat")
+        put(name, marking_dat_text(name, kind))
     # 分岐の追加画像の提供用の物（build.py が別の pak に作り、ex_graft.py で写す）。1 つの dat に --- で区切って並べる
-    donors = [dat_text(n, BUILT[n], donor=True) for n in EX_WAYS]
-    donors += [wall_dat_text(n, CATENARY[n], catenary=True, donor=True) for n in EX_WAYOBJS]
-    with open(os.path.join(SRC, EX_DONORS_DAT), "w", encoding="utf8", newline=NL) as f:
-        f.write(("---" + NL).join(donors))
-    print(f"[dat] {EX_DONORS_DAT}（{len(donors)} 個）")
+    if sheet_settings.SCALE == 1:  # pak128 以外の大きさの分岐の追加画像は #261 の D（ex）で作る
+        donors = [dat_text(n, BUILT[n], donor=True) for n in EX_WAYS]
+        donors += [wall_dat_text(n, CATENARY[n], catenary=True, donor=True) for n in EX_WAYOBJS]
+        with open(os.path.join(SRC, EX_DONORS_DAT), "w", encoding="utf8", newline=NL) as f:
+            f.write(("---" + NL).join(donors))
+        print(f"[dat] {EX_DONORS_DAT}（{len(donors)} 個）")
     for table, text in ((BRIDGES, bridge_dat_text), (TUNNELS, tunnel_dat_text)):
         for name, (base, sheet) in table.items():
-            with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-                f.write(text(name, base, sheet))
-            print(f"[dat] {name}.dat")
+            put(name, text(name, base, sheet))
     for name, (track, road) in catalog.CROSSINGS.items():
-        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(crossing_dat_text(name, track, road))
-        print(f"[dat] {name}.dat")
+        put(name, crossing_dat_text(name, track, road))
     for name, way in catalog.CANAL_CROSSINGS.items():
-        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(canal_crossing_dat_text(name, way))
-        print(f"[dat] {name}.dat")
+        put(name, canal_crossing_dat_text(name, way))
     for depot in catalog.DEPOTS:
-        with open(os.path.join(SRC, depot.name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(depot_dat_text(depot))
-        print(f"[dat] {depot.name}.dat")
-    with open(os.path.join(SRC, catalog.RAIL_YARD + ".dat"), "w", encoding="utf8", newline=NL) as f:
-        f.write(yard_dat_text(catalog.RAIL_YARD))
-    print(f"[dat] {catalog.RAIL_YARD}.dat")
+        put(depot.name, depot_dat_text(depot))
+    put(catalog.RAIL_YARD, yard_dat_text(catalog.RAIL_YARD))
     for name, key in catalog.ROADSIGNS.items():
-        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(roadsign_dat_text(name, key))
-        print(f"[dat] {name}.dat")
+        put(name, roadsign_dat_text(name, key))
     for name, one_way in catalog.ROADSIGN_CROSSWALKS.items():
-        with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
-            f.write(crosswalk_dat_text(name, one_way))
-        print(f"[dat] {name}.dat")
+        put(name, crosswalk_dat_text(name, one_way))
 
 
 if __name__ == "__main__":
