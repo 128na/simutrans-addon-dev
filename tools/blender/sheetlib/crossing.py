@@ -22,6 +22,8 @@ import os
 import numpy as np
 from mathutils import Vector
 
+from sheet_rows import CROSSING_SNOW_ROW, WAY_SNOW_ROWS  # 雪の絵の行のずらし（夏の奥・手前が行 0・1）。dat を書く側も同じ定義を読む（#302）
+
 from . import core as _core
 from . import sheetlib as _s
 from .cells import GROUND_CY, ROAD_CY, _ground_mask, load_rgba8, make_sheet, render_cell, save_rgba
@@ -86,7 +88,6 @@ _ASSEMBLIES = {
 _TILE_EDGE = {"n": (0, TILE / 2), "s": (0, -TILE / 2), "e": (TILE / 2, 0), "w": (-TILE / 2, 0)}
 # (道路の向き, 閉じた絵か) → 列
 CROSSING_COLS = {("ns", False): 0, ("ns", True): 1, ("ew", False): 2, ("ew", True): 3}
-CROSSING_SNOW_ROW = 2      # 雪の絵の行のずらし（夏の奥・手前が行 0・1）
 
 
 def _strip(path, u0, u1, z, th, mat, name):
@@ -205,7 +206,7 @@ def _road_cell(road_png, row, col, stamp=None):
     return cell
 
 
-def crossing_sheet(sheet, road_sheet, datums, rail=(RAIL_IN, RAIL_OUT, RAIL_Z1), road_cells=None, road_snow_rows=4):
+def crossing_sheet(sheet, road_sheet, datums, rail=(RAIL_IN, RAIL_OUT, RAIL_Z1), road_cells=None, road_snow_rows=WAY_SNOW_ROWS):
     """踏切のシート。road_sheet は道路の way のシートのファイル名（src/ の中。先に描いておく）で、その直線のセル（road_cells。
     既定は道路の向き → (行, 列) が ns: (0, 2)・ew: (0, 3)。雪は road_snow_rows 行下）を奥の絵の下地に写す。
     datums は線路の way の基準面（レールと踏板を datums["rail"] で動かし、隣の線路のタイルのレールとつなぐ）。
