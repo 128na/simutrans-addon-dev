@@ -55,7 +55,7 @@ def apply(cfg, n, R, render):
     K = sys.modules["sheetlib.core"]  # sweep・Part（sheetlib が再輸出していない。round_road.py と同じ取り方）
 
     if "shoulder" in cfg:
-        parts = list(S.ROAD_PARTS)
+        parts = [p for p in S.ROAD_PARTS if p.name != "shoulder"]  # 本番に入った部品と二重にしない
         i = next(i for i, p in enumerate(parts) if p.name == "line")
         parts.insert(i, _shoulder_part(K, RP, R, cfg, n))  # 白線の下（先に作る）
         S.ROAD_PARTS = tuple(parts)
