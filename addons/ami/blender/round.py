@@ -64,6 +64,9 @@ FAMILIES = {
     "tram": {"dats": ("ami_tram",), "targets": ("ami_tram",), "module": "round_tram"},
     "road": {"dats": ("ami_road_*", "ami_wall_road_*", "ami_pier_road", "ami_sidewalk"),
              "targets": ("ami_road_*", "ami_wall_road_*", "ami_pier_road", "ami_sidewalk"), "module": "round_road"},
+    # 第 4 弾の物（#256）: 幹線道路・円弧と L 字の道路・Y 字と三方分岐。道路一式（road と同じ対象）に、今の本番を土台にした汚しを重ねる
+    "road4": {"dats": ("ami_road_*", "ami_wall_road_*", "ami_pier_road", "ami_sidewalk"),
+              "targets": ("ami_road_*", "ami_wall_road_*", "ami_pier_road", "ami_sidewalk"), "module": "round_road4"},
     # 第 3 弾の物（#197）: 路面表示（ami_mark_*）と運河・景観の運河。運河の踏切のシートは運河のセルが下地なので、系統に入れない
     "wave3": {"dats": ("ami_mark_*", "ami_canal", "ami_canal_scenic"), "targets": ("ami_mark_*", "ami_canal", "ami_canal_scenic"),
               "module": "round_wave3"},
@@ -371,6 +374,37 @@ def _trial_parts(cfg, R, TP):
     return out
 
 
+def _graft_ex(out, out_src, suffix, bases):
+    """ラウンドの pak に、分岐の追加画像（ex 画像。絵の番号 26〜35）を継ぎ足す（build.py の graft_ex と同じ。#256）。
+    src/ex_donors.dat の提供用の物のうち、この pak に入れた物（bases。suffix 抜きの名前）のものだけを、名前に suffix を付けて作る"""
+    sys.path.insert(0, ROOT)
+    import ex_graft  # noqa: E402
+    with open(os.path.join(ROOT, "src", "ex_donors.dat"), encoding="utf8") as f:
+        blocks = re.split(r"(?m)^(?=obj=)", f.read())
+    keep = []
+    for b in blocks:
+        m = re.search(r"(?m)^name=(\S+?)__ex_donor\s*$", b)
+        if b.startswith("obj=") and m and m[1] in bases:
+            keep.append(re.sub(r"\b(ami_[a-z0-9_]+?)(?=\.\d|\b)", lambda mm: mm[1] + suffix, b)
+                        .replace("__ex_donor" + suffix, suffix + "__ex_donor"))
+    if not keep:
+        return 0
+    name = "donors_ex.dat"
+    with open(os.path.join(out_src, name), "w", encoding="utf8", newline="\n") as f:
+        f.write("".join(keep))
+    pak = os.path.join(out_src, "donors_ex.pak")
+    r = subprocess.run(["makeobj", "pak256", pak, name], cwd=out_src, capture_output=True, text=True, encoding="utf8", errors="replace")
+    if r.returncode != 0 or any("warning" in x.lower() or "error" in x.lower() for x in (r.stdout + r.stderr).splitlines()):
+        print(r.stdout + r.stderr)
+        sys.exit("[round] 提供用の pak が失敗か警告あり")
+    _, root = ex_graft.read_pak(pak)
+    donors = {n: node for n, node in ex_graft.objects(root).items() if n.endswith(ex_graft.DONOR_SUFFIX)}
+    done = ex_graft.graft(out, donors)
+    if len(done) != len(donors):
+        sys.exit(f"[round] 継ぎ足す対象 {len(donors)} 個のうち {len(done)} 個にしか継ぎ足せなかった")
+    return len(done)
+
+
 def _pack(n):
     suffix = f"_round{n}"
     drawn = os.path.join(round_dir(n), "src")
@@ -403,7 +437,9 @@ def _pack(n):
     if r.returncode != 0 or any("warning" in line.lower() or "error" in line.lower() for line in text.splitlines()):
         print(text)
         sys.exit(f"[round] makeobj が失敗か警告あり: {out}")
-    print(f"[round] {out}: {len(names)} dat, {len(sheets)} シート")
+    bases = {nm[:-len(suffix + ".dat")] for nm in names}
+    n_ex = _graft_ex(out, out_src, suffix, bases)
+    print(f"[round] {out}: {len(names)} dat, {len(sheets)} シート, 分岐の追加画像 {n_ex} 個")
 
 
 if __name__ == "__main__":

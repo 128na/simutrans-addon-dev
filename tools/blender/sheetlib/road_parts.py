@@ -95,6 +95,23 @@ WEAR_LAYERS = (  # (帯の並び, 路面の色からの寄せ具合, 行き止�
 
 OIL_U = (1.45, 1.75)
 
+# 路肩の砂ぼこり（group "shoulder"。AMI の道路だけが groups に足す。blender-poc は足さないので絵は変わらない。#256）:
+# 路側の白線（実線）の縁から外へ SHOULDER_D0〜SHOULDER_D1 の帯を、白線と同じ部品（where="line"）で敷く。タイル全面が路面の道路（歩道なし）は、
+# 白線の外もアスファルトの一色で、走行面と路肩の区別が無かった。分岐・十字・Y 字では線の切れ目と V 字の角にそのまま沿う。
+# 路側の実線の白線（|u| > 3 で幅 LINE_W）以外の線（中央線・点線・停止線）の分は、路面の下に隠す（SHOULDER_HIDDEN_Z）
+SHOULDER_D0, SHOULDER_D1 = 0.15, 0.8
+SHOULDER_HIDDEN_Z = -0.06
+_M_SHOULDER = lambda: noisy_material("road_shoulder", (0.04, 0.04, 0.038), (0.08, 0.078, 0.072), scale=22, rough=0.95,
+                                     ramp=(0.30, 0.70))
+
+
+def _shoulder_shape(path, u, lw, k):
+    edge = abs(u) > 3.0 and abs(lw - LINE_W) < 1e-6
+    s = 1.0 if u >= 0 else -1.0
+    z = 0.0 if edge else SHOULDER_HIDDEN_Z
+    a, b = (u + s * (lw / 2 + SHOULDER_D0)) * k, (u + s * (lw / 2 + SHOULDER_D1)) * k
+    return sweep(path, [(a, z), (b, z), (b, z + 0.004), (a, z + 0.004)][::int(s)])
+
 _WEAR_LO, _WEAR_HI = (0.030, 0.031, 0.033), (0.060, 0.061, 0.064)
 
 _M_OIL = lambda: noisy_material("road_oil", (0.004, 0.004, 0.005), (0.012, 0.012, 0.013), scale=90, rough=0.7)
@@ -155,6 +172,7 @@ ROAD_PARTS = (
          carve=lambda t, k: t.hw, transfer=True),
     Part("paving", "bed", "road", _M_PAVING, lambda t, k: box(0, 0, SIDEWALK_H + 0.01, *t.size, 0.02), "sidewalk", "tile",
          carve=lambda t, k: t.hw + t.curb_w / k),
+    Part("shoulder", "bed", "road", _M_SHOULDER, _shoulder_shape, "shoulder", "line"),
     Part("line", "bed", "road", _M_LINE, _line_shape, "marking", "line"),
     Part("oil", "bed", "lane", _M_OIL, _lane_strips([OIL_U], fade=WEAR_LAYERS[1][2]), "weathering"),
 ) + tuple(Part(f"wear{i}", "bed", "lane", _wear_material("street", (0.013, 0.0135, 0.015), (0.028, 0.029, 0.031), t),
