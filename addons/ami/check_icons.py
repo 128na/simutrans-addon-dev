@@ -2,7 +2,7 @@
 
     python -X utf8 check_icons.py [src のディレクトリ]
 
-#25 で、次の 1〜3 の誤りを目で見て見つけた。同じ種類の誤りを機械的に見つける（4 は #141 で足した）。
+#25 で、次の 1〜3 の誤りを目で見て見つけた。同じ種類の誤りを機械的に見つける（4 は #141、5 は #287 で足した）。
 
 1. セルの重なり: 各 dat の icon・cursor が指すセルを、ほかの dat のキーや、同じ dat のほかのキーが指していないか。
    blender/icons.py はセルを空けてから書くので、重なると相手の絵が消えるか、2 つの物が同じアイコンになる
@@ -17,7 +17,7 @@
 
 5. カーソルの offset: cursor= の offset（`cell,x,y` の x,y）が、同じ dat のほかの絵のキー（image・backimage など）の offset と同じか（#287）。
    置く前のカーソルはタイルの上に出る絵で、offset が絵と違うとタイルからずれる。ゲームでは撮れないので、ここで守る
-   （#282 の前、車庫・操車場・停留所・道路標識の cursor= に offset が無く、ずれていた）。全部の dat を対象にし、way 系の `{OFFSET}` も同じに見る
+   （#282 の前、車庫・操車場・停留所・道路標識の cursor= に offset が無く、ずれていた）。展開後の dat を全部読むので、way 系も同じに見る
 
 意図して共有・借用するものは、下の SHARE_SUFFIX と BG_BORROW に書く。意図して offset が違うものは CURSOR_OFFSET_ALLOW に書く。
 """
@@ -329,7 +329,8 @@ def check_cursor_offsets(objs):
                 got.setdefault(offset_of(v), []).append(k)
         for off, keys in sorted(got.items(), key=str):
             if off != want:
-                errors.append(f"{o['name']}（{o['file']}）: cursor の offset {want} が、絵（{keys[0]} ほか {len(keys)} キー）の offset {off} と違う。"
+                shown = "（無し）" if want is None else f"{want}"
+                errors.append(f"{o['name']}（{o['file']}）: cursor の offset {shown} が、絵（{keys[0]} ほか {len(keys)} キー）の offset {off} と違う。"
                               f"置く前のカーソルがタイルからずれる。意図したものなら check_icons.py の CURSOR_OFFSET_ALLOW に理由を書く")
                 break
     return errors
