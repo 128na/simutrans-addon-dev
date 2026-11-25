@@ -3,3 +3,7 @@ dist/
 __pycache__/
 work256/
 dist256/
+# 256 のシート（PNG）と控えはコミットしない（全部で約 260MB。ユーザーの決定、2026-11-25。#261）。dat と、#266 で入れた生活道路のシートだけを置く
+src256/*.png
+src256/*.txt
+!src256/ami_road_local.png

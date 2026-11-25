@@ -15,10 +15,14 @@ work/ex/donors.pak に作り、ex_graft.py で dist/ の各 pak の対象の物�
 dat は先に blender/ami_dat.py で書き出す。画像（シート）は blender/render.py で描く。
 環境変数 SHEET_PAK_SIZE=256 を付けると、256 の pak を src256/ の dat・シートから dist256/ に作る（#266。makeobj の大きさは pak512。
 catalog.SCALED_SHEETS の物だけ。分岐の追加画像の継ぎ足しはしない）。pak128 の src/・dist/ には触れない。
+BUILD_SKIP_MISSING=1 を付けると、絵のシート（PNG）が無い dat を組まない（256 の PNG は生活道路だけをコミットするので、CI はこれで絵のある物だけを組む。#261）。
+--stage-sheeted <フォルダ> は、絵のシートが全部ある dat とそのシートをフォルダにコピーして終わる（check.sh の 256 の dat_linter 用）。
 SHEET_LAYOUT=1 を付けると、work/layout/ のシートと dat から work/layout/dist/ に作る（レイアウト検証用モード。ADR 0005）。
 """
 import glob
 import os
+import re
+import shutil
 import subprocess
 import sys
 
@@ -74,9 +78,41 @@ def makeobj(out, dats, dist=DIST):
     print(f"[build] {out}: {len(dats)} dat")
 
 
+def sheet_names(dat):
+    """dat が指す絵のシートの名前（`<シート>.<行>.<列>` の <シート>）"""
+    with open(dat, encoding="utf8") as f:
+        return set(re.findall(r"=\s*>?\s*([A-Za-z0-9_\-]+)\.\d+\.\d+", f.read()))
+
+
+def has_sheets(dat):
+    """dat が指す絵のシート（<シート>.png）が、全部 SRC にあるか"""
+    return all(os.path.exists(os.path.join(SRC, n + ".png")) for n in sheet_names(dat))
+
+
+def stage_sheeted(dest):
+    """絵のシートが全部ある dat と、そのシートを dest にコピーする（check.sh が 256 の dat_linter を絵のある物だけに掛けるため。#261）"""
+    os.makedirs(dest, exist_ok=True)
+    n = 0
+    for dat in sorted(glob.glob(os.path.join(SRC, "ami_*.dat"))):
+        if not has_sheets(dat):
+            continue
+        for src in [dat] + [os.path.join(SRC, n + ".png") for n in sheet_names(dat)]:
+            shutil.copy(src, os.path.join(dest, os.path.basename(src)))
+        n += 1
+    print(f"[build] シートのある dat {n} 個を {dest} にコピーした")
+
+
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] == "--stage-sheeted":
+        stage_sheeted(sys.argv[2])
+        return
     os.makedirs(DIST, exist_ok=True)
     dats = sorted(glob.glob(os.path.join(SRC, "ami_*.dat")))
+    if os.environ.get("BUILD_SKIP_MISSING"):
+        # 256 の PNG は dat と生活道路だけをコミットする（#261）ので、CI は絵のある物だけを組む。全部のシートを描いた手元では付けない
+        n = len(dats)
+        dats = [d for d in dats if has_sheets(d)]
+        print(f"[build] BUILD_SKIP_MISSING: シートの無い {n - len(dats)} 個の dat は組まない")
     if not dats:
         sys.exit("[build] src/ に ami_*.dat が無い（先に blender/ami_dat.py）")
     stem = lambda d: os.path.splitext(os.path.basename(d))[0]

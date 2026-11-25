@@ -1,0 +1,19 @@
+# AMI: ami_sign_crosswalk_one_way（CC BY 4.0）。路面の横断歩道の標識。シートは blender/render.py が描く（sheetlib の roadsign.py。#162）
+obj=roadsign
+name=ami_sign_crosswalk_one_way
+copyright=AMI (CC BY 4.0)
+waytype=road
+intro_year=1900
+intro_month=1
+retire_year=2999
+retire_month=1
+cost=500
+offset_left=0
+single_way=1
+no_foreground=1
+icon=> ami_sign_crosswalk_one_way.0.4
+cursor=ami_sign_crosswalk_one_way.1.4
+image[0]=ami_sign_crosswalk_one_way.0.0,-128,-64
+image[1]=ami_sign_crosswalk_one_way.0.1,-128,-64
+image[2]=ami_sign_crosswalk_one_way.0.2,-128,-64
+image[3]=ami_sign_crosswalk_one_way.0.3,-128,-64

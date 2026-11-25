@@ -14,7 +14,7 @@
 東西の面に立ち、画面では右へ 2px 進むごとに 1px 下がる。東西の道路の板（image[2]・[3]）は南北の面に立ち、右へ 2px 進むごとに 1px 上がる。
 絵の列を 1 列ずつ縦にずらして押す（せん断。列の数を減らさないので数字の画素は残る）。画面に裏が見える板（image[1]・[3]）は、柱の手前に
 板があるので柱の画素を上から消さない（柱は板の中心で終わる）。
-セルの中のタイルは pak128 の大きさ（幅 128px）で描かれるので、板の絵は画面の画素のまま押す。
+セルの中のタイルは pak の大きさ（pak128 は幅 128px）で描かれるので、板の絵は画面の画素のまま押す（pak128 以外は、画素の絵を倍率の分だけ最近傍で拡大する）。
 
 シートの並び（make_sheet。dat を書く側の addons/ami/blender/ami_dat.py の ROADSIGN_* と同じ）:
     行 0 の列 0〜3: image[0]〜[3]。列 4: 行 0 がアイコン、行 1 がカーソル（AMI の blender/icons.py が書く。ここでは空けておく）
@@ -29,7 +29,7 @@ from mathutils import Vector
 import bpy
 
 from .cells import ROAD_CY, load_rgba8, make_sheet, render_cell, save_rgba
-from .core import CELL, H, TILE, TRANSPARENT, box, clear_models, material, mesh_object, set_anchor
+from .core import CELL, H, SCALE, TILE, TRANSPARENT, box, clear_models, material, mesh_object, set_anchor
 
 ROADSIGN_ICON_CELL = (0, 4)       # アイコンのセル（行, 列）
 ROADSIGN_CURSOR_CELL = (1, 4)     # カーソルのセル
@@ -176,7 +176,8 @@ def _cell_xy(p):
 def roadsign_sheet(sheet, plate, work):
     """標識のシート。plate は ROADSIGN_PLATES のキー。work は描いたセルを置くディレクトリ"""
     set_anchor(ROAD_CY)
-    face = ROADSIGN_PLATES[plate]()
+    # 板は画素の絵（3×5 の数字など。pak128 の大きさ）なので、pak の大きさの倍率の整数倍に最近傍で拡大して押す（#261）。倍率 1 は同じ絵
+    face = np.kron(ROADSIGN_PLATES[plate](), np.ones((SCALE, SCALE, 1), np.uint8))
     back = plate_back(face)
     base = os.path.basename(sheet)[:-4]
     z = ROADSIGN_PLATE_PX * H / 16
