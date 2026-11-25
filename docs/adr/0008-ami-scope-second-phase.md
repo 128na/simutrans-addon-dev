@@ -1,6 +1,6 @@
 # ADR: AMI の範囲を第 2 弾で広げ、モノレール・運河・車庫・操車場と景観・補助の物を足す
 
-> ステータス: Superseded by ADR-0014（[0014-ami-scope-stations-and-signals.md](0014-ami-scope-stations-and-signals.md)、2026-11-25。範囲の項を置き換えた。名前・pak・ライセンスなどは 0014 が引き継ぐ）
+> ステータス: Superseded by ADR-0014（[0014-ami-scope-stations-and-signals.md](0014-ami-scope-stations-and-signals.md)、2026-11-25。範囲の項を置き換えた。名前・pak・ライセンスなどは 0014 が引き継ぐ）。0014 は ADR-0015（[0015-ami-scope-back-to-iss.md](0015-ami-scope-back-to-iss.md)、2026-11-26）に置き換えられ、範囲は iss にある物に戻った
 > 由来: [#102](https://github.com/128na/simutrans-addon-dev/issues/102)（ADR 0002 の書き直し）・[#61](https://github.com/128na/simutrans-addon-dev/issues/61)（バリエーションのロードマップ）・[ADR 0002](0002-ami-scope.md)
 
 ## 背景と問題

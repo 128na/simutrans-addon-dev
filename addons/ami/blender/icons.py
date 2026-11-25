@@ -111,7 +111,7 @@ def describe(d):
         info["way"] = "monorail"
     elif name.startswith("ami_canal"):  # 運河と船の車庫（#114）
         info["way"] = "canal"
-    elif "road" in name or "sidewalk" in name or (obj == "roadsign" and not d.get("is_signal")):  # 歩道（ami_sidewalk*）と歩道の柵（ami_wall_sidewalk_*）は道路の色（#25・#119）。道路標識も（#122）
+    elif "road" in name or "sidewalk" in name or obj == "roadsign":  # 歩道（ami_sidewalk*）と歩道の柵（ami_wall_sidewalk_*）は道路の色（#25・#119）。道路標識も（#122）
         info["way"] = "road"
     else:
         info["way"] = "rail"
