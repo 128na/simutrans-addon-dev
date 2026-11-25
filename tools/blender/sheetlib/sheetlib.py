@@ -166,7 +166,7 @@ def build_road(paths, lines, slope=None, scale=1.0, clip=True, size=TILE + 4, co
 DIAG_PX = 64 * SCALE / math.sqrt(2) / TILE
 
 # 画面で横向きになる斜めの中央線を、半画素（0.5px）ずらす量。線の画面での太さ（LINE_W × DIAG_PX = 0.68px × SCALE）が奇数の画素に収まる
-# pak128 は、線の中心を画素の行の中心に置くための半画素。偶数の画素（SCALE が偶数）は行の境に置くので、ずらさない（#261）
+# pak128 は、線の中心を画素の行の中心に置くための半画素。偶数の画素（SCALE が偶数）は行の境に置くので、ずらさない（#261。確かめたのは SCALE 1・2 だけ。3 以上は太さが 0.68px × SCALE で偶奇だけで足りるか未確認）
 DIAG_HALF_PX = 0.5 if SCALE % 2 else 0.0
 DIAG_CENTER_SHIFT = DIAG_HALF_PX / DIAG_PX
 

@@ -909,7 +909,7 @@ def main():
         put(name, sidewalk_wall_dat_text(name, name))
     for name, (variant, fence) in catalog.SIDEWALK_POLES.items():
         put(name, sidewalk_wall_dat_text(name, name, SIDEWALK_WALL_POLE_VALUES if fence else SIDEWALK_POLE_VALUES,
-                                       f"歩道の柵（{variant}）と電柱" if fence else f"電柱（{variant}。タイルのわきに立てる）"))
+                                         f"歩道の柵（{variant}）と電柱" if fence else f"電柱（{variant}。タイルのわきに立てる）"))
     for name in catalog.EMBANKMENTS:
         put(name, embankment_dat_text(name, name))
     for name, kind in catalog.MARKINGS.items():

@@ -133,7 +133,14 @@ fi
 
 step "dat_linter"
 (cd "$AMI/src" && dat_linter lint --tile-size 256 .)
-(cd "$AMI/src256" && dat_linter lint --tile-size 512 .)  # 256 の pak（#266）
+if [ "${CHECK_256_FULL:-}" = "1" ]; then
+  (cd "$AMI/src256" && dat_linter lint --tile-size 512 .)  # 256 の pak（#266）
+else
+  # 256 の PNG は生活道路だけをコミットする（#261）ので、絵のある dat だけを lint する（絵の無い dat は missing-image-file で落ちる）
+  rm -rf "$AMI/work256/lint"
+  (cd "$AMI" && SHEET_PAK_SIZE=256 "$PY" -X utf8 build.py --stage-sheeted work256/lint)
+  (cd "$AMI/work256/lint" && dat_linter lint --tile-size 512 .)
+fi
 
 step "dat の静かな誤り（行末の # 注記・数値でない値・行頭の空白・知らない obj・way の絵の綴りと坂。dat_lint_extra.py）"
 "$PY" -X utf8 "$ROOT/tools/dat_lint_extra/dat_lint_extra.py" --self-test
