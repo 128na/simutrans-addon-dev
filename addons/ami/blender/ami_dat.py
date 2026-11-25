@@ -760,7 +760,7 @@ def depot_dat_text(depot):
         f"dims=1,1,{DEPOT_LAYOUTS}",
         "needs_ground=1",
         f"icon=> {sheet}.{DEPOT_ICON_CELL}",
-        f"cursor={sheet}.{DEPOT_CURSOR_CELL}",
+        f"cursor={sheet}.{DEPOT_CURSOR_CELL},{DEPOT_OFFSET}",
     ]
     for season in (0, 1):
         for layout in range(DEPOT_LAYOUTS):
@@ -803,7 +803,7 @@ def yard_dat_text(name):
         f"dims=1,1,{YARD_LAYOUTS}",
         "needs_ground=1",
         f"icon=> {name}.{YARD_ICON_CELL}",
-        f"cursor={name}.{YARD_CURSOR_CELL}",
+        f"cursor={name}.{YARD_CURSOR_CELL},{DEPOT_OFFSET}",
     ]
     for season in (0, 1):
         for layout in range(YARD_LAYOUTS):
@@ -846,7 +846,7 @@ def road_stop_dat_text(name, enables):
         f"dims=1,1,{ROAD_STOP_LAYOUTS}",
         "needs_ground=1",
         f"icon=> {name}.{ROAD_STOP_ICON_CELL}",
-        f"cursor={name}.{ROAD_STOP_CURSOR_CELL}",
+        f"cursor={name}.{ROAD_STOP_CURSOR_CELL},{DEPOT_OFFSET}",
     ]
     for season in (0, 1):
         row = season * ROAD_STOP_SNOW_ROW
@@ -883,7 +883,7 @@ def roadsign_dat_text(name, key):
     ]
     if key in ROADSIGN_EFFECT:
         out.append(ROADSIGN_EFFECT[key])
-    out += [f"icon=> {name}.{ROADSIGN_ICON_CELL}", f"cursor={name}.{ROADSIGN_CURSOR_CELL}"]
+    out += [f"icon=> {name}.{ROADSIGN_ICON_CELL}", f"cursor={name}.{ROADSIGN_CURSOR_CELL},{ROADSIGN_OFFSET}"]
     out += [f"image[{i}]={name}.0.{i},{ROADSIGN_OFFSET}" for i in range(4)]
     return NL.join(out) + NL
 
@@ -908,7 +908,7 @@ def crosswalk_dat_text(name, one_way):
         f"single_way={1 if one_way else 0}",
         "no_foreground=1",  # 路面の標示は車両の下に描く（#187・#189 の路面表示と同じ。向きによって手前になるのを防ぐ）
         f"icon=> {name}.{ROADSIGN_ICON_CELL}",
-        f"cursor={name}.{ROADSIGN_CURSOR_CELL}",
+        f"cursor={name}.{ROADSIGN_CURSOR_CELL},{ROADSIGN_OFFSET}",
     ]
     cell = {0: 0, 1: 1, 2: 2, 3: 3} if one_way else {0: 0, 1: None, 2: 1, 3: None}
     out += [f"image[{i}]={name}.0.{c},{ROADSIGN_OFFSET}" if c is not None else f"image[{i}]=-" for i, c in cell.items()]
