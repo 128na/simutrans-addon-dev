@@ -6,17 +6,18 @@
 
 ## 分かったこと（事実）
 
-- **C は描画のコードを変えなかった**。#266 で高さに関わる画素の値（`WALL_RISE`・`TUNNEL_RISE`・`ELEV_LOWER`・`PIER_RISE`・`CAT_RISE`・`BALLAST_DY` など）に `SCALE` を掛けてあり、B で `DIAG_HALF_PX` を足した。C の変更は `catalog.SCALED_SHEETS` の拡張と dat・文書だけ。pak128 のシートはコードが変わらないので、描き直した絵も変わらない（C は `catalog.py` の定義の追加だけで、`sheetlib`・`render.py`・`ami_dat.py` を変えていない）。
-- `catalog.SCALED_SHEETS` は B の分（`SCALED_WAYS_B`）と C の分（`SCALED_RAILS`・`SCALED_BASES`・`SCALED_ELEVS`・`SCALED_BRIDGES_TUNNELS`・`SCALED_WALLS`・`SCALED_PIERS`・`SCALED_OTHERS`）に分け、Track・Road・壁の関数が導く名前で作る（192 シート。src/ の PNG からは作らない）。
+- **描画のコードの変更は 1 つだけ**: 架線の吊り金具・ハンガーの太さ `CAT_HANGER_PX`（画面で 1px の縦線）に `SCALE` を掛けた（`sheetlib/catenary_parts.py`）。`PX_PER_UNIT` が `SCALE` 倍になるので、掛けないと世界の単位の太さが 128 の半分（256 で 1px）になり、架線の斜めの線 `CAT_WIRE_W_DIAG`（世界の単位で約 1px → 256 で 2px）より細くなる。`SCALE` が 1 のとき値は同じ（pak128 のシートは変わらない）。レビューの指摘で気づき、架線つきの壁 12 シートを 256 で描き直した（描き直しの前後で、不透明な画素が単線の壁で 320545 → 323086）。そのほかの高さに関わる画素の値（`WALL_RISE`・`TUNNEL_RISE`・`ELEV_LOWER`・`PIER_RISE`・`CAT_RISE`・`BALLAST_DY` など）は #266 で、`DIAG_HALF_PX` は B で `SCALE` を掛けてあり、C では変えていない。`catalog.SCALED_SHEETS` の拡張と、256 の dat・`render.py` の 256 の既定の対象（`SCALED_TARGETS`）・検査（`check_scaled.py`）・文書が、そのほかの変更。
+- `catalog.SCALED_SHEETS`（198 名）は B の分（`SCALED_WAYS_B`、33 名）と C の分（165 名 = シート 159 + 絵を持たない twin の dat 6）に分け、`SCALED_RAILS`・`SCALED_BASES`・`SCALED_ELEVS`・`SCALED_BRIDGES_TUNNELS`・`SCALED_WALLS`・`SCALED_PIERS`・`SCALED_OTHERS` を、Track・Road・壁の関数が導く名前で作る（src/ の PNG からは作らない）。PNG は 192 枚（B の分と合わせて）。render.py の描く対象でない名前（壁の単独の名前 8 と twin の dat 6）は `SCALED_NO_TARGET`、dat を持たないシート（twin の架線つきの壁の絵 4）は `SCALED_NO_DAT`。256 で `render.py` を対象なしで流すと `SCALED_TARGETS`（184 名）を描く（最初は 198 名全部を渡して「unknown target」で止まる不具合があった。レビューで見つけて直した）。名前の過不足は `check_scaled.py` が、256 の PNG が無い CI でも見る。
 - **近い斜めの分け合う壁（twin）の dat 6 個は、絵のシートを持たない**（`ami_wall_rail_twin`・`_old_twin`・`_twin_catenary`・`_old_twin_catenary`、`ami_wall_road_twin`・`_twin_divider`）ので、最初の対象から漏れた。twin の dat は back・front の壁のシートの絵と、back の壁のシートの 0.4 のセル（icon）・1.4（cursor）を指す。対象に足し、アイコンを書き直した。縮め比べで「back の壁の 0.4 のセルが 256 で空」と見えて気づいた。
 - **壁のシートの単独の名前（`ami_wall_rail_single` など 8 枚）は、描く対象の名前ではない**。基盤の版（`ami_rail_*_base_*`）を描いたときに一緒に書かれる。対象に渡すと「unknown target」と出る（失敗に見えるが PNG は書かれている）。アイコンは名前を渡して `icons.py` を流す。
 - **256 の描画**: 線路の way 8 枚（新旧）は約 60 秒。残り 159 枚（基盤・高架・橋・トンネル・壁・橋脚・盛土）は Blender 16 本で約 17 分。
-- **256 で makeobj `pak512` が警告なしで通った**: 332 dat（`ami.pak` 138・`ami_rail.pak` 44・`ami_tram.pak` 1・`ami_road.pak` 48・`ami_extra.pak` 35・`ami_scenery.pak` 10・`ami_rail_old.pak` 56）。
-- **256 の dat は 128 と、位置合わせ（`-64,-32` → `-128,-64`）とカーソルの絵の位置の違いのほかに差が無い**（256 の dat 194 個を比べた）。dat に画素の値は位置合わせしか無く、タイルの幅に対する比の値（標識の `offset_left` のようなもの）は C の物には無い（`pillar_distance` は個数）。
-- **256 のシートを pak128 の大きさに縮めて、128 のシートと比べた**（B と同じ方法）: アイコン・カーソルのセルを除くと、セルごとの透過の範囲の差（xor）は最大 381 画素（架線つきの壁の柱が立つセル。セルの不透明な画素 1497 のうち）、ほとんどは 0〜100。色の大きく違う画素は 11 画素以下。縁の階段の違いの範囲。基盤・高架・橋・トンネルは差の大きいセルが無い（300 画素を超えたセルは、アイコンのセルと、壁の架線つきの柱のセルだけ）。
+- **256 で makeobj `pak512` が警告なしで通った**: dat 194 個（全部入りの `ami.pak` と、種類別の `ami_rail.pak` 44・`ami_tram.pak` 1・`ami_road.pak` 48・`ami_extra.pak` 35・`ami_scenery.pak` 10・`ami_rail_old.pak` 56 に同じ dat が入る）。
+- **256 の dat は 128 の dat と、位置合わせ（`,-64,-32` → `,-128,-64`。`cursor=` の行を含む）のほかに差が無い**（256 の dat 194 個を比べた。C で足したのは 161 個）。dat に画素の値は位置合わせしか無く、タイルの幅に対する比の値（標識の `offset_left` のようなもの）は C の物には無い（`pillar_distance` は個数）。
+- **256 のシートを pak128 の大きさに縮めて、128 のシートと比べた**（B と同じ方法）: アイコン・カーソルのセルを除くと、セルごとの透過の範囲の差（xor）は、ほとんど 0〜100 画素（セルの不透明な画素は 1000〜5000）。300 画素を超えたセルは、架線つきの壁の柱が立つセル（最大 383 画素、不透明な画素 1497 のうち）だけ。色の大きく違う画素は 11 画素以下。この架線のセルは、細い線（梁・吊り金具・ハンガーが細かく交わる）の階段のでき方が 128 と 256 で違う所で、拡大して並べて確かめた（256 の線は約 1px で、128 を 2 倍にした 2px より細い。形・位置は同じ）。基盤・高架・橋・トンネルには差の大きいセルが無い。
 - **`check_icons.py`（194 物・190 シート）・`check_cells.py`（12662 参照・10327 セル）が通った**。**`check_embankment.py` が、256 の実物のシートで通った**（盛土 136 枚。A で拡大した 128 のシートで確かめた道具が、実物でも通ることの確認）。
 - **ゲームでの確認**（OTRP v64、地面は pak128 を 2 倍にした `pak256poc`、`dist256` の pak、画面は 704×560 の等倍の 3 倍）: 地上の基盤と壁（輪と十字・坂の十字）、架線つきの壁（坂）、高架（輪と十字・坂）、降雪側の高架・架線つきの壁（坂）、門型の橋脚、橋（坂から始まる橋）・トンネル（架線つき）、道路の壁・高架（坂）・橋・橋脚と交差する高架・電柱つきの歩道・中央分離帯・盛土・旧描画位置の架線つきの壁が、地面・坂・つなぎ目に合って見えた。門型の橋脚・橋・トンネルは、同じ場所の pak128（`dist/`）と並べて、形と位置が同じことを確かめた。スクリーンショットは `addons/ami/docs/261_c_pak256_rail/`。
 - 横向きの斜めの線路（`TRAM_HDIAG_*` に当たる補正）は、線路の部品には無い（路面軌道だけ。`tram_parts.py`）。256 では線路のレールの頭が 1px の線で、128 を 2 倍にした絵より細く見える。ゲームの画面（坂の十字・高架の輪）では、細すぎず、道床の上のレールとして読める細かさだった。ユーザーの確認で細すぎれば、補正を足す。路面軌道（B）は値を変えず、ユーザーが確認した。
+- 架線の線（`cat_wire`・`cat_messenger`。`thin`）は、256 で約 1px（128 を 2 倍にした絵の 2px より細い）。世界の単位の幅 `CAT_WIRE_W`（0.05）のままで、画素の数が 2 倍になるより細く出る（`Part.thin` が残す条件との関係は未確認）。ゲームの画面（坂の架線つきの壁）では、架線の線は読める細かさだった。細すぎればユーザーの確認で、幅を足す。
 
 ## 推測・未確認事項
 
@@ -29,4 +30,4 @@
 
 ## 結果どうしたか
 
-#261 の C の PR（Part of #261）で、`SCALED_SHEETS` の拡張・256 の dat（C の分 約 155 個）・README・way-addon.md（dat の値の単位を確かめる注記）・ゲームのスクリーンショットを入れた。残りは D（踏切・車庫・運河・モノレール・操車場・分岐の追加画像）。
+#261 の C の PR（Part of #261）で、`SCALED_SHEETS` の拡張・256 の dat（C の分 161 個）・`check_scaled.py`・README・way-addon.md（dat の値の単位を確かめる注記）・ゲームのスクリーンショットを入れた。残りは D（踏切・車庫・運河・モノレール・操車場・分岐の追加画像）。

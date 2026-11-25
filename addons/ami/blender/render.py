@@ -780,13 +780,13 @@ for _n, _o in catalog.ROADSIGN_CROSSWALKS.items():
 
 if __name__ == "__main__":
     if R.SCALE != 1:
-        # pak128 以外の大きさは、catalog.SCALED_SHEETS の物だけ描ける（#266）。対象を渡さなければその物だけを描く
+        # pak128 以外の大きさは、catalog.SCALED_TARGETS の物だけ描ける（#266）。対象を渡さなければその物だけを描く
         _asked = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-        _bad = [t for t in _asked if t not in catalog.SCALED_SHEETS]
+        _bad = [t for t in _asked if t not in catalog.SCALED_TARGETS]
         if _bad:
-            raise SystemExit(f"[render] pak{R.sheet_settings.PAK_SIZE} で描けるのは {' '.join(catalog.SCALED_SHEETS)} だけ（#261 の残りで足す）: {' '.join(_bad)}")
+            raise SystemExit(f"[render] pak{R.sheet_settings.PAK_SIZE} で描ける対象は catalog.SCALED_TARGETS の物だけ（#261 の D で足す。壁の単独の名前は基盤の版と一緒に描かれる）: {' '.join(_bad)}")
         if not _asked:
-            sys.argv += ["--"] + list(catalog.SCALED_SHEETS)
+            sys.argv += ["--"] + list(catalog.SCALED_TARGETS)
     R.run_targets(SHEETS, list(SHEETS))
     # アイコン・カーソル（#25）: 描いたシートの絵から作り、シートのセルに書く（blender/icons.py）。LAYOUT・ONLY の出力（work/）には書かない
     if not (R.LAYOUT or R.ONLY):
