@@ -114,7 +114,7 @@ from .assemble import (  # noqa: F401
     build_base,
     build_start_body,
 )
-from .road_ex import EX_TEES, edge_lines, make_arm
+from .road_ex import EX_TEES, center_paths, edge_lines, make_arm
 from .cells import (  # noqa: F401
     GROUND_CY,
     ROAD_CY,
@@ -498,10 +498,12 @@ def _road_sheet(style="street"):
                     d_edge = (math.floor(EDGE_LINE * DIAG_EDGE * DIAG_PX) + DIAG_HALF_PX) / DIAG_PX if snap else None
                     arms.append((make_arm(c, "arc" if shape == "arc" else "diag", DIAG_EXT, d_edge),
                                  {"se": DIAG_CENTER_SHIFT, "nw": -DIAG_CENTER_SHIFT}.get(c, 0.0) if shape == "diag" else 0.0))
-                centers = [ln for a, shift in arms for ln in center(a.center, shift)]
                 arm_list = [a for a, _ in arms]
-                y_lines = centers + edge_lines(arm_list)
-                three_lines = center(through) + centers + edge_lines(arm_list, (through, EDGE_LINE))
+                shifts = [shift for _, shift in arms] + [0.0]
+                # 中央線・腕と腕の間の線は、根元から各腕へ進む車の通り道を横切らないよう、分かれ切った所から先だけに引く（road_ex.py）
+                centers = lambda through_: [ln for i, run in center_paths(arm_list, through_) for ln in center(run, shifts[i])]
+                y_lines = centers(None) + edge_lines(arm_list)
+                three_lines = centers((through, EDGE_LINE)) + edge_lines(arm_list, (through, EDGE_LINE))
                 y_wear = [a.wear for a in arm_list]
                 three_wear = [through] + y_wear
             jobs[(0, 10 + col)] = (y_name, jobs[(3, 5 + col)][1], y_lines, None)
