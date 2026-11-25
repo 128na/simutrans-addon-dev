@@ -85,6 +85,9 @@ if [ -s "$report256" ]; then
 fi
 rm -rf "$snap256"
 
+step "256 で描き・組める物の一覧が実在するか（check_scaled.py。256 の PNG が無い CI でも名前の過不足を見る。#261）"
+"$PY" -X utf8 "$AMI/check_scaled.py"
+
 step "アイコン・カーソルの参照先（セルの重なり・絵の有無・背景色・別のシートの絵。check_icons.py）"
 "$PY" -X utf8 "$AMI/check_icons.py"
 

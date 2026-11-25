@@ -69,7 +69,7 @@ CAT_BEAM_REACH_DIAG = TILE * 1.5 / math.sqrt(2) + CAT_BEAM_OVERLAP_DIAG
 CAT_BEAM_REACH_TWIN = TILE / (2 * math.sqrt(2)) + CAT_BEAM_OVERLAP_DIAG
 # 吊り金具（梁からちょう架線へ下ろす）とハンガー（ちょう架線からトロリ線へ下ろす）は、画面で 1px の縦線（Part.thin）。
 # 画面の横の位置を画素の中心に乗せる（_snap_x）。pak128 の架線は、直線で画面の横 16px ごとにハンガーがある（2026-11-18 に測った）
-CAT_HANGER_PX = 1.0      # 吊り金具・ハンガーの、画面での太さ（px）
+CAT_HANGER_PX = 1.0 * SCALE  # 吊り金具・ハンガーの、画面での太さ（px。pak128 で 1px。大きな pak は倍率を掛け、架線の太さ CAT_WIRE_W_DIAG（世界の単位で約 1px は倍率で 2px）と比を保つ。#261 の C）
 CAT_DROPPER_N = 4        # 直線の 1 タイルのハンガーの数（タイルの長さの 1/4 ずつ。画面の横 16px ごと）
 CAT_DROPPER_N_DIAG = 4   # 画面で横向きの斜めの 1 タイルのハンガーの数（同じく画面の横 16px ごと）。画面で縦向きの斜めは、2 本の線が重なるので無し
 
