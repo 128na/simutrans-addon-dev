@@ -58,7 +58,7 @@ TRANSPARENT = np.array(R.TRANSPARENT)
 PLATE_TOP = 78 * SCALE
 PLATE_H = 14
 PLATE_CHAR_W = 8
-ROAD_STOP_LABELS = {"ami_road_bus_stop": "停", "ami_road_truck_stop": "荷"}  # 道路の停留所のアイコンの左上の字と、カーソルの札（#277）
+ROAD_STOP_LABELS = {"bus": "停", "truck": "荷"}  # 道路の停留所のアイコンの左上の字と、カーソルの札（#277）
 YARD_LABEL = "操"  # 操車場のアイコンの左上の字と、カーソルの札（#115）
 DEPOT_LABEL = "庫"  # 車庫のアイコンの左上の字と、カーソルの札（#112）
 NS_STEP = (64 * SCALE, -32 * SCALE)  # 南北の直線で、北の隣のタイルの画面のずれ（pak128 のタイルは幅 128・高さ 64）
@@ -128,7 +128,7 @@ def describe(d):
     elif name.startswith("ami_sidewalk"):  # 歩道の種類と高架の歩道（#119）も同じ決まり。高架は下の帯
         info.update(kind="sidewalk", label="歩", struct="elev" if name.endswith("_elev") else None)
     elif obj == "building" and d.get("type") == "stop" and d.get("waytype") == "road":  # 道路の停留所（#277）。左上に「停」「荷」
-        info.update(kind="roadstop", label=ROAD_STOP_LABELS[name])
+        info.update(kind="roadstop", label=ROAD_STOP_LABELS[catalog.ROAD_STOPS[name][0]])
     elif obj == "building" and d.get("type") == "stop":  # 操車場（#115）。速度は無く、左上に「操」
         info.update(kind="yard", label=YARD_LABEL)
     elif obj == "building":  # 車庫（#112）。速度は無く、左上に「庫」

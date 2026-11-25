@@ -853,12 +853,13 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 
 - 見た目は道路の見える側（南北の道路なら東、東西の道路なら南）の脇のホーム。道路は描かない。ホームは車道の縁（`ROAD_HW` = 3.6）の外からタイルの端の内まで。バス停は低いホーム（床の上面 0.35）に、青い屋根の待合（2 本の柱と背の板、長椅子）と青い標識。荷役所は高い積み降ろし場（1.0）に、木箱 2 つと黄色の標識。道路側の縁に黄色の帯。切れた端（隣に停留所の建物が無い側）には斜路の段を付ける。床と縁は奥の絵（車両の下）、屋根・柱・標識・木箱は手前の絵（車両の上）。寸法は `tools/blender/sheetlib/road_stop.py` の定数
 - 絵: 8 つの配置ごとに、夏と雪の奥・手前（シートは 4 行 × 9 列。列 0〜7 が配置、列 8 の行 0・1 がアイコン・カーソル）。配置の決め方は操車場と同じ本体の仕組み（ビット 0 が道路の向き、ビット 1・2 が南・東と北・西の隣に停留所の建物が無いこと。`sheetlib/yard.py` の `yard_layout` を使う）。道路・線路の区別は本体にない（`hausbauer.cc` の `build_station_extension_depot`）
-- 値: 費用 60000（600 cr）、維持費 1800、`level=2`、登場年 1900、引退 2999 年（`blender/ami_dat.py` の `ROAD_STOP_VALUES`。値の決め方は「第 2 弾の物の値」の操車場と同じ。level だけ pak256 の仮の物に合わせた）。`noinfo=1`・`allow_underground=2`・`needs_ground=1`。下に敷く道路の費用は別にかかる
+- 値: 費用 80000（800 cr）、維持費 3600、`level=2`、登場年 1900、引退 2999 年（`blender/ami_dat.py` の `ROAD_STOP_VALUES`）。本体の道路の停留所の既定（`building_desc.cc`: 費用 = `cost_multiply_roadstop`（pak128・pak256 とも 400 cr）× level、維持費 = `maintenance_building`（1800）× level）を明示した値で、`cost`・`maintenance` を書かない pak256 の仮の物と同じ額になる（建てたときの実額は測っていない）。`noinfo=1`・`allow_underground=2`・`needs_ground=1`。下に敷く道路の費用は別にかかる
 - 大きさ: 128 でも 256 でも同じ道具で描く（`SHEET_PAK_SIZE`。#261）。256 の dat は `src256/` に置く（PNG はコミットしない）。`catalog.SCALED_DEPOTS` に入れてあり、`check_scaled.py` が dat と突き合わせる。箱積み駅舎の箱 1 段に収まるかは `check_depot.py` が見る
 - pak は名前の頭 `ami_road_` で `ami_road.pak` に入る。アイコンは左上に「停」（バス停）・「荷」（荷役所）。名前の訳は `release/text/ja_ami.tab`
 - 見本は `ingame/road_stop_sample.nut`（`game.sh` に `NUT=` で渡して流し、`SPOTS` で撮る）。道路 3 種（生活・一般・幹線）に、南北の 1 タイルと 3 タイル、東西、歩道（`ami_sidewalk`）つきの区画を、温暖側と降雪側に敷く。駅になること・旅客・郵便・貨物の扱いを `[check]` で返す
-  - 確認（2026-11-25、`sim-WinGDI64-OTRPv64.exe`・`flat_512_left_v64.sve`、道路 3 種 × 2 気候の 36 か所）: すべて駅になり、バス停は旅客・郵便だけ、荷役所は貨物だけを扱った。画像は `docs/road_stop277_temperate_AB.png`（生活道路の南北のバス停と荷役所）、`road_stop277_temperate_D.png`（歩道つき）、`road_stop277_snow_C.png`（降雪側の東西）
-  - 高速道路（`ami_road_expressway`）の上、斜め・坂・高架の上は確かめていない
+  - 確認（2026-11-25、`sim-WinGDI64-OTRPv64.exe`・`flat_512_left_v64.sve`、道路 3 種 × 2 気候の 36 か所）: すべて駅になり、バス停は旅客・郵便だけ、荷役所は貨物だけを扱った。3 タイルの連なり（南北・東西・歩道つき）は 1 つの駅になり、建物は AMI の物だった（2026-11-25 にレビューの指摘で見本の検査を足して再確認）。画像は `docs/road_stop277_temperate_AB.png`（生活道路の南北のバス停と荷役所）、`road_stop277_temperate_D.png`（歩道つき）、`road_stop277_snow_C.png`（降雪側の東西）
+  - 高速道路（`ami_road_expressway`）の上、斜め・坂・高架の上は確かめていない。右側通行の地図でも確かめていない（検証の地図は左側通行の `flat_512_left_v64`）。ホームは通行の向きによらず、見える側（南北の道路なら東、東西の道路なら南）に固定で、左右で絵は変わらない
+  - 建てた直後は本体の建設中の絵（黄と黒の縞）が出る。ゲームを進めてから（速さ 64 で約 20 秒）撮る
 
 ### アイコン・カーソル（#25）
 
@@ -1184,7 +1185,7 @@ PORT=47300 bash ingame/game.sh STOP
   - dat の値は 1/100 cr。車庫の費用は pak128 の `cost_depot_<種類>`（線路・路面軌道・モノレールが 8500 cr、道路が 7000 cr、船が 9000 cr）。
   - 操車場の費用は `cost_multiply_station`（600 cr。面積 1 タイル、level 1 のとき）。維持費は、どちらも `maintenance_building`（1800）。
   - 操車場の下に敷く線路の費用は、別にかかる。
-  - 道路の停留所（#277）も同じ式で、費用 600 cr・維持費 1800・level 2（pak256 の仮の停留所に合わせた）。
+  - 道路の停留所（#277）は線路の駅と式が違う。本体の既定（費用 = `cost_multiply_roadstop` 400 cr × level、維持費 = 1800 × level）で、level 2 なので費用 800 cr・維持費 3600。
 - 登場年は 1900
 - 新しい waytype の速さは、pak128 の車両が最高速度で走れる値にする（モノレールの車両は最高 150 km/h、船は 53 km/h）
 

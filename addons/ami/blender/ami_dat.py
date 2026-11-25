@@ -812,8 +812,9 @@ def yard_dat_text(name):
 
 # 道路の停留所（building の stop・waytype=road。#277。ADR 0014）。シートの並びは sheetlib の road_stop.py（列 = layout 0〜7、行 0・1 が夏の
 # 奥・手前、行 2・3 が雪の奥・手前、列 8 の行 0・1 がアイコン・カーソル）。layout の決め方は操車場と同じ。
-# 値: 費用 60000（600 cr。pak128 の cost_multiply_station × 1 タイル）・維持費 1800・level 2（pak256 の仮の停留所に合わせた。容量 = level × 32）
-ROAD_STOP_VALUES = dict(cost=60000, maintenance=1800, level=2)
+# 値: 本体の道路の停留所の既定（building_desc.cc: 費用 = cost_multiply_roadstop × level、維持費 = maintenance_building × level）に合わせて明示する。
+# pak128・pak256 の cost_multiply_roadstop は 400 cr、maintenance_building は 1800、level 2（pak256 の仮の停留所と同じ。容量 = level × 32）なので、費用 800 cr・維持費 3600
+ROAD_STOP_VALUES = dict(cost=80000, maintenance=3600, level=2)
 ROAD_STOP_INTRO_YEAR = 1900
 ROAD_STOP_LAYOUTS = 8
 ROAD_STOP_SNOW_ROW = 2  # sheetlib の road_stop.ROAD_STOP_SNOW_ROW と同じ
