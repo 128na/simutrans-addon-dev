@@ -8,8 +8,8 @@ sheetlib の road_sheet が、プロファイルの "ex_switches" が真のと�
 "ell"（生活道路。L 字）は、2 本の L 字を重ねると T字・十字の形そのものになるので、ここでは作らず、road_sheet が T字・十字の白線を使う。
 
 腕の白線は、腕の中心線から両側へ車道の半幅だけ離れた線（内側と外側）。内側（角の側）の線は、根元の道の路側線へそのままつながる。
-外側の線（腕と腕の間の線）と、腕・通り抜ける道の中央線は、根元から各腕へ進む車の通り道を実線・点線で塞がないように、ほかの道の帯の中と、
-その縁から GORE_GAP 以内に入る所を落とし、分かれ切った所から先だけに引く（ユーザーの指摘、#210。実際の道路の分流部の標示も、分かれる手前には
+外側の線（腕と腕の間の線）は、ほかの道の帯の縁（分かれ切った所）まで引いて、隣の線と鋭角（V 字）につなぐ。腕・通り抜ける道の中央線は、根元から各腕へ
+進む車の通り道を点線で塞がないように、ほかの道の帯の中と、その縁から GORE_GAP 以内に入る所を落とし、分かれ切った所から先だけに引く（ユーザーの指摘、#210。実際の道路の分流部の標示も、分かれる手前には
 線を引かず、導流帯の縁を分かれ切った所から引く。実物の標示の規則書は引いていない）。内側の線は道の外の縁なので、そのまま引く。
 """
 import math
@@ -33,6 +33,9 @@ BAND_EPS = 0.06
 # 腕と腕の間の線（Y字の外側の線・三方分岐の通り抜ける道の縁）は、根元から各腕へ進む車の通り道を実線で塞がないように、
 # 腕が分かれ切った所（ほかの道の帯の縁）からさらにこの距離だけ離れた所から先だけに引く（ユーザーの指摘、#210）
 GORE_GAP = 1.5
+# 腕と腕の間の線は、分かれ切った所（隣の腕の帯の縁）で、隣の線と鋭角（V 字）につなぐ。帯の縁をこの距離だけ越えて引いて、継ぎ目を重ねる
+# （ユーザーの指摘、#210: 途切れていた線をつなぐ。V 字の頂点は分かれ切った所で、根元の側へは伸ばさない）
+GORE_JOIN = 0.15
 STEP = 0.15
 
 
@@ -120,7 +123,7 @@ def edge_lines(arms, through=None):
         others = [r for j, r in enumerate(roads) if j != i]
         # 内側（角の側）の線は道の外の縁。外側の線は腕と腕の間の線で、分かれ切った所から先だけ
         out += [(run, 0.0) for run in outside_runs(a.inner, others)]
-        out += [(run, 0.0) for run in outside_runs(a.outer, others, -GORE_GAP)]
+        out += [(run, 0.0) for run in outside_runs(a.outer, others, GORE_JOIN)]
     if through:
         # 通り抜ける道の両側の線（半幅だけ離れた線）も、腕の帯の中に入る所を落とす
         c, w = through
@@ -129,5 +132,5 @@ def edge_lines(arms, through=None):
         n = Vector((t.y, -t.x))
         for s in (1, -1):
             line = [p0 + n * (w * s), p1 + n * (w * s)]
-            out += [(run, 0.0) for run in outside_runs(line, [(a.center, a.halfw) for a in arms], -GORE_GAP)]
+            out += [(run, 0.0) for run in outside_runs(line, [(a.center, a.halfw) for a in arms], GORE_JOIN)]
     return out
