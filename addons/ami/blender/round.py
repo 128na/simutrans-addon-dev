@@ -446,12 +446,32 @@ if __name__ == "__main__":
     try:
         import bpy  # noqa: F401
     except ImportError:
-        if sys.argv[1] == "--targets":
+        import argparse
+        ap = argparse.ArgumentParser(
+            prog="round.py", allow_abbrev=False, description="精細化のラウンドの pak を作る（Blender を使わない）。系統は環境変数 AMI_FAMILY（既定 rail_ballast）。")
+        ap.add_argument("rounds", nargs="*", metavar="鍵", help="ラウンドの鍵（ROUND_SETTINGS の鍵。例: 1・7・0）。並べると順に pak を作る")
+        ap.add_argument("--targets", action="store_true", help="その系統の描く対象を出す（pak は作らない）")
+        args = ap.parse_args()
+        if args.targets:
+            if args.rounds:
+                ap.error("--targets には鍵を渡さない")
             sys.path.insert(0, _HERE)
             names = [os.path.basename(p)[:-4] for p in sorted(glob.glob(os.path.join(ROOT, "src", "*.png")))]
             print(" ".join(ROUND_TARGETS if FAMILY == "rail_ballast" else family_targets(names)))
         else:
-            _pack(sys.argv[1])
+            if not args.rounds:
+                ap.error("鍵を 1 つ以上渡す")
+            bad = [k for k in args.rounds if not re.fullmatch(r"[0-9A-Za-z]+", k)]
+            if bad:
+                ap.error("鍵の形でない引数: " + " ".join(bad))
+            # 綴り違い（abc など）で空の名前の pak を作らない: 系統の ROUND_SETTINGS の鍵、ラウンド 0、描いた絵のあるラウンドだけ受ける
+            sys.path.insert(0, _HERE)
+            known = set(ROUND_SETTINGS if FAMILY == "rail_ballast" else importlib.import_module(FAMILIES[FAMILY]["module"]).ROUND_SETTINGS)
+            unknown = [k for k in args.rounds if k != "0" and k not in known and not os.path.isdir(os.path.join(round_dir(k), "src"))]
+            if unknown:
+                ap.error(f"系統 {FAMILY} に無いラウンドの鍵: " + " ".join(unknown))
+            for key in args.rounds:
+                _pack(key)
     else:
         sys.path.insert(0, _HERE)
         sys.path.insert(0, os.path.join(_HERE, "..", "..", "..", "tools", "blender"))
