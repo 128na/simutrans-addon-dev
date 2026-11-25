@@ -164,6 +164,7 @@ MARK_LABELS = {"ami_mark_lane4": "線", "ami_mark_junction2": "交", "ami_mark_j
                "ami_mark_junction6_out": "出", "ami_mark_junction6_m": "中", "ami_mark_junction6_c": "心",
                # 高速道路の分岐・合流（#188）
                "ami_mark_diverge_main": "分", "ami_mark_diverge_ramp": "岐", "ami_mark_merge_main": "合", "ami_mark_merge_ramp": "流"}
+assert set(MARK_LABELS) == set(MARKINGS), "MARK_LABELS が MARKINGS と合っていない（路面表示を足したら字も足す。#300）"
 WALL_ROAD = ROAD_GENERAL  # 道路の壁のシートを描く元の道路（壁の形は 3 種で同じ。断面とカーブの作りが同じため）
 # カーブの形ごとの壁（#260）: 一般道路（円弧）・生活道路（L 字）の基盤・高架は single だけなので、カーブのセルが円弧・L 字の single の壁を別に持つ。
 # 名前 → 形（ROAD_CURVE_SHAPES の値）。直線・T字・十字・坂・端の壁は ami_wall_road_single と同じ絵で、カーブのセル（行 2 の列 5〜8）だけが違う。

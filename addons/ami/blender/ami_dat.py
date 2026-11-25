@@ -257,7 +257,8 @@ TUNNELS[catalog.MONORAIL_TUNNEL] = (catalog.MONORAIL, catalog.MONORAIL_TUNNEL)  
 
 def _head(comment, obj, name, intro_year, before=(), after=()):
     """dat の頭の行（どの dat も共通の並び）: 注記・obj・name・copyright → before → 登場年・退役年 → after。
-    before は登場年の前に置くキー（building の type・waytype など）、after は退役年の後のキー（waytype・値・icon・cursor など）"""
+    before は登場年の前に置くキー（building の type・waytype など）、after は退役年の後のキー（waytype・値・icon・cursor など）。
+    before・after に分けるのは、dat のキーの並びを前と変えないため（並びが変わると、比べで差分が出る）"""
     return [
         comment,
         f"obj={obj}",
@@ -273,7 +274,8 @@ def _head(comment, obj, name, intro_year, before=(), after=()):
 
 
 def _way_values(v, cost_k=1, topspeed=None):
-    """waytype・費用・維持費・最高速度の 4 行（v は VALUES の値か、topspeed を持つ値の表）。cost_k は費用・維持費の倍率"""
+    """waytype・費用・維持費・最高速度の 4 行。cost_k は費用・維持費の倍率。
+    最高速度は、v が "topspeed" を持つ表（PIER_VALUES など）ならそれ、VALUES の値（"speed" が最高速度）なら topspeed=v["speed"] を渡す"""
     return [f"waytype={v['waytype']}", f"cost={v['cost'] * cost_k}", f"maintenance={v['maintenance'] * cost_k}",
             f"topspeed={v['topspeed'] if topspeed is None else topspeed}"]
 
