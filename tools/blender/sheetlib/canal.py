@@ -16,6 +16,8 @@ import os
 
 import numpy as np
 
+from sheet_rows import CANAL_SNOW_ROWS  # 雪の絵の行のずらし（dat を書く側も同じ定義を読む。#302）
+
 from . import sheetlib as _s
 from .cells import ROAD_CY, _ground_mask, exits_of, make_sheet, render_cell, save_rgba
 from .core import H, LAYOUT, ONLY, SCALE, TILE, _SNOW, apply_slope, boolean, clear_models, make_material, mesh_object, noisy_material, set_anchor
@@ -28,7 +30,6 @@ CANAL_WALL_BOTTOM = -0.7  # 護岸の下端（水面より下。水面との継�
 CANAL_COPING_T = 0.03    # 笠石の厚み（地面より上に出す分）
 CANAL_PAD = 1.0          # つながる辺で、腕・帯をタイルの外へ延ばす量（持ち分で切る）
 CANAL_EARTH_EPS = 0.02   # 地面（holdout）を水路より広く抜く量（護岸の内の面と重ねない）
-CANAL_SNOW_ROWS = 4      # 雪の絵の行のずらし（addons/ami/blender/ami_dat.py の SNOW_ROWS と同じ）
 
 # ---------------------------------------------------------------- 色
 # 水面は青緑（iss の運河の色に寄せる）。灰色に寄せると、ゲームの画面でアスファルトの道路と見分けにくかった（2026-11-22）

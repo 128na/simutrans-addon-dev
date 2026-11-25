@@ -41,7 +41,7 @@ OVERLAP = 0.025  # つながる辺で隣のタイルへ延ばす長さ（タイ�
 LEVEL = 16 * SCALE  # 1 段の高さ（px。タイルの幅 ÷ 8）
 HIGH = 2         # 楔の高い辺の段数（高架と同じ）
 OFFSET = (-64 * SCALE, -32 * SCALE)  # way の絵のオフセット（セルを切る AMI の決まり。ami_dat.py）
-SNOW_ROWS = 4    # 雪の絵の行のずらし（ami_dat.py の EMBANKMENT_SNOW_ROWS）
+SNOW_ROWS = 4    # 雪の絵の行のずらし（sheet_rows.py の EMBANKMENT_SNOW_ROWS。dat が決まりどおりかを見る検査なので、定義を読まず値を持つ。変えるときは両方）
 SIDES = ("front", "back")
 
 F = {"n": lambda x, y: y + 0.5, "s": lambda x, y: 0.5 - y, "e": lambda x, y: x + 0.5, "w": lambda x, y: 0.5 - x}

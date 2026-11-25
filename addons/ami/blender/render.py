@@ -44,9 +44,19 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(_HERE, "..", "..", "..", "tools", "blender"))
 sys.path.insert(0, _HERE)  # Blender の --python は、スクリプトのディレクトリを探す先に入れない
 import catalog  # noqa: E402
+import sheet_rows  # noqa: E402  行の並び（手前の絵の行など）。dat を書く ami_dat.py も同じ定義を読む（#302）
 import sheetlib as R  # noqa: E402
 
 _p = catalog.profile  # way・シートの名前 → TRACK_PROFILES の名前
+
+
+def _way_flags(way):
+    """way の絵の並びの性質（catalog.py の集まり。dat を書く ami_dat.py も同じ集まりを読む。#302）を、TRACK_PROFILES の値にする:
+    diag_curves（カーブを斜めの絵で表す）・close（近い斜めの絵を描く）・front_row（手前の絵を持つ way の、手前の絵の行）"""
+    flags = {"diag_curves": way in catalog.DIAG_CURVE_WAYS, "close": way not in catalog.NO_CLOSE_WAYS}
+    if way in catalog.FRONT_WAYS:
+        flags["front_row"] = sheet_rows.WAY_FRONT_ROW
+    return flags
 
 # ---------------------------------------------------------------- 線路の描き分け
 # 新描画位置（レールが低い。今の pak128・iss）。旧描画位置（SIS に合う）は、catalog.OLD_TRACKS の名前で、下の TRACK_SETTINGS が新の設定から導く（#26。ADR 0011）。
@@ -256,7 +266,7 @@ for _t in catalog.OLD_TRACKS:
 for _t in catalog.ALL_TRACKS:
     # diag_curves: カーブを斜めの絵で表す（pak128 標準の線路と同じ。T字・十字・分岐の絵も斜めの直線）。buffer: 行き止まりの車止め
     R.TRACK_PROFILES[_t.key] = dict({"sheet": _t.way, "spill": 1 * R.SCALE, "datums": _DATUMS, "snow": True,
-                                     "groups": ("body", "weathering", "buffer"), "diag_curves": True,
+                                     "groups": ("body", "weathering", "buffer"), **_way_flags(_t.way),
                                      "end_from_edge": END_FROM_EDGE, "ex_switches": True}, **TRACK_SETTINGS[_t.key])
 
 # ---------------------------------------------------------------- 路面軌道（ami_tram。#23）
@@ -271,6 +281,7 @@ R.TRACK_PROFILES[TRAM_KEY] = {
     "sheet": catalog.TRAM, "label": "60", "spill": 0, "datums": TRAM_DATUMS, "snow": True, "anchor": R.ROAD_CY, "cy": R.ROAD_CY,
     "groups": ("body", "weathering"), "track_parts": R.TRAM_TRACK_PARTS, "replace": R.TRAM_WEAR_REPLACE,
     "snow_skin": R.TRAM_SNOW_SKIN, "end_from_edge": END_FROM_EDGE, "cell_fills": R.TRAM_CELL_FILLS, "ex_switches": True,
+    **_way_flags(catalog.TRAM),
 }
 
 # ---------------------------------------------------------------- 跨座式モノレール（ami_monorail。#113）
@@ -282,7 +293,8 @@ MONORAIL_KEY = catalog.profile(catalog.MONORAIL)
 MONORAIL_LABEL = "150"
 R.TRACK_PROFILES[MONORAIL_KEY] = {
     "sheet": catalog.MONORAIL, "label": MONORAIL_LABEL, "spill": 1 * R.SCALE, "datums": R.FLAT, "snow": True, "anchor": 128 * R.SCALE,
-    "groups": ("body",), "track_parts": R.monorail_parts(), "snow_skin": R.MONO_SNOW_SKIN, "diag_curves": True, "close": False,
+    "groups": ("body",), "track_parts": R.monorail_parts(), "snow_skin": R.MONO_SNOW_SKIN,
+    **_way_flags(catalog.MONORAIL),
 }
 # 高架の 3 版（ami_monorail_elev_<版>、dat は system_type=1）: 桁を下へ深くし、桁が出入りする辺の角に柱と腕を足す（版で柱の側が違う）。
 # 柱は高架の高さ（ELEV_STEPS 段）下の地面まで伸ばし、持ち分も同じだけ下へ広げる。アイコンは下の帯で高架を示す
@@ -291,7 +303,7 @@ for _v in catalog.MONORAIL_ELEV_VARIANTS:
     R.TRACK_PROFILES[catalog.profile(catalog.monorail_elev(_v))] = dict(
         R.TRACK_PROFILES[MONORAIL_KEY], sheet=catalog.monorail_elev(_v),
         track_parts=R.monorail_parts(R.MONO_BEAM_TOP - R.MONO_ELEV_BEAM_D), cell_fills=R.monorail_pier_fills(_v),
-        lower=MONORAIL_ELEV_LOWER, band="elevated", badge=_v[0].upper())
+        lower=MONORAIL_ELEV_LOWER, band="elevated", badge=_v[0].upper(), **_way_flags(catalog.monorail_elev(_v)))
 
 # ---------------------------------------------------------------- 懸垂式モノレール（ami_monorail_suspended。#116）
 # 物の並びは iss の懸垂式（地上・高架とも front・center・back）に合わせ、支柱は way の絵に持たせる（2026-11-22、進捗管理の決定・案 A）。
@@ -303,14 +315,14 @@ for _v in catalog.MONORAIL_SUSPENDED_VARIANTS:
         _n = catalog.monorail_suspended(_v, _elev)
         R.TRACK_PROFILES[catalog.profile(_n)] = dict(
             R.TRACK_PROFILES[MONORAIL_KEY], sheet=_n, track_parts=R.suspended_parts(), snow_skin=R.SUSP_SNOW_SKIN,
-            cell_fills=R.suspended_pier_fills(_v, _elev), front_row=4, rise=R.SUSP_RISE, badge=_v[0].upper(),
+            cell_fills=R.suspended_pier_fills(_v, _elev), rise=R.SUSP_RISE, badge=_v[0].upper(), **_way_flags(_n),
             **(dict(lower=MONORAIL_ELEV_LOWER, band="elevated") if _elev else {}))
 # 電化の way-object（ami_monorail_power・ami_monorail_suspended_power。#116）: way-object のシート（奥の絵 4 行 → 手前の絵 4 行。雪の絵は無い）。
 # 給電レールと碍子だけを描き、桁は holdout で置いて奥のレールを隠す（sheetlib の monorail_parts の power_*）。並びは跨座式の way と同じ
 for _n, _susp in catalog.MONORAIL_POWERS.items():
     R.TRACK_PROFILES[catalog.profile(_n)] = dict(
         R.TRACK_PROFILES[MONORAIL_KEY], sheet=_n, track_parts=R.power_parts(_susp), cell_fills=R.power_insulator_fills(_susp),
-        front_row=4, rise=R.POWER_RISE, snow=False, snow_skin={}, label="E", badge="S" if _susp else None)
+        front_row=sheet_rows.WALL_FRONT_ROW, rise=R.POWER_RISE, snow=False, snow_skin={}, label="E", badge="S" if _susp else None)
 
 # ---------------------------------------------------------------- 基盤の版と壁の way-object（ADR 0003。#16）
 # 基盤の版の way（ami_rail_ballast_base_<版>）は、通常の版の道床の下に基盤を敷き、基盤は壁の位置で止まる（壁の無い側はタイルの端まで）。

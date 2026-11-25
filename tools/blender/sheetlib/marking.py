@@ -31,6 +31,8 @@ import os
 
 import bpy
 
+from sheet_rows import MARKING_COLS, MARKING_EMPTY_CELL, MARKING_ROWS, MARKING_SNOW_KINDS  # 空のセル・行数・雪の絵を持つ種類（シートは行を 2 倍にし、雪は MARKING_ROWS 行下）。dat を書く側も同じ定義を読む（#302）
+
 from . import sheetlib as _s
 from .cells import ROAD_CY, make_sheet, render_cell
 from .core import H, TILE, apply_slope, clear_models, material, mesh_object, set_anchor
@@ -45,7 +47,6 @@ MARKING_Z = (0.0, LINE_TOP + 0.004)  # 白線の下面・上面（道路の白�
 MARKING_PAVE_Z = (-0.002, 0.008)
 MARKING_SNOW_Z = (0.0, 0.0115)          # 雪の板（下の道路の積もった雪 snowbank と同じ厚み。白線より薄い）
 MARKING_SLUSH_DZ = 0.0004                # 雪の縁のぼかしの段ごとの厚みの差（外の段ほど低く、板の縁を重ねて見せる）
-MARKING_SNOW_KINDS = ("lane6_m", "junction4_in", "junction4_out", "junction6_in", "junction6_out", "junction6_m")       # 雪の絵（夏と別のセル）を持つ種類。シートは行を 2 倍にし、雪は MARKING_ROWS 行下
 MARKING_PAVE_IN = SNOW_LAYERS[0][1]                # 2.47（2 車線の道路の中心からの半幅）
 MARKING_PAVE_GAP = EDGE_LINE - MARKING_PAVE_IN     # 0.9
 MARKING_TEE_MOUTH_COVER = EDGE_LINE + 0.2          # junction2_t の T字の、枝の側の角の内を覆う四角の外の端（下の道路の口の点線の端の外）
@@ -122,8 +123,6 @@ MARKING_SLOPES = {(1, 0): ("ns", lambda x, y: H * (y + MARKING_HALF) / TILE),
                   (1, 6): ("ew", lambda x, y: 2 * H * (MARKING_HALF - x) / TILE),
                   (1, 7): ("ns", lambda x, y: 2 * H * (MARKING_HALF - y) / TILE),
                   (1, 8): ("ew", lambda x, y: 2 * H * (x + MARKING_HALF) / TILE)}
-MARKING_EMPTY_CELL = (0, 4)    # 絵の無い形が使う空のセル（ami_dat.py の MARKING_EMPTY_CELL）
-MARKING_ROWS, MARKING_COLS = 4, 10
 
 
 # ---------------------------------------------------------------- 多角形（(u, v) の凸の多角形を集め、切り抜いてから板にする）

@@ -19,6 +19,8 @@ import os
 
 import numpy as np
 
+from sheet_rows import FENCE_FRONT_ROW, SIDEWALK_SNOW_ROWS  # 雪の絵の行のずらしと、柵の手前の絵の行（奥の絵 4 行 → 手前の絵 4 行）。dat を書く側も同じ定義を読む（#302）
+
 from . import sheetlib as _s
 from .cells import ROAD_CY, _ground_mask, exits_of, load_rgba8, make_sheet, render_cell, save_rgba
 from .core import (H, ONLY, SCALE, TILE, _SNOW, apply_slope, box, clear_models, make_material, mesh_object, named_materials,
@@ -31,8 +33,6 @@ SIDEWALK_FOOT = 0.3      # 板の下端（地面より下。手前の辺の立�
 PAVING_TH = 0.02         # 敷石の厚み（道路の歩道の paving と同じ）
 # 持ち分を上へ広げる行数。板の上面は地面より SIDEWALK_H 高く、奥の辺（北・西）の縁石の上面の帯が地面の菱形より上に出る
 SIDEWALK_RISE = 3 * SCALE
-# 雪の絵の行のずらし（dat を書く側の addons/ami/blender/ami_dat.py の SNOW_ROWS と同じ）
-SIDEWALK_SNOW_ROWS = 4
 
 # 高架の版: 板（縁石の色）は道路の高架の路面の下の基盤の上面（ROAD_BASE_DROP 下）まで。その下に基盤（BASE_H）と躯体（ELEV_BODY_D）。
 # 深さは道路の高架（sheetlib の road_sheet の elev_body）と同じにし、並べた高架の道路と床の下の縁をそろえる。
@@ -56,7 +56,6 @@ FENCE_ALPHA = 128        # これより覆われていない縁の画素は捨�
 _M_FENCE = ("sidewalk_fence", (0.80, 0.81, 0.80), 0.5, 0.3)
 # 版 → 柵を立てる辺
 FENCE_SIDES = {"single": "nsew", "back": "nw", "front": "se"}
-FENCE_FRONT_ROW = 4      # 柵のシートの手前の絵の行（奥の絵 4 行 → 手前の絵 4 行。sheetlib の WALL_FRONT_ROW と同じ並び）
 
 # セル（行, 列）→ 名前。位置は線路の way と同じ（ami_dat.py の IMAGES）。カーブは行 2 の列 5〜8（斜めのセルは無い）
 _CELLS = {

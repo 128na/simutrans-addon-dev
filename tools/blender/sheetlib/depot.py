@@ -15,7 +15,7 @@
     列 4: 行 0 がアイコン、行 1 がカーソル（AMI の blender/icons.py が、描いた絵から作って書く。ここでは空けておく）
 絵の位置: タイルの中心をセルの (CELL / 2, GROUND_CY + BUILDING_DROP) に置き、dat のオフセットは BUILDING_OFFSET（pak128 は -64,-96。256 は倍）。
 pak128 のタイルの中心は (64, 95)（線路・踏切の絵と同じ。cells の GROUND_CY = 127 にオフセット -32）なので、上へ 191px の余白がある（256 は倍）。
-BUILDING_OFFSET は dat を書く側（addons/ami/blender/ami_dat.py の DEPOT_OFFSET）と同じ値で、ここでは描画に使わない（対応を示す）。
+BUILDING_OFFSET は tools/blender/sheet_rows.py の定義で、dat を書く側（addons/ami/blender/ami_dat.py の DEPOT_OFFSET）も同じ物を読む。ここでは描画に使わない（対応を示す）。
 """
 import math
 import os
@@ -23,12 +23,12 @@ import os
 import numpy as np
 from mathutils import Vector
 
+from sheet_rows import BUILDING_OFFSET, DEPOT_SNOW_ROW  # dat の offset（画素）と雪の絵の行のずらし。dat を書く側も同じ定義を読む（#302）
+
 from .cells import GROUND_CY, load_rgba8, make_sheet, render_cell, save_rgba
 from .core import CELL, H, SCALE, TILE, TRANSPARENT, clear_models, material, merge, mesh_object, set_anchor
 
 BUILDING_DROP = 64 * SCALE          # 建物の絵のタイルの中心を、線路の絵（GROUND_CY）より何 px 下に置くか（上に余白を作る。画素の値なので pak の大きさに比例。#261 の D）
-BUILDING_OFFSET = (-64 * SCALE, -96 * SCALE)  # dat のオフセット（画素）。GROUND_CY + BUILDING_DROP - 96 = 95 が、線路の絵（GROUND_CY - 32）と同じ行（128 のとき。大きな pak は倍）
-DEPOT_SNOW_ROW = 2                  # 雪の絵の行のずらし（夏の奥・手前が行 0・1）
 DEPOT_ICON_CELL = (0, 4)            # アイコンのセル（行, 列）
 DEPOT_CURSOR_CELL = (1, 4)          # カーソルのセル
 DEPOT_FRONT_SIDES = ("s", "e")            # 画面の手前に来る面（南・東）。この向きの壁は手前の絵にする

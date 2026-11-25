@@ -9,6 +9,12 @@ import bmesh
 import bpy
 import numpy as np
 from mathutils import Vector
+from sheet_rows import (  # 行の並びの唯一の定義（dat を書く側も同じ物を読む。#302）
+    EMBANKMENT_SNOW_ROWS as _EMB_SNOW_ROW,
+    PIER_GATE_FRONT_ROW,
+    WALL_FRONT_ROW,
+    way_snow_rows,
+)
 
 from .core import (  # noqa: F401
     CELL,
@@ -567,7 +573,7 @@ def _road_sheet(style="street"):
     set_anchor(ROAD_CY)
     cells = {}
     # 行の並びは線路と同じ: 奥の絵 4 行 →（手前の絵 4 行。側壁の版）→ 雪の奥の絵 4 行 →（雪の手前の絵 4 行）。白線は雪に隠れるので描かない
-    block = 8 if "front_row" in prof else 4
+    block = way_snow_rows("front_row" in prof)
     variants = [(0, "", {}, groups), (block, "_snow", dict(ROAD_SNOW_SKIN, **prof.get("snow_skin", {})), groups + ROAD_SNOW_GROUPS)]
     wcells = {}
     if wall_only:
@@ -752,7 +758,7 @@ WALL_RISE = 11 * SCALE  # 側壁の高さ（画面の px。持ち分を上へ広
 
 # 壁を way-object に分ける版（TRACK_PROFILES の wall_sheet）の、壁のシートの行の並び: 奥の絵（dat の backimage）4 行 → 手前の絵（frontimage）4 行。
 # セルの位置は way のシートと同じ。way-object には雪の絵が無いので、雪の行は無い
-WALL_FRONT_ROW = 4
+# （WALL_FRONT_ROW は tools/blender/sheet_rows.py の定義。dat を書く側も同じ物を読む）
 # その版の坂のセルで、壁をタイルの辺の外へ残す幅（高さのある部品の TALL_PAD の代わり）
 SLOPE_WALL_PAD = TALL_PAD * 2
 
@@ -1024,7 +1030,7 @@ def _track_sheet(profile="new"):
     groups = prof.get("groups", ("body",))
     # 雪の絵は下の 4 行に同じ並びで置く（dat の image[..][1]）。汚れは、雪の絵では雪の上の汚れ（灰色）に差し替える
     # 行の並び: 奥の絵 4 行 →（手前の絵 4 行）→ 雪の奥の絵 4 行 →（雪の手前の絵 4 行）
-    block = 8 if "front_row" in prof else 4
+    block = way_snow_rows("front_row" in prof)
     # prof["wall_sheet"]（無くてよい）: 壁を way の絵に焼き込まず、この名前の way-object のシートに分ける（AMI の基盤の版と壁。ADR 0003）。
     # way のシートには壁を除いた本体（基盤は壁の位置で止まる）を、壁のシートには壁だけを描く
     wall_sheet = prof.get("wall_sheet")
@@ -1333,7 +1339,7 @@ def _pier_sheet(sheet, datums, label="P", across=PIER_SIZE * PIER_ACROSS_K, anch
 # 盛土の way（AMI。#123）: 1 タイルの全面を楔にした法面。高い側の辺は高架と同じ高さ（ELEV_STEPS 段）で、反対の辺は地面。
 # 名前 → 高さの割合 f(x, y)（0 = 地面、1 = 高架の高さ）。側（side）は front（法面が手前の南・東を向き、高い側が北・西）と back（逆）
 EMB_OVERLAP = 0.25  # つながる辺で隣のタイルへ延ばす長さ（約 2px。持ち分の外は切られる）
-_EMB_SNOW_ROW = 4  # 雪の絵の行のずらし。dat を書く側の addons/ami/blender/ami_dat.py の EMBANKMENT_SNOW_ROWS と同じ値にする
+# （雪の絵の行のずらし _EMB_SNOW_ROW は tools/blender/sheet_rows.py の EMBANKMENT_SNOW_ROWS。dat を書く側も同じ物を読む）
 
 
 def _emb_height(name, side):
@@ -1488,8 +1494,7 @@ def _gate_parts(name):
 
 
 # 門型の橋脚のシートの手前の絵（frontimage）の行。奥の絵（image）の行 0〜3 の下（壁の way-object の WALL_FRONT_ROW と同じ並び）
-# 手前の絵の行のずらし。dat を書く側の addons/ami/blender/ami_dat.py の PIER_FRONT_ROW と同じ値にする
-PIER_GATE_FRONT_ROW = 4
+# （手前の絵の行のずらし PIER_GATE_FRONT_ROW は tools/blender/sheet_rows.py の定義。dat を書く側も同じ物を読む）
 # 斜めのタイルで、中心の柱を手前の絵にも描くセル（柱が経路より手前にある。ほかの斜めは同じ奥行きか奥なので奥の絵だけ）
 _GATE_CENTER_FRONT = ("diag_nw",)
 

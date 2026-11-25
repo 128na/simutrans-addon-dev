@@ -22,12 +22,13 @@ import os
 
 import numpy as np
 
+from sheet_rows import YARD_SNOW_ROW  # 雪の絵の行（夏の奥の絵が行 0）。dat を書く側も同じ定義を読む（#302）
+
 from .cells import GROUND_CY, make_sheet, save_rgba
 from .core import CELL, TILE, TRANSPARENT, clear_models, material, merge, mesh_object, set_anchor
 from .depot import BUILDING_DROP, _depot_box, _depot_render_layer
 
 YARD_LAYOUTS = 8
-YARD_SNOW_ROW = 1                   # 雪の絵の行（夏の奥の絵が行 0）
 YARD_ICON_CELL = (0, YARD_LAYOUTS)  # アイコンのセル（行, 列）
 YARD_CURSOR_CELL = (1, YARD_LAYOUTS)
 
