@@ -2,7 +2,7 @@
 
     python -X utf8 check_icons.py [src のディレクトリ]
 
-#25 で、次の 1〜3 の誤りを目で見て見つけた。同じ種類の誤りを機械的に見つける（4 は #141 で足した）。
+#25 で、次の 1〜3 の誤りを目で見て見つけた。同じ種類の誤りを機械的に見つける（4 は #141、5 は #287 で足した）。
 
 1. セルの重なり: 各 dat の icon・cursor が指すセルを、ほかの dat のキーや、同じ dat のほかのキーが指していないか。
    blender/icons.py はセルを空けてから書くので、重なると相手の絵が消えるか、2 つの物が同じアイコンになる
@@ -15,7 +15,11 @@
    icons.py が絵のセルの sha256 を <シート>.icon_sources.txt に控え、ここで今のシートと比べる（#141。#89 で線路のシートを描き直した後、
    在来線のトンネルのアイコンが古い線路の絵のままだった）。トンネルには控えが無ければならない
 
-意図して共有・借用するものは、下の SHARE_SUFFIX と BG_BORROW に書く。
+5. カーソルの offset: cursor= の offset（`cell,x,y` の x,y）が、同じ dat のほかの絵のキー（image・backimage など）の offset と同じか（#287）。
+   置く前のカーソルはタイルの上に出る絵で、offset が絵と違うとタイルからずれる。ゲームでは撮れないので、ここで守る
+   （#282 の前、車庫・操車場・停留所・道路標識の cursor= に offset が無く、ずれていた）。展開後の dat を全部読むので、way 系も同じに見る
+
+意図して共有・借用するものは、下の SHARE_SUFFIX と BG_BORROW に書く。意図して offset が違うものは CURSOR_OFFSET_ALLOW に書く。
 """
 import glob
 import hashlib
@@ -37,6 +41,10 @@ CELL = 256 * SCALE  # 1 セルの画素数（pak128 は 256、256 は 512）
 ICON = 32  # アイコンは大きさによらず 32px（pak256 の menuconf.tab も icon_width = 32）
 TRANSPARENT = (231, 255, 255)
 REF = re.compile(r"^>?\s*([A-Za-z0-9_\-]+)\.(\d+)\.(\d+)\s*(?:,|$)")
+REF_OFFSET = re.compile(r"^>?\s*[A-Za-z0-9_\-]+\.\d+\.\d+\s*(?:,\s*(-?\d+)\s*,\s*(-?\d+))?\s*(?:,|$)")  # セルの後の offset（無ければ None, None）
+
+# cursor= の offset が絵の offset と違ってよい物（名前 → 理由）。今は無い（#287）。足すときは理由を書く
+CURSOR_OFFSET_ALLOW = {}
 
 # 意図して共有するもの: 名前が <物><SHARE_SUFFIX> の物は、<物> と同じキーで同じセルを指してよい
 # （ex_donors.dat の分岐の追加画像の提供用の物。SHARE_SUFFIX は ex_graft.py の DONOR_SUFFIX。icons.py は ex_donors.dat を書かず、
@@ -301,6 +309,33 @@ def expected_sources(objs):
     return out
 
 
+def offset_of(value):
+    """セルの参照の offset（x, y）。無ければ None"""
+    m = REF_OFFSET.match(value)
+    return None if not m or m.group(1) is None else (int(m.group(1)), int(m.group(2)))
+
+
+def check_cursor_offsets(objs):
+    """cursor= の offset が、同じ dat のほかの絵のキー（icon 以外のセルの参照）の offset と同じか（#287）"""
+    errors = []
+    for o in objs:
+        cursor = o["keys"].get("cursor")
+        if cursor is None or not cell_of(cursor) or o["name"] in CURSOR_OFFSET_ALLOW:
+            continue
+        want = offset_of(cursor)
+        got = {}
+        for k, v in o["keys"].items():
+            if k not in ("icon", "cursor") and cell_of(v):
+                got.setdefault(offset_of(v), []).append(k)
+        for off, keys in sorted(got.items(), key=str):
+            if off != want:
+                shown = "（無し）" if want is None else f"{want}"
+                errors.append(f"{o['name']}（{o['file']}）: cursor の offset {shown} が、絵（{keys[0]} ほか {len(keys)} キー）の offset {off} と違う。"
+                              f"置く前のカーソルがタイルからずれる。意図したものなら check_icons.py の CURSOR_OFFSET_ALLOW に理由を書く")
+                break
+    return errors
+
+
 def main(src):
     all_objs = read_dats(src)
     objs, skipped = drop_missing(src, all_objs)
@@ -393,6 +428,9 @@ def main(src):
 
     # 4. ほかのシートの絵から作ったアイコン・カーソルが、今の絵のシートから作られているか（#141）
     errors += check_sources(src, objs, skipped_names)
+
+    # 5. cursor= の offset が絵と同じか（#287。シートの有無に関わらないので、飛ばした物も含めた全部を見る）
+    errors += check_cursor_offsets(all_objs)
 
     n = len(objs)
     if skipped and not n:  # 絵のある物が 1 つも無い（dat の綴りやシートの名前が崩れて、全部飛ばされた）なら、通さない
