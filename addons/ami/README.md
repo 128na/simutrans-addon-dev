@@ -36,8 +36,9 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 | 水路の踏切 | `ami_crossing_<線路\|道路>_canal`（例 `ami_crossing_rail_ballast_canal`・`ami_crossing_road_general_canal`。#117） |
 | 車庫 | `ami_rail_depot`・`ami_tram_depot`・`ami_road_depot`・`ami_monorail_depot`・`ami_canal_depot`（ADR 0008） |
 | 操車場 | `ami_rail_yard`（#115） |
+| 道路の停留所 | `ami_road_bus_stop`（旅客・郵便）・`ami_road_truck_stop`（貨物）（ADR 0014。#277） |
 
-dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`・`ami_rail_concrete`・`ami_rail_concrete_base_<版>`（4 版）・`ami_rail_concrete_elev_<版>`（4 版）・`ami_rail_concrete_bridge`・`ami_rail_concrete_tunnel`・`ami_rail_ladder`・`ami_rail_ladder_base_<版>`（4 版）・`ami_rail_ladder_elev_<版>`（4 版）・`ami_rail_ladder_bridge`・`ami_rail_ladder_tunnel`・`ami_road_local`・`ami_road_general`・`ami_road_expressway`・道路それぞれの `_base_<版>`（幹線道路・高速道路は 4 版、一般道路・生活道路は `single` だけ。#260）・`_elev_<版>`（4 版）・`_bridge`・`_tunnel`・`ami_wall_road_<版>`（4 版）・`ami_wall_road_twin`・`ami_wall_road_front_divider`・`ami_wall_road_center_divider`・`ami_wall_road_twin_divider`・`ami_pier_road`・`ami_tram`・`ami_embankment_front`・`ami_embankment_back`・`ami_sidewalk`・`ami_sidewalk_<舗装>`（3 種）・`ami_sidewalk_elev`・`ami_wall_sidewalk_<版>`（3 版）・`ami_sidewalk_pole_<版>`（2 版）・`ami_wall_sidewalk_<版>_pole`（2 版）・`ami_monorail_straddle`・`ami_monorail_straddle_elev_<版>`（3 版）・`ami_monorail_straddle_tunnel`・`ami_monorail_suspended_<版>`（3 版）・`ami_monorail_suspended_elev_<版>`（3 版）・`ami_monorail_power`・`ami_monorail_suspended_power`・`ami_canal`・`ami_canal_scenic`・水路の踏切 7 つ（`ami_crossing_<線路|道路>_canal`）・車庫 5 つ・`ami_rail_yard`。
+dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）。今あるのは `ami_rail_ballast`・`ami_rail_ballast_base_<版>`（4 版）・`ami_wall_rail_<版>`（4 版）・`ami_wall_rail_twin`・`ami_wall_rail_<版>_catenary`（4 版）・`ami_wall_rail_twin_catenary`・`ami_rail_ballast_elev_<版>`（4 版）・`ami_pier_rail`・`ami_pier_rail_gate`・`ami_rail_ballast_bridge`・`ami_rail_ballast_tunnel`・`ami_rail_slab`・`ami_rail_slab_base_<版>`（4 版）・`ami_rail_slab_elev_<版>`（4 版）・`ami_rail_slab_bridge`・`ami_rail_slab_tunnel`・`ami_rail_concrete`・`ami_rail_concrete_base_<版>`（4 版）・`ami_rail_concrete_elev_<版>`（4 版）・`ami_rail_concrete_bridge`・`ami_rail_concrete_tunnel`・`ami_rail_ladder`・`ami_rail_ladder_base_<版>`（4 版）・`ami_rail_ladder_elev_<版>`（4 版）・`ami_rail_ladder_bridge`・`ami_rail_ladder_tunnel`・`ami_road_local`・`ami_road_general`・`ami_road_expressway`・道路それぞれの `_base_<版>`（幹線道路・高速道路は 4 版、一般道路・生活道路は `single` だけ。#260）・`_elev_<版>`（4 版）・`_bridge`・`_tunnel`・`ami_wall_road_<版>`（4 版）・`ami_wall_road_twin`・`ami_wall_road_front_divider`・`ami_wall_road_center_divider`・`ami_wall_road_twin_divider`・`ami_pier_road`・`ami_tram`・`ami_embankment_front`・`ami_embankment_back`・`ami_sidewalk`・`ami_sidewalk_<舗装>`（3 種）・`ami_sidewalk_elev`・`ami_wall_sidewalk_<版>`（3 版）・`ami_sidewalk_pole_<版>`（2 版）・`ami_wall_sidewalk_<版>_pole`（2 版）・`ami_monorail_straddle`・`ami_monorail_straddle_elev_<版>`（3 版）・`ami_monorail_straddle_tunnel`・`ami_monorail_suspended_<版>`（3 版）・`ami_monorail_suspended_elev_<版>`（3 版）・`ami_monorail_power`・`ami_monorail_suspended_power`・`ami_canal`・`ami_canal_scenic`・水路の踏切 7 つ（`ami_crossing_<線路|道路>_canal`）・車庫 5 つ・`ami_rail_yard`・`ami_road_bus_stop`・`ami_road_truck_stop`。
 
 ### 線路（新描画位置）
 
@@ -846,6 +847,20 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
   - 確認画像（2026-11-22、`OTRPv64_3.exe`、`flat_512.sve`）: `docs/yard115_temperate_Y1.png`（南北の 1 タイルと 3 タイル）、`yard115_snow_YE.png`（東西）、`yard115_pax_snow_zoom.png`（乗客の駅の隣。通路が駅の側へ続き、階段は反対の端だけ）、`yard115_pax_edge_zoom.png`（乗客の駅との境の拡大。プラットフォームと通路の線路の側の縁がそろう）、`yard115_temperate_YG.png`（並べた留置線）、`yard115_temperate_YW.png`（壁つきの線路）、`yard115_train_zoom.png`（止まった機関車が通路の上に描かれる）、`yard115_elevated_zoom.png`（高架の上）
   - 建てたときに引かれた額は 576 cr と 640 cr（2 か所）。本体は dat の `cost` をそのまま使う（[way-addon.md](../../docs/reference/way-addon.md) の 5 章）。600 cr からのずれは測り方の問題で、建設費はずれていない（スクリプトの所持金が 32 ビット float で、残高が大きく負の `flat_512` では 64 cr 刻みに丸められる。純資産の差は 60000。記録 [2026-11-22_ami-yard-cost-float32.md](../../docs/records/2026-11-22_ami-yard-cost-float32.md)、[#160](https://github.com/128na/simutrans-addon-dev/issues/160)）
 
+### 道路の停留所の作り（#277）
+
+[ADR 0014](../../docs/adr/0014-ami-scope-stations-and-signals.md) の第 5 弾の 1 つめ。道路の上に建てる駅の建物（building の `stop`・`waytype=road`）で、`ami_road_bus_stop`（`enables_pax`・`enables_post`）と `ami_road_truck_stop`（`enables_ware`）の 2 つ。pak256 の仮の `pak256_bus_stop`・`pak256_truck_stop`（pak256 の `docs/stations.md`）の置き換え先で、名前・`type`・`waytype`・扱う荷・`dims=1,1,8`・`level=2`・登場年 1900 を合わせた。
+
+- 見た目は道路の見える側（南北の道路なら東、東西の道路なら南）の脇のホーム。道路は描かない。ホームは車道の縁（`ROAD_HW` = 3.6）の外からタイルの端の内まで。バス停は低いホーム（床の上面 0.35）に、青い屋根の待合（2 本の柱と背の板、長椅子）と青い標識。荷役所は高い積み降ろし場（1.0）に、木箱 2 つと黄色の標識。道路側の縁に黄色の帯。切れた端（隣に停留所の建物が無い側）には斜路の段を付ける。床と縁は奥の絵（車両の下）、屋根・柱・標識・木箱は手前の絵（車両の上）。寸法は `tools/blender/sheetlib/road_stop.py` の定数
+- 絵: 8 つの配置ごとに、夏と雪の奥・手前（シートは 4 行 × 9 列。列 0〜7 が配置、列 8 の行 0・1 がアイコン・カーソル）。配置の決め方は操車場と同じ本体の仕組み（ビット 0 が道路の向き、ビット 1・2 が南・東と北・西の隣に停留所の建物が無いこと。`sheetlib/yard.py` の `yard_layout` を使う）。道路・線路の区別は本体にない（`hausbauer.cc` の `build_station_extension_depot`）
+- 値: 費用 80000（800 cr）、維持費 3600、`level=2`、登場年 1900、引退 2999 年（`blender/ami_dat.py` の `ROAD_STOP_VALUES`）。本体の道路の停留所の既定（`building_desc.cc`: 費用 = `cost_multiply_roadstop`（pak128・pak256 とも 400 cr）× level、維持費 = `maintenance_building`（1800）× level）を明示した値で、`cost`・`maintenance` を書かない pak256 の仮の物と同じ額になる（建てたときの実額は測っていない）。`noinfo=1`・`allow_underground=2`・`needs_ground=1`。下に敷く道路の費用は別にかかる
+- 大きさ: 128 でも 256 でも同じ道具で描く（`SHEET_PAK_SIZE`。#261）。256 の dat は `src256/` に置く（PNG はコミットしない）。`catalog.SCALED_DEPOTS` に入れてあり、`check_scaled.py` が dat と突き合わせる。箱積み駅舎の箱 1 段に収まるかは `check_depot.py` が見る
+- pak は名前の頭 `ami_road_` で `ami_road.pak` に入る。アイコンは左上に「停」（バス停）・「荷」（荷役所）。名前の訳は `release/text/ja_ami.tab`
+- 見本は `ingame/road_stop_sample.nut`（`game.sh` に `NUT=` で渡して流し、`SPOTS` で撮る）。道路 3 種（生活・一般・幹線）に、南北の 1 タイルと 3 タイル、東西、歩道（`ami_sidewalk`）つきの区画を、温暖側と降雪側に敷く。駅になること・旅客・郵便・貨物の扱いを `[check]` で返す（使った本体のスクリプト API と、連なりは端から順に建てる決まりは [script-api.md](../../docs/reference/script-api.md)）
+  - 確認（2026-11-25、`sim-WinGDI64-OTRPv64.exe`・`flat_512_left_v64.sve`、道路 3 種 × 2 気候の 36 か所）: すべて駅になり、バス停は旅客・郵便だけ、荷役所は貨物だけを扱った。3 タイルの連なり（南北・東西・歩道つき）は 1 つの駅になり、建物は AMI の物だった（2026-11-25 にレビューの指摘で見本の検査を足して再確認）。画像は `docs/road_stop277_temperate_AB.png`（生活道路の南北のバス停と荷役所）、`road_stop277_temperate_D.png`（歩道つき）、`road_stop277_snow_C.png`（降雪側の東西）
+  - 高速道路（`ami_road_expressway`）の上、斜め・坂・高架の上は確かめていない。右側通行の地図でも確かめていない（検証の地図は左側通行の `flat_512_left_v64`）。ホームは通行の向きによらず、見える側（南北の道路なら東、東西の道路なら南）に固定で、左右で絵は変わらない
+  - 建てた直後は本体の建設中の絵（黄と黒の縞）が出る。ゲームを進めてから（速さ 64 で約 20 秒）撮る
+
 ### アイコン・カーソル（#25）
 
 全部の way・way-object（線路 4 種・道路 3 種・路面軌道・歩道と、その基盤・高架の版、壁・架線・橋脚・橋・トンネル）で、同じ決まりで作る（2026-11-21、ユーザーの決定。#25 の案 A。版の字は漢字）。iss（背景色で構造、左上に版の漢字）と pak128 標準（左上に速度の標識、白い印で高架・橋・トンネル）を見比べて、way の一覧で 4 種の線路が並ぶ AMI では速度を大きく出すほうが見分けやすいとして決めた。案と見比べた画像は `docs/icons_compare_x2.png`・`icons_mock_A.png`・`icons_mock_B.png`、全部の dat のアイコンとカーソルの一覧は `docs/icons_all.png`、ゲームの道具のメニューとカーソルは `docs/icons_menu_<メニュー>.png`・`icons_cursor_<名前>.png`。
@@ -1170,6 +1185,7 @@ PORT=47300 bash ingame/game.sh STOP
   - dat の値は 1/100 cr。車庫の費用は pak128 の `cost_depot_<種類>`（線路・路面軌道・モノレールが 8500 cr、道路が 7000 cr、船が 9000 cr）。
   - 操車場の費用は `cost_multiply_station`（600 cr。面積 1 タイル、level 1 のとき）。維持費は、どちらも `maintenance_building`（1800）。
   - 操車場の下に敷く線路の費用は、別にかかる。
+  - 道路の停留所（#277）は線路の駅と式が違う。本体の既定（費用 = `cost_multiply_roadstop` 400 cr × level、維持費 = 1800 × level）で、level 2 なので費用 800 cr・維持費 3600。
 - 登場年は 1900
 - 新しい waytype の速さは、pak128 の車両が最高速度で走れる値にする（モノレールの車両は最高 150 km/h、船は 53 km/h）
 
