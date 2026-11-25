@@ -1,4 +1,4 @@
-// AMI の分岐の追加画像（ex 画像。Y字分岐 26〜29・三方分岐 31〜34）の見本。本体が ex 画像を自動で選ぶ線路の形を敷き、
+// AMI の分岐の追加画像（ex 画像。Y字分岐 26〜29・三方分岐 31〜34）の見本。本体が ex 画像を自動で選ぶ線路・道路の形を敷き、
 // 選ばれた絵が、固定の道具で選んだ ex の絵と同じかを確かめる（#57。決まりは docs/reference/way-addon.md の 9.4）。
 // 検証用の flat_512_left_v64.sve に、温暖側 (OX, OY) と降雪側 (OX + 256, OY) の 2 か所へ同じ並びで敷き、降雪側は敷いた後に降雪に塗り直す。
 // 使い方（ゲームを -mcp-port で起動し、flat_512_left_v64 を開いて）: bash ingame/ex_check.sh（PORT を渡す）
@@ -29,7 +29,9 @@ local checks = "";
 function r(name, v) { return v == null ? "" : name + "=[" + v + "]\n"; }
 local pin = null;
 try { pin = command_x(tool_set_switch_image); } catch (e) { pin = null; }
-function rail_at(x, y, z) { local t = z == 0 ? square_x(x, y).get_ground_tile() : square_x(x, y).get_tile_at_height(z); return t == null ? null : t.get_way(wt_rail); }
+// 道路（名前が ami_road_ で始まる組）は wt_road で読む・固定する（#210）。ほかは wt_rail（路面軌道もこれで読めている）
+local G = { wt = wt_rail };
+function rail_at(x, y, z) { local t = z == 0 ? square_x(x, y).get_ground_tile() : square_x(x, y).get_tile_at_height(z); return t == null ? null : t.get_way(G.wt); }
 function img(x, y, z) { local w = rail_at(x, y, z); return w == null ? -1 : w.get_image_id(); }
 // [名札, 根元の向き dx, dy, 固定の T字の列]
 local DIRS = [["E", 1, 0, 0], ["W", -1, 0, 1], ["N", 0, -1, 2], ["S", 0, 1, 3]];
@@ -72,7 +74,7 @@ function lay(w, wo, ox, oy, z) {
     local qx = 2 + 6 * 4;
     s += r("P ns", line(qx, py - 1, qx, py + 1));
     s += r("P ew", line(qx - 1, py, qx + 1, py));
-    if (pin != null && v != 0) for (local k = 0; k <= 4; k++) s += r("pin", pin.work(pl, coord3d(ox + 2 + 6 * k, oy + py, z), "" + wt_rail + "," + v));
+    if (pin != null && v != 0) for (local k = 0; k <= 4; k++) s += r("pin", pin.work(pl, coord3d(ox + 2 + 6 * k, oy + py, z), "" + G.wt + "," + v));
     s += r("label", marker.work(pl, c(0, py - 2), v == 0 ? "plain" : "pin " + v));
   }
   return s;
@@ -99,6 +101,7 @@ foreach (i, pair in WAYS) {
   local w = way_desc_x(pair[0]);
   local wo = pair[1] == null ? null : wayobj_desc_x(pair[1]);
   local z = pair[0].find("_elev_") != null ? ELEV_UP : 0;
+  G.wt = pair[0].find("ami_road_") == 0 ? wt_road : wt_rail;
   if (w == null || (pair[1] != null && wo == null)) { report += pair[0] + " desc=[missing]\n"; continue; }
   foreach (snow in [false, true]) {
     local ox = OX + (snow ? SNOW_DX : 0);

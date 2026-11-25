@@ -11,7 +11,7 @@ src/ の dat から、全部入りのまとめ（dist/ami.pak）と、種類別�
     dist/ami_rail_old.pak 旧描画位置（SIS に合う）の線路と、その壁・架線・橋脚（catalog.is_old。#26・ADR 0011）。全部入りの ami.pak と、上の種類別の pak には入らない
 dat が 1 つも無い種類の pak は作らない。makeobj の出力に WARNING か ERROR があれば、出力を見せて 1 で終わる（ACCEPTANCE 1-5）。
 作った後、分岐の追加画像（Y字分岐・三方分岐。絵の番号 26〜35）を継ぎ足す: src/ex_donors.dat（blender/ami_dat.py が書く提供用の物）を
-work/ex/donors.pak に作り、ex_graft.py で dist/ の各 pak の対象の物（線路・路面軌道の way と架線つきの壁）へ写す。提供用の物は dist/ に入らない。
+work/ex/donors.pak に作り、ex_graft.py で dist/ の各 pak の対象の物（線路・路面軌道・道路の way と架線つきの壁）へ写す。提供用の物は dist/ に入らない。
 dat は先に blender/ami_dat.py で書き出す。画像（シート）は blender/render.py で描く。
 環境変数 SHEET_PAK_SIZE=256 を付けると、256 の pak を src256/ の dat・シートから dist256/ に作る（#266。makeobj の大きさは pak512。
 catalog.SCALED_SHEETS の物だけ。分岐の追加画像は、提供用の dat が指すシートが全部ある（BUILD_SKIP_MISSING で欠けていない）ときだけ継ぎ足す）。pak128 の src/・dist/ には触れない。
@@ -123,7 +123,7 @@ def main():
         if part:
             makeobj(out, part)
             outs.append(out)
-    # 分岐の追加画像は線路・路面軌道の物の継ぎ足し。256 の PNG をコミットしない CI（BUILD_SKIP_MISSING）は、
+    # 分岐の追加画像は線路・路面軌道・道路の物の継ぎ足し。256 の PNG をコミットしない CI（BUILD_SKIP_MISSING）は、
     # 提供用の dat が指すシートが欠けているので継ぎ足さない（全部のシートを描いた手元では継ぎ足す。#261）
     ex_ok = not os.environ.get("BUILD_SKIP_MISSING") or has_sheets(os.path.join(SRC, EX_DONORS))
     if ex_ok:
