@@ -13,6 +13,7 @@
   （[nse1]・[nse2]）は T字・十字、imageup[12] などは坂（imageup2 は 2 段の坂）。雪の絵（[1]）も同じ形
 - そろっているか: front と back の両方の dat があり、どちらも KEYS のキーを夏・雪とも持つ。オフセットは -64,-32（way の決まり）
 - 比べ方: 形を細かい点に分けて 128px の座標に写し（地面の菱形は (64,64)(128,96)(64,128)(0,96)、1 段は 16px）、塗る画素の集まりを作る。
+  （256 は座標・段・許しを全部 SCALE 倍。SHEET_PAK_SIZE=256 で流すと src256/ を見る）
   絵の塗った画素のうち、期待の範囲から TOL px より離れた画素と、期待の範囲を TOL px 削った内側で塗られていない画素を数える
   （輪郭の 1〜2px の差は、つなぎ目で隣へ延ばす分（EMB_OVERLAP）・持ち分の切り方・輪郭の半透明の画素を捨てる分）
 - 雪: 雪の絵（[1]）が夏の絵の 4 行下（ami_dat.py の EMBANKMENT_SNOW_ROWS）を指すかと、塗った画素の平均の色が雪（白に近い）か、
@@ -29,15 +30,16 @@
 import os
 import sys
 
-from check_icons import CELL, TRANSPARENT, cell_of, fmt, read_dats, read_rows
+from check_icons import CELL, SCALE, SRC, TRANSPARENT, cell_of, fmt, read_dats, read_rows
 
-TOL = 2          # 輪郭の許し（px）
-MAX_BAD = 6      # 許しの外に出た画素の数の上限（輪郭の端の数画素。今の絵は最悪 2）
-STEPS = 160      # タイル 1 辺を割る数（1 つの点が約 0.4px）
+# 画素で書いた値は、pak128 の値に SCALE（pak の大きさの倍率。256 は 2）を掛ける（#261）。形の座標は pak128 の 128px で書き、expected が SCALE 倍に写す
+TOL = 2 * SCALE          # 輪郭の許し（px）
+MAX_BAD = 6 * SCALE      # 許しの外に出た画素の数の上限（輪郭の端の数画素。今の絵は最悪 2。輪郭の長さが SCALE 倍になる）
+STEPS = 160 * SCALE      # タイル 1 辺を割る数（1 つの点が約 0.4px）
 OVERLAP = 0.025  # つながる辺で隣のタイルへ延ばす長さ（タイル 1 辺 = 1。sheetlib の EMB_OVERLAP 0.25 / TILE 10）
-LEVEL = 16       # 1 段の高さ（px）
+LEVEL = 16 * SCALE  # 1 段の高さ（px。タイルの幅 ÷ 8）
 HIGH = 2         # 楔の高い辺の段数（高架と同じ）
-OFFSET = (-64, -32)  # way の絵のオフセット（256px のセルを切る AMI の決まり。ami_dat.py）
+OFFSET = (-64 * SCALE, -32 * SCALE)  # way の絵のオフセット（セルを切る AMI の決まり。ami_dat.py）
 SNOW_ROWS = 4    # 雪の絵の行のずらし（ami_dat.py の EMBANKMENT_SNOW_ROWS）
 SIDES = ("front", "back")
 
@@ -104,8 +106,8 @@ def expected(name, side, exits, slope_hi, slope_n):
             ex, ey = -0.5 + i / n, -0.5 + j / n   # 辺の元の点（高さはここで決める）
             x = lo["w"] if i == 0 else hi["e"] if i == n else ex
             y = lo["s"] if j == 0 else hi["n"] if j == n else ey
-            sx = 64 + 64 * (x + y)
-            base = 96 - 32 * (y - x) - LEVEL * slope_n * g(ex, ey)
+            sx = SCALE * (64 + 64 * (x + y))
+            base = SCALE * (96 - 32 * (y - x)) - LEVEL * slope_n * g(ex, ey)
             top = base - LEVEL * HIGH * min(1.0, max(0.0, h(ex, ey)))
             put(sx, top, top)    # 上の面
             put(sx, base, base)  # 底
@@ -227,4 +229,4 @@ def main(src):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
+    main(sys.argv[1] if len(sys.argv) > 1 else SRC)

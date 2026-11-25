@@ -7,6 +7,7 @@
 1. 奥の絵・手前の絵（backimage・frontimage）の塗った画素が、箱の六角形の中にあるか。六角形は pak128 の 128px のセルの座標で
    (64,32)(128,64)(128,96)(64,128)(0,96)(0,64)（地面の菱形 y64〜127 と、その 32px 上の菱形を結んだ形）。画素の中心で判定する。
    セルの座標に dat のオフセットを足すと 128px の座標（256px のセルを切る AMI の決まり。build.py の PAKSET）。
+   256（SHEET_PAK_SIZE=256。src256/）は座標が全部 2 倍（箱 1 段 = 64px。#261）。
    外へ出ると、隣や上に積んだ箱と重なる
 2. 奥の絵の上端が y32 より下か。本体は奥の絵の不透明な上端から建物の高さ（段）を出し、その上に高架を引けるかを決める
    （OTRP の building_desc.cc の get_drawn_height: 段 = (64 - 上端) / 16 の切り捨て。wegbauer.cc は車庫も見る）。
@@ -15,10 +16,11 @@
 import os
 import sys
 
-from check_icons import CELL, TRANSPARENT, cell_of, fmt, read_dats, read_rows
+from check_icons import CELL, SCALE, SRC, TRANSPARENT, cell_of, fmt, read_dats, read_rows
 
-HEX = [(64, 32), (128, 64), (128, 96), (64, 128), (0, 96), (0, 64)]  # 箱 1 段の六角形（128px の座標。時計回り）
-BOX_TOP = 32  # 奥の絵の上端の下限（128px の座標）
+# 箱 1 段の六角形（pak128 のセルの座標を SCALE 倍した座標。時計回り）。256 は 2 倍（#261）
+HEX = [(x * SCALE, y * SCALE) for x, y in [(64, 32), (128, 64), (128, 96), (64, 128), (0, 96), (0, 64)]]
+BOX_TOP = 32 * SCALE  # 奥の絵の上端の下限（同じ座標）
 
 
 def inside(x, y):
@@ -76,8 +78,8 @@ def main(src):
         print(e)
     if errors:
         sys.exit(f"[check_depot] {len(errors)} 件")
-    print(f"[check_depot] 建物の絵 {checked} 枚が箱 1 段（32px）に収まる")
+    print(f"[check_depot] 建物の絵 {checked} 枚が箱 1 段（{32 * SCALE}px）に収まる")
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
+    main(sys.argv[1] if len(sys.argv) > 1 else SRC)

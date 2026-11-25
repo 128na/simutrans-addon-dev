@@ -2,6 +2,7 @@
 
     python -X utf8 check_cells.py [src のディレクトリ]
     python -X utf8 check_cells.py --self-test
+    SHEET_PAK_SIZE=256 python -X utf8 check_cells.py   # 256 のシート（src256/）。控えは dat のある物だけ見る（#261）
 
 dat の絵のキー（image・imageup・diagonal・frontimage・backimage・openimage など、値が `<シート>.<行>.<列>[,x,y]` の形のもの）が指すセルを、
 シートの PNG で読み、全部の画素が透明色（231,255,255）なら失敗にする。セルを描き忘れたり、dat の指すセルがずれたりすると、
@@ -20,7 +21,7 @@ import re
 import sys
 import tempfile
 
-from check_icons import CELL, TRANSPARENT, cell_of, fmt, read_dats, read_rows
+from check_icons import CELL, SCALE, SRC, TRANSPARENT, cell_of, drop_missing, fmt, png_size, read_dats, read_rows
 
 ALLOW_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "check_cells.allow.txt")
 
@@ -81,7 +82,7 @@ def scan(src, jobs=None):
 
     空の絵の種類は、同じ物の 1 つのキー（層・季節ごとに別）が、空のセルを指しているもの。
     奥の層だけ・手前の層だけを描く物（壁・架線・柱・踏切の手前の絵など）は、描かない層が空のセルを指すので、控えに入る"""
-    objs = read_dats(src)
+    objs, _ = drop_missing(src, read_dats(src))  # CHECK_SKIP_MISSING=1 のときだけ、シートの無い物を除く
     errors, refs = [], 0
     uses = {}  # セル → [(物, ファイル, キー)]
     for o in objs:
@@ -104,6 +105,10 @@ def scan(src, jobs=None):
         path = os.path.join(src, sheet + ".png")
         if not os.path.exists(path):
             errors.append(f"シートが無い: {sheet}.png（{who([u for cell, us in uses.items() if cell[0] == sheet for u in us])}）")
+            continue
+        w, h = png_size(path)
+        if w % CELL or h % CELL:  # 別の大きさのシート（128 のシートを 256 で検査した、など）は、セルの切りが全部ずれる
+            errors.append(f"シート {sheet}.png の大きさ {w}x{h} が、セルの大きさ {CELL}px の倍数でない（SHEET_PAK_SIZE と合わないシート）")
             continue
         tasks.append((path, (max(r for r, _ in cells) + 1) * CELL, cells))
         sheets.append(sheet)
@@ -232,11 +237,19 @@ def self_test():
 
 def main(src, update=False):
     errors, empties, ncells, nrefs = scan(src)
+    if update and SCALE != 1:
+        print("控えは pak128 の src/ から書き直す（SHEET_PAK_SIZE を付けずに流す）")
+        return 1
     if update and not errors:
         write_allow(ALLOW_FILE, empties)
         print(f"控えを書き直した: {ALLOW_FILE}（{len(empties)} 物）")
         return 0
-    errors += compare(empties, read_allow(ALLOW_FILE))
+    allow = read_allow(ALLOW_FILE)
+    if SCALE != 1:
+        # pak128 以外は、描ける物（catalog.SCALED_SHEETS）だけの dat があるので、dat に無い物の控えは見ない（意図して空の絵の種類は大きさによらず同じ）
+        names = {o["name"] for o in drop_missing(src, read_dats(src))[0]}
+        allow = {n: g for n, g in allow.items() if n in names}
+    errors += compare(empties, allow)
     if errors:
         for e in errors[:40]:
             print(e)
@@ -252,6 +265,5 @@ if __name__ == "__main__":
     if sys.argv[1:] == ["--self-test"]:
         self_test()
         sys.exit(0)
-    here = os.path.dirname(os.path.abspath(__file__))
     args = [a for a in sys.argv[1:] if a != "--update"]
-    sys.exit(main(args[0] if args else os.path.join(here, "src"), "--update" in sys.argv))
+    sys.exit(main(args[0] if args else SRC, "--update" in sys.argv))
