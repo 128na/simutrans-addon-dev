@@ -14,7 +14,7 @@ dat が 1 つも無い種類の pak は作らない。makeobj の出力に WARNI
 work/ex/donors.pak に作り、ex_graft.py で dist/ の各 pak の対象の物（線路・路面軌道・道路の way と架線つきの壁）へ写す。提供用の物は dist/ に入らない。
 dat は先に blender/ami_dat.py で書き出す。画像（シート）は blender/render.py で描く。
 環境変数 SHEET_PAK_SIZE=256 を付けると、256 の pak を src256/ の dat・シートから dist256/ に作る（#266。makeobj の大きさは pak512。
-catalog.SCALED_SHEETS の物だけ。分岐の追加画像は、提供用の dat が指すシートが全部ある（BUILD_SKIP_MISSING で欠けていない）ときだけ継ぎ足す）。pak128 の src/・dist/ には触れない。
+catalog.SCALED_EXCLUDED の物を除く。分岐の追加画像は、提供用の dat が指すシートが全部ある（BUILD_SKIP_MISSING で欠けていない）ときだけ継ぎ足す）。pak128 の src/・dist/ には触れない。
 BUILD_SKIP_MISSING=1 を付けると、絵のシート（PNG）が無い dat を組まない（256 の PNG は生活道路だけをコミットするので、CI はこれで絵のある物だけを組む。#261）。
 --stage-sheeted <フォルダ> は、絵のシートが全部ある dat とそのシートをフォルダにコピーして終わる（check.sh の 256 の dat_linter 用）。
 SHEET_LAYOUT=1 を付けると、work/layout/ のシートと dat から work/layout/dist/ に作る（レイアウト検証用モード。ADR 0005）。

@@ -261,7 +261,7 @@ def main(src, update=False):
         return 0
     allow = read_allow(ALLOW_FILE)
     if SCALE != 1:
-        # pak128 以外は、描ける物（catalog.SCALED_SHEETS）だけの dat があるので、dat に無い物の控えは見ない（意図して空の絵の種類は大きさによらず同じ）
+        # pak128 以外は、組まない物（catalog.SCALED_EXCLUDED）の dat が無いので、dat に無い物の控えは見ない（意図して空の絵の種類は大きさによらず同じ）
         names = {o["name"] for o in drop_missing(src, read_dats(src))[0]}
         allow = {n: g for n, g in allow.items() if n in names}
     errors += compare(empties, allow)

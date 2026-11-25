@@ -780,11 +780,14 @@ for _n, _o in catalog.ROADSIGN_CROSSWALKS.items():
 
 if __name__ == "__main__":
     if R.SCALE != 1:
-        # pak128 以外の大きさは、catalog.SCALED_TARGETS の物だけ描ける（#266）。対象を渡さなければその物だけを描く
+        # pak128 以外の大きさは、catalog.SCALED_TARGETS（pak128 の絵のある物から、組まない物 SCALED_EXCLUDED を除いた物。#301）を描く。対象を渡さなければ全部を描く
+        _lost = [t for t in catalog.SCALED_TARGETS if t not in SHEETS]
+        if _lost:
+            raise SystemExit(f"[render] src/ に絵があるが render.py の SHEETS に無い（SHEETS に足すか、catalog.SCALED_EXCLUDED に理由を付けて書く）: {' '.join(_lost)}")
         _asked = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
         _bad = [t for t in _asked if t not in catalog.SCALED_TARGETS]
         if _bad:
-            raise SystemExit(f"[render] pak{R.sheet_settings.PAK_SIZE} で描ける対象は catalog.SCALED_TARGETS の物だけ（壁の単独の名前は基盤の版と一緒に描かれる）: {' '.join(_bad)}")
+            raise SystemExit(f"[render] pak{R.sheet_settings.PAK_SIZE} で描けない対象（catalog.SCALED_TARGETS に無い。組まない物か、壁の単独の名前は基盤の版と一緒に描かれる）: {' '.join(_bad)}")
         if not _asked:
             sys.argv += ["--"] + list(catalog.SCALED_TARGETS)
     R.run_targets(SHEETS, list(SHEETS))

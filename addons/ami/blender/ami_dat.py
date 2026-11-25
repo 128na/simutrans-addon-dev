@@ -33,7 +33,7 @@ import sheet_settings  # noqa: E402  pak の大きさ（SHEET_PAK_SIZE。既定�
 
 # dat の位置合わせ（セルの左上からタイルの左上までの画素。pak128 は -64,-32）。pak の大きさに比例する（sheetlib の GROUND_CY・ROAD_CY と対応）
 OFFSET = f"{-64 * sheet_settings.SCALE},{-32 * sheet_settings.SCALE}"
-# pak128 以外の大きさは src<大きさ>/ に書く（pak128 の src/ と混ぜない）。書くのは catalog.SCALED_SHEETS の物だけ（main）
+# pak128 以外の大きさは src<大きさ>/ に書く（pak128 の src/ と混ぜない）。組まない物（catalog.SCALED_EXCLUDED）は書かない（put）
 SRC = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src" + sheet_settings.SUFFIX)
 NL = chr(10)
 SNOW_ROWS = 4  # 雪の絵は、夏の絵の 4 行下
@@ -702,8 +702,8 @@ def crosswalk_dat_text(name, one_way):
 
 
 def put(name, text):
-    """dat を書く。pak128 以外の大きさは、catalog.SCALED_SHEETS の物だけ（#266。#261 の B・C・D で全部に広げた）"""
-    if sheet_settings.SCALE != 1 and name not in catalog.SCALED_SHEETS:
+    """dat を書く。pak128 以外の大きさは、組まない物（catalog.SCALED_EXCLUDED。#301。今は無い）だけ書かない"""
+    if sheet_settings.SCALE != 1 and name in catalog.SCALED_EXCLUDED:
         return
     with open(os.path.join(SRC, name + ".dat"), "w", encoding="utf8", newline=NL) as f:
         f.write(text)
