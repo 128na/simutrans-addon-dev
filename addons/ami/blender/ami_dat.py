@@ -37,9 +37,9 @@ OFFSET = f"{-64 * sheet_settings.SCALE},{-32 * sheet_settings.SCALE}"
 # pak128 以外の大きさは src<大きさ>/ に書く（pak128 の src/ と混ぜない）。組まない物（catalog.SCALED_EXCLUDED）は書かない（put）
 SRC = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src" + sheet_settings.SUFFIX)
 NL = chr(10)
-SNOW_ROWS = sheet_rows.WAY_SNOW_ROWS  # 雪の絵は、夏の絵の 4 行下（運河・歩道は CANAL_SNOW_ROWS・SIDEWALK_SNOW_ROWS と同じ値だが、物ごとに別の定義を引く）
+# 雪の絵の行のずらしは tools/blender/sheet_rows.py の定義を、物ごとに引く（way は way_snow_rows、運河・歩道は CANAL_SNOW_ROWS・SIDEWALK_SNOW_ROWS。今は同じ値）
 
-IMAGES = (  # (キー, 添字, 行, 列)。セル配置は iss・blender-poc の線路と同じ。[0] の夏の絵。雪の絵（[1]）は行を SNOW_ROWS だけ下げる
+IMAGES = (  # (キー, 添字, 行, 列)。セル配置は iss・blender-poc の線路と同じ。[0] の夏の絵。雪の絵（[1]）は行を sheet_rows.way_snow_rows だけ下げる
     ("image", "[ns]", 0, 2), ("image", "[ew]", 0, 3), ("image", "[s]", 0, 5), ("image", "[w]", 0, 6),
     ("image", "[n]", 0, 7), ("image", "[e]", 0, 8), ("image", "[-]", 0, 9), ("imageup", "[12]", 1, 0),
     ("imageup", "[9]", 1, 1), ("imageup", "[3]", 1, 2), ("imageup", "[6]", 1, 3), ("imageup2", "[12]", 1, 5),
@@ -103,7 +103,7 @@ CURVE_TO_DIAG = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
 # （sheetlib の track_sheet の front_row。懸垂式モノレールの柱・梁。#116）。名前の集まり
 FRONT_WAYS = catalog.FRONT_WAYS  # 唯一の定義は catalog.py（#242）
 FRONT_ROW = sheet_rows.WAY_FRONT_ROW  # render.py の TRACK_PROFILES の front_row と同じ定義
-FRONT_SNOW_ROWS = sheet_rows.WAY_FRONT_SNOW_ROWS  # 手前の絵を持つ way の雪の絵の行のずらし（奥と手前の 8 行の下）
+# （手前の絵を持つ way の雪の絵の行のずらし（奥と手前の 8 行の下）は sheet_rows.way_snow_rows(True)）
 # 絵を作った way（名前 → シート名）。dat と pak を作る
 BUILT = {_n: _n for _n in catalog.BUILT_WAYS}  # 並びの唯一の定義は catalog.py の BUILT_WAYS（#242）
 BASE_VARIANTS = catalog.VARIANTS
@@ -174,7 +174,7 @@ PIERS = {catalog.pier_rail(_g, _o): catalog.pier_rail(_g, _o) for _o in (False, 
 # 道路用の橋脚（#22）: 線路用と同じ waytype（tram_track。2026-11-19 にユーザーが確定）と値（仮）。シートの並びは単柱の橋脚と同じ（README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
 PIERS[catalog.PIER_ROAD] = catalog.PIER_ROAD
 # 手前の絵（frontimage）を持つ橋脚: 名前 → 手前の絵の行のずらし。シートを描く側の tools/blender/sheetlib/sheetlib.py の
-# PIER_GATE_FRONT_ROW と同じ値にする。門型は柱・梁を手前の絵に描く
+# PIER_GATE_FRONT_ROW（tools/blender/sheet_rows.py）を引く。門型は柱・梁を手前の絵に描く
 PIER_FRONT_ROW = {catalog.pier_rail(True, _o): sheet_rows.PIER_GATE_FRONT_ROW for _o in (False, True)}
 # 橋脚のシートにあるセル（render の pier_sheet）。分岐の絵（switch 画像）は T字・十字と同じ柱
 PIER_SWITCH = {"[nse1]": "[nse]", "[nse2]": "[nse]", "[new1]": "[new]", "[new2]": "[new]", "[nsw1]": "[nsw]", "[nsw2]": "[nsw]",
@@ -436,7 +436,7 @@ def pier_dat_text(name, sheet):
 
 # 盛土の way（#123。ADR 0008 の景観 6）: 高架の脇の地面に敷く法面の楔。waytype は橋脚と同じ tram_track、速さ 1（ADR 0008）。値は #110 の一覧
 EMBANKMENT_VALUES = dict(waytype="tram_track", cost=1000, maintenance=100, intro_year=1900, topspeed=1)
-# 雪の絵（[1]）の行のずらし。シートを描く側の tools/blender/sheetlib/sheetlib.py の _EMB_SNOW_ROW と同じ値にする
+# 雪の絵（[1]）の行のずらし。シートを描く側（tools/blender/sheetlib/sheetlib.py の _EMB_SNOW_ROW）と同じ定義（sheet_rows.py）を引く
 EMBANKMENT_SNOW_ROWS = sheet_rows.EMBANKMENT_SNOW_ROWS
 # 曲がり（image[sw] など）は行 2 の列 0〜3 の曲がりのセル。斜めの絵（diagonal）は持たない（本体は曲がりの絵を使い、斜めに敷くと角が並ぶ）
 EMBANKMENT_CURVES = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
@@ -531,7 +531,7 @@ SIDEWALK_KEYS = ("image", "imageup", "imageup2")
 
 
 def sidewalk_dat_text(name, sheet):
-    """歩道の way の dat。カーブはシートのカーブのセル（行 2 の列 5〜8）。雪の絵（[1]）は SNOW_ROWS 下の行。
+    """歩道の way の dat。カーブはシートのカーブのセル（行 2 の列 5〜8）。雪の絵（[1]）は SIDEWALK_SNOW_ROWS 下の行。
     高架の歩道（catalog.SIDEWALK_ELEV）は system_type=1 と高架の値"""
     elevated = name == catalog.SIDEWALK_ELEV
     v = SIDEWALK_ELEV_VALUES if elevated else SIDEWALK_VALUES
