@@ -915,7 +915,7 @@ def crosswalk_dat_text(name, one_way):
     return NL.join(out) + NL
 
 
-# 線路の信号（#278。閉塞信号）。値は #110 の一覧と道路標識に合わせる（cost は roadsign なので cr 単位）。画像は 向き + 状態 * 4 の 8 枚（obj/signal.cc。状態 0 が停止、1 が進行）
+# 線路の信号（#278。閉塞信号）。値は道路標識（#122）に合わせる（#110 の一覧に信号は無い。pak128 の閉塞信号は費用 500）（cost は roadsign なので cr 単位）。画像は 向き + 状態 * 4 の 8 枚（obj/signal.cc。状態 0 が停止、1 が進行）
 RAIL_SIGNAL_COST = 500
 RAIL_SIGNAL_STATES = 2
 
@@ -935,7 +935,7 @@ def rail_signal_dat_text(name):
         f"cost={RAIL_SIGNAL_COST}",
         f"offset_left={ROADSIGN_OFFSET_LEFT}",
         f"icon=> {name}.{ROADSIGN_ICON_CELL}",
-        f"cursor={name}.{ROADSIGN_CURSOR_CELL}",
+        f"cursor={name}.{ROADSIGN_CURSOR_CELL},{ROADSIGN_OFFSET}",  # カーソルも絵と同じ位置合わせ（付けないと置く前の絵がタイルから右下へずれる。#282）
     ]
     out += [f"image[{s * 4 + i}]={name}.{s}.{i},{ROADSIGN_OFFSET}" for s in range(RAIL_SIGNAL_STATES) for i in range(4)]
     return NL.join(out) + NL
