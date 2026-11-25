@@ -721,7 +721,7 @@ SHEETS[catalog.SIDEWALK] = lambda: R.sidewalk_sheet(catalog.SIDEWALK, label=SIDE
 # 敷石が約 6 x 3px の画面では見分けられないので、色と材質で分ける（2026-11-21、#119 で作業者が決めた。ユーザーが PR で確かめる）
 #   asphalt: アスファルト舗装（道路の路面より明るい灰色のまだら） / brick: 赤れんが色のインターロッキングブロック / tile: ベージュの平板（敷石が大きい）
 SIDEWALK_PAVINGS = {
-    "asphalt": lambda: R.noisy_material("ami_sidewalk_asphalt", (0.045, 0.046, 0.048), (0.085, 0.086, 0.088), scale=60, rough=0.9,
+    "asphalt": lambda: R.noisy_material("ami_sidewalk_asphalt", (0.045, 0.046, 0.048), (0.085, 0.086, 0.088), scale=60 * R.SCALE, rough=0.9,
                                         ramp=(0.47, 0.53)),
     "brick": lambda: R.brick_material("ami_sidewalk_brick", (0.30, 0.10, 0.06), (0.11, 0.08, 0.07), 0.6),
     "tile": lambda: R.brick_material("ami_sidewalk_tile", (0.44, 0.38, 0.28), (0.17, 0.15, 0.12), 0.35),
