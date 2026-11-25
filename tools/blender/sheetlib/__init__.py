@@ -13,6 +13,7 @@
     wall_parts   壁・基盤・橋・高架の橋脚（線路と道路で共通）
     catenary_parts 架線（柱・梁・吊り金具・トロリ線。線路の壁の way-object の電化の版）
     road_parts   道路の部品（路面・縁石・歩道・白線・車線・汚れ・雪）
+    road_ex      道路の分岐の追加画像（ex 画像）の白線と轍の経路（sheetlib の road_sheet が使う）
     assemble     部品を経路ごとに組み立てる
     cells        セルの描画・特殊色・シート化
     sheetlib     シートの組み立て（線路・道路・トンネル・アイコン）と run_targets

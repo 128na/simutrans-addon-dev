@@ -545,7 +545,7 @@ ROAD_SETTINGS = {
 # 壁・基盤・高架・橋・トンネルはこの辞書を写して作るので、写した側は curve=None に戻す（カーブのセルを斜めの形で描く版は curve_cells）
 for _r in catalog.ROADS:
     R.ROAD_PROFILES[_r.key] = dict({"sheet": _r.way, "prefix": _r.way + "_", "groups": ("body", "marking", "weathering"),
-                                    "expressway": True, "switches": True, "switch_ruts": True,
+                                    "expressway": True, "switches": True, "switch_ruts": True, "ex_switches": True,
                                     "priority_cross": True, "open_cross": True, "corner_arcs": True,
                                     "drive_left": DRIVE_LEFT, "curve": catalog.ROAD_CURVE_SHAPES.get(_r.key)}, **ROAD_SETTINGS[_r.key])
 

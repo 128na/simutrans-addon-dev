@@ -114,6 +114,7 @@ from .assemble import (  # noqa: F401
     build_base,
     build_start_body,
 )
+from .road_ex import EX_TEES, center_paths, edge_lines, make_arm
 from .cells import (  # noqa: F401
     GROUND_CY,
     ROAD_CY,
@@ -201,6 +202,9 @@ def _road_sheet(style="street"):
     curve: expressway（歩道なし）の道路で、カーブのセル（行 2 の列 5〜8）を描く形（#259）。"arc" は 4 分の 1 の円弧（路面軌道と同じ。
         タイルの角を中心に半径がタイルの半分）、"ell" は 2 辺の中点から中心まで直線で来て、中心で直角に折れる L 字（MiterPath）。
         無ければ描かず、dat の image[sw] などは斜めのセルを指す（高速道路・幹線道路。壁・基盤・高架・橋は、この版では持たない）
+    ex_switches: 真なら分岐の追加画像（ex 画像。Y字分岐を行 0、三方分岐を行 1 の列 10〜13。#210）の白線と轍を描く（road_ex.py。
+        expressway と switches が真のプロファイルが前提。シートの幅 15 列と T字・十字の白線の部品を使う）。
+        経路は元の T字・十字と同じ。腕の形は curve（"arc" は円弧、"ell" は T字・十字の白線、無ければ斜めの直線）に合わせる
     switch_ruts: 真なら T字の分岐の絵の 1・2 を、どちらも「1」と同じ T字の白線にし、走行跡（轍）を直進と右左折のカーブ 1 本だけにする
         （カーブは下の SWITCH_RUT_ARCS）。1 と 2 の違いは轍だけ
     drive_left: priority_cross の停止線の通行の側。真（既定）なら左側通行、偽なら右側通行（停止線が進入する車線の反対の半分へ移る）
@@ -469,6 +473,42 @@ def _road_sheet(style="street"):
             # 白線の端が壁の下の縁から 1px 出て、明るい点に見えた（AMI の道路の高架の行き止まり、2026-11-19、ゲームで確認）。
             # 壁を焼き込む版は壁の外側を削る型で消えるので変えない
             jobs[pos] = (name, [p_end], both(p_end if wall_sheet else (sn if name in "ns" else we)), None)
+    # prof["ex_switches"]（無くてよい）: 分岐の追加画像（ex 画像。OTRP の絵の番号 26〜35。docs/reference/way-addon.md の 9.4。#210）を、
+    # 線路の track_sheet の ex_switches と同じセルに描く。dat のキーが無いので、AMI は別に作った pak から絵を継ぎ足す（addons/ami/ex_graft.py）。
+    #   行 0 の列 10〜13: Y字分岐（26〜29。T字 nse・new・nsw・sew の順。根元が東・北・西・南）。T字のタイルに出る。轍は根元と両隣をつなぐ 2 本だけ（直進なし）
+    #   行 1 の列 10〜13: 三方分岐（31〜34）。十字のタイルに出る。根元の軸を通る直線と、根元と両隣をつなぐ 2 本
+    # 経路（路面・壁・基盤・持ち分）は元の T字・十字と同じ。変えるのは白線と轍だけ。白線の形は road_ex.py（腕の形は道路のカーブに合わせる。
+    # 生活道路の L 字は T字・十字の白線と同じ形になるので、T字・十字の白線を使う）。セルの名前の最後の _ の後ろが元の T字・十字（exits_of・near_frame・select_walls が読む）
+    ex_wear = {}
+    if prof.get("ex_switches"):
+        shape = prof.get("curve") or "diag"
+        arc_of = {"sw": arc_sw, "nw": arc_nw, "ne": arc_ne, "se": arc_se}
+        for col, (base_name, (root, corners)) in enumerate(EX_TEES.items()):
+            through = sn if root in "ns" else we
+            y_name, three_name = f"y_{base_name}", f"three{root}_nsew"
+            if shape == "ell":
+                y_lines, three_lines = tee_lines(base_name, mouth=False), cross
+                y_wear = [arc_of[c] for c in corners]
+                three_wear = [through] + y_wear
+            else:
+                arms = []
+                for c in corners:
+                    # 画面で横向きの斜め（se・nw）は、白線と中央線を 1 行に収める（build_diag と同じ）
+                    snap = c in ("se", "nw")
+                    d_edge = (math.floor(EDGE_LINE * DIAG_EDGE * DIAG_PX) + DIAG_HALF_PX) / DIAG_PX if snap else None
+                    arms.append((make_arm(c, "arc" if shape == "arc" else "diag", DIAG_EXT, d_edge),
+                                 {"se": DIAG_CENTER_SHIFT, "nw": -DIAG_CENTER_SHIFT}.get(c, 0.0) if shape == "diag" else 0.0))
+                arm_list = [a for a, _ in arms]
+                shifts = [shift for _, shift in arms] + [0.0]
+                # 中央線・腕と腕の間の線は、根元から各腕へ進む車の通り道を横切らないよう、分かれ切った所から先だけに引く（road_ex.py）
+                centers = lambda through_: [ln for i, run in center_paths(arm_list, through_) for ln in center(run, shifts[i])]
+                y_lines = centers(None) + edge_lines(arm_list)
+                three_lines = centers((through, EDGE_LINE)) + edge_lines(arm_list, (through, EDGE_LINE))
+                y_wear = [a.wear for a in arm_list]
+                three_wear = [through] + y_wear
+            jobs[(0, 10 + col)] = (y_name, jobs[(3, 5 + col)][1], y_lines, None)
+            jobs[(1, 10 + col)] = (three_name, jobs[(3, 9)][1], three_lines, None)
+            ex_wear[y_name], ex_wear[three_name] = y_wear, three_wear
     # 斜めの経路はタイルの外まで十分に延ばす。45° の向きでは型の端の角が内側に入り込み、
     # 延長が短い（2.5）とタイルの端の近くで縁石が削り残されて、つなぎ目に切り欠きが出た
     diag = {
@@ -489,6 +529,11 @@ def _road_sheet(style="street"):
     if wall_only:
         # 壁の way-object は分岐の絵を持たない（壁は通常の T字・十字と同じ）
         jobs = {k_: v for k_, v in jobs.items() if k_[1] < 10}
+    if ONLY:
+        # 試しに描く（SHEET_ONLY=y_nse,threee_nsew など。track_sheet と同じ。斜め・カーブのセルは描かない）
+        jobs = {k_: v for k_, v in jobs.items() if v[0] in ONLY + ("ns",)}
+        diag = {}
+        curve_cells = {}
     # 走行跡の経路: 分岐・十字は直進に右左折のカーブを足す。行き止まりは中ほどから開いた側へ（閉じた側の手前で止める。WearPath.fade）
     wear = {"nse": [sn, arc_ne, arc_se], "new": [we, arc_nw, arc_ne], "nsw": [sn, arc_nw, arc_sw], "sew": [we, arc_sw, arc_se],
             "nsew": [sn, we, arc_sw, arc_nw, arc_ne, arc_se]}
@@ -506,6 +551,7 @@ def _road_sheet(style="street"):
             else:
                 branch = arcs[corner_name]
             wear[sname] = [sn if sname[:2] == "ns" else we, branch]
+    wear.update(ex_wear)
     # 坂のタイルから始まる橋の端（Start・Start2）: 平らな橋の絵の下に、坂の地面までの躯体を足す（線路の橋と同じ）。
     # 本体の slope_t::north は南が高い坂で、そのとき Start[N] が使われる（東西も同じく、名前と反対の側が高い）
     grounds = {}
@@ -647,7 +693,7 @@ def _road_sheet(style="street"):
             path = next(p for n, p in diag.values() if n == d_name)
             obs = build_diag(d_name, path, cut_half=False)
             shoot(pos, row0, cn(name), d_name, [path], None, obs)
-        if walls:
+        if walls or ONLY:  # SHEET_ONLY のときは斜めのセルを描かない（diag が空）ので、斜めを使う近い斜めも描かない
             # 側壁の版は近い斜めの絵を持たない（線路と同じ。本体が分け合うタイルに 2 本の way を置き、back と front を組み合わせられる）
             continue
         # 近い斜め（diagonal[close1]・[close2]）: 1 タイル空けて並べた斜め 2 本が分け合う十字のタイル。

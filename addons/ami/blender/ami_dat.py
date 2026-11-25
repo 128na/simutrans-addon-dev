@@ -220,8 +220,9 @@ CATENARY = {f"{catalog.wall_rail(_v, _o)}_catenary": f"{catalog.wall_rail(_v, _o
 TWIN_FROM_CATENARY = {k: v.replace("ami_wall_rail_", "ami_wall_rail_twin_catenary_") for k, v in TWIN_FROM.items()}
 
 # ---------------------------------------------------------------- 分岐の追加画像を継ぎ足す物（#57）
-# 線路（線路・基盤・高架の版）と路面軌道の way: 本体が Y字分岐・三方分岐で ex 画像を自動で選ぶのは track_wt（tram を含む）だけ（9.4）。道路は入れない
-EX_WAYS = [_n for _n in BUILT if VALUES[_n]["waytype"] in ("track", "tram_track")]
+# 線路（線路・基盤・高架の版）・路面軌道・道路（通常・基盤・高架の版）の way: 本体（OTRP v64）が Y字分岐・三方分岐で ex 画像を自動で選ぶのは
+# track_wt（tram を含む）と road_wt（9.4。v64 は way の種類を問わず同じ決めで選ぶ。道路は #210 でゲームで確かめた）。モノレール・運河は入れない
+EX_WAYS = [_n for _n in BUILT if VALUES[_n]["waytype"] in ("track", "tram_track", "road")]
 # 架線つきの壁の way-object（twin を除く）: トロリ線を Y字・三方分岐の走行面に合わせた絵を持つ（壁だけの版は絵が T字・十字と同じなので持たない）。
 # 本体（obj/wayobj.cc）は、way-object の 26 番の絵があると、隣のタイルの way-object の向きから way と同じ条件で ex 画像を選ぶ。
 # 分岐の絵（16 番）が無いとその処理に入らないので、1・2 の 10 枚は T字・十字と同じセルを指す

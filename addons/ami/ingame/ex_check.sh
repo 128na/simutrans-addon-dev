@@ -5,6 +5,8 @@
 #   GAME_DIR=<検証用のフォルダ> PORT=47300 bash ingame/ex_check.sh
 #   PORT=47300 STOP=1 bash ingame/ex_check.sh        … 閉じて写しを消す
 # PORT は必ず渡す（ほかの作業とポートを分けるため）。WAYS で敷く組を替えられる（ex_sample.nut の WAYS の行を置き換える。Squirrel の配列の式）
+#   道路の例（#210）: WAYS='[["ami_road_trunk", null], ["ami_road_trunk_base_single", "ami_wall_road_single"]]'（道路は ex_sample.nut が wt_road で読む。
+#     壁は版ごとの way-object: 生活道路の基盤・高架は ami_wall_road_single_ell、一般道路は _arc、幹線・高速は ami_wall_road_<single|back|center|front>）
 #   高架の版の例（#82）: WAYS='[["ami_rail_ballast_elev_single", null], ["ami_rail_ladder_elev_single", null]]'
 #   高架に架線つきの壁を重ねる例（#85）: WAYS='[["ami_rail_ballast_elev_single", "ami_wall_rail_single_catenary"]]'
 PORT=${PORT:?PORT を指定する}

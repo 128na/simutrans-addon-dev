@@ -443,9 +443,22 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 作り: シートのセル（行 0・1、列 10〜13。雪は行 4・5、壁のシートの手前の絵も +4 行）を `tools/blender/sheetlib` の `track_sheet` の `ex_switches` で描く。変えるのはレールと、架線の線だけ。道床・壁・基盤は通常の T字・十字のまま（reference の 9.3「変えるのは走行面だけ」）。Y字のタイルには、T字の直線の分の道床が三角に残る
 - pak への入れ方: makeobj は 26 番以降のキーを持たないので、ex の絵を `image[nse1]`〜`[nsew2]` に割り当てた提供用の way（`src/ex_donors.dat`、名前は `<対象>__ex_donor`）を作り、その 10 枚を対象の画像リストの末尾へ写す（`ex_graft.py`。reference の 9.1）。`build.py` が pak を作った後に自動で行う。提供用の way は継ぎ足しにだけ使い、配る pak には入れない
 - 架線つきの壁: 本体は、way-object の分岐の絵（16 番）が空でないときだけ、分岐のタイルで ex 画像を探す（reference の 10 章）。そのため 16〜25 番には通常の T字・十字の絵を入れた（見た目は今までと同じ）。壁だけの way-object（`ami_wall_rail_<版>`）は分岐で絵が変わらないので入れていない
-- 二重架線（`ami_wall_rail_twin_catenary`）と道路（#46）、高架の橋脚は対象外
+- 二重架線（`ami_wall_rail_twin_catenary`）と高架の橋脚は対象外。道路は下の「道路の ex 画像（#210）」
 - 確認画像は `docs/rail_switch_ex_<気候>_<区画>_<形><根元の向き>.png`（左が前、右が後。2 倍）。壁だけの way-object を重ねたところは `docs/rail_switch_ex_wallonly.png`（壁は通常の T字・十字の絵のまま）。区画は `ingame/ex_sample.nut` の `WAYS` の順で、0 = 在来線、2 = 高速線、3 = 路面軌道、4 = 在来線の基盤 single と架線つきの壁 single。経緯は記録 [2026-11-21_ami-rail-switch-ex](../../docs/records/2026-11-21_ami-rail-switch-ex.md)
 - 高架の版（#82）: 在来線・ラダー軌道の高架の 4 版を `ex_sample.nut` で敷き、地上の版と同じく全部の形で ex の絵の番号が選ばれた（画面で見たのは温暖側の single だけ。架線つきの壁を高架に重ねた組は #85 で確かめ、地上と同じ絵だった（`docs/ex85_*.png`、記録 [2026-11-21_ami-elev-catenary-ex](../../docs/records/2026-11-21_ami-elev-catenary-ex.md)）。`docs/ex_elev_temperate_E.png`。左上から在来線の地上の Y字 東、在来線の高架 single の Y字 東、ラダーの高架 single の Y字 東・三方分岐 東。記録 [2026-11-21_ami-ex-elevated](../../docs/records/2026-11-21_ami-ex-elevated.md)）。これからの種類は、高架の版の確認を省く（reference の 9.4）
+
+### 道路の ex 画像（#210）
+
+道路 4 種（`ami_road_local`・`_general`・`_trunk`・`_expressway`）の通常・基盤・高架の way（24 個）に、線路と同じ ex 画像（26〜29 番の Y字分岐、31〜34 番の三方分岐。30・35 番は通常の十字）を入れた。壁の way-object・橋・トンネル・橋脚は入れない（壁は通常の T字・十字と同じで、橋・トンネルは分岐の絵を持たない）。本体（v64）が道路でも線路と同じ決めで ex 画像を選ぶことは、reference の 9.4。
+
+- 作り: シートのセル（行 0・1、列 10〜13。雪は行 4・5）を `tools/blender/sheetlib` の `road_sheet` の `ex_switches`（プロファイルに `"ex_switches": True`）で描く。白線と轍だけを替え、経路（路面・壁・基盤）は元の T字・十字のまま。腕の形は `tools/blender/sheetlib/road_ex.py`
+  - 一般道路: 腕は 4 分の 1 の円弧。路側線は腕の内側（道の外の縁。根元の路側線へつながる。そのまま引く）と、腕と腕の間の外側の線
+  - 腕と腕の間の線は、腕が分かれ切った所（隣の腕の帯の縁）まで引き、隣の線と V 字につなぐ（`road_ex.py` の `GORE_JOIN`。頂点は分かれ切った所で、根元の側へは伸ばさない。2 つ目のユーザーの指摘）。中央線は、根元から各腕へ進む車の通り道を塞がないよう、分かれ切った所からさらに少し離れた所から先だけに引く（`GORE_GAP`。1 つ目のユーザーの指摘で、最初の版の、分岐のタイルの中まで届く実線・点線をやめた）。三方分岐は腕の間の角が 2 つあり、どちらも V 字につなぐ
+  - 幹線道路・高速道路: 腕は斜めの直線（路側線・中央線の画素のそろえ方は斜めのセルと同じ）
+  - 生活道路: L 字の腕を 2 本重ねると T字・十字の形そのものになるので、白線は T字・十字の白線（口の点線なし）で、轍だけを Y字・三方分岐の向きにした
+- pak への入れ方は線路と同じ（`ami_dat.py` の `EX_WAYS` が道路の waytype も拾う。提供用の way を `ex_graft.py` で継ぎ足す）。256 でも同じ（`src256/` の `ami_road_local.png` に新しいセルが入った。ほかの道路の 256 は手元で描いて確かめ、コミットしない）
+- 確かめた組: 絵の番号が固定の道具の T字の枠と同じになることを、道路 4 種の通常の版（4 組）、基盤の版（生活・一般・幹線・高速の single、幹線の back・center・front、高速の front）、高架の版（幹線・一般・生活の single、高速の center）で確かめた。24 個のうち残りの 8 個（高速の基盤の back・center、幹線の高架の back・center・front、高速の高架の single・back・front）は、選ぶ処理が way によらないので同じ結果の見込み（確かめていない）。画面で見たのは通常の版 4 種と幹線の基盤の single・back、降雪の一部
+- 確認: `ingame/ex_sample.nut` の `WAYS` に道路を渡す（`ex_check.sh` の先頭の例。道路は `wt_road` で読む・固定する）。確認画像は `docs/road_switch_ex_<種類>.png`（左が ex 画像なし、右が ex 画像あり。上が Y字分岐 東、下が三方分岐 東。温暖側、`flat_512_left_v64`、`OTRPv64`）。経緯は記録 [2026-11-25_ami-road-switch-ex](../../docs/records/2026-11-25_ami-road-switch-ex.md)
 
 ### 付属（別の pak にして同梱）
 
@@ -950,7 +963,7 @@ python -X utf8 build.py                                                        #
 ```
 
 - `build.py` は、全部入りのまとめ `dist/ami.pak` と、種類別の `ami_rail.pak`（線路）・`ami_tram.pak`（路面軌道）・`ami_road.pak`（道路と路面表示 `ami_mark_*`）・`ami_monorail.pak`（モノレール）・`ami_canal.pak`（運河）・`ami_extra.pak`（付属）・`ami_scenery.pak`（景観）と、旧描画位置の物（#26）だけを集めた `ami_rail_old.pak` を作る。旧の物は `ami.pak` と種類別の pak（旧の `ami_rail_old.pak` 以外）に入らない（`build.py` の `belongs`）。dat が無い種類は作らない。makeobj の出力に警告かエラーがあれば止まる
-- `build.py` は続けて、`src/ex_donors.dat` から提供用の pak（`work/ex/donors.pak`）を作り、各 pak の線路・路面軌道・架線つきの壁へ ex 画像を継ぎ足す（上の「分岐の追加画像」）。継ぎ足した数を出し、pak ごとに名前で当たる提供用の物が全部写ったことと、継ぎ足した絵（26〜29・31〜34 番が空でなく、通常の T字・十字と違うこと、30・35 番が通常の十字と同じこと）を確かめ、違えば止まる。pak の中の ex 画像の数は `python -X utf8 ex_graft.py --list dist/ami.pak` で見られる
+- `build.py` は続けて、`src/ex_donors.dat` から提供用の pak（`work/ex/donors.pak`）を作り、各 pak の線路・路面軌道・道路の way と架線つきの壁へ ex 画像を継ぎ足す（上の「分岐の追加画像」）。継ぎ足した数を出し、pak ごとに名前で当たる提供用の物が全部写ったことと、継ぎ足した絵（26〜29・31〜34 番が空でなく、通常の T字・十字と違うこと、30・35 番が通常の十字と同じこと）を確かめ、違えば止まる。pak の中の ex 画像の数は `python -X utf8 ex_graft.py --list dist/ami.pak` で見られる
 - シートを複数描くときは `python -X utf8 ..\..\tools\blender\render_parallel.py <対象>...`。レイアウト検証用モードは `SHEET_LAYOUT=1`（`work/layout/` に書く）
 - レイアウト検証用モードの pak は `SHEET_LAYOUT=1` で描いた後、`SHEET_LAYOUT=1 python -X utf8 build.py`（`work/layout/dist/` に作る）
 - 同じシートの通常の描画とレイアウト検証用の描画を同時に動かさない。セルごとの生の絵（`work/<シート>_<セル>.png`）の名前が同じで、互いのセルを取り込んだシートができた（2026-11-17）
