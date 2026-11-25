@@ -82,13 +82,7 @@ def ref(v):
     return sheet, int(r), int(c)
 
 
-# 路面表示（#187）の左上の字と、絵にするセル（北へ向かう腕・北南の直線・北が閉じた T字の中心）
-MARK_LABELS = {"ami_mark_lane4": "線", "ami_mark_junction2": "交", "ami_mark_junction2_t": "丁",
-               "ami_mark_junction4_in": "入", "ami_mark_junction4_out": "出",
-               "ami_mark_lane6_a": "甲", "ami_mark_lane6_b": "乙", "ami_mark_lane6_m": "央", "ami_mark_junction6_in": "入",
-               "ami_mark_junction6_out": "出", "ami_mark_junction6_m": "中", "ami_mark_junction6_c": "心",
-               # 高速道路の分岐・合流（#188）
-               "ami_mark_diverge_main": "分", "ami_mark_diverge_ramp": "岐", "ami_mark_merge_main": "合", "ami_mark_merge_ramp": "流"}
+# 路面表示（#187）の、絵にするセル（北へ向かう腕・北南の直線・北が閉じた T字の中心）。左上の字は catalog.MARK_LABELS
 MARK_PICTURE = {"ami_mark_lane4": "image[ns][0]", "ami_mark_junction2": "image[n][0]", "ami_mark_junction2_t": "image[sew][0]",
                 "ami_mark_junction4_in": "image[nse][0]", "ami_mark_junction4_out": "image[nsw][0]",
                 "ami_mark_lane6_a": "image[ns][0]", "ami_mark_lane6_b": "image[ns][0]", "ami_mark_lane6_m": "image[ns][0]", "ami_mark_junction6_in": "image[nse][0]", "ami_mark_junction6_out": "image[nsw][0]",
@@ -134,8 +128,8 @@ def describe(d):
         info["kind"] = "sign"
     elif name.startswith("ami_embankment"):  # 盛土（#123）: 左上に「盛」、右下に版（前・後）
         info.update(kind="embankment", label="盛")
-    elif name.startswith("ami_mark_"):  # 路面表示（#187）: 左上に MARK_LABELS の字。速度は出さない
-        info.update(kind="marking", label=MARK_LABELS[name])
+    elif name.startswith("ami_mark_"):  # 路面表示（#187）: 左上に catalog.MARK_LABELS の字。速度は出さない
+        info.update(kind="marking", label=catalog.MARK_LABELS[name])
     else:
         info["kind"] = {"bridge": "bridge", "tunnel": "tunnel"}.get(obj, "way")
         info["speed"] = d["topspeed"]
