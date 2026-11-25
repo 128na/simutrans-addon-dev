@@ -114,6 +114,8 @@ def _kind_label(o):
         return "道路の停留所（荷役所）" if o.get("enables_ware") else "道路の停留所（バス停）"  # #277
     if t == "building" and o.get("type") == "stop":
         return f"{wt}の操車場"  # 荷を扱わない駅の建物（ami_rail_yard。#115）
+    if t == "roadsign" and o.get("is_signal"):
+        return "線路の信号（閉塞信号）"  # #278
     if t == "roadsign":
         return "道路標識"
     raise ValueError(f"{o.get('name')}: 知らない obj（{t} {o.get('type', '')}）。lineup.py の kind_label に足す")

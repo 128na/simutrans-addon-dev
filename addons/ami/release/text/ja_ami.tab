@@ -259,6 +259,8 @@ ami_rail_ladder_old_tunnel
 フローティング・ラダー軌道（旧位置）のトンネル（AMI）
 ami_rail_ladder_tunnel
 フローティング・ラダー軌道のトンネル（AMI）
+ami_rail_signal
+閉塞信号（AMI）
 ami_rail_slab
 高速線（スラブ軌道）（AMI）
 ami_rail_slab_base_back
