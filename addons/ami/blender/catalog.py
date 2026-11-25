@@ -322,7 +322,7 @@ FRONT_WAYS = frozenset(FRONT_WAYS)
 # pak128 以外の大きさ（sheet_settings.PAK_SIZE が 128 でない。#261・#266）の、描き・組む物（#301 で、組む物の表から組まない物の表に裏返した）。
 # 既定は、pak128 の絵（src/<名前>.png）か dat（src/<名前>.dat）がある物は全部 256 でも描き・組む。物を足したときに、ここへ書き足さなくてよい。
 # 256 の絵が合わない物（画素で書いた値を大きさに合わせていない物など）だけを SCALED_EXCLUDED に「名前: 理由」で書く（今は無い）。
-# 分岐の追加画像の提供用の dat（ex_donors）は物ではなく、ami_dat.py が別に書く
+# 分岐の追加画像の提供用の dat（ex_donors）は物ではなく、ami_dat.py が別に書く。物を入れるときは、その物を指す dat（ex_donors・twin の壁・踏切）が 256 に残らないかも確かめる
 SCALED_EXCLUDED = {}
 
 

@@ -5,8 +5,9 @@
 - SCALED_EXCLUDED の名前が実在する物（src/<名前>.dat か .png がある。書き間違いで、組まない物が組まれるのを防ぐ）で、理由が書いてある
 - src256/ の dat の名前の集まりが、src/ の dat の名前の集まりから SCALED_EXCLUDED を除いた物と同じ（物の足し忘れ・消し忘れ。
   分岐の追加画像の提供用 ex_donors は物ではなく、どちらにもあるので同じに扱う）
-- 描く対象（SCALED_TARGETS）は、src/ に絵（png）がある（render.py の SHEETS のキーであることは、256 で render.py を流すときに確かめる）
+- src/ の dat・png の名前が ami_ で始まる（catalog.SCALED_TARGETS は ami_ の絵から作るので、外れた名前が黙って 256 の対象から落ちるのを防ぐ）
 - 踏切のシート（SCALED_CROSSING_SHEETS）は、src/ に絵（png）がある
+（SCALED_TARGETS が render.py の SHEETS のキーであることは、Blender が要るのでここでは見ない。256 で render.py を流すときに止まる）
 """
 import os
 import sys
@@ -17,6 +18,7 @@ import catalog  # noqa: E402
 
 SRC = os.path.join(HERE, "src")
 SRC256 = os.path.join(HERE, "src256")
+EX_DONORS = "ex_donors"  # 分岐の追加画像の提供用の dat（物ではない。blender/ami_dat.py の EX_DONORS_DAT）
 
 
 def names(folder, ext):
@@ -37,9 +39,12 @@ def main():
         errors.append(f"{n}: src/ に dat があるが src256/ に無い（SHEET_PAK_SIZE=256 で blender/ami_dat.py を流して dat をコミットする。256 で組まない物は SCALED_EXCLUDED へ）")
     for n in sorted(have - want):
         errors.append(f"{n}: src256/ に dat があるが src/ に無い（消し忘れか、SCALED_EXCLUDED の物）")
-    for n in catalog.SCALED_TARGETS + catalog.SCALED_CROSSING_SHEETS:
+    for n in sorted(dats | pngs):
+        if n != EX_DONORS and not n.startswith(catalog.PREFIX):
+            errors.append(f"{n}: src/ の名前が {catalog.PREFIX} で始まらない（256 の対象から外れる。名前を直す）")
+    for n in catalog.SCALED_CROSSING_SHEETS:
         if n not in pngs:
-            errors.append(f"{n}: 描く対象だが src/ に絵（png）が無い")
+            errors.append(f"{n}: 踏切のシートだが src/ に絵（png）が無い")
     if errors:
         print("\n".join(errors))
         print(f"256 の物の検査で {len(errors)} 件")
