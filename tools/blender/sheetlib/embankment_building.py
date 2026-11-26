@@ -14,7 +14,8 @@ from .core import H, clear_models, material, mesh_object, named_materials, set_a
 # 法面の向き（直線）は 南・東・北・西、台の高い角（外の角）は 北西・南西・南東・北東 の順にする
 EMBANKMENT_BUILDING_LAYOUTS = {
     "straight": (("ew", "front"), ("ns", "front"), ("ew", "back"), ("ns", "back")),
-    "corner": (("corner_nw", "front"), ("corner_sw", "back"), ("corner_se", "back"), ("corner_ne", "front")),
+    # 外の角（高いのがその角だけ）になる側: nw・sw・ne は front、se は back（_emb_height の内の角は front の se と back の nw・ne・sw）
+    "corner": (("corner_nw", "front"), ("corner_sw", "front"), ("corner_se", "back"), ("corner_ne", "front")),
 }
 
 
