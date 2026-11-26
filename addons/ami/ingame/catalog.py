@@ -160,6 +160,7 @@ REUSE = [
     ("canal_scenic", "canal.nut", 314, 390, {"ami_canal\"": "ami_canal_scenic\""}),
     ("turntable", "turntable_sample.nut", 416, 390, {}),
     ("crossing", "crossing_sample.nut", 8, 480, {}),
+    ("maglev", "maglev.nut", 110, 480, {}),  # 約 152×58 マスなので 2 区画ぶん（x 110〜310）を使う
 ]
 
 

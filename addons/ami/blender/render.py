@@ -543,6 +543,67 @@ for _w, _ in _WALL_TRACKS:
     for _v in TWIN_FROM:
         R.TRACK_PROFILES[f"{_p(_w.base(_v))}_twin_catenary"]["mat_skin"] = TRACK_WALL_SKIN
 
+# ---------------------------------------------------------------- リニア（ami_maglev_*。#371。範囲は ADR 0017）
+# リニア 3 種を、形で名前を付けて作る（2026-11-26、ユーザーの判断 75・案 a）。手本は超電導・常電導が iss、チューブ式が marine_express
+# （2026-11-27 のユーザーの指示）。部品は sheetlib の maglev_parts（寸法は手本の絵から測って、並べて合わせ直した値）。
+# 超電導（ami_maglev_guideway_<版>・_elev_<版>）: 線路の基盤の版と同じ基準面・版・基盤・高架の躯体に、床の板と溝を置く。防音壁は iss と同じく
+#   way の絵に焼き込み（wall_sheet を渡さない）、手前の側の壁は手前の絵（FRONT_WAYS）。壁の位置は線路の側壁と同じで、高さだけ iss の 1.9 にする。
+#   高架の下は線路と同じ橋脚の way（ami_pier_rail）を敷く。在来線の描き分けは写さない（砕石の差し替え・汚れ・車止めが付いてくるため）
+# ガイド（ami_maglev_guide）: U 字の側壁とコイルの way-object（電化を兼ねる）。並びはモノレールの電化と同じ（奥の絵 4 行 → 手前の絵 4 行。雪の絵は無い）。
+#   基準面と絵の基準位置は超電導の way と同じ（床の上面から立てる）
+# 常電導（ami_maglev_beam）: 跨座式モノレールと同じ並び（地上・高架の 3 版・トンネル）。桁の形は maglev_parts、
+#   高架の柱と腕は跨座式の monorail_pier_fills に桁の下面の高さを渡す
+# チューブ式（ami_maglev_tube_<版>・_elev_<版>）: 手本は marine_express（ユーザーのアドオン。2026-11-27、ユーザーの指示）。超電導と同じ
+#   版・基盤・高架の躯体に、床と中央の溝を置き、側壁は線路の側壁と同じ高さ（1.2）で way の絵に焼き込む。
+#   チューブ（ami_maglev_tube_cover）は way-object（輪の骨組み。電化しない）。並びはガイドと同じ
+MAGLEV_LABEL = "1200"
+_MAG_WALLS = {n: dataclasses.replace(p, shape=R.to_edge_shape(R._wall_shape(s, wh=R.MAG_WALL_H)))
+              for p in R.TRACK_EXTRAS for n, s in (("wallL", -1), ("wallR", 1)) if p.name == n}
+_MAG_WALLS["endw"] = dataclasses.replace(next(p for p in R.TRACK_EXTRAS if p.name == "endw"), name="endw_edge",
+                                         shape=R.end_wall_edge_shape(wh=R.MAG_WALL_H))
+_MAG_GUIDEWAY = {"spill": 1 * R.SCALE, "datums": _DATUMS, "snow": True, "label": MAGLEV_LABEL, "groups": ("body", "base", "wall"),
+                 "track_parts": R.guideway_parts(), "snow_skin": R.GUIDEWAY_SNOW_SKIN, "replace": _MAG_WALLS,
+                 "curve_cells": True, "rise": R.MAG_WALL_RISE, "mat_skin": TRACK_MAT_SKIN, "ex_switches": False,
+                 "end_from_edge": END_FROM_EDGE}  # 行き止まりの手前/奥をタイルの中心から測る（線路と同じ）
+for _v, _walls in BASE_VARIANTS.items():
+    for _elev in (False, True):
+        _n = f"{catalog.MAGLEV_GUIDEWAY}_{'elev_' if _elev else ''}{_v}"
+        R.TRACK_PROFILES[_p(_n)] = dict(_MAG_GUIDEWAY, sheet=_n, walls=_walls, **_way_flags(_n),
+                                        **(dict(elev_body=True, lower=R.ELEV_BODY_LOWER, band="elevated") if _elev else {}))
+# トンネルの坑口に描く床（壁・基盤の無い描き分け。坑口の中に防音壁が立たないように）
+MAGLEV_TUNNEL_KEY = _p(catalog.MAGLEV_GUIDEWAY_TUNNEL) + "_floor"
+R.TRACK_PROFILES[MAGLEV_TUNNEL_KEY] = dict(_MAG_GUIDEWAY, sheet=catalog.MAGLEV_GUIDEWAY_TUNNEL, groups=("body",), replace={})
+R.TRACK_PROFILES[_p(catalog.MAGLEV_GUIDE)] = {
+    "sheet": catalog.MAGLEV_GUIDE, "label": "E", "spill": 1 * R.SCALE, "datums": _DATUMS, "snow": False, "groups": ("body",),
+    "track_parts": R.guide_parts(), "front_row": sheet_rows.WALL_FRONT_ROW, "rise": R.GUIDE_RISE,
+    "diag_curves": True, "close": False, "ex_switches": False}
+_TUBE_WALLS = {n: dataclasses.replace(p, shape=R.to_edge_shape(R._wall_shape(s)))
+               for p in R.TRACK_EXTRAS for n, s in (("wallL", -1), ("wallR", 1)) if p.name == n}
+_TUBE_WALLS["endw"] = dataclasses.replace(next(p for p in R.TRACK_EXTRAS if p.name == "endw"), name="endw_edge",
+                                          shape=R.end_wall_edge_shape())
+_MAG_TUBE = dict(_MAG_GUIDEWAY, track_parts=R.tube_track_parts(), snow_skin=R.TUBE_SNOW_SKIN, replace=_TUBE_WALLS, rise=R.WALL_RISE)
+for _v, _walls in BASE_VARIANTS.items():
+    for _elev in (False, True):
+        _n = f"{catalog.MAGLEV_TUBE}_{'elev_' if _elev else ''}{_v}"
+        R.TRACK_PROFILES[_p(_n)] = dict(_MAG_TUBE, sheet=_n, walls=_walls, **_way_flags(_n),
+                                        **(dict(elev_body=True, lower=R.ELEV_BODY_LOWER, band="elevated") if _elev else {}))
+MAGLEV_TUBE_TUNNEL_KEY = _p(catalog.MAGLEV_TUBE) + "_tunnel_floor"
+R.TRACK_PROFILES[MAGLEV_TUBE_TUNNEL_KEY] = dict(_MAG_TUBE, sheet=f"{catalog.MAGLEV_TUBE}_tunnel", groups=("body",), replace={})
+R.TRACK_PROFILES[_p(catalog.MAGLEV_TUBE_COVER)] = dict(
+    R.TRACK_PROFILES[_p(catalog.MAGLEV_GUIDE)], sheet=catalog.MAGLEV_TUBE_COVER, label="T", track_parts=R.tube_frame_parts(),
+    rise=R.TUBE_RISE)
+_MAG_BEAMS = {catalog.MAGLEV_BEAM: (R.beam_parts, R.BEAM_TOP, R.BEAM_SNOW_SKIN)}
+for _w, (_parts, _top, _snow) in _MAG_BEAMS.items():
+    R.TRACK_PROFILES[_p(_w)] = {
+        "sheet": _w, "label": MAGLEV_LABEL, "spill": 1 * R.SCALE, "datums": R.FLAT, "snow": True, "anchor": 128 * R.SCALE,
+        "groups": ("body",), "track_parts": _parts(), "snow_skin": _snow, **_way_flags(_w)}
+    _z = _top - R.BEAM_ELEV_D  # 高架の桁の下面（腕を渡す高さ）
+    for _v in catalog.MAGLEV_ELEV_VARIANTS:
+        _n = catalog.maglev_elev(_w, _v)
+        R.TRACK_PROFILES[_p(_n)] = dict(
+            R.TRACK_PROFILES[_p(_w)], sheet=_n, track_parts=_parts(_z), cell_fills=R.monorail_pier_fills(_v, _z),
+            lower=MONORAIL_ELEV_LOWER, band="elevated", badge=_v[0].upper(), **_way_flags(_n))
+
 # ---------------------------------------------------------------- 道路 3 種の通常の版（#21）
 # 断面は blender-poc の高速道路（ROAD_PROFILES["expressway"]）と同じ: 片側 1 車線、タイル全面が路面、歩道なし、路側の白線は実線
 # （分岐の口は点線）。描くのは sheetlib の road_sheet（expressway=True が歩道なしの作り）。種類ごとに変えるのは中央線・路面の色・アイコン:
@@ -706,6 +767,14 @@ for _n in catalog.MONORAIL_SUSPENDEDS + catalog.MONORAIL_SUSPENDED_ELEVS + tuple
     SHEETS[_n] = _track_target(catalog.profile(_n))
 SHEETS[catalog.MONORAIL_TUNNEL] = lambda: R.tunnel_sheet("track", profile=MONORAIL_KEY, sheet=catalog.MONORAIL_TUNNEL, label=MONORAIL_LABEL,
                                                           mat_skin=TRACK_WALL_SKIN)
+# リニア（#371）: 地上の way を先に、トンネルを後に描く（トンネルのアイコンは中の way の絵を読む）
+for _n in (catalog.MAGLEV_GUIDEWAYS + catalog.MAGLEV_GUIDEWAY_ELEVS + (catalog.MAGLEV_GUIDE,)
+           + catalog.MAGLEV_TUBES + catalog.MAGLEV_TUBE_ELEVS + (catalog.MAGLEV_TUBE_COVER,)
+           + tuple(_x for _w in catalog.MAGLEV_BEAMS for _x in (_w, *catalog.MAGLEV_BEAM_ELEVS[_w]))):
+    SHEETS[_n] = _track_target(_p(_n))
+for _n, _way in catalog.MAGLEV_TUNNELS.items():
+    SHEETS[_n] = (lambda n, k: lambda: R.tunnel_sheet("track", profile=k, sheet=n, label=MAGLEV_LABEL, mat_skin=TRACK_WALL_SKIN))(
+        _n, {catalog.MAGLEV_GUIDEWAY_TUNNEL: MAGLEV_TUNNEL_KEY, f"{catalog.MAGLEV_TUBE}_tunnel": MAGLEV_TUBE_TUNNEL_KEY}.get(_n, _p(_way)))
 for _t in catalog.ALL_TRACKS:
     for _v in BASE_VARIANTS:
         SHEETS[_t.base(_v)] = _track_target(_p(_t.base(_v)))

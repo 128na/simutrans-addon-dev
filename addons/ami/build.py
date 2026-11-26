@@ -5,6 +5,7 @@ src/ の dat から、全部入りのまとめ（dist/ami.pak）と、種類別�
     dist/ami_tram.pak   路面軌道（ami_tram*）
     dist/ami_road.pak   道路（ami_road_*。多車線と交差点の路面表示 ami_mark_* も入る）
     dist/ami_monorail.pak モノレール（ami_monorail*。跨座式の way・高架・トンネル、懸垂式の way・高架、電化と車庫 ami_monorail_depot）
+    dist/ami_maglev.pak   リニア（ami_maglev*。超電導・常電導・チューブ式の way・高架・トンネル、ガイド・チューブと車庫 ami_maglev_depot）
     dist/ami_canal.pak    運河（ami_canal*。地上の way と船の車庫 ami_canal_depot）
     dist/ami_narrow.pak   狭軌（ami_narrow_*。地上の 30・60、60 のトンネルと車庫 ami_narrow_depot。#370）
     dist/ami_extra.pak  付属（壁・橋脚・歩道・歩道の柵・踏切: ami_wall_*（歩道の柵 ami_wall_sidewalk_* と柵つきの電柱を含む）・ami_pier_*・ami_sidewalk*（電柱 ami_sidewalk_pole_* を含む）・ami_crossing_*）
@@ -48,6 +49,7 @@ KINDS = {
     "ami_road.pak": ("ami_road_", "ami_mark_"),  # 路面表示（#187）は道路と組で使うので道路に入れる
     "ami_monorail.pak": ("ami_monorail",),  # 跨座式（#113。ADR 0008）・懸垂式（#116）のモノレールと電化。車庫 ami_monorail_depot も入る
     "ami_canal.pak": ("ami_canal",),  # 運河（#114。ADR 0008）。船の車庫 ami_canal_depot も入る
+    "ami_maglev.pak": ("ami_maglev",),  # リニア（#371。ADR 0017）。ガイドと車庫 ami_maglev_depot も入る
     "ami_narrow.pak": ("ami_narrow_",),  # 狭軌（#370）。トンネルと車庫 ami_narrow_depot も入る
     "ami_extra.pak": ("ami_wall_", "ami_pier_", "ami_sidewalk", "ami_crossing_"),  # 踏切（#111）は線路・道路と組で使うので付属に入れる
     "ami_scenery.pak": ("ami_embankment_", "ami_sign_"),  # 景観（ADR 0008。盛土 #123・道路標識 #122）

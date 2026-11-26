@@ -137,6 +137,38 @@ MONORAIL_SUSPENDED_ELEVS = tuple(monorail_suspended(_v, True) for _v in MONORAIL
 # （2026-11-22、進捗管理の決定）。名前 → 懸垂式用か（絵の作りは sheetlib の monorail_parts の power_*）
 MONORAIL_POWERS = {f"{PREFIX}monorail_power": False, f"{PREFIX}monorail_suspended_power": True}
 
+# リニア（1200 km/h、maglev_track。#371。範囲は ADR 0017）。iss のリニア 3 種を、形で名前を付けて作る（2026-11-26、ユーザーの判断 75・案 a）。
+# 橋・留置線は作らない。トンネルの中の way は地上の way（超電導は center の版）。docs/objects/maglev.md の「リニアの作り」
+#   超電導 ami_maglev_guideway_<版>（地上 4 版。防音壁は way の絵）・ami_maglev_guideway_elev_<版>（高架 4 版）・
+#     ami_maglev_guide（U 字の側壁の way-object。電化を兼ねる）・ami_maglev_guideway_tunnel
+#   常電導 ami_maglev_beam（地上）・ami_maglev_beam_elev_<front|center|back>・ami_maglev_beam_tunnel
+#   チューブ式 ami_maglev_tube_<版>（地上 4 版）・ami_maglev_tube_elev_<版>（高架 4 版）・ami_maglev_tube_cover（チューブの way-object。
+#     電化しない）・ami_maglev_tube_tunnel。作りは marine_express（ユーザーのアドオン）に合わせた（2026-11-27、ユーザーの指示）
+MAGLEV_GUIDEWAY = f"{PREFIX}maglev_guideway"
+MAGLEV_GUIDEWAYS = tuple(f"{MAGLEV_GUIDEWAY}_{_v}" for _v in VARIANTS)
+MAGLEV_GUIDEWAY_ELEVS = tuple(f"{MAGLEV_GUIDEWAY}_elev_{_v}" for _v in VARIANTS)
+MAGLEV_GUIDEWAY_TUNNEL = f"{MAGLEV_GUIDEWAY}_tunnel"
+MAGLEV_GUIDEWAY_TUNNEL_WAY = f"{MAGLEV_GUIDEWAY}_center"  # トンネルの中の way（側壁の無い版）
+MAGLEV_GUIDE = f"{PREFIX}maglev_guide"
+MAGLEV_BEAM = f"{PREFIX}maglev_beam"
+MAGLEV_TUBE = f"{PREFIX}maglev_tube"
+MAGLEV_TUBES = tuple(f"{MAGLEV_TUBE}_{_v}" for _v in VARIANTS)
+MAGLEV_TUBE_ELEVS = tuple(f"{MAGLEV_TUBE}_elev_{_v}" for _v in VARIANTS)
+MAGLEV_TUBE_TUNNEL_WAY = f"{MAGLEV_TUBE}_center"  # トンネルの中の way（側壁の無い版）
+MAGLEV_TUBE_COVER = f"{MAGLEV_TUBE}_cover"
+MAGLEV_BEAMS = (MAGLEV_BEAM,)  # 跨座式モノレールと同じ並び（地上 1・高架 3 版・トンネル）
+MAGLEV_ELEV_VARIANTS = MONORAIL_ELEV_VARIANTS
+
+
+def maglev_elev(way, variant):
+    """常電導の高架の版の名前（<地上の名前>_elev_<版>）"""
+    return f"{way}_elev_{variant}"
+
+
+MAGLEV_BEAM_ELEVS = {_w: tuple(maglev_elev(_w, _v) for _v in MAGLEV_ELEV_VARIANTS) for _w in MAGLEV_BEAMS}
+MAGLEV_TUNNELS = {MAGLEV_GUIDEWAY_TUNNEL: MAGLEV_GUIDEWAY_TUNNEL_WAY, f"{MAGLEV_BEAM}_tunnel": MAGLEV_BEAM,
+                  f"{MAGLEV_TUBE}_tunnel": MAGLEV_TUBE_TUNNEL_WAY}  # トンネルの名前 → 中の way
+
 # 運河（60 km/h、water。#114。名前は ADR 0008）。物の並びは iss の運河（地上だけ。高架・橋・トンネルは無い）に合わせる
 # （2026-11-22、ユーザーの決定）。歩道（ami_sidewalk）と同じ waytype なので、突き当てるとつながる（docs/objects/canal.md の「運河の作り」）
 CANAL = "ami_canal"
@@ -264,7 +296,8 @@ class Depot:
 
 
 DEPOTS = (Depot("rail", "track"), Depot("tram", "tram_track"), Depot("road", "road"), Depot("monorail", "monorail_track"),
-          Depot("canal", "water"), Depot("narrow", "narrowgauge_track"))  # 狭軌（#370）
+          Depot("canal", "water"), Depot("maglev", "maglev_track"),  # リニア（#371）
+          Depot("narrow", "narrowgauge_track"))  # 狭軌（#370）
 
 # 操車場（building の stop。#115。ADR 0008 の ami_rail_yard）: 荷を扱わない線路の駅の建物。線路の脇の構内通路（2026-11-22、ユーザーの決定）。
 # 名前の頭 ami_rail_ で、build.py が線路の pak（ami_rail.pak）に入れる
@@ -288,6 +321,8 @@ DIAG_CURVE_WAYS = {_t.way for _t in ALL_TRACKS} | {_r.way for _r in ROADS if _r.
 DIAG_CURVE_WAYS |= {MONORAIL, *MONORAIL_ELEVS}  # 跨座式モノレールは高架の版もカーブを斜めの絵（#113。手本の iss の跨座式の dat と同じ）
 DIAG_CURVE_WAYS.add(CANAL)  # 運河もカーブは斜めの絵（#114）
 DIAG_CURVE_WAYS |= {*MONORAIL_SUSPENDEDS, *MONORAIL_SUSPENDED_ELEVS}  # 懸垂式（#116）も跨座式と同じ
+# リニアの常電導（#371）も跨座式と同じ（iss の dat と同じ）。超電導・チューブ式は線路の基盤の版と同じくカーブのセルを斜めの形で描く
+DIAG_CURVE_WAYS |= {_n for _w in MAGLEV_BEAMS for _n in (_w, *MAGLEV_BEAM_ELEVS[_w])}
 DIAG_CURVE_WAYS |= set(NARROWS)  # 狭軌（#370）も線路と同じく斜めの絵（iss の narrow.dat も image[sw] などが斜めと別のセルだが、AMI の線路にそろえる）
 
 
@@ -328,6 +363,17 @@ for _v in MONORAIL_SUSPENDED_VARIANTS:  # 懸垂式（#116）: 並びは跨座�
         if _elev:
             ELEVATED_WAYS.add(_n)
 BUILT_WAYS += [CANAL, CANAL_SCENIC]  # 運河（近い斜めの絵は持つ）
+# リニア（#371）: どれも近い斜めの絵を持たない。超電導は防音壁を way の絵に焼き込み、手前の側の壁を手前の絵に描く。
+# チューブ式も超電導と同じく側壁を way の絵に焼き込む（チューブは way-object）
+for _n in MAGLEV_GUIDEWAYS + MAGLEV_GUIDEWAY_ELEVS + MAGLEV_TUBES + MAGLEV_TUBE_ELEVS:
+    BUILT_WAYS.append(_n)
+    NO_CLOSE_WAYS.add(_n)
+    FRONT_WAYS.add(_n)
+ELEVATED_WAYS.update(MAGLEV_GUIDEWAY_ELEVS + MAGLEV_TUBE_ELEVS)
+for _w in MAGLEV_BEAMS:
+    BUILT_WAYS += [_w, *MAGLEV_BEAM_ELEVS[_w]]
+    NO_CLOSE_WAYS.update((_w, *MAGLEV_BEAM_ELEVS[_w]))
+    ELEVATED_WAYS.update(MAGLEV_BEAM_ELEVS[_w])
 BUILT_WAYS += list(NARROWS)  # 狭軌（#370。線路の通常の版と同じく近い斜めの絵を持つ）
 BUILT_WAYS = tuple(BUILT_WAYS)
 NO_CLOSE_WAYS = frozenset(NO_CLOSE_WAYS)  # 書き換えられないようにする（ami_dat.py などが別名で持つ）
