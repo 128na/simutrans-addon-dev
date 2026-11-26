@@ -107,6 +107,9 @@ COLOR_MARKING_SPOTS="PE:6:8 PN:22:7 PY:6:13 PNY:27:8 PX:40:5 PT:55:6"
 # 操車場の見本（ingame/yard_sample.nut）: Y1 南北の 1・3 タイル、YP 乗客の駅の隣、YE 東西の 1・3 タイル、YG 並べた留置線、
 #   YW 壁つきの基盤の版、YT 列車を止めた操車場、YX 斜め・坂・高架に建てる試し
 YARD_SPOTS="Y1:2:3 YP:6:4 YE:3:13 YG:11:4 YW:15:3 YT:19:5 YX:30:4"
+# 転車台・遷車台の見本（ingame/turntable_sample.nut。#314）: TT 転車台（東西・南北の線路の行き止まりの間と単独）、VN 南北の遷車台、
+#   VE 東西の遷車台、VX 十字・T 字（VX2 はカーブ）、VC 線路を横切らせた試し（踏切になる）
+TURNTABLE_SPOTS="TT:6:2 VN:17:3 VE:4:11 VX:32:4 VX2:46:3 VC:56:3"
 case "${NUT:-}" in
   *tram_sample.nut) SPOTS=${SPOTS:-$TRAM_SPOTS} ;;
   *road_sample.nut) SPOTS=${SPOTS:-$ROAD_SPOTS} ;;
@@ -121,5 +124,6 @@ case "${NUT:-}" in
   *marking_sample.nut) SPOTS=${SPOTS:-$MARKING_SPOTS} ;;
   *marking6_sample.nut) SPOTS=${SPOTS:-$MARKING6_SPOTS} ;;
   *yard_sample.nut) SPOTS=${SPOTS:-$YARD_SPOTS} ;;
+  *turntable_sample.nut) SPOTS=${SPOTS:-$TURNTABLE_SPOTS} ;;
 esac
 SPOTS=${SPOTS:-"AFC:8:2 B:3:7 DE:14:7 G1:25:3 G2:25:15 I:5:14 H0:3:22 H1:11:22 H2:19:22 H3:27:22 H4:35:22 H5:43:22 H6:51:22 H7:59:22$WALLED_SPOTS W1:6:155 W2a:19:153 W2b:19:163 W3:2:163 WE1:6:305 WE2a:19:303 WE2b:19:313 WE3:2:313 $BT_SPOTS"}

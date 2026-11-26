@@ -268,6 +268,10 @@ DEPOTS = (Depot("rail", "track"), Depot("tram", "tram_track"), Depot("road", "ro
 # 名前の頭 ami_rail_ で、build.py が線路の pak（ami_rail.pak）に入れる
 RAIL_YARD = f"{PREFIX}rail_yard"
 
+# 転車台・遷車台（#314）: iss の転車台とトラバーサー（../refs/iss/src/util/rail_misc/table.dat）と同じく、道路（waytype=road）の way 1 つ。
+# 1 タイルで転車台、直線に敷くと遷車台。線路の 4 種で共通（桁・台車の上の線路は線路の基準面にそろえる）。名前の頭 ami_rail_ で線路の pak に入る
+RAIL_TURNTABLE = f"{PREFIX}rail_turntable"
+
 
 # 道路標識（roadsign。#122）。名前は ami_sign_<名前>（ADR 0008）で、build.py の振り分けで ami_scenery.pak に入る。
 # 値は 6 種（2026-11-21、ユーザーの決定。#122 の案 A）。キーは sheetlib の roadsign.ROADSIGN_PLATES のキー（板の絵）

@@ -1,6 +1,6 @@
-# AMI の車庫・操車場の作り
+# AMI の車庫・操車場・転車台の作り
 
-車庫と操車場（building）の作り。全体の案内は [AMI の README](../../README.md)。文中の `ingame/…`・`blender/…`・`docs/…` などのパスは `addons/ami/` から数える。
+車庫と操車場（building）と、転車台・遷車台（道路の way）の作り。全体の案内は [AMI の README](../../README.md)。文中の `ingame/…`・`blender/…`・`docs/…` などのパスは `addons/ami/` から数える。
 
 ## 車庫の作り（#112）
 
@@ -31,3 +31,23 @@
 - 見本は `ingame/yard_sample.nut`（撮る場所は `sample_spots.sh` の `YARD_SPOTS`）。`sample_parallel.sh` に `NUT=ingame/yard_sample.nut` を付けて流す。区画は 1 タイルと 3 タイル（南北・東西）、乗客の駅の隣、並べた留置線、壁つきの線路、列車（車庫から出して操車場で止める）、斜め・坂・高架の試し。駅になること・乗客と郵便を扱わないこと・隣の駅とつながることを `[check]` で返す
   - 確認画像（2026-11-22、`OTRPv64_3.exe`、`flat_512.sve`）: `docs/yard115_temperate_Y1.png`（南北の 1 タイルと 3 タイル）、`yard115_snow_YE.png`（東西）、`yard115_pax_snow_zoom.png`（乗客の駅の隣。通路が駅の側へ続き、階段は反対の端だけ）、`yard115_pax_edge_zoom.png`（乗客の駅との境の拡大。プラットフォームと通路の線路の側の縁がそろう）、`yard115_temperate_YG.png`（並べた留置線）、`yard115_temperate_YW.png`（壁つきの線路）、`yard115_train_zoom.png`（止まった機関車が通路の上に描かれる）、`yard115_elevated_zoom.png`（高架の上）
   - 建てたときに引かれた額は 576 cr と 640 cr（2 か所）。本体は dat の `cost` をそのまま使う（[way-addon.md](../../../../docs/reference/way-addon.md) の 5 章）。600 cr からのずれは測り方の問題で、建設費はずれていない（スクリプトの所持金が 32 ビット float で、残高が大きく負の `flat_512` では 64 cr 刻みに丸められる。純資産の差は 60000。記録 [2026-11-22_ami-yard-cost-float32.md](../../../../docs/records/2026-11-22_ami-yard-cost-float32.md)、[#160](https://github.com/128na/simutrans-addon-dev/issues/160)）
+
+## 転車台・遷車台の作り（#314）
+
+- 名前は `ami_rail_turntable` 1 つ（`blender/catalog.py` の `RAIL_TURNTABLE`）。手本は iss の転車台とトラバーサー（`../refs/iss/src/util/rail_misc/table.dat`。iss の文書 `docs/technique/index.md` の「転車台とトラバーサー」）。iss と同じく 1 つの way で、つながりの無い 1 タイルに敷くと転車台、直線に敷くと遷車台（トラバーサー）になる
+- 本体での種類と動き（2026-11-26、`sim-WinGDI64-OTRPv64.exe`、`flat_512_left_v64.sve` で iss の `iss_util_rail_misc.pak` を敷いて確かめた）:
+  - obj は way、waytype は道路（`road`）。回る・動く絵は無い。本体は way の絵をつながる向き（ribi）だけで選ぶ（`descriptor/way_desc.h` の `get_image_id`）ので、1 タイル（ribi 0）が `image[-]`、直線が `image[ns]`・`[ew]`、端が `image[s]` などになる
+  - 線路とはつながらない。線路の行き止まりの隣に置く（線路の端には車止めが出る）。線路を横切らせると、どちらを先に敷いても、そのタイルは踏切になる（線路 × 道路の踏切が速さで選ばれる。[way-addon.md](../../../../docs/reference/way-addon.md) の 5 章）。道路を突き当てると道路とはつながる
+  - 速さ 65535 は、本体が道路を自動で選ぶとき（橋・トンネルの上の way、町の道路など。`bauer/wegbauer.cc` の `weg_search` は、求める速さ以下でいちばん速い物を選ぶ）に選ばれないための値（iss と同じ）
+  - iss はカーブ・T 字・坂の絵を持たず、敷くとそのタイルの way は見えない（絵の番号が空）
+- AMI の作り（形と寸法は `tools/blender/sheetlib/turntable.py` の定数）:
+  - 転車台（`image[-]`）: タイルの四角いコンクリートに、半径 4.6 の丸いピット（深さ約 4px、縁に黄色の帯、床に桁の車輪が走る円のレールと中心の支点）。桁は東西に渡し（iss と同じ向き）、上にまくらぎとレール、西の端の北の側に運転室。桁とピットはタイルの中心に置き、線路の基準面では動かさない（動かすと桁がピットの中心から外れる）。なので南北の線路の間に置くと、桁の向きが合わない（`TT` の区画の (9,2)）
+  - 遷車台: つながる向きに延びるピット（床に台車の走るレール 2 本、閉じた辺は壁と黄色の帯）。北・西の端（`image[s]`・`[e]`）に台車（橙）を置き、台車の上に、ピットを横切る向きの線路と運転室を載せる（iss と同じ）。台車の線路は、両脇の線路のタイルのレールと画面で一直線になるよう、線路の基準面の下げ（`datums["rail"]`）のうち線路に直角な成分だけ動かす（ピットに沿って動くだけなので壁の間に収まる）
+  - カーブ・T 字・十字は、ピットの分かれ目（床のレールを両方の向きに、閉じた辺は壁）を描く（iss には無い。見えない way を残さないため）。坂・斜め・分岐の絵は持たない（坂に敷くと見えない。iss と同じ）
+  - 全部を奥の絵（`image`）にし、手前の絵（`frontimage`）は持たない。iss は奥と手前に同じ絵を置いていたが、上に乗る乗り物が無いので要らない
+  - 雪の絵は、ピットの床・まわりのコンクリート・運転室の屋根・まくらぎを白くした版（iss には無い）
+  - 線路の 4 種（バラスト・コンクリート・ラダー・スラブ）で共通の 1 つ。線路とは車止めをはさんでつながらず、桁と台車は自前の床なので、種類ごとに変える所が無い。台車のレールは、4 種が同じに持つレールの断面（`blender/render.py` の `RAIL_IN`・`RAIL_OUT`・`RAIL_Z1`）と走行面の基準面（`_DATUMS["rail"]`。スラブの `_SLAB_DATUMS` も `rail` は同じ）で描くので、どの種類の線路と並べてもレールの位置と高さがそろう。画面で並べて見たのはバラストだけ（水路の踏切の線路の床と同じ考え方）。旧描画位置（#26）の版も作らない（台車の線路のずらしだけが違い、つながらないので目立たない）
+- 値: 費用 1000（10 cr）、維持費 100、速さ 65535、登場年 1900（iss と同じ。`blender/ami_dat.py` の `TURNTABLE_VALUES`）
+- pak は `ami_rail.pak` に入る（名前の頭 `ami_rail_`）。道路の way なので、ゲームの中では道路の道具の一覧に並ぶ（iss の文書の「道路ツールを使用しています」と同じ。メニューの画面では見ていない）。アイコンは線路の色で、左上に「転」
+- 見本は `ingame/turntable_sample.nut`（撮る場所は `sample_spots.sh` の `TURNTABLE_SPOTS`）。`sample_parallel.sh` に `NUT=ingame/turntable_sample.nut` を付けて流す。区画は転車台（東西・南北の線路の行き止まりの間と単独）、南北・東西の遷車台（両脇から線路を突き当てる）、十字・T 字・カーブ、線路を横切らせた試し。敷いたタイルの向きと、絵が空でないことを `[check]` で返す
+  - 確認画像（2026-11-26、`sim-WinGDI64-OTRPv64.exe`、`flat_512_left_v64.sve`）は `docs/314_turntable/`: `TT_*`（転車台）・`VN_*`（南北の遷車台）・`VE_*`（東西の遷車台）・`VX_*`（十字）・`VX2_temperate`（カーブと T 字の一部）・`VC_temperate`（線路を横切らせると踏切になる）。`_x4` は 4 倍の拡大（`TT_turntable_x4`・`VN_carriage_x4` と雪の版）

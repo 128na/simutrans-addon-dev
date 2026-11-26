@@ -23,6 +23,7 @@
     canal        運河の way のシート（水面・護岸・笠石。sheetlib の render_icon を使う。名前が canal・CANAL で始まるものだけを出す）
     depot        車庫（building の depot）など 1 タイルの建物のシート（4 方向 × 奥・手前 × 夏・雪）
     yard         操車場（building の stop。線路の脇の構内通路）のシート（8 layout × 夏・雪。depot の描き方を使う）
+    turntable    転車台・遷車台の way（道路の waytype。つながりの無い 1 タイルが転車台、直線が遷車台）のシート（名前が turntable で始まるものだけを出す）
     marking      多車線と交差点の路面表示の way のシート（道路に重ねる白線と路面。名前が marking・MARKING で始まるものだけを出す）
     roadsign     道路標識（roadsign）のシート（柱を描き、板の 2D の絵を押す）
 
@@ -34,6 +35,7 @@ from . import sidewalk
 from . import crossing
 from . import depot
 from . import yard
+from . import turntable
 from . import canal
 from . import canal_crossing
 from . import roadsign
@@ -45,5 +47,7 @@ for _m in (core, track_parts, slab_parts, tram_parts, monorail_parts, wall_parts
 globals().update({_k: _v for _k, _v in vars(canal).items() if _k.lower().startswith("canal")})
 # 水路の踏切も、crossing と同じ名前の部品を持つので、名前が canal_crossing で始まるものだけを出す
 globals().update({_k: _v for _k, _v in vars(canal_crossing).items() if _k.lower().startswith("canal_crossing")})
+# 転車台・遷車台も同じく、名前が turntable・TURNTABLE で始まるものだけを出す（_own・_build などの名前がぶつかる）
+globals().update({_k: _v for _k, _v in vars(turntable).items() if _k.lower().startswith("turntable")})
 # 路面表示も同じく、名前が marking・MARKING で始まるものだけを出す
 globals().update({_k: _v for _k, _v in vars(marking).items() if _k.lower().startswith("marking")})

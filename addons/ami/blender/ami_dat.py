@@ -671,6 +671,26 @@ def yard_dat_text(name):
     return NL.join(out) + NL
 
 
+# 転車台・遷車台（#314）。iss の転車台とトラバーサー（../refs/iss/src/util/rail_misc/table.dat）と同じく道路（road）の way 1 つで、
+# つながりの無い 1 タイル（image[-]）が転車台、直線と行き止まりが遷車台。速さ 65535 は iss と同じで、本体が道路を自動で選ぶとき
+# （橋・トンネルの上の way・町の道路。bauer/wegbauer.cc の weg_search は求める速さ以下でいちばん速い物を選ぶ）に選ばれないようにする。
+# 絵はシートの way の位置（IMAGES）で、カーブ・T 字・十字も持つ（iss は持たず、敷くと見えない way が残る）。坂・斜め・分岐の絵は持たない（README の「転車台・遷車台の作り」）
+TURNTABLE_VALUES = dict(waytype="road", cost=1000, maintenance=100, topspeed=65535, intro_year=1900)
+TURNTABLE_KEYS = ("[ns]", "[ew]", "[s]", "[w]", "[n]", "[e]", "[-]", "[sw]", "[nw]", "[ne]", "[se]", "[nse]", "[new]", "[nsw]", "[sew]", "[nsew]")
+
+
+def turntable_dat_text(name):
+    v = TURNTABLE_VALUES
+    out = _head(f"# AMI: {name}（CC BY 4.0）。転車台・遷車台（道路の way。1 タイルで転車台、直線に敷くと遷車台）。シートは blender/render.py が描く（sheetlib の turntable.py）",
+                "way", name, v["intro_year"],
+                after=[*_way_values(v), "system_type=0", f"icon=> {name}.0.0", f"cursor={name}.0.1,{OFFSET}"])
+    for season in (0, 1):
+        for key, idx, row, col in IMAGES:
+            if key == "image" and idx in TURNTABLE_KEYS:
+                out.append(f"image{idx}[{season}]={name}.{row + season * sheet_rows.WAY_SNOW_ROWS}.{col},{OFFSET}")
+    return NL.join(out) + NL
+
+
 # 道路標識（roadsign。#122）。値は #110 の一覧（費用 500 cr。roadsign の cost は cr 単位で、makeobj が 100 倍する。維持費のキーは無い）。
 # 効き目は一方通行（single_way）と最低速度（min_speed）だけ。止まれ・最高速度は飾り（本体に速さの上限のキーが無い。#122 の案 A）
 ROADSIGN_COST = 500
@@ -769,6 +789,7 @@ def main():
     for depot in catalog.DEPOTS:
         put(depot.name, depot_dat_text(depot))
     put(catalog.RAIL_YARD, yard_dat_text(catalog.RAIL_YARD))
+    put(catalog.RAIL_TURNTABLE, turntable_dat_text(catalog.RAIL_TURNTABLE))
     for name, key in catalog.ROADSIGNS.items():
         put(name, roadsign_dat_text(name, key))
     for name, one_way in catalog.ROADSIGN_CROSSWALKS.items():
