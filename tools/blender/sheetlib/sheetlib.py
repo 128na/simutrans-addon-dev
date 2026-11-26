@@ -885,6 +885,13 @@ def track_sheet_parts(prof):
     return tuple(swap.get(p.name, p) for p in track_body_parts(prof) + tuple(prof.get("parts", ())) + TRACK_EXTRAS)
 
 
+def track_own_exits(prof, name):
+    """track_sheet が持ち分（render_cell・render_layers）に渡すつながる辺。
+    prof["fill_back_band"]（無くてよい）が真なら空（""）を渡し、つながる奥の辺の上の帯も塗る（cells._ground_mask_direct の #354 の
+    分岐を通さない）。路面軌道は道路と同じタイルに重なり、道路がつながらない辺で塗った道路の端を、軌道の帯で覆う（#365）"""
+    return "" if prof.get("fill_back_band") else exits_of(name)
+
+
 # 斜めの部分の横幅の倍率（Part.width → 倍率）
 DIAG_WIDTHS = {"gauge": DIAG_RAIL, "bed": DIAG_BALLAST}
 
@@ -1167,9 +1174,10 @@ def _track_sheet(profile="new"):
             # 坂の低い側では、基盤・躯体が地面より下にあり、広げると地面の下の部分が描かれて、隣の地上の線路の上に帯（基盤の端の面）と、
             # 手前の壁の下に三角が出た（AMI の橋。2026-11-18、ユーザーの確認用の保存データ）。坂の躯体・Start の躯体は solid・grounds で地面まで描く
             lower = 0 if prof.get("solid") and (slope or name in grounds) else prof.get("lower", 0)
+            own_exits = track_own_exits(prof, name)
             if wall_sheet and any(ob.get("tall") for ob in obs):
                 # 壁を way-object に分ける版: 本体（壁なし）は way のシート、壁は way-object のシート（夏の絵だけ）へ
-                body, wback, wfront = render_layers(cname, obs, True, exits_of(name), mask_slope, cy, prof["spill"], prof.get("rise", WALL_RISE),
+                body, wback, wfront = render_layers(cname, obs, True, own_exits, mask_slope, cy, prof["spill"], prof.get("rise", WALL_RISE),
                                                     prof.get("solid", False), lower, separate=True,
                                                     tall_layers=row0 == 0 and write_walls,
                                                     frame=near_frame(name, paths, origin),
@@ -1180,13 +1188,13 @@ def _track_sheet(profile="new"):
                 if wfront:
                     wcells[(pos[0] + WALL_FRONT_ROW, pos[1])] = wfront
             elif any(ob.get("tall") for ob in obs):
-                cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, True, exits_of(name), mask_slope, cy,
+                cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, True, own_exits, mask_slope, cy,
                                                                       prof["spill"], prof.get("rise", WALL_RISE), prof.get("solid", False),
                                                                       lower, frame=near_frame(name, paths, origin))
                 if front:
                     cells[(pos[0] + row0 + prof["front_row"], pos[1])] = front
             else:
-                cells[(pos[0] + row0, pos[1])] = render_cell(cname, exits_of(name), slope=mask_slope, cy=cy, spill=prof["spill"],
+                cells[(pos[0] + row0, pos[1])] = render_cell(cname, own_exits, slope=mask_slope, cy=cy, spill=prof["spill"],
                                                              solid=prof.get("solid", False), lower=lower)
 
     if prof.get("piers"):

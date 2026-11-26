@@ -282,6 +282,8 @@ R.TRACK_PROFILES[TRAM_KEY] = {
     "sheet": catalog.TRAM, "label": "60", "spill": 0, "datums": TRAM_DATUMS, "snow": True, "anchor": R.ROAD_CY, "cy": R.ROAD_CY,
     "groups": ("body", "weathering"), "track_parts": R.TRAM_TRACK_PARTS, "replace": R.TRAM_WEAR_REPLACE,
     "snow_skin": R.TRAM_SNOW_SKIN, "end_from_edge": END_FROM_EDGE, "cell_fills": R.TRAM_CELL_FILLS, "ex_switches": True,
+    # 256 で、つながる奥の辺の上の帯も塗る。土の上の軌道と道路の上の軌道の境・車庫の前で、道路がつながらない辺に塗った道路の端を覆う（#365）
+    "fill_back_band": True,
     **_way_flags(catalog.TRAM),
 }
 
