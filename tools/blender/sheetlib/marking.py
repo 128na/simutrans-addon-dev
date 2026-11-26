@@ -34,7 +34,8 @@ import os
 
 import bpy
 
-from sheet_rows import MARKING_COLS, MARKING_EMPTY_CELL, MARKING_ROWS, MARKING_SNOW_KINDS  # 空のセル・行数・雪の絵を持つ種類（シートは行を 2 倍にし、雪は MARKING_ROWS 行下）。dat を書く側も同じ定義を読む（#302）
+import marking_kinds  # 種類ごとの表（種類の一覧・絵のあるセル・カーソルのセル・雪の絵を持つか）。dat を書く側も同じ表を読む（#352）
+from sheet_rows import MARKING_COLS, MARKING_EMPTY_CELL, MARKING_ROWS  # 空のセル・行数（シートは行を 2 倍にし、雪は MARKING_ROWS 行下）。dat を書く側も同じ定義を読む（#302）
 
 from . import sheetlib as _s
 from .cells import ROAD_CY, make_sheet, render_cell
@@ -121,7 +122,7 @@ MARKING_W6_CURB = EDGE_LINE / 2                    # 1.685 分離帯の縁（真
 #                腕の口までの中央線・通り抜ける道路の中央線を描き直す）
 #   paving_red_striped: 赤の縞。路面は敷かず、道を横切る縞（accent の材質）を ±MARKING_PAVE_IN の内に並べ、中央線を描き直す。直線・坂・行き止まり
 #   center_yellow: 黄色の中央線（はみ出し禁止）。下の一般道路の中央線と同じ位置・幅の線だけ（line に黄の材質を渡す）。直線・坂・行き止まり
-MARKING_COLOR_KINDS = ("paving_red", "paving_blue", "paving_green", "paving_red_striped", "center_yellow")
+MARKING_COLOR_KINDS = marking_kinds.kinds_of("color")
 MARKING_COLOR_STRIPE_W = 1.0       # 縞の幅（道に沿う向き）
 MARKING_COLOR_STRIPE_PERIOD = 2.0  # 縞の周期（タイル 1 辺 10 に 5 本。タイルの辺をまたいでも周期がそろう）
 MARKING_COLOR_IN = EDGE_LINE - MARKING_PAVE_IN  # 色の帯の内の端の、中央線の中心からの距離（0.9。外の端は MARKING_PAVE_IN = 路側線の中心から 0.9 内）
@@ -130,8 +131,7 @@ MARKING_TEE_MOUTH_DASH = 0.3   # 下の一般道路の T字の、枝の口の点
 # WEAR_LAYERS の 2 段目）と同じ所を通し、色の帯の範囲（MARKING_COLOR_IN〜MARKING_PAVE_IN）で切る。材質は marking_sheet の wear（無ければ描かない）
 MARKING_COLOR_WEAR = WEAR_LAYERS[1][0]
 MARKING_ACCENT_Z = (MARKING_PAVE_Z[0], MARKING_PAVE_Z[1] + 0.001)  # 縞の板（路面の板と同じ高さ。白線より下）
-MARKING_KINDS = ("lane4", "junction2", "junction2_t", "junction4_in", "junction4_out", "junction4_c",
-                 "lane6_a", "lane6_b", "lane6_m", "junction6_in", "junction6_out", "junction6_m", "junction6_c") + MARKING_COLOR_KINDS
+MARKING_KINDS = tuple(marking_kinds.KINDS)  # 種類の一覧（marking_kinds.py。#352）
 _DIRS = {"n": (0, 1), "e": (1, 0), "s": (0, -1), "w": (-1, 0)}
 # セル（行, 列）→ 形。位置は ami_dat.py の IMAGES と同じ（iss・blender-poc の線路の並び）
 MARKING_DEADENDS = {(0, 5): "s", (0, 6): "w", (0, 7): "n", (0, 8): "e"}       # 行き止まり → つながる向き
@@ -785,7 +785,7 @@ def _tee(m, closed_edge):
 
 def marking_sheet(sheet, kind, label="M", paving=None, snow=None, line=None, slush=None, accent=None, wear=None):
     """多車線と交差点の路面表示の way のシート（4 行 × 10 列）。種類ごとの形 → 絵は marking_jobs。絵の無い形のセル
-    （MARKING_EMPTY_CELL ほか）は空。アイコン（0,0）は仮の絵（AMI は icons.py が描き直す）、カーソル（0,1）は MARKING_CURSOR の絵。
+    （MARKING_EMPTY_CELL ほか）は空。アイコン（0,0）は仮の絵（AMI は icons.py が描き直す）、カーソル（0,1）は marking_kinds.KINDS の cursor の絵。
     line は白線の材質を返す関数（擦れのまだら。#197。無ければ一色の MARKING_LINE）、slush は雪の板の縁のぼかしの段（外 → 内の (広げる幅, 材質を返す関数)）。
     paving は路面の材質を返す関数（下の道路のアスファルトと同じ物。AMI は render.py の _road_asphalt_skin の "asphalt"。色の舗装（#313）は色の材質）。
     無ければ白線だけ。accent は色の板（赤の縞。#313）の材質を返す関数、wear は色の舗装の走行跡（#331）の材質を返す関数（無ければ描かない）"""
@@ -795,11 +795,14 @@ def marking_sheet(sheet, kind, label="M", paving=None, snow=None, line=None, slu
     pave_mat = paving() if paving else None
     accent_mat = accent() if accent else None
     wear_mat = wear() if wear else None
-    snow_mat = snow() if (snow and kind in MARKING_SNOW_KINDS) else None
+    snow_mat = snow() if (snow and kind in marking_kinds.SNOW_KINDS) else None
     slush_mats = [(d, f()) for d, f in (slush or ())] if snow_mat is not None else None
     seasons = (0, 1) if snow_mat is not None else (0,)
     cells = {}
     jobs = marking_jobs(kind)
+    # 描くセルが、dat が絵を指すセル（marking_kinds の cells）と同じか（#352。違うと、描いた絵を dat が指さないか、dat が空のセルを指す）
+    drawn, table = set(jobs), set(marking_kinds.KINDS[kind].cells)
+    assert drawn == table, f"{kind}: marking_jobs のセルが marking_kinds.KINDS の cells と違う（描くだけ {sorted(drawn - table)}、表だけ {sorted(table - drawn)}）"
     for season in seasons:  # 雪の絵（season 1）は MARKING_ROWS 行下
         for rc, (draw, a, voff, slope) in jobs.items():
             clear_models()
@@ -812,7 +815,7 @@ def marking_sheet(sheet, kind, label="M", paving=None, snow=None, line=None, slu
                         apply_slope(ob, slope)
             row = rc[0] + season * MARKING_ROWS
             cells[(row, rc[1])] = render_cell(f"{sheet}_{row}_{rc[1]}")
-    cursor = MARKING_CURSOR[kind]
+    cursor = marking_kinds.KINDS[kind].cursor
     cells[(0, 1)] = cells[cursor]
     clear_models()
     draw, a, voff, _ = jobs[cursor]
@@ -822,11 +825,6 @@ def marking_sheet(sheet, kind, label="M", paving=None, snow=None, line=None, slu
     cells[(0, 0)] = _s.render_icon(sheet + "_icon", 0.5, shift=(-0.14, 0.2), label=label, style="tram")
     make_sheet(cells, MARKING_ROWS * len(seasons), MARKING_COLS, os.path.join(_s.SRC, sheet + ".png"))
 
-
-# カーソルの絵のセル: 北南の直線、北へ向かう 2 車線の腕（行き止まり [n]）、北へ向かう 4 車線の腕の 1 マス目（入る側は T字 [nse]、出る側は [nsw]）
-MARKING_CURSOR = {"lane4": (0, 2), "junction2": (0, 7), "junction2_t": (0, 7), "junction4_in": (3, 5), "junction4_out": (3, 7), "junction4_c": (2, 8),
-                  "lane6_a": (0, 2), "lane6_b": (0, 2), "lane6_m": (0, 2), "junction6_in": (3, 5), "junction6_out": (3, 7), "junction6_m": (3, 5), "junction6_c": (3, 9),
-                  **{k: (0, 2) for k in MARKING_COLOR_KINDS}}
 
 
 # ---------------------------------------------------------------- 高速道路の分岐・合流（AMI #188。ADR 0012 の作りを高速道路へ広げる）
@@ -840,8 +838,7 @@ MARKING_CURSOR = {"lane4": (0, 2), "junction2": (0, 7), "junction2_t": (0, 7), "
 #                              向きの決まりで、T字は欠ける向きが左、曲がりの横の向きは右（本線の側）
 # 絵は、進む向き u（タイルの中心が 0）と左の横位置 v（本線のタイルの中心が 0、ランプのタイルの中心が TILE）で 1 行分を描き、
 # タイルごとに切り抜く。合流は分岐の絵を u について裏返す（ランプから入る導線に沿う向きになる）
-MARKING_EXPWY_KINDS = ("diverge_main", "diverge_ramp", "merge_main", "merge_ramp")
-MARKING_KINDS = MARKING_KINDS + MARKING_EXPWY_KINDS
+MARKING_EXPWY_KINDS = marking_kinds.kinds_of("expwy")
 MARKING_EXPWY_IN = EDGE_LINE                     # 3.37 本線の左の路側線 = 帯の車線との境（太い破線）
 MARKING_EXPWY_OUT = TILE - EDGE_LINE             # 6.63 帯の車線の外の路側線（ランプのタイルの、本線の側の路側線の位置）
 MARKING_EXPWY_RAMP_TOP = TILE + EDGE_LINE        # 13.37 分かれの先の端の、ランプの道路の外の路側線
@@ -991,7 +988,3 @@ def _expwy_jobs(kind):
                 break
     assert len(jobs) == 12, (kind, len(jobs))
     return jobs
-
-
-# カーソルの絵のセル: 北へつながる行き止まり（分岐は北へ向かうテーパー、合流は南へ向かうテーパーの終わり）
-MARKING_CURSOR.update({k: (0, 7) for k in MARKING_EXPWY_KINDS})

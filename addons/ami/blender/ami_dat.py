@@ -30,6 +30,7 @@ import catalog
 import src_lock
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "tools", "blender"))
+import marking_kinds  # noqa: E402  路面表示の種類ごとの表（絵のあるセル・雪の絵）。描く側（sheetlib の marking.py）も同じ表を読む（#352）
 import sheet_rows  # noqa: E402  行の並び（雪の絵・手前の絵の行のずらし）と offset。シートを描く側（sheetlib）も同じ定義を読む（#302）
 import sheet_settings  # noqa: E402  pak の大きさ（SHEET_PAK_SIZE。既定は pak128）
 
@@ -464,35 +465,9 @@ def embankment_dat_text(name, sheet):
 # 多車線と交差点の路面表示の way（#187。ADR 0012）: 道路に重ねて敷く白線と路面の way。waytype は橋脚・盛土と同じ tram_track、速さ 1
 # （路面軌道・線路とつながっても速く走れない。車の速さは変わらない）。値は橋脚・盛土と同じ（ADR 0012）
 MARKING_VALUES = dict(waytype="tram_track", cost=1000, maintenance=100, intro_year=1900, topspeed=1)
-# 種類 → 絵のあるセル（tools/blender/sheetlib/marking.py の marking_jobs と同じ）。ほかの形は空のセル（MARKING_EMPTY_CELL）
-_MARK_DEADENDS = {(0, 5), (0, 6), (0, 7), (0, 8)}
-_MARK_TEES = {(3, 5), (3, 6), (3, 7), (3, 8)}
-MARKING_CELLS = {
-    "lane4": {(0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (1, 5), (1, 6), (1, 7), (1, 8)} | _MARK_DEADENDS,
-    "junction2": _MARK_DEADENDS | _MARK_TEES | {(0, 9), (3, 9)},
-    "junction2_t": _MARK_DEADENDS | _MARK_TEES | {(0, 9), (3, 9)},
-    "junction4_in": _MARK_DEADENDS | _MARK_TEES | {(2, 5), (2, 6), (2, 7), (2, 8)},
-    "junction4_out": _MARK_DEADENDS | _MARK_TEES | {(2, 5), (2, 6), (2, 7), (2, 8)},
-    "junction4_c": {(2, 5), (2, 6), (2, 7), (2, 8)},
-    "lane6_a": {(0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (1, 5), (1, 6), (1, 7), (1, 8)} | _MARK_DEADENDS,
-    "lane6_b": {(0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (1, 5), (1, 6), (1, 7), (1, 8)} | _MARK_DEADENDS,
-    "lane6_m": {(0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (1, 5), (1, 6), (1, 7), (1, 8)} | _MARK_DEADENDS,
-    "junction6_in": _MARK_DEADENDS | _MARK_TEES,
-    "junction6_out": _MARK_DEADENDS | _MARK_TEES,
-    "junction6_m": _MARK_DEADENDS | _MARK_TEES,
-    "junction6_c": _MARK_DEADENDS | {(3, 9)},
-    # 高速道路の分岐・合流（#188）: 行き止まり = テーパー、T字 = 平行、曲がり = 分かれ
-    **{_k: _MARK_DEADENDS | _MARK_TEES | {(2, 5), (2, 6), (2, 7), (2, 8)}
-       for _k in ("diverge_main", "diverge_ramp", "merge_main", "merge_ramp")},
-    # 路面の色と黄色の中央線（#313）: 直線・坂・行き止まり（直線と同じ絵）。色の舗装は十字・1 タイル・T字も
-    **{_k: {(0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (1, 5), (1, 6), (1, 7), (1, 8)} | _MARK_DEADENDS | _MARK_TEES | {(0, 9), (3, 9)}
-       for _k in ("paving_red", "paving_blue", "paving_green")},
-    **{_k: {(0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (1, 5), (1, 6), (1, 7), (1, 8)} | _MARK_DEADENDS
-       for _k in ("paving_red_striped", "center_yellow")},
-}
+# 種類 → 絵のあるセル・雪の絵を持つか: tools/blender/marking_kinds.py の KINDS（描く側の sheetlib の marking.py も同じ表を読む。#352）。
+# ほかの形は空のセル（MARKING_EMPTY_CELL）。雪の絵は MARKING_ROWS 行下
 MARKING_EMPTY_CELL = sheet_rows.MARKING_EMPTY_CELL
-# 雪の絵（[1]）を夏と別のセルに持つ種類（tools/blender/sheetlib/marking.py の MARKING_SNOW_KINDS）。雪は MARKING_ROWS 行下
-MARKING_SNOW_KINDS = frozenset(sheet_rows.MARKING_SNOW_KINDS)
 MARKING_ROWS = sheet_rows.MARKING_ROWS
 
 
@@ -510,9 +485,9 @@ def marking_dat_text(name, kind):
                 continue
             if key == "image" and idx in PIER_SWITCH:
                 row, col = cell[("image", PIER_SWITCH[idx])]
-            if (row, col) not in MARKING_CELLS[kind]:
+            if (row, col) not in marking_kinds.KINDS[kind].cells:
                 row, col = MARKING_EMPTY_CELL
-            elif season and kind in MARKING_SNOW_KINDS:
+            elif season and kind in marking_kinds.SNOW_KINDS:
                 row += MARKING_ROWS
             out.append(f"{key}{idx}[{season}]={name}.{row}.{col},{OFFSET}")
     return NL.join(out) + NL

@@ -43,5 +43,4 @@ BUILDING_OFFSET = (-64 * sheet_settings.SCALE, -96 * sheet_settings.SCALE)
 MARKING_ROWS = 4           # 路面表示のシートの、夏の絵の行数（雪の絵は MARKING_ROWS 行下）
 MARKING_COLS = 10
 MARKING_EMPTY_CELL = (0, 4)  # 絵の無い形が指す空のセル
-# 雪の絵（夏と別のセル）を持つ種類
-MARKING_SNOW_KINDS = ("lane6_m", "junction4_in", "junction4_out", "junction6_in", "junction6_out", "junction6_m")
+# 種類ごとの値（雪の絵を夏と別のセルに持つか・絵のあるセルなど）は marking_kinds.py（#352）
