@@ -342,12 +342,13 @@ def _arc_circle(path):
     return centre, (a - centre).length
 
 
-def _beyond_prisms(walls, paths, k, wu=None, ww=None, zr=(-2, 2), ref_move=None):
+def _beyond_prisms(walls, paths, k, wu=None, ww=None, zr=(-2, 2), ref_move=None, ell_inner_stop=False):
     """残した壁それぞれの「外側」を表す柱の集まり（基盤や端の壁から削る型）。wu・ww は壁の位置と厚み（既定は線路）。
     zr は柱の高さの範囲。坂を当てた後の物を削るときは、坂の高さまで広げる（ROAD_CUT_Z）。
     経路ごとに倍率を変えて組み立てた壁（assemble の path_opts。印 "diag" が付く）は、壁の物の横幅の倍率（k）を使う
     （T字・十字の斜めの部分は倍率が違う。diag_curves）。
-    ref_move（無くてよい）は削られる物の動き。そうした壁の動き（mv）と違えば、柱をその差だけずらす（斜めの部分は下げ幅が半分）"""
+    ref_move（無くてよい）は削られる物の動き。そうした壁の動き（mv）と違えば、柱をその差だけずらす（斜めの部分は下げ幅が半分）。
+    ell_inner_stop: 真なら L 字の角の内側の壁の柱を角で止める（下の L 字の節。雪の路面の板を内へ寄せて削るときだけ。#378）"""
     ww = ww or WALL_W
     cut = []
     for w in walls:
@@ -371,10 +372,21 @@ def _beyond_prisms(walls, paths, k, wu=None, ww=None, zr=(-2, 2), ref_move=None)
             pts = [p0 + n * 30, p0 - n * 30, p0 - n * 30 - d * 30, p0 + n * 30 - d * 30]
         elif len(path) == 3:  # L 字（MiterPath の経路。2 辺の中点 → 中心 → 辺の中点。#260）: 2 本の直線として、それぞれの外側を削る
             # （始点と終点を結ぶ斜めの直線で削ると、タイルの半分が消える）
-            for p0, p1 in ((path[0], path[1]), (path[1], path[2])):
+            for i, (p0, p1) in enumerate(((path[0], path[1]), (path[1], path[2]))):
                 d = (p1 - p0).normalized()
                 n = Vector((d.y, -d.x)) * s
                 a, b = p0 - d * 30, p1 + d * 30
+                # 角の内側の壁の柱は角（中心）を越えて延び、もう一方の脚の、壁の外の面より外（タイルの辺までの帯と余白）を削る。
+                # 帯の幅はタイルの辺と壁の外の面の差（道路で 0.05）だけで、ふだんは見えない（高架の躯体は、この帯で辺の側面が
+                # 削られた形が今の絵）。雪の絵で路面の板だけを内へ寄せて削る（#360）と帯が 1 画素の幅になり、256 の角のタイルの辺に
+                # 地面が透ける点線が出た（#378）。ell_inner_stop のときは、内側の柱をもう一方の脚の壁の外の面（中心から uw）で止める。
+                # 外側の壁は角を越えて延ばす（角の外側の三角を削る）
+                other = (path[2] - path[1]) if i == 0 else (path[0] - path[1])
+                if ell_inner_stop and n.dot(other) > 0:
+                    if i == 0:
+                        b = p1 - d * uw
+                    else:
+                        a = p0 + d * uw
                 cut.append(prism([(q.x, q.y) for q in (a + n * uw, b + n * uw, b + n * 40, a + n * 40)], *zr))
             continue
         elif len(path) > 4:  # カーブ
