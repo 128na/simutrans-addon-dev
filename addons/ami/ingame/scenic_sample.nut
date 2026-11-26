@@ -56,6 +56,8 @@ foreach (n, o in ORIGINS) {
   // 高架の説明用の線
   way("DE", "ami_describe_red_elev", 18, 18, 24, 18);
   way("DE", "ami_describe_blue_elev", 21, 18, 21, 21);
+  // 高架に載れば、地面のタイルに way は無い（[check] の DE は road=- tram=-）
+  info("DE", 19, 18); info("DE", 21, 20);
   // 盛土の建物の輪（直線の layout 0 南・1 東・2 北・3 西、角の高い角は 0 北西・1 南西・2 南東・3 北東）
   local B = "ami_embankment_building", K = "ami_embankment_building_corner";
   house("MB", K, 39, 7, 2); house("MB", B, 40, 7, 2); house("MB", K, 41, 7, 1);
