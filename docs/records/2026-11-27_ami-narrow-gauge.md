@@ -10,12 +10,13 @@ AMI 第 6 弾（管理 #374）の [#370](https://github.com/128na/simutrans-addo
 - iss の狭軌は地上だけ（高架・橋・壁なし）。`iss_wng_0030` と `iss_wng_0060` は費用 15000・維持費 300 が同じで、絵も同じ（分岐の絵の向きだけ違う）。付属にトンネル `iss_tn_0060`（60 km/h、費用 60000・維持費 1200）、地下の way、車庫、留置線、踏切（道路 × 狭軌 3、狭軌 × 線路 1、狭軌 × 水路 1）がある
 - iss のレールの間は、ew のセルで狭軌 4px・標準軌 6px（`../refs/iss/release/pak128/way/rail/narrow_kt.png`・`standard_kt.png`）。AMI の在来線は約 6.1px。レールの中心を 0.7 倍に寄せた狭軌は約 4.3px
 - refs の pak128・pak128.japan に `waytype=narrowgauge_track` の車両の dat は無い
-- 本体は、分岐の絵（1・2）を線路（tram を含む）と道路でだけ自動で選ぶ（[way-addon.md](../reference/way-addon.md) の 9.2 にすでにある）。狭軌は選ばれない
+- pak128 の `config/menuconf.tab` に狭軌の道具の窓（`toolbar[10]`。way・橋・トンネル・車庫）がある。AMI を入れると、窓に 30・60・トンネル・車庫が並び、30 の道具で地図を押して敷けた（`addons/ami/docs/narrow_menu.png`）
 - squirrel で、タイルの上の物は `square_x(x, y).get_ground_tile().get_objects()` で引けた（`tile_x` から車庫を直接は引けなかった）。狭軌の waytype は `wt_narrowgauge`
 - `catalog.TRACKS` に足すと、旧描画位置（`OLD_TRACKS`）・基盤・高架・橋・踏切・壁の対応まで一緒に増え、それぞれが waytype `track` を前提にしている。狭軌は `TRACKS` に入れず、`catalog.NARROWS` として別に持ち、`render.py` の `TRACK_PROFILES` に直接足した
 
 ## 推測・未確認事項
 
+- 本体が狭軌の分岐の絵（1・2）を自動で選ぶかは見ていない。[way-addon.md](../reference/way-addon.md) の 9.2 は「線路と道路だけ」と書き、同じ文書の v64 の ex 画像の節は「`select_switch_image` は way の種類を問わない」と書く
 - 256 の pak をゲームに入れては見ていない（シートを描いて見ただけ）
 - 本家 125.0.1 での読み込みは見ていない
 - 実際の狭軌の車両アドオン（pak128 用の配布物）では走らせていない。走らせたのは、pak128 の気動車 `620_Railcar_Addon` の dat を写して waytype を `narrowgauge_track` にした試しの車両（ゲームの写しの中だけ。リポジトリには入れていない）
