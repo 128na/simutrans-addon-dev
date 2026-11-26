@@ -593,14 +593,18 @@ def _road_sheet(style="street"):
             # タイルの角（3.54）までの路面が壁の外へはみ出して見えた（2026-11-15、ゲームで確認）
             # 型の柱は坂の高さまで伸ばす（ROAD_CUT_Z）。路面は坂を当てた後なので、-2〜2 では橋の端の坂（高さ H〜2H）の
             # 上の方が削れずに残り、壁の手前に路面が出て躯体にかぶさった（2026-11-15、ゲームで確認）
-            beyond = _beyond_prisms(kept, paths, kl, EXPWY_WALL_U, EXPWY_WALL_W, ROAD_CUT_Z)
+            recess = row0 == block and prof.get("snow_recess", False)
+            # L 字のカーブ（生活道路）の雪の絵（recess）では、角の内側の柱を角で止める。越えると、もう一方の脚のタイルの辺に沿って
+            # 壁の外の面からタイルの辺までの帯が削られ、路肩の雪の板がその帯の分だけ欠けた（下の inner では路面の板が帯の分だけ欠け、
+            # 地面が透ける点線になった。#378）。温帯の絵と高架は、帯で削れた今の絵のまま変えない
+            beyond = _beyond_prisms(kept, paths, kl, EXPWY_WALL_U, EXPWY_WALL_W, ROAD_CUT_Z, ell_inner_stop=recess)
             # prof["snow_recess"]（無くてよい。AMI の道路の地上の基盤の版）: 雪の絵だけ、路面の板（asphalt）を ROAD_SNOW_ASPHALT_RECESS
             # だけ内で切る（#360）。同じ所で切ると、路肩の雪の板（厚み 0.0115）の下に路面の板（厚み 0.04）の切り口の縦の面が影の色で出て、
             # タイルの手前の縁に暗い 1 行（256）ができた。内へ寄せると雪の板が張り出して切り口を隠す（その下は透明）。温帯の絵は変えない
-            recess = row0 == block and prof.get("snow_recess", False)
             # 寄せるのは壁の厚みの側（ww）: 横の壁の外の面（wu + ww。斜めは倍率 kl が掛かり 0.1 × kl）と、行き止まりの端の壁（endw）の
             # 外の面（経路の端から ww）が両方とも内へ寄る。タイルの端に立つ端の壁（endw_edge。線路だけ）は ww を使わないので寄らない
-            inner = _beyond_prisms(kept, paths, kl, EXPWY_WALL_U, EXPWY_WALL_W - ROAD_SNOW_ASPHALT_RECESS, ROAD_CUT_Z) if recess else None
+            inner = _beyond_prisms(kept, paths, kl, EXPWY_WALL_U, EXPWY_WALL_W - ROAD_SNOW_ASPHALT_RECESS, ROAD_CUT_Z,
+                                   ell_inner_stop=True) if recess else None
             if beyond:
                 def cutters_of(pieces):
                     # 抜く形（壁の外側の角柱）は 1 つずつ順に抜く（まとめると自己交差して use_self が要り遅い。assemble._carve と同じ）

@@ -6,7 +6,7 @@
 #   MAKEOBJ_FROM_PATH=1 bash addons/ami/check.sh   # ci.env の makeobj でなく、PATH の makeobj を使う
 #   HEADLESS_SIM_BIN=<sim> HEADLESS_PAKSET=<simutrans-test-base.zip> bash addons/ami/check.sh   # 画面を出さない本体で pak を読む検査（下記）。Windows の手元はこれを渡す。渡さないと飛ばす
 # 道具の版は ci.env。makeobj と dat_linter は TOOLS_DIR（既定は ~/.cache/simutrans-addon-dev/ci-tools）に取ってくる。
-# 要るもの: Python（と Pillow・numpy。Pillow は check_cells.py が PNG を速く読む（無くても通るが数分かかる）のと、check_snow_edge.py が要る。numpy は check_ground_mask.py・check_snow_edge.py が要る。版は ci.env）、gh（道具を取るとき。サインイン済み）、uvx か pipx（ruff）。
+# 要るもの: Python（と Pillow・numpy。Pillow は check_cells.py が PNG を速く読む（無くても通るが数分かかる）のと、check_snow_edge.py が要る。numpy は check_ground_mask.py・check_snow_edge.py・check_curve_join.py が要る。版は ci.env）、gh（道具を取るとき。サインイン済み）、uvx か pipx（ruff）。
 # シートの描画（Blender）はしない（#50）。
 set -euo pipefail
 unset CHECK_SKIP_MISSING  # 環境に残っていると、128 の検査もシートの無い物を黙って飛ばす。256 の検査の行だけで付ける
@@ -120,6 +120,10 @@ step "雪の基盤の版の下の端に路面の板の切り口が出ていな�
 "$PY" -X utf8 "$AMI/check_snow_edge.py" --self-test
 "$PY" -X utf8 "$AMI/check_snow_edge.py"
 
+step "道路のカーブと隣の直線をつないだとき、タイルの辺に地面が透けないか（check_curve_join.py。#378）"
+"$PY" -X utf8 "$AMI/check_curve_join.py" --self-test
+"$PY" -X utf8 "$AMI/check_curve_join.py"
+
 # 256 のシート（src256/。SHEET_PAK_SIZE=256。#261）。256 の PNG は dat と生活道路だけをコミットする（全部は大きすぎる）ので、CI は絵のある物だけを見る
 # （CHECK_SKIP_MISSING=1: シートの無い物は飛ばす）。全部のシートを描いた手元では CHECK_256_FULL=1 を付けて、全部を厳しく見る
 # （絵の無い物があると落ちる。踏切・車庫・盛土のシートの検査も含む）
@@ -132,11 +136,13 @@ if [ "${CHECK_256_FULL:-}" = "1" ]; then
   "$PY" -X utf8 "$AMI/check_depot.py"
   "$PY" -X utf8 "$AMI/check_embankment.py"
   "$PY" -X utf8 "$AMI/check_snow_edge.py"
+  "$PY" -X utf8 "$AMI/check_curve_join.py"
 else
   step "256 のシートの検査（絵のある物だけ。アイコン・カーソル・空のセル・雪の基盤の版の下の端。SHEET_PAK_SIZE=256。#261）"
   CHECK_SKIP_MISSING=1 "$PY" -X utf8 "$AMI/check_icons.py"
   CHECK_SKIP_MISSING=1 "$PY" -X utf8 "$AMI/check_cells.py"
   CHECK_SKIP_MISSING=1 "$PY" -X utf8 "$AMI/check_snow_edge.py"
+  CHECK_SKIP_MISSING=1 "$PY" -X utf8 "$AMI/check_curve_join.py"
 fi
 unset SHEET_PAK_SIZE
 
