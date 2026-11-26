@@ -11,13 +11,7 @@ https://github.com/128na/simutrans-addon-dev/releases
 設定値は仮です。クラッシュしなければどうということないという心持ちでご利用ください。
 Y字、三方分岐などOTRPでのみ表示可能なものも含まれています。
 道路標識の最高速度・一時停止は飾りで、車の速さは変わりません（効くのは一方通行と最低速度）。
-
-■ ami-beta.3 からの変更（道路）
-
-- 一般道路・生活道路（ami_road_general・ami_road_local）の基盤と高架を、single（両側に壁）だけにしました。奥だけ・手前だけ・壁なし（back・center・front）の版は無くなります。
-  消えた物: ami_road_general_base_back・_base_center・_base_front、ami_road_general_elev_back・_elev_center・_elev_front と、生活道路（ami_road_local）の同じ 6 個（計 12 個）。
-  幹線道路・高速道路は今までどおり 4 版です。
-- 消えた物を使っていた保存データは読み込めなくなります。代わりの物への置き換えはしません（ベータ版のため）。必要なら single の版で敷き直してください。
+版ごとの変更（増えた物・無くなった物）は、上の Release の各版の説明に書いています。
 
 ■ 動作確認
 
