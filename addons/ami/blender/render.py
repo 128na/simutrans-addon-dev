@@ -270,6 +270,60 @@ for _t in catalog.ALL_TRACKS:
                                      "groups": ("body", "weathering", "buffer"), **_way_flags(_t.way),
                                      "end_from_edge": END_FROM_EDGE, "ex_switches": True}, **TRACK_SETTINGS[_t.key])
 
+# ---------------------------------------------------------------- 狭軌（ami_narrow_*。#370）
+# 在来線の部品（まくらぎ・レール・汚れ・車止め・道床）を使い回し、軌間だけを内へ寄せる（少ない物で多くのパーツ）。部品の形は横幅の倍率 k を受けるので、
+# 横幅の倍率が gauge の部品（まくらぎ・汚れ・まくらぎの間の砕石・車止め）は k に NARROW_GAUGE_K を掛けて縮める（_narrow_k）。レールと頭頂面の帯は
+# 太さを変えずに中心だけ寄せる（縮めると 1px を割って途切れる）。道床（bed）は NARROW_BED_K で細くする。壁・基盤・架線は作らない（catalog.py）。
+# 軌間: iss の狭軌は ew のセルでレールの間 4px（標準軌は 6px。../refs/iss/release/pak128/way/rail/narrow_kt.png・standard_kt.png）。
+# 1067/1435 ≈ 0.74 と iss の 2/3 の間の 0.7 にした（画面でレールの間 4px）
+NARROW_GAUGE_K = 0.7
+NARROW_BED_K = 0.75  # 道床の幅の倍率（底 ±1.9 → ±1.43、肩 ±1.45 → ±1.09）
+_RAIL_HALF_W = (RAIL_OUT - RAIL_IN) / 2
+NARROW_RAIL_C = (RAIL_IN + RAIL_OUT) / 2 * NARROW_GAUGE_K  # レールの中心の、経路の中心からの距離
+NARROW_RAIL_IN, NARROW_RAIL_OUT = NARROW_RAIL_C - _RAIL_HALF_W, NARROW_RAIL_C + _RAIL_HALF_W
+
+
+def _narrow_k(part, f):
+    """部品 part の横幅の倍率を f 倍にする（形を作る関数に渡す k を縮める）"""
+    shape = part.shape
+    return dataclasses.replace(part, shape=lambda path, k: shape(path, k * f))
+
+
+def _narrow_rail_shape(side):
+    """狭軌のレール（在来線の _rail_shape と同じ断面で、横の位置だけ NARROW_RAIL_IN〜OUT）"""
+    def shape(path, k):
+        a, b = NARROW_RAIL_IN * k, NARROW_RAIL_OUT * k
+        prof = [(a, R.RAIL_Z0), (b, R.RAIL_Z0), (b, RAIL_Z1), (a, RAIL_Z1)]
+        return R.sweep(path, [(side * u, v) for u, v in prof][::side])
+    return shape
+
+
+_NARROW_SECTION = [(u * NARROW_BED_K, v) for u, v in _BALLAST_SECTION]
+# 在来線で描く部品（差し替えを当てた後）から、gauge の部品を縮めた差し替え表を作る
+_NARROW_REPLACE = {p.name: _narrow_k(p, NARROW_GAUGE_K)
+                   for p in R.track_sheet_parts({"replace": _BALLAST_REPLACE, "parts": _BALLAST_PARTS}) if p.width == "gauge"}
+_NARROW_REPLACE.update(
+    railL=R.Part("railL", "rail", "gauge", _rail_mat, _narrow_rail_shape(-1)),
+    railR=R.Part("railR", "rail", "gauge", _rail_mat, _narrow_rail_shape(1)),
+    rail_head=R.Part("rail_head", "rail", "gauge", ("rail_head", RAIL_HEAD_RGB, 0.4, 0.0),
+                     R._strip_shape(NARROW_RAIL_IN + 0.01, NARROW_RAIL_OUT - 0.01, RAIL_Z1 + 0.001, 0.004)),
+    ballast=dataclasses.replace(_old["ballast"], shape=R.bed_to_edge(_NARROW_SECTION)))
+# 30（軽便）: 木のまくらぎと、土と細かい砂利の道床。赤みを抑える（slope_measure.py がレールを「赤 − 青」の大きい行で探す。汚れの帯と同じ理由）
+# 土の道床は在来線の砕石（_stone を掛けた後で 0.21〜0.40）と同じくらいの暗さの黄みの灰、まくらぎはそれより暗い焦げ茶（防腐剤を塗った木）
+NARROW_WOOD_SLEEPER_RGB = ((0.05, 0.042, 0.035), (0.10, 0.085, 0.07))
+NARROW_EARTH_RGB = ((0.26, 0.24, 0.20), (0.40, 0.37, 0.31))
+NARROW_EARTH_GRAIN = BALLAST_GRAIN
+_NARROW_EARTH = R.track_noise("ami_narrow_earth", *NARROW_EARTH_RGB, NARROW_EARTH_GRAIN)
+_NARROW_WOOD_SKIN = {"ballast": _NARROW_EARTH, "ballast_fill": _NARROW_EARTH,
+                     "sleeper": R.track_noise("ami_narrow_sleeper_wood", *NARROW_WOOD_SLEEPER_RGB, 5.0)}
+NARROW_SETTINGS = {catalog.NARROW_WOOD: {"label": "30", "skin": _NARROW_WOOD_SKIN},
+                   catalog.NARROW_BALLAST: {"label": "60", "skin": _BALLAST_SKIN}}  # 60 は在来線の砕石・PC まくらぎ
+for _n, _s in NARROW_SETTINGS.items():
+    # 分岐の追加画像（ex_switches）は描かない: 本体が ex 画像を選ぶのは track・tram・road の way だけ（ami_dat.py の EX_WAYS）
+    R.TRACK_PROFILES[_p(_n)] = dict({"sheet": _n, "spill": 1 * R.SCALE, "datums": _DATUMS, "snow": True,
+                                     "groups": ("body", "weathering", "buffer"), **_way_flags(_n), "end_from_edge": END_FROM_EDGE,
+                                     "snow_skin": _BALLAST_SNOW_SKIN, "replace": _NARROW_REPLACE, "parts": _BALLAST_PARTS}, **_s)
+
 # ---------------------------------------------------------------- 路面軌道（ami_tram。#23）
 # tram（waytype=tram_track）で道路の上に重ねて敷く（ADR 0002）。コンクリートで固めた床・縁の明るい帯・レールの頭・溝・さび（sheetlib の
 # tram_parts）。床は道路の路面と同じ高さ（基準面は動かさない FLAT）で、絵の基準位置と持ち分は道路と同じ ROAD_CY（spill 0）。
@@ -741,6 +795,11 @@ for _old_pier, _pier_datums in ((False, _DATUMS), (True, _OLD_DATUMS)):
 for _t in catalog.ALL_TRACKS:
     SHEETS[_t.bridge] = _track_target(_p(_t.bridge))
     SHEETS[_t.tunnel] = _tunnel_target(_t)
+# 狭軌（#370）: 地上の 2 種と、60 のトンネル（坑口は線路のトンネル、道床・レールは狭軌の 60）
+for _n in catalog.NARROWS:
+    SHEETS[_n] = _track_target(_p(_n))
+SHEETS[catalog.NARROW_TUNNEL] = lambda: R.tunnel_sheet("track", profile=_p(catalog.NARROW_BALLAST), sheet=catalog.NARROW_TUNNEL,
+                                                        label=NARROW_SETTINGS[catalog.NARROW_BALLAST]["label"], mat_skin=TRACK_WALL_SKIN)
 _road_target = lambda key: lambda: R.road_sheet(key)
 for _r in catalog.ROADS:
     SHEETS[_r.way] = _road_target(_r.key)

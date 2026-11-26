@@ -179,6 +179,14 @@ ami_monorail_suspended_front
 懸垂式モノレール（柱が手前）（AMI）
 ami_monorail_suspended_power
 モノレールの電化（懸垂式）（AMI）
+ami_narrow_ballast
+狭軌（60 km/h・砕石）（AMI）
+ami_narrow_ballast_tunnel
+狭軌のトンネル（AMI）
+ami_narrow_depot
+狭軌の車庫（AMI）
+ami_narrow_wood
+狭軌（30 km/h・木のまくらぎ）（AMI）
 ami_pier_rail
 線路用の橋脚（AMI）
 ami_pier_rail_gate

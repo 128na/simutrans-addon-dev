@@ -1,7 +1,7 @@
 """AMI の配る zip を作る（アドオンのディレクトリで。先に `python -X utf8 build.py` で dist/ を作っておく）。
 
     python -X utf8 release.py --version beta.1 --paks ami_rail ami_road ami_tram ami_extra
-    （第 2 弾の景観を入れるときは ami_scenery、モノレール・運河を入れるときは ami_monorail・ami_canal も並べる。#123・#113・#114）
+    （第 2 弾の景観を入れるときは ami_scenery、モノレール・運河・リニア・狭軌を入れるときは ami_monorail・ami_canal・ami_maglev・ami_narrow も並べる。#123・#113・#114・#371・#370）
 
 zip（work/release/ami-<版>.zip）の中身:
     pak128/<pak>.pak   --paks で選んだ dist/ の pak（名前は拡張子なし）。ゲームの addons/ に展開すると addons/pak128/ に入る
@@ -41,7 +41,7 @@ OUT = os.path.join(HERE, "work", "release")
 TEMPLATE = os.path.join(HERE, "release")
 TEXTS = os.path.join(TEMPLATE, "text")
 THUMBNAIL = os.path.join(HERE, "docs", "thumbnail", "thumbnail.png")
-KINDS = ("ami_rail", "ami_road", "ami_tram", "ami_monorail", "ami_canal", "ami_maglev", "ami_extra", "ami_scenery", "ami_rail_old")  # build.py の KINDS と同じ
+KINDS = ("ami_rail", "ami_road", "ami_tram", "ami_monorail", "ami_canal", "ami_maglev", "ami_narrow", "ami_extra", "ami_scenery", "ami_rail_old")  # build.py の KINDS と同じ
 # 固定の版名（版は beta.<n>・タグは ami-beta.<n>。256 の試しは alpha.<n>。README の「配る形」）。前が英数字なら版名ではない
 FIXED_VERSION = re.compile(r"(?<![A-Za-z0-9])(?:alpha|beta)\.\d+", re.IGNORECASE)
 

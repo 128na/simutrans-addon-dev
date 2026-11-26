@@ -90,6 +90,9 @@ VALUES = {
     "ami_canal_scenic": dict(waytype="water", speed=60, cost=25000, maintenance=500, intro_year=1900),  # 景観の運河（#161）。実用と同じ値
     # 懸垂式モノレール（#116）。値は #110 の一覧（跨座式と同じ）。地上の 3 版の値（下で版ごとに写す）
     "ami_monorail_suspended": dict(waytype="monorail_track", speed=150, cost=30000, maintenance=600, intro_year=1900),
+    # 狭軌（#370）。速さは iss の iss_wng_0030・iss_wng_0060 と同じ。60 の費用・維持費は iss（在来線と同じ 15000・300）、30 は路面軌道と同じ（軽便）
+    catalog.NARROW_WOOD: dict(waytype="narrowgauge_track", speed=30, cost=10000, maintenance=200, intro_year=1900),
+    catalog.NARROW_BALLAST: dict(waytype="narrowgauge_track", speed=60, cost=15000, maintenance=300, intro_year=1900),
 }
 # リニア（#371）。値はユーザーの判断 75（案 a）: 速さは iss と同じ 1200 km/h、費用・維持費は高速線（40000・800）の 1.5 倍（iss の 500000・10000 は
 # AMI の値から離れすぎるので寄せた）。超電導・常電導・チューブ式で同じ。版・高架は下で写す
@@ -266,6 +269,8 @@ TUNNELS = {_t.tunnel: (_t.way, _t.tunnel) for _t in catalog.ALL_TRACKS}  # 名�
 TUNNELS.update({_r.tunnel: (_r.way, _r.tunnel) for _r in catalog.ROADS})  # 道路のトンネル（#22）。シートの並びは線路のトンネルと同じ
 TUNNELS[catalog.MONORAIL_TUNNEL] = (catalog.MONORAIL, catalog.MONORAIL_TUNNEL)  # 跨座式モノレールのトンネル（#113）。中の way は地上の版
 TUNNELS.update({_n: (_w, _n) for _n, _w in catalog.MAGLEV_TUNNELS.items()})  # リニアのトンネル（#371）。中の way は地上の way（超電導・チューブ式は center の版）
+# 狭軌のトンネル（#370）: 60 の版だけ（iss の iss_tn_0060 と同じ。費用・維持費も TUNNEL_COST_K 倍で iss と同じ 60000・1200）
+TUNNELS[catalog.NARROW_TUNNEL] = (catalog.NARROW_BALLAST, catalog.NARROW_TUNNEL)
 
 
 def _head(comment, obj, name, intro_year, before=(), after=()):
@@ -617,7 +622,8 @@ def canal_crossing_dat_text(name, way):
 DEPOT_VALUES = {"track": dict(cost=850000, maintenance=1800), "tram_track": dict(cost=850000, maintenance=1800),
                 "road": dict(cost=700000, maintenance=1800), "monorail_track": dict(cost=850000, maintenance=1800),
                 "water": dict(cost=900000, maintenance=1800),  # 船の車庫（#114）
-                "maglev_track": dict(cost=850000, maintenance=1800)}  # リニアの車庫（#371。モノレールと同じ）
+                "maglev_track": dict(cost=850000, maintenance=1800),  # リニアの車庫（#371。モノレールと同じ）
+                "narrowgauge_track": dict(cost=850000, maintenance=1800)}  # 狭軌の車庫（#370）。線路の車庫と同じ
 DEPOT_INTRO_YEAR = 1900
 DEPOT_LAYOUTS = 4
 DEPOT_SNOW_ROW = sheet_rows.DEPOT_SNOW_ROW

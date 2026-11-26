@@ -4,7 +4,7 @@
 
 ## リニアの作り（#371）
 
-- 範囲: 第 6 弾。ADR 0017「狭軌とリニアを範囲に入れる」（#370 で書く）による。pak128 にリニアの車両は無く、車両は別のアドオンに任せる。AMI には車両を入れない
+- 範囲: 第 6 弾。[ADR 0017](../../../../docs/adr/0017-ami-scope-narrow-gauge-and-linear.md)（狭軌とリニアを範囲に入れる）による。pak128 にリニアの車両は無く、車両は別のアドオンに任せる。AMI には車両を入れない
 - 手本: 超電導・常電導は iss のリニア（`../refs/iss/src/way/maglev/`・`../refs/iss/src/way-object/maglev/linear_guide.dat`・`../refs/iss/src/tunnel/maglev/`。合成済みの絵の切り抜きは `docs/maglev371_iss_reference.png`）。チューブ式は marine_express（`../refs/marine_express_1.1/marine_express/`。ユーザーのアドオン、WTFPL）。名前・版・値・断面は、案をユーザーが決めた（2026-11-26、判断 75「おすすめの案で描く」。[#371](https://github.com/128na/simutrans-addon-dev/issues/371) のコメント）。チューブ式は、その後のユーザーの指示（2026-11-27「チューブ式リニアのアドオンはこれを参考に」）で、iss の溝の桁から marine_express の作りに替えた
 - 名前: 形で付けた。iss の「transrapid」は商品名、「marine」は作品名なので使わない
 
