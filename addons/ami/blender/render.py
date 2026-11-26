@@ -459,12 +459,15 @@ for _w, _wold in _WALL_TRACKS:
 
 # 路面軌道の架線の way-object（ami_tram_catenary。#376。docs/objects/rail.md の「路面軌道の架線」）: 路面軌道の経路に、路面の架線の
 # 柱・腕（cell_fills。TRAM_CAT_FILLS）と、線路の架線の線を張る。路面軌道の本体は描くが、way のシートは書かない（wall_only。way-object のシートだけ）。
-# 路面軌道の T字のすき間埋め（TRAM_CELL_FILLS）と、道路の端を覆う帯（fill_back_band）は way の絵のためのものなので外す
+# 路面軌道の T字のすき間埋め（TRAM_CELL_FILLS）と、道路の端を覆う帯（fill_back_band）は way の絵のためのものなので外す。
+# 線の色は、線路の架線の暗い茶より明るい灰色（線は路面の道路の上に重なり、暗い色は暗いアスファルトに溶けて見えなかった。#376）
+TRAM_CAT_WIRE = ("ami_tram_cat_wire", (0.55, 0.52, 0.48), 0.5, 0.5)
 R.TRACK_PROFILES[f"{TRAM_KEY}_catenary"] = dict(
     R.TRACK_PROFILES[TRAM_KEY], sheet="ami_tram_cat", wall_sheet=catalog.TRAM_CATENARY, wall_only=True, snow=False,
     groups=R.TRACK_PROFILES[TRAM_KEY]["groups"] + ("catenary",), replace=dict(R.TRAM_WEAR_REPLACE, cat_dropper=R.TRAM_CAT_DROPPER),
     cell_fills=R.TRAM_CAT_FILLS, fill_back_band=False, rise=R.CAT_RISE, wall_label=CATENARY_LABEL,
-    close=False)  # way-object には近い斜めの絵のキーが無い（makeobj の way_obj_writer）
+    close=False,  # way-object には近い斜めの絵のキーが無い（makeobj の way_obj_writer）
+    skin={n: TRAM_CAT_WIRE for n in ("cat_wire", "cat_messenger", "cat_dropper", "cat_hanger")})
 
 # 近い斜めの分け合うタイル用の架線つきの壁（ami_wall_rail_twin_catenary）の絵。壁だけの twin と同じく、nw・sw の線は back、ne・se の線は
 # front の版の斜めのセルを使う。斜めの梁だけを短くした（CAT_BEAM_REACH_TWIN。分け合うタイルの隣の線の外の壁からはみ出さない）。

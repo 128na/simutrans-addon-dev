@@ -85,6 +85,7 @@ dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）�
 | もの | 作り | 名前（仮） |
 |---|---|---|
 | 線路の壁と架線 | way-object。架線つき（電化）の `single`・`back`・`center`（架線だけ）・`front` と、壁だけの `single`・`back`・`center`（行き止まりの端の壁だけ）・`front` | `ami_wall_rail_*`・`ami_wall_rail_*_catenary` |
+| 路面軌道の架線 | way-object（電化）。歩道の片側の柱と腕に、線路の架線の線（#376。橋・トンネル・高架は無い） | `ami_tram_catenary` |
 | 道路の壁 | way-object。`single`・`back`・`front`。中央分離帯つきの `front_divider`・`center_divider`・`twin_divider`（#118） | `ami_wall_road_*` |
 | 橋脚 | 高架の真下の地面に敷く、別の waytype の way。線路用（単柱と門型）と道路用 | `ami_pier_rail`・`ami_pier_rail_gate`・`ami_pier_road` |
 | 歩道 | 道路の隣のタイルに敷く、別の waytype の way。舗装の種類と高架の版がある | `ami_sidewalk`・`ami_sidewalk_<舗装>`・`ami_sidewalk_elev` |
@@ -133,6 +134,7 @@ dat のファイル名と pak に入る名前は同じ（`src/<名前>.dat`）�
 - 導入: zip の中の `pak128` フォルダを、Simutrans の `addons` フォルダ（無ければ作る）に入れる。起動のオプション `-addons` は要らない（付けずに起動すると、アドオンを読み込むかを確かめる画面が出て、そこで選べる。2026-11-21、ユーザーの言葉。#137）
 - 線路・道路は「版」を選んで敷く。single（単線・1 本）、back・center・front（複線・3 線の奥・中・手前）。基盤・高架の版と壁は、アイコンの右下の漢字（単・後・中・前。近い斜め用の壁は 双）で版を見分ける。通常の版（壁を重ねない地上の線路・道路）には札が無い
 - 基盤の版の線路・道路に、同じ版の壁（way-object）を重ねると、壁つきの線路・道路になる。架線は「架線つきの壁」（壁の無い center の版は架線だけ）
+- 路面軌道の架線（`ami_tram_catenary`）は、路面軌道のメニューではなく**鉄道のメニュー**にある（way-object の一覧。本体が `tram_track` の架線を線路の物として扱う）。路面軌道を敷いた経路にそのまま張る（[「路面軌道の架線」](docs/objects/rail.md)）
 - 版の奥・手前は、南北の線なら西が back・東が front、東西の線なら北が back・南が front。複線のカーブで画面の右と左に曲がる角では、外の線と内の線の版（back・front）が角の前後で入れ替わる。角のタイルは南北の辺と同じ版にする。線路は東西の辺を先に敷き、南北の辺を角のタイルまで後から敷く。壁は逆に、南北の辺を角のタイルまで先に敷き、東西の辺を後から敷く（同じ速さの壁は、後から敷いても前の版のままになるため。作りは[「壁の敷き方」](docs/objects/rail.md)）
 - 高架の下の地面には、橋脚の way を敷く。橋脚は路面軌道のメニューにある（線路の高架の下を地上の線路が横切るタイルには敷かない。敷くと線路とつながるか、線路が切れる。[「高架と橋脚の作り」](docs/objects/rail.md)）
 - 歩道は船のメニューにある（waytype が `water`）。道路の隣のタイルに敷く
@@ -307,6 +309,7 @@ GAME_DIR=<検証用のフォルダ> NUT=ingame/tram_sample.nut OUT=work/tram bas
 - `ingame/tram_sample.nut` は、線路の見本と同じ区画（A・F・C・B・D・E・G・I・H）を、土の上と、AMI の道路 3 種・pak128 標準の `Road_050` の上（道路を先に敷いて同じ経路に重ねる）に、温暖側 (20,20) と降雪側 (276,20) で 30 ずつ南へずらして敷く。土の上の区画には、橋脚とのつながりの区画 P もある。表は `tram_sample.nut` の冒頭
 - `[check]` の行: 区画 G の分け合うタイル（道路の上では道路と路面軌道で `two_ways=true` になる）、区画 I の固定の絵、区画 H の自動選択の絵（通常の T字と同じなら `(plain)`）、道路の上の区画で道路が残っているか（`road=`）、区画 P のタイルの way。判定は `tram_sample.nut` の `SWITCH_IMAGES`（`ami_dat.py` の `TRAM_SWITCH_IMAGES` と同じにする）で変わる
 - 撮る場所は `sample_spots.sh` の `TRAM_SPOTS`（`GR`・`LO`・`GE`・`EX`・`ST` は土・生活道路・一般道路・高速道路・`Road_050` の上）。47 か所 × 温暖側・降雪側で 94 画面
+- 路面軌道の架線（#376）は `GAME_DIR=<検証用のフォルダ> PORT=<ポート> bash ingame/tram_catenary.sh`。一般道路の上と土の上に路面軌道と架線を敷き、電化の路面電車の車庫を建てる。`CAPTURE=1`（区画と走る電車を撮る）・`TOOLBAR=1`（鉄道と路面軌道のメニューを撮る）・`STOP=1`（閉じて写しを消す）。区画の表は `ingame/tram_catenary.nut` の冒頭、`[check]` の行は電化（`elec`）と使った車両
 - 確認画像は `tram_*.png`（2026-11-20）。`GE_B`・`EX_B`・`ST_B`・`GR_B` は輪と十字（一般道路・高速道路・`Road_050`・土の上）、`GE_B_zoom` はその十字・カーブ・T字の 4 倍、`GE_AFC`・`GR_AFC`（行き止まり・1 タイル・斜め）、`GE_DE`（坂と急坂）、`GR_G1`・`GE_G1`（近い斜め）、`GR_I`（十字の固定の 1・2）、`GR_H0`（分岐の自動選択）、`switch_H0_zoom`（左が分岐の絵あり、右が無し。5 倍）、`GR_P`（橋脚の列を横切る）、`snow_*` は降雪側、`layout_*` はレイアウト検証用モード
 
 歩道の見本も別のゲームで敷く:
