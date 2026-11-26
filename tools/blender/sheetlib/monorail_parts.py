@@ -135,9 +135,11 @@ def _pier_geometry(paths, side, z_beam):
     return merge(geo + arms) if geo or arms else None
 
 
-def monorail_pier_fills(side):
-    """高架の版の柱と腕（TRACK_PROFILES の "cell_fills"）。セルの全部の経路から、桁が出入りする辺と端を求めて作る"""
-    z_beam = MONO_BEAM_TOP - MONO_ELEV_BEAM_D
+def monorail_pier_fills(side, z_beam=None):
+    """高架の版の柱と腕（TRACK_PROFILES の "cell_fills"）。セルの全部の経路から、桁が出入りする辺と端を求めて作る。
+    z_beam は腕を渡す桁の下面の高さ（無ければ跨座式の高架の桁 MONO_BEAM_TOP − MONO_ELEV_BEAM_D。リニアの桁は maglev_parts が渡す。#371）"""
+    if z_beam is None:
+        z_beam = MONO_BEAM_TOP - MONO_ELEV_BEAM_D
 
     def make(paths):
         geo = _pier_geometry(paths, side, z_beam)

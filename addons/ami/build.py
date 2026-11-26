@@ -47,6 +47,7 @@ KINDS = {
     "ami_road.pak": ("ami_road_", "ami_mark_"),  # 路面表示（#187）は道路と組で使うので道路に入れる
     "ami_monorail.pak": ("ami_monorail",),  # 跨座式（#113。ADR 0008）・懸垂式（#116）のモノレールと電化。車庫 ami_monorail_depot も入る
     "ami_canal.pak": ("ami_canal",),  # 運河（#114。ADR 0008）。船の車庫 ami_canal_depot も入る
+    "ami_maglev.pak": ("ami_maglev",),  # リニア（#371。ADR 0017）。ガイドと車庫 ami_maglev_depot も入る
     "ami_extra.pak": ("ami_wall_", "ami_pier_", "ami_sidewalk", "ami_crossing_"),  # 踏切（#111）は線路・道路と組で使うので付属に入れる
     "ami_scenery.pak": ("ami_embankment_", "ami_sign_"),  # 景観（ADR 0008。盛土 #123・道路標識 #122）
     "ami_rail_old.pak": (),  # 旧描画位置の線路・壁・架線・橋脚（#26。ADR 0011）。名前の頭でなく catalog.is_old で決める（belongs）

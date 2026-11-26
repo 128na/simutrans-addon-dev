@@ -41,7 +41,7 @@ OUT = os.path.join(HERE, "work", "release")
 TEMPLATE = os.path.join(HERE, "release")
 TEXTS = os.path.join(TEMPLATE, "text")
 THUMBNAIL = os.path.join(HERE, "docs", "thumbnail", "thumbnail.png")
-KINDS = ("ami_rail", "ami_road", "ami_tram", "ami_monorail", "ami_canal", "ami_extra", "ami_scenery", "ami_rail_old")  # build.py の KINDS と同じ
+KINDS = ("ami_rail", "ami_road", "ami_tram", "ami_monorail", "ami_canal", "ami_maglev", "ami_extra", "ami_scenery", "ami_rail_old")  # build.py の KINDS と同じ
 # 固定の版名（版は beta.<n>・タグは ami-beta.<n>。256 の試しは alpha.<n>。README の「配る形」）。前が英数字なら版名ではない
 FIXED_VERSION = re.compile(r"(?<![A-Za-z0-9])(?:alpha|beta)\.\d+", re.IGNORECASE)
 

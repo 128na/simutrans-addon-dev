@@ -10,6 +10,7 @@
     slab_parts   スラブ軌道の部品（コンクリート道床・てん充層・スラブ・突起・締結装置。track_parts を import する）
     tram_parts   路面軌道の部品（コンクリートの床・縁の帯・レールの頭・溝・さび。track_parts を import する）
     monorail_parts 跨座式・懸垂式モノレールの部品（軌道桁と、柱・腕。track_parts を import する）
+    maglev_parts リニアの部品（超電導の床・ガイド、常電導の T 字の桁、チューブ式の溝の桁とチューブの骨組み。monorail_parts を import する）
     wall_parts   壁・基盤・橋・高架の橋脚（線路と道路で共通）
     catenary_parts 架線（柱・梁・吊り金具・トロリ線。線路の壁の way-object の電化の版）
     road_parts   道路の部品（路面・縁石・歩道・白線・車線・汚れ・雪）
@@ -29,7 +30,7 @@
 
 アドオンの入口と判定の道具からは `import sheetlib as R` で、どのモジュールの名前も `R.名前` で引ける（下で全部をここに出す）。
 """
-from . import core, wall_parts, catenary_parts, track_parts, slab_parts, tram_parts, monorail_parts, road_parts, assemble, cells
+from . import core, wall_parts, catenary_parts, track_parts, slab_parts, tram_parts, monorail_parts, maglev_parts, road_parts, assemble, cells
 from . import sheetlib as _sheets
 from . import sidewalk
 from . import crossing
@@ -41,7 +42,7 @@ from . import canal_crossing
 from . import roadsign
 from . import marking
 
-for _m in (core, track_parts, slab_parts, tram_parts, monorail_parts, wall_parts, catenary_parts, road_parts, assemble, cells, _sheets, sidewalk, crossing, depot, yard, roadsign):
+for _m in (core, track_parts, slab_parts, tram_parts, monorail_parts, maglev_parts, wall_parts, catenary_parts, road_parts, assemble, cells, _sheets, sidewalk, crossing, depot, yard, roadsign):
     globals().update({_k: _v for _k, _v in vars(_m).items() if not _k.startswith("__")})
 # 運河は、ほかのモジュールと同じ名前の _jobs・_own などを持つので、名前が canal・CANAL で始まるものだけを出す
 globals().update({_k: _v for _k, _v in vars(canal).items() if _k.lower().startswith("canal")})

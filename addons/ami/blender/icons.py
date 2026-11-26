@@ -52,7 +52,8 @@ SKIP_DATS = ("ex_donors.dat",)
 WAY_BG = {"rail": ((0, 196, 96), (0, 112, 56)), "tram": ((214, 160, 0), (140, 92, 0)),
           "road": ((96, 132, 196), (40, 64, 120)), "expwy": ((70, 90, 190), (24, 30, 96)),
           "monorail": ((168, 72, 200), (96, 32, 120)),  # モノレール（#113）は紫（色相 285。ほかの waytype と 20 度以上離す。check_icons.py）
-          "canal": ((0, 170, 190), (0, 96, 112))}  # 運河（#114）は青緑（色相 186）
+          "canal": ((0, 170, 190), (0, 96, 112)),  # 運河（#114）は青緑（色相 186）
+          "maglev": ((214, 40, 72), (120, 16, 36))}  # リニア（#371）は紅（色相 349。モノレールの 285・路面軌道の 45 から 20 度以上離す）
 VERSION_MARK = {"single": "単", "back": "後", "center": "中", "front": "前", "twin": "双"}
 DECK = (215, 215, 220)  # 帯の床・柱の色
 BOLT = [(13, 1), (4, 15), (9, 15), (6, 26), (17, 10), (12, 10), (16, 1)]  # 稲妻（32px の座標）
@@ -105,6 +106,8 @@ def describe(d):
         info["way"] = "monorail"
     elif name.startswith("ami_canal"):  # 運河と船の車庫（#114）
         info["way"] = "canal"
+    elif name.startswith("ami_maglev"):  # リニアの way・高架・トンネル・ガイドと車庫（#371）
+        info["way"] = "maglev"
     elif "road" in name or "sidewalk" in name or obj == "roadsign":  # 歩道（ami_sidewalk*）と歩道の柵（ami_wall_sidewalk_*）は道路の色（#25・#119）。道路標識も（#122）
         info["way"] = "road"
     else:
