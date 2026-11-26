@@ -6,9 +6,12 @@
 bpy などを差し替えて cells を読み、SHEET_PAK_SIZE=256 で次を確かめる。失敗は終了コード 1。
 - 四隅の高さ 0〜2（最低 0）の 65 形すべてで、マスクが地面のマスをセルの (128, 62 + GROUND_PHASE) に置いた形と同じ
 - 平らのマスクを格子に並べたとき、隙間も重なりも無い
-- side の上下・左右が重ならず、合わせると全体になる
-地面の形は pak256 の objects/ground/temperate/draw_ground.py の column_span・covered と同じ決まり（列 x の中心 x + 0.5 で
-上の辺（左→上→右の角）と下の辺（左→下→右の角）を引き、行 y を 上 <= y < 下 で塗る）を、ここに書き写して使う（別のリポジトリなので読み込まない）。
+- side の上下・左右が重ならず、合わせると全体になる（既定の引数のとき）
+- 広げたマスク（線路の spill、道路の cy = ROAD_CY、高架の lower、橋の端の solid）が、平らと坂で素のマスクを含み、
+  平らの spill・道路のマスクを格子に並べて隙間が無い
+地面の形は pak256（128-bit-net/pak256 の 54fc440）の objects/ground/temperate/draw_ground.py の column_span・covered と同じ決まり
+（列 x の中心 x + 0.5 で上の辺（左→上→右の角）と下の辺（左→下→右の角）を引き、行 y を 上 <= y < 下 で塗る）を、
+ここに書き写して使う（別のリポジトリなので読み込まない。原本が変わったら写し直す）。
 """
 import itertools
 import os
@@ -64,15 +67,33 @@ for s in shapes:
     if (got ^ want).any():
         fails.append(f"形 {s}（sw, se, ne, nw）: 欠け {int((want & ~got).sum())}・余り {int((got & ~want).sum())}")
 
-flat = cells._ground_mask(None)
-canvas = np.zeros((CELL * 3, CELL * 3), int)
-for i, j in itertools.product(range(-3, 4), repeat=2):
-    ox, oy = CELL + (i - j) * GCELL // 2, CELL + (i + j) * GCELL // 4
-    if 0 <= ox <= 2 * CELL and 0 <= oy <= 2 * CELL:
-        canvas[oy:oy + CELL, ox:ox + CELL] += flat
-core = canvas[CELL + CELL // 4:2 * CELL - CELL // 4, CELL + CELL // 4:2 * CELL - CELL // 4]
+def tiled(mask):
+    """平らのマスクを格子に並べ、真ん中の範囲で各画素を何枚が覆うかを返す"""
+    canvas = np.zeros((CELL * 3, CELL * 3), int)
+    for i, j in itertools.product(range(-3, 4), repeat=2):
+        ox, oy = CELL + (i - j) * GCELL // 2, CELL + (i + j) * GCELL // 4
+        if 0 <= ox <= 2 * CELL and 0 <= oy <= 2 * CELL:
+            canvas[oy:oy + CELL, ox:ox + CELL] += mask
+    return canvas[CELL + CELL // 4:2 * CELL - CELL // 4, CELL + CELL // 4:2 * CELL - CELL // 4]
+
+
+core = tiled(cells._ground_mask(None))
 if (core != 1).any():
     fails.append(f"平らの並び: 重なり {int((core > 1).sum())}・隙間 {int((core == 0).sum())}")
+
+# 広げたマスク（呼び出しの引数の組。値は画素で、AMI の線路の spill は 2・高架の lower は 32 前後）
+WIDENED = {"spill": dict(spill=2), "road": dict(cy=cells.ROAD_CY), "lower": dict(cy=cells.ROAD_CY, lower=32)}
+for s in [(0, 0, 0, 0), (1, 1, 0, 0), (0, 0, 2, 2), (1, 0, 0, 0)]:
+    sl = slope_of(*s)
+    for name, kw in list(WIDENED.items()) + ([("solid", dict(solid=True))] if sl else []):
+        # 素のマスクは同じ cy の菱形だけ（道路は地面より下の ROAD_CY に描くので、地面の位置の菱形は含まない）
+        base = cells._column_mask(sl, None, kw.get("cy", cells.GROUND_CY))
+        m = cells._ground_mask(sl, **kw)
+        if (base & ~m).any():
+            fails.append(f"{name} の形 {s}: 素のマスクを含まない（{int((base & ~m).sum())} 画素）")
+for name in ("spill", "road"):
+    if (tiled(cells._ground_mask(None, **WIDENED[name])) == 0).any():
+        fails.append(f"{name} の平らの並びに隙間がある")
 
 for s in [(0, 0, 0, 0), (1, 1, 0, 0), (0, 1, 1, 0), (1, 0, 0, 0), (2, 2, 0, 0)]:
     sl = slope_of(*s)
@@ -85,4 +106,4 @@ for s in [(0, 0, 0, 0), (1, 1, 0, 0), (0, 1, 1, 0), (1, 0, 0, 0), (2, 2, 0, 0)]:
 if fails:
     print("\n".join(fails))
     sys.exit(1)
-print(f"[ground-mask] 256 の持ち分マスク: 地面と一致 {len(shapes)} 形・平らの並びに隙間と重なり無し・side の分け方 OK（GROUND_PHASE {cells.GROUND_PHASE}）")
+print(f"[ground-mask] 256 の持ち分マスク: 地面と一致 {len(shapes)} 形・平らの並びに隙間と重なり無し・side の分け方・広げたマスク OK（GROUND_PHASE {cells.GROUND_PHASE}）")

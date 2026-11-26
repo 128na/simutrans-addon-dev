@@ -6,7 +6,7 @@
 #   MAKEOBJ_FROM_PATH=1 bash addons/ami/check.sh   # ci.env の makeobj でなく、PATH の makeobj を使う
 #   HEADLESS_SIM_BIN=<sim> HEADLESS_PAKSET=<simutrans-test-base.zip> bash addons/ami/check.sh   # 画面を出さない本体で pak を読む検査（下記）。Windows の手元はこれを渡す。渡さないと飛ばす
 # 道具の版は ci.env。makeobj と dat_linter は TOOLS_DIR（既定は ~/.cache/simutrans-addon-dev/ci-tools）に取ってくる。
-# 要るもの: Python（と Pillow。check_cells.py が PNG を速く読む。無くても通るが数分かかる）、gh（道具を取るとき。サインイン済み）、uvx か pipx（ruff）。
+# 要るもの: Python（と Pillow。check_cells.py が PNG を速く読む。無くても通るが数分かかる。numpy は check_ground_mask.py が要る。版は ci.env）、gh（道具を取るとき。サインイン済み）、uvx か pipx（ruff）。
 # シートの描画（Blender）はしない（#50）。
 set -euo pipefail
 unset CHECK_SKIP_MISSING  # 環境に残っていると、128 の検査もシートの無い物を黙って飛ばす。256 の検査の行だけで付ける
