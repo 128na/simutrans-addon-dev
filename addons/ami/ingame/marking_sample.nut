@@ -5,7 +5,7 @@
 // 敷き方は README の「路面表示の作り」と同じ:
 //   4 車線どうし: 1. 道路を 2 本ずつ並べる 2. 直線の 2 列に lane4 を腕の手前まで 3. junction4_in で 4 本の L 字（入る側の腕の外の端
 //   → 中心の角 → 左隣の腕の出る側の外の端）と、腕の 1 マス目の 2 列を横につなぐ 4. 出る側の 2 マス（スクランブルなら中心も）を
-//   junction4_out で 1 マスずつ敷き直す
+//   junction4_out で 1 マスずつ敷き直す 5. ふつうの中心は、中心の 4 マスを junction4_c で 1 マスずつ敷き直す（中心の印。#313）
 //   4 車線 × 2 車線: 4 車線の 2 列を junction4_in で通して敷き、1 マス目を横につなぎ、2 車線の腕から中心へ junction2、出る側を junction4_out
 //   2 車線: 腕の外の端から反対の腕の外の端へ junction2（T字路は junction2_t）
 // 区画（原点から。左側通行。東西の道は北の列が東行き、南北の道は東の列が南行き）:
@@ -19,7 +19,7 @@ local AREA = [[-3, -4], [66, 36]];
 local SUFFIX = "";
 local G = "ami_road_general";
 local L4 = "ami_mark_lane4", J2 = "ami_mark_junction2", J2T = "ami_mark_junction2_t";
-local JI = "ami_mark_junction4_in", JO = "ami_mark_junction4_out";
+local JI = "ami_mark_junction4_in", JO = "ami_mark_junction4_out", JC = "ami_mark_junction4_c";
 local pl = player_x(0);
 local report = "";
 local checks = "";
@@ -56,10 +56,10 @@ function x4(tag, dx, scramble) {
   local outs = [[8, 6], [8, 7], [10, 8], [11, 8], [9, 10], [9, 11], [6, 9], [7, 9]];
   local centers = [[8, 8], [9, 8], [8, 9], [9, 9]];
   foreach (p in outs) one(tag + " out", JO, dx + p[0], p[1]);
-  if (scramble) foreach (p in centers) one(tag + " scramble", JO, dx + p[0], p[1]);
+  foreach (p in centers) one(tag + (scramble ? " scramble" : " center"), scramble ? JO : JC, dx + p[0], p[1]);
   foreach (p in [[9, 6], [9, 7], [10, 9], [11, 9], [8, 10], [8, 11], [6, 8], [7, 8]]) expect(tag + " in", dx + p[0], p[1], G, JI);
   foreach (p in outs) expect(tag + " out", dx + p[0], p[1], G, JO);
-  foreach (p in centers) expect(tag + " center", dx + p[0], p[1], G, scramble ? JO : JI);
+  foreach (p in centers) expect(tag + " center", dx + p[0], p[1], G, scramble ? JO : JC);
   foreach (p in [[3, 8], [3, 9], [8, 3], [9, 3]]) expect(tag + " lane4", dx + p[0], p[1], G, L4);
 }
 

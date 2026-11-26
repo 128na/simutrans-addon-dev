@@ -699,10 +699,33 @@ def _marking_slush(t):
 
 
 MARKING_SLUSH = tuple((_d, _marking_slush(_t)) for _d, _t in MARKING_SLUSH_T)
+# 路面の色と黄色の中央線（#313）: 色の舗装は、色の 2 色のまだら（Scale 60。アスファルトと同じ粒の段 ROAD_ASPHALT_RAMP）を路面に渡す（MARKING_COLORS）。
+#   赤の縞は、路面は敷かず、縞を赤の舗装と同じ材質で描く（accent）。黄色の中央線は、白線の擦れ（MARKING_WORN）と同じ作りの黄の線（MARKING_YELLOW）。
+#   色は、アスファルトに近い暗さで色みだけを付けたカラー舗装の色（値は仮。ゲームの画面でユーザーが確かめる）
+MARKING_COLORS = {"red": ((0.20, 0.035, 0.025), (0.28, 0.05, 0.035)),
+                  "blue": ((0.03, 0.07, 0.20), (0.045, 0.10, 0.27)),
+                  "green": ((0.05, 0.15, 0.05), (0.07, 0.21, 0.07))}
+MARKING_YELLOW = ((0.74, 0.40, 0.02), (0.88, 0.50, 0.04), 12.0)
+
+
+def _marking_color(color):
+    lo, hi = MARKING_COLORS[color]
+    return lambda: R.noisy_material(f"ami_marking_paving_{color}", lo, hi, scale=60.0, rough=0.9, ramp=ROAD_ASPHALT_RAMP)
+
+
+MARKING_LINE_YELLOW = lambda: R.noisy_material("ami_marking_line_yellow", MARKING_YELLOW[0], MARKING_YELLOW[1], scale=MARKING_YELLOW[2],
+                                               rough=0.6, emit=0.35, ramp=ROAD_ASPHALT_RAMP)
+# 種類 → marking_sheet に渡す材質（無い種類は白線・下の道路のアスファルト）
+MARKING_COLOR_ARGS = {"paving_red": dict(paving=_marking_color("red")), "paving_blue": dict(paving=_marking_color("blue")),
+                      "paving_green": dict(paving=_marking_color("green")),
+                      "paving_red_striped": dict(paving=None, accent=_marking_color("red")),
+                      "center_yellow": dict(paving=None, line=MARKING_LINE_YELLOW)}
 for _name, _kind in catalog.MARKINGS.items():
     _paving = MARKING_EXPWY_PAVING if _name in catalog.MARKINGS_EXPWY else MARKING_PAVING
-    SHEETS[_name] = (lambda n, k, pv: lambda: R.marking_sheet(n, k, label=MARKING_LABEL, paving=pv, snow=ROAD_SNOW, line=MARKING_LINE_WORN,
-                                                              slush=MARKING_SLUSH))(_name, _kind, _paving)
+    # line の既定（MARKING_LINE_WORN）は描くときに引く（ラウンドの版 round_wave3.py が後から差し替えるため）
+    SHEETS[_name] = (lambda n, k, pv: lambda: R.marking_sheet(
+        n, k, label=MARKING_LABEL, snow=ROAD_SNOW, slush=MARKING_SLUSH,
+        **dict(dict(paving=pv, line=MARKING_LINE_WORN), **MARKING_COLOR_ARGS.get(k, {}))))(_name, _kind, _paving)
 for _v in catalog.ROAD_WALL_VARIANTS:
     SHEETS[f"ami_wall_road_{_v}"] = _road_target(f"wall_road_{_v}")
 for _name in catalog.ROAD_WALL_CURVED:
