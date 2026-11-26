@@ -483,6 +483,8 @@ ami_sidewalk_tile
 歩道（タイル）（AMI）
 ami_tram
 路面軌道（AMI）
+ami_tram_catenary
+路面軌道の架線（AMI）
 ami_tram_depot
 路面軌道の車庫（AMI）
 ami_wall_rail_back
