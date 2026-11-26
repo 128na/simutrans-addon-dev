@@ -1,0 +1,25 @@
+name: md-links
+
+# addons/ と .claude/ の md の相対リンクとアンカーを検査する（#315）。docs-lint はそこを見ない。
+# リンク先は md 以外（画像・スクリプト）もあり、その移動や削除でも切れるので、paths で絞らない。
+# 手元では: python -X utf8 tools/ci/check_md_links.py
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  md-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: 検査の道具のテスト
+        run: python3 -m unittest discover -v -s tools/ci -p "test_*.py"
+
+      - name: リンクとアンカーの検査
+        run: python3 tools/ci/check_md_links.py
