@@ -116,10 +116,11 @@ _GROUND_CY_1 = 127
 GROUND_CY = _GROUND_CY_1 * SCALE
 
 # pak128 より大きいときの持ち分マスクの縦の位相（_ground_mask_direct）。菱形の角を cy + GROUND_PHASE の行の上の縁に置く。
-# -1 のとき、マスクは pak256 の地面（256 四方のマス）をセルの (128, 61) に置いた形と、平らと坂の 65 形すべてで画素で一致する。
-# pak128 のマスクが地面の約 1.5 行上（地面のマスを 30〜31 行下に置いた形）なのを 2 倍にした位置。
-# ゲーム（pak256 の地面）で -1・0・1 を比べて決めた（#321）: 1 は平らな道路のタイルの継ぎ目に草の線、0 は坂の継ぎ目に 1 画素の草が出た。-1 は出ない
-GROUND_PHASE = -1
+# 256（SCALE 2）では -1 で、マスクは pak256 の地面（256 四方のマス）をセルの (128, 61) に置いた形と、平らと坂の 65 形すべてで画素で一致する
+# （tools/blender/check_ground_mask.py）。pak128 のマスクに近い地面の置き方（地面のマスを 30 行下と 31 行下の間。dat の位置合わせどおりの 32 行下より約 1.5 行上）を SCALE 倍にした位置。
+# ゲーム（pak256 の地面）で -1・0・1 を比べて決めた（#321）: 1 は平らな道路のタイルの継ぎ目に草の線、0 は坂の継ぎ目に 1 画素の草が出た。-1 は出ない。
+# 確かめたのは SCALE 2 だけ。3 以上（奇数では半行が整数の画素にならない）は未確認
+GROUND_PHASE = -(SCALE // 2)
 
 
 # 道路を描く位置。SIS・pak128 標準の道路は、菱形を地面より 1px 下にずらした絵で、自分の菱形の上の1行は描かず、
@@ -149,7 +150,9 @@ def _ground_mask_direct(slope, side=None, cy=GROUND_CY, spill=0, solid=False, lo
         for k in range(32):
             m |= _column_mask(lambda x, y, k=k: slope(x, y) * k / 32, side, cy)
     if spill:
-        # 手前の 2 辺を spill 行と半行広げる（_ground_mask_1x の cy + spill と cy + spill + 0.5）
+        # 手前の 2 辺を spill 行と半行広げる（_ground_mask_1x の cy + spill と cy + spill + 0.5）。
+        # 2 つのずらしだけでなく、間のずらしも全部足す。列ごとの判定では、左右の角の近くの列は縦の幅が 2 画素より薄く、
+        # 離れたずらしの和だと間にすき間ができるため。そのぶん 1x の和を拡大した形より、角の近くで 1〜2 画素広い
         for k in range(1, spill + half_row + 1):
             m |= _column_mask(slope, side, cy + k)
     if cy != GROUND_CY:
