@@ -3,6 +3,7 @@
     python -X utf8 -m unittest discover -s tools/ci -p "test_*.py"
 """
 
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -70,11 +71,39 @@ class CheckTest(unittest.TestCase):
     def test_broken(self):
         _, _, errors = self.run_check(
             {
-                ".claude/skills/s/SKILL.md": "[a](no.md)\n[b](#no)\n[c](A.md)\n[d](a.md#no)\n[e](/x)\n[f](../../../../x)\n",
+                ".claude/skills/s/SKILL.md": "[a](no.md)\n[b](#no)\n[c](A.md)\n[d](a.md#no)\n[e](/x)\n"
+                "[f](../../../../x)\n[g](a.md/)\n",
                 ".claude/skills/s/a.md": "# a\n",
             }
         )
-        self.assertEqual([e.split(":")[1] for e in errors], ["1", "2", "3", "4", "5", "6"])
+        self.assertEqual(
+            [tuple(e.split(": ")[:2]) for e in errors],
+            [
+                (f".claude/skills/s/SKILL.md:{line}", reason)
+                for line, reason in enumerate(
+                    [
+                        "リンク先が無い",
+                        "アンカーが無い",
+                        "リンク先が無い",
+                        "アンカーが無い",
+                        "絶対パスのリンクは使わない",
+                        "リポジトリの外を指す",
+                        "リンク先が無い",
+                    ],
+                    1,
+                )
+            ],
+        )
+
+    def test_inside_a_worktree(self):
+        # root の途中に .claude/worktrees があっても飛ばさない（#304 の空振り）
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d, ".claude", "worktrees", "w")
+            (root / "addons").mkdir(parents=True)
+            (root / "addons" / "a.md").write_text("[x](no.md)\n", encoding="utf-8")
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            sources, _, errors = c.check(root, c.repo_files(root))
+        self.assertEqual((sources, len(errors)), (1, 1))
 
 
 if __name__ == "__main__":

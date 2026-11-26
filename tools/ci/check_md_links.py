@@ -207,7 +207,7 @@ def is_source(path):
 
 def check(root, files):
     """(検査した md の数, 見たリンクの数, 誤りの行) を返す。"""
-    dirs = {""}
+    files, dirs = set(files), {""}
     for f in files:
         parent = posixpath.dirname(f)
         while parent not in dirs:
@@ -244,7 +244,8 @@ def check(root, files):
                 if target == ".." or target.startswith("../"):
                     fail("リポジトリの外を指す")
                     continue
-                if target not in files and target not in dirs:
+                # `a.md/` のように、ファイルを / で終わるリンクは GitHub で切れる
+                if target not in (dirs if path.endswith("/") else files | dirs):
                     fail("リンク先が無い")
                     continue
             else:
