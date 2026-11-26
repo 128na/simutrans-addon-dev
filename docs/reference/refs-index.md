@@ -40,7 +40,7 @@ way 系アドオンを作るときに、既存のアドオンや本家のどこ�
 | 道路 | `../refs/iss/src/way/road/ground.dat`・`elevated.dat`、`../refs/pak128/infrastructure/roads/road_030.dat`、`../refs/sis/road/Local_Street/`・`Expressway/`、`../refs/rtx/workspace/road/` | 速度別の種類、高架、路面 | iss は `ns`・`ew` で way を分ける種類がある |
 | 歩道 | `../refs/iss/src/util/sidewalk/ground.dat`・`elevated.dat`・`ground_road.dat`、`../refs/rtx/workspace/side/` | 別の waytype を歩道に流用する作り | iss は `water` を使う |
 | 跨座式モノレール | `../refs/iss/src/way/monorail/straddle.dat`、`../refs/iss/src/tunnel/monorail/tunnel.dat`、`../refs/iss/src/building/depot/depot.dat` | 地上・高架の版の並び（高架は front・center・back）、カーブが斜めの絵を指すこと、トンネルと車庫のキー | iss の跨座式には雪の絵・近い斜め・橋が無い。動作の確かめの車両は pak128.japan の跨座式（ユーザーが渡した物。リポジトリに入れない） |
-| 運河 | `../refs/iss/src/way/water/canal.dat`、`../refs/pak128/infrastructure/water_all/canal_020.dat`・`shipdepot.dat` | iss はタイルいっぱいの水面と薄い壁（地上だけ。坂は閘門）、pak128 は水面と石の縁（斜めは半分のタイル）。船の車庫 | 運河と歩道はどちらも waytype が water で、突き当てるとつながる（AMI の README の「運河の作り」） |
+| 運河 | `../refs/iss/src/way/water/canal.dat`、`../refs/pak128/infrastructure/water_all/canal_020.dat`・`shipdepot.dat` | iss はタイルいっぱいの水面と薄い壁（地上だけ。坂は閘門）、pak128 は水面と石の縁（斜めは半分のタイル）。船の車庫 | 運河と歩道はどちらも waytype が water で、突き当てるとつながる（[AMI の運河の作り](../../addons/ami/docs/objects/canal.md) の「運河の作り」） |
 | 路面軌道 | `../refs/iss/src/way/rail/tram.dat`、`../refs/pak128/infrastructure/tram_tracks/tram_track_050_a.dat` | waytype の持たせ方 | iss は `tram_track`、pak128 は `track` と `system_type=7` |
 | アイコン・カーソル | `../refs/iss/src/icon_way1.png`〜`icon_way3.png`・`icon_bridge.png`、`../refs/pak128/base/misc_GUI/` | 共有シートとシート内蔵の違い | 位置の値は資料ごとに違う |
 
