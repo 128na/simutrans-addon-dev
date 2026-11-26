@@ -106,6 +106,10 @@ step "車庫・操車場の絵の大きさ（箱積み駅舎の箱 1 段に収�
 step "物の一覧が全部の dat から作れるか、種類別の pak で全部を覆うか（lineup.py --check）"
 "$PY" -X utf8 "$AMI/lineup.py" --check
 
+step "配る readme の元に固定の版名が無いか（release.py --check。#345）"
+"$PY" -X utf8 "$AMI/release.py" --self-test
+"$PY" -X utf8 "$AMI/release.py" --check
+
 step "盛土の絵の形と割り当て（向き・角・T字・十字・1 タイル・坂が期待のセルと形か。check_embankment.py）"
 "$PY" -X utf8 "$AMI/check_embankment.py"
 
