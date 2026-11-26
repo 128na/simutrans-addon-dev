@@ -55,6 +55,8 @@ ami_embankment_back
 盛土（奥）（AMI）
 ami_embankment_front
 盛土（手前）（AMI）
+ami_mark_center_yellow
+路面表示・黄色の中央線（AMI）
 ami_mark_diverge_main
 路面表示・分岐（本線）（AMI）
 ami_mark_diverge_ramp
@@ -87,6 +89,14 @@ ami_mark_merge_main
 路面表示・合流（本線）（AMI）
 ami_mark_merge_ramp
 路面表示・合流（ランプ）（AMI）
+ami_mark_paving_blue
+路面表示・青の舗装（AMI）
+ami_mark_paving_green
+路面表示・緑の舗装（AMI）
+ami_mark_paving_red
+路面表示・赤の舗装（AMI）
+ami_mark_paving_red_striped
+路面表示・赤の縞の舗装（AMI）
 ami_monorail_depot
 モノレールの車庫（AMI）
 ami_monorail_power

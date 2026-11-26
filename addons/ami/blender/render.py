@@ -722,9 +722,10 @@ MARKING_COLOR_ARGS = {"paving_red": dict(paving=_marking_color("red")), "paving_
                       "center_yellow": dict(paving=None, line=MARKING_LINE_YELLOW)}
 for _name, _kind in catalog.MARKINGS.items():
     _paving = MARKING_EXPWY_PAVING if _name in catalog.MARKINGS_EXPWY else MARKING_PAVING
-    _args = dict(dict(paving=_paving, line=MARKING_LINE_WORN), **MARKING_COLOR_ARGS.get(_kind, {}))
-    SHEETS[_name] = (lambda n, k, a: lambda: R.marking_sheet(n, k, label=MARKING_LABEL, snow=ROAD_SNOW, slush=MARKING_SLUSH, **a))(
-        _name, _kind, _args)
+    # line の既定（MARKING_LINE_WORN）は描くときに引く（ラウンドの版 round_wave3.py が後から差し替えるため）
+    SHEETS[_name] = (lambda n, k, pv: lambda: R.marking_sheet(
+        n, k, label=MARKING_LABEL, snow=ROAD_SNOW, slush=MARKING_SLUSH,
+        **dict(dict(paving=pv, line=MARKING_LINE_WORN), **MARKING_COLOR_ARGS.get(k, {}))))(_name, _kind, _paving)
 for _v in catalog.ROAD_WALL_VARIANTS:
     SHEETS[f"ami_wall_road_{_v}"] = _road_target(f"wall_road_{_v}")
 for _name in catalog.ROAD_WALL_CURVED:
