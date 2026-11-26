@@ -45,7 +45,7 @@
 - 物: `ami_embankment_building`（直線。4 向き）と `ami_embankment_building_corner`（台の外の角。4 向き）。どちらも `type=cur`・`dims=1,1,4`・`passengers=0`・`chance=0`・`noconstruction=1`・`needs_ground=1`・費用 1000・登場 1900。`ami_scenery.pak`
 - 向き（layout）: 直線は 0 南・1 東・2 北・3 西を法面が向く。角は 0 北西・1 南西・2 南東・3 北東の角が高い。順は、地図を右へ回すと `(layout + 3) % 4` になる本体の回し方に合わせた
 - 絵: 盛土の way と同じ形の式と芝・雪の材質（`sheetlib/embankment_building.py`）。雪は 2 つ目の季節の絵。way との違いは、隣とつながらないので側面をどの辺にも持つこと。持ち分は way と同じ（地面の菱形を上へ広げた列）で、箱積みの箱には収めない（`check_depot.py` は `type=cur` を見ない）
-- 建て方: 建物の道具（名所の一覧）で選び、向きを回して建てる。直線を 4 辺に、外の角を 4 隅に置くと、中心が空いた盛土の輪になる。見本は `ingame/scenic_sample.nut` の区画 MB
+- 建て方: 建物の道具（名所の一覧）で選び、向きを回して建てる（本体の `gui/curiosity_edit.cc` は名所をアイコンの有無によらず並べる。コードの読み。一覧の窓から選んで建てることは未確認で、確かめたのはスクリプトの `tool_build_house` だけ）。直線を 4 辺に、外の角を 4 隅に置くと、中心が空いた盛土の輪になる。見本は `ingame/scenic_sample.nut` の区画 MB
 - 乗客: `passengers=0` なので行き先にならない。名所の一覧には出る
 
 ## 説明用の色の way の作り（#372）
