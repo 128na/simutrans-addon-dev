@@ -33,7 +33,7 @@ from .core import SCALE, TILE, _SNOW, box, clear_models, datum_move, make_materi
 PIT_D = 0.5              # ピットの深さ（約 4px）
 PIT_PAD = 1.0            # 開いた辺で、床をタイルの外へ延ばす量（持ち分で切る）
 WALL_T = 0.3             # 閉じた辺の壁の厚み（タイルの辺から内へ）
-COPING_W = 0.18          # 壁・ピットの縁の黄色の帯の幅
+COPING_W = 0.36          # 壁・ピットの縁の黄色の帯の幅（約 2.6px。実寸の 0.18 は約 1.3px でまわりに埋もれたので誇張した。#331 の 1cp）
 COPING_H = 0.03          # 黄色の帯の厚み
 FLOOR_T = 0.1            # 床の板の厚み
 # 遷車台の床の、台車の走るレール（ピットに沿う 2 本。iss と同じくタイルの中心から左右に）
@@ -52,6 +52,8 @@ TT_PIVOT_R = 0.45        # 中心の支点の半径
 TT_BRIDGE_HALF = 1.25    # 桁の幅の半分
 TT_BRIDGE_END = TT_R - 0.12  # 桁の端（中心から）
 TT_HUT = (0.9, 0.9, 1.0)    # 運転室（桁に沿う向きの長さ・横切る向きの長さ・高さ）
+TT_APRON_W = 0.9         # まわりのコンクリートの輪の幅（ピットの縁から。#331 の 2ringd。タイルいっぱいの四角は草の中で浮いたので、角は地面を見せる）
+HUT_WINDOW = (0.25, 0.55)  # 運転室の窓の暗い帯（高さ、帯の下の端の高さ ÷ 運転室の高さ。#331 の 2win。転車台・遷車台の両方）
 # 線路（桁・台車の上）: まくらぎ（長さ・幅・高さ）と間隔。canal_crossing の線路の床と同じ作り
 SLEEPER = (2.4, 0.22, 0.14)
 SLEEPER_STEP = 0.65
@@ -74,6 +76,10 @@ _M_RAIL = ("turntable_rail", (0.92, 0.91, 0.88), 0.4)         # レールの頭�
 _M_RAIL_SIDE = ("turntable_rail_side", (0.25, 0.18, 0.13), 0.6)  # レールの腹（さび）
 # ピットの床の、台車・桁の車輪が走るレール（ゆっくり動くだけで磨かれない。画面で約 1px の幅なので、頭と腹を分けず 1 色）
 _M_FLOOR_RAIL = ("turntable_floor_rail", (0.30, 0.26, 0.22), 0.5)
+_M_HUT_WINDOW = ("turntable_hut_window", (0.10, 0.12, 0.15), 0.3)  # 運転室の窓
+
+# 材質の差し替え（turntable_sheet の skin。材質の名前（_M_* の先頭）→ 材質を返す関数）。汚し（#331）はアドオンが渡す
+_skin = {}
 
 # セル（行, 列）→ 名前（cells の exits_of で、つながる辺に直せる名前）。"single" はつながりが無い（転車台）
 TURNTABLE_CELLS = {
@@ -87,7 +93,7 @@ TURNTABLE_CAR_CELLS = ("s", "e")  # 台車を置く行き止まり（北・西�
 def _obj(name, parts, spec):
     if not parts:
         return None
-    return mesh_object(name, *merge(parts), make_material(spec, spec[0]))
+    return mesh_object(name, *merge(parts), make_material(_skin.get(spec[0], spec), spec[0]))
 
 
 # ---------------------------------------------------------------- 線路（桁・台車の上）
@@ -130,11 +136,13 @@ def _deck_top(rail):
 
 
 def _hut(cx, cy, sx, sy, sz, z0, snow):
-    """運転室（箱と、少し大きい屋根）"""
+    """運転室（箱と、少し大きい屋根と、4 面に回した窓の暗い帯。窓は壁より 0.02 外へ出した薄い箱）"""
     walls = _obj("turntable_hut", [box(cx, cy, z0 + sz / 2, sx, sy, sz)], _M_HUT)
     roof = _obj("turntable_hut_roof", [box(cx, cy, z0 + sz + CAR_HUT_ROOF / 2, sx + 0.16, sy + 0.16, CAR_HUT_ROOF)],
                 _SNOW if snow else _M_HUT_ROOF)
-    return [walls, roof]
+    wh, wz = HUT_WINDOW
+    window = _obj("turntable_hut_window", [box(cx, cy, z0 + sz * wz + wh / 2, sx + 0.04, sy + 0.04, wh)], _M_HUT_WINDOW)
+    return [walls, roof, window]
 
 
 # ---------------------------------------------------------------- 遷車台（ピット）
@@ -202,22 +210,15 @@ def _circle(r, n=TT_SEG):
     return [(r * math.cos(2 * math.pi * i / n), r * math.sin(2 * math.pi * i / n)) for i in range(n)]
 
 
-def _square_point(ang):
-    """中心から角度 ang へ伸ばした線が、タイルの四角（辺 TILE）と交わる点"""
-    c, s = math.cos(ang), math.sin(ang)
-    k = (TILE / 2) / max(abs(c), abs(s))
-    return c * k, s * k
-
-
 def _ring_faces(n):
     return [(i, (i + 1) % n, n + (i + 1) % n, n + i) for i in range(n)]
 
 
 def _apron(z):
-    """タイルの四角から、半径 TT_R の円を抜いた面（高さ z）"""
+    """ピットの縁（半径 TT_R）から TT_APRON_W の輪の面（高さ z）。輪の外（タイルの角）は地面が見える"""
     n = TT_SEG
     inner = [Vector((x, y, z)) for x, y in _circle(TT_R, n)]
-    outer = [Vector((*_square_point(2 * math.pi * i / n), z)) for i in range(n)]
+    outer = [Vector((x, y, z)) for x, y in _circle(TT_R + TT_APRON_W, n)]
     return inner + outer, [tuple(reversed(f)) for f in _ring_faces(n)]
 
 
@@ -312,10 +313,13 @@ def _build(name, snow, datums, rail):
     return fixed + moving
 
 
-def turntable_sheet(sheet, datums, rail, label="T"):
-    """転車台・遷車台の way のシート。datums・rail は線路の way の基準面とレール (内側, 外側, 上面)（canal_crossing と同じ渡し方）"""
+def turntable_sheet(sheet, datums, rail, label="T", skin=None):
+    """転車台・遷車台の way のシート。datums・rail は線路の way の基準面とレール (内側, 外側, 上面)（canal_crossing と同じ渡し方）。
+    skin は材質の差し替え（材質の名前 → 材質を返す関数。汚し。#331）"""
     if rail is None or len(rail) != 3:
         raise SystemExit("[turntable] rail（内側, 外側, 上面）が要る")
+    _skin.clear()
+    _skin.update(skin or {})
     set_anchor(GROUND_CY)  # 線路と同じ位置（dat のオフセット -64,-32）。桁・台車の上の線路を、線路のタイルのレールとそろえる
     cells = {}
     for snow in (False, True):

@@ -7,14 +7,21 @@
 //   PN: 南北の道路 5 本（x 16・19・22・25・28、y 0〜14）に、西から同じ順で y 3〜10 に重ねる
 //   PX: 十字（中心 (40,5)）に赤を十字に重ねる（腕は 3 マス）
 //   PT: T字（中心 (55,5)、南へ枝）に青を重ねる（腕は 3 マス）
+//   PI: iss の同じ物と並べる（#331）。東西の道路 5 本（y 2・5・8・11・14、x 62〜78）に、同じ順で AMI を x 64〜69、iss（iss_util_road_misc.pak）を
+//     x 71〜76 に重ねる。iss の pak が無ければ iss の分は敷かず、[info] に書く（sample_parallel.sh の EXTRA_PAKS で iss の pak を足す）
+// ラウンドの版（#56・#331）: SUFFIX を AMI の表示の名前（KINDS）の末尾に付ける。下の道路には付けない（sample_parallel.sh の SUFFIX が置き換える）
+local SUFFIX = "";
 local ORIGINS = [[20, 20], [276, 20]];
 local SNOW = 1;
-local AREA = [[-3, -4], [63, 18]];
+local AREA = [[-3, -4], [80, 18]];
 local G = "ami_road_general";
 local KINDS = ["ami_mark_paving_red", "ami_mark_paving_blue", "ami_mark_paving_green", "ami_mark_paving_red_striped", "ami_mark_center_yellow"];
+foreach (i, k in KINDS) KINDS[i] = k + SUFFIX;
+local ISS = ["iss_wsg_red_pavement", "iss_wsg_blue_pavement", "iss_wsg_green_pavement", "iss_wsg_red_striped_pavement", "iss_wsg_yellow_line"];
 local pl = player_x(0);
 local report = "";
 local checks = "";
+local infos = "";
 local OX = 0, OY = 0;
 function r(name, v) { return v == null ? "" : name + "=[" + v + "]\n"; }
 function c(x, y) { return coord3d(OX + x, OY + y, 0); }
@@ -55,8 +62,17 @@ foreach (n, o in ORIGINS) {
   way("PT", KINDS[1], 52, 5, 58, 5);
   way("PT", KINDS[1], 55, 5, 55, 8);
   foreach (p in [[55, 5], [52, 5], [58, 5], [55, 8]]) expect("PT", p[0], p[1], G, KINDS[1]);
+  foreach (i, k in KINDS) {
+    local y = 2 + 3 * i;
+    way("PI", G, 62, y, 78, y);
+    way("PI", k, 64, y, 69, y);
+    expect("PI", 66, y, G, k);
+    if (way_desc_x(ISS[i]) == null) { infos += "[info] PI " + ISS[i] + " desc=[missing]\n"; continue; }
+    way("PI iss", ISS[i], 71, y, 76, y);
+    expect("PI iss", 73, y, G, ISS[i]);
+  }
   if (n == SNOW)
     report += r("climate", command_x(tool_set_climate).work(pl, c(AREA[0][0], AREA[0][1]), c(AREA[1][0], AREA[1][1]), "7"));
 }
 gui.close_all_windows();
-return (report == "" ? "ok\n" : "check\n" + report) + checks;
+return (report == "" ? "ok\n" : "check\n" + report) + infos + checks;
