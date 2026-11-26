@@ -38,6 +38,24 @@
 - 見本: `ingame/embankment_sample.nut`（撮る場所は `ingame/sample_spots.sh` の `EMBANKMENT_SPOTS`）。線路の高架（東西・南北）・道路の高架の両脇、台の輪（M）、窪みの輪（P）、坂・急坂、斜め、橋脚との交わりを、温暖側と降雪側に敷く。輪の角に残った版を `[check]` の行で期待と比べる（違えば返り値の先頭が `check`）
 - 後から足せるもの（今は作らない。2026-11-21、進捗管理の決定。[#123 のコメント](https://github.com/128na/simutrans-addon-dev/issues/123)）: 半分の高さ（1 段）の版、コンクリートの法面、iss の `distorted` の坂の形、斜めの法面の絵
 
+## 盛土の建物の版の作り（#372）
+
+盛土の way と同じ楔を、地面に建てる建物にした物。手本は iss の `../refs/iss/src/util/embankment/building*.dat`。決めた理由は [ADR 0018](../../../../docs/adr/0018-ami-scenic-aids.md)。
+
+- 物: `ami_embankment_building`（直線。4 向き）と `ami_embankment_building_corner`（台の外の角。4 向き）。どちらも `type=cur`・`dims=1,1,4`・`passengers=0`・`chance=0`・`noconstruction=1`・`needs_ground=1`・費用 1000・登場 1900。`ami_scenery.pak`
+- 向き（layout）: 直線は 0 南・1 東・2 北・3 西を法面が向く。角は 0 北西・1 南西・2 南東・3 北東の角が高い。順は、地図を右へ回すと `(layout + 3) % 4` になる本体の回し方に合わせた
+- 絵: 盛土の way と同じ形の式と芝・雪の材質（`sheetlib/embankment_building.py`）。雪は 2 つ目の季節の絵。way との違いは、隣とつながらないので側面をどの辺にも持つこと。持ち分は way と同じ（地面の菱形を上へ広げた列）で、箱積みの箱には収めない（`check_depot.py` は `type=cur` を見ない）
+- 建て方: 建物の道具（名所の一覧）で選び、向きを回して建てる。直線を 4 辺に、外の角を 4 隅に置くと、中心が空いた盛土の輪になる。見本は `ingame/scenic_sample.nut` の区画 MB
+- 乗客: `passengers=0` なので行き先にならない。名所の一覧には出る
+
+## 説明用の色の way の作り（#372）
+
+ゲームの中の図解に使う、1 色の帯の way。手本は iss の `../refs/iss/src/util/describe/`。
+
+- 物（8 本）: `ami_describe_<色>`（`tram_track`・地上）と `ami_describe_<色>_elev`（`track`・`system_type=1`）。色は赤・青・緑・黄で、値は iss の画像の色（`blender/catalog.py` の `DESCRIBE_COLORS`）。速さ 1・費用 1・維持費 1・登場 1900。`ami_scenery.pak`
+- 絵: タイルの辺の約 1/4 の幅の帯。陰影を付けず、指定の色がそのまま画面に出る材質（黒の下地と発光）で描く（`sheetlib/describe.py`）。直線・行き止まり（端に横棒）・1 タイル・曲がり（中心で折れる）・斜め・T字・十字・坂。近い斜め・分岐の絵は持たない。雪の絵は夏と同じ。地上と高架は同じシート `ami_describe_<色>` を使い、高架のアイコン・カーソルは (0,4)・(1,4) のセル
+- 見本: `ingame/scenic_sample.nut` の区画 DG（地上）・DE（高架）
+
 ## 道路標識の作り（#122）
 
 道路に置く roadsign の 6 種。数と効き目は、2026-11-21 にユーザーが案 A で決めた（[#122 のコメント](https://github.com/128na/simutrans-addon-dev/issues/122#issuecomment-7060773248)）。本体の roadsign は最高速度を変えられない（dat に速さの上限のキーが無い。[way-addon.md](../../../../docs/reference/way-addon.md) の 5 章）ので、最高速度の標識は飾りにし、効き目のある最低速度の標識を別に置く。形は日本の標識。
