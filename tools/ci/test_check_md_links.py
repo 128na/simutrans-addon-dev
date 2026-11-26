@@ -66,7 +66,7 @@ class CheckTest(unittest.TestCase):
                 ".claude/worktrees/w/addons/y/README.md": "[x](no.md)\n",
             }
         )
-        self.assertEqual((sources, count, errors), (2, 6, []))
+        self.assertEqual((sources, count, errors), (3, 6, []))
 
     def test_broken(self):
         _, _, errors = self.run_check(

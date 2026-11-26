@@ -1,11 +1,11 @@
-"""addons/ と .claude/ の md の相対リンクとアンカーを検査する（#315）。
+"""リポジトリの md の相対リンクとアンカーを検査する（#315・#319）。
 
-docs-lint が見るのは直下と docs/ の md だけで、アンカー（`#見出し`）はどこも見ないので、
-残りをここで見る。標準ライブラリだけで動く。
+docs-lint がリンクを見るのは直下と docs/ の md だけで、アンカー（`#見出し`）は見ないので、
+ここで全部の md を見る。標準ライブラリだけで動く。
 
     python -X utf8 tools/ci/check_md_links.py
 
-- 検査するのは addons/ と .claude/ の下の md（.claude/worktrees/ は除く）。
+- 検査するのはリポジトリのすべての md（.claude/worktrees/ は除く）。
 - 相対リンクは、指す先が git の管理下（か、まだ add していない新しいファイル）にあること。
   大文字小文字も合っていること（Windows では通っても GitHub では切れる）。
 - md へのアンカーは、指す先の見出しから GitHub と同じ作り方で作った名前か、
@@ -23,7 +23,6 @@ import unicodedata
 from pathlib import Path
 from urllib.parse import unquote
 
-SOURCE_DIRS = ("addons/", ".claude/")
 # リポジトリの直下からの相対パスで比べる。パスの途中の名前で判定すると、
 # worktree の中で流したときに全部を飛ばす（#304）。
 SKIP_PREFIXES = (".claude/worktrees/",)
@@ -202,7 +201,7 @@ def repo_files(root):
 
 
 def is_source(path):
-    return path.endswith(".md") and path.startswith(SOURCE_DIRS) and not path.startswith(SKIP_PREFIXES)
+    return path.endswith(".md") and not path.startswith(SKIP_PREFIXES)
 
 
 def check(root, files):
