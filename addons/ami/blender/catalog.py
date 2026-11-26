@@ -224,6 +224,13 @@ SIDEWALK = "ami_sidewalk"  # 歩道の way（道路の隣のタイルに敷く�
 # 盛土の way（#123。ADR 0008 の景観 6）: 高架の脇の地面に敷く法面の楔。front は法面が手前（南・東）、back は奥（北・西）を向く
 EMBANKMENT_SIDES = ("front", "back")
 EMBANKMENTS = {f"{PREFIX}embankment_{_s}": _s for _s in EMBANKMENT_SIDES}
+# 盛土の建物の版（#372。ADR 0018）: type=cur の 1 タイルの建物。名前 → 種類（straight = 4 辺のどれかを向く法面、corner = 台の外の角）。
+# 4 向きずつ（layout 0〜3）に分けるのは、建物の layout が 8 だと地図の回転で向きが崩れるため
+EMBANKMENT_BUILDINGS = {f"{PREFIX}embankment_building": "straight", f"{PREFIX}embankment_building_corner": "corner"}
+# 説明用の色の way（#372。ADR 0018。手本 iss の util/describe）: 色 → sRGB 8bit（iss の画像の色）。地上は ami_describe_<色>（tram_track）、
+# 高架は ami_describe_<色>_elev（track・system_type=1）で、同じシート ami_describe_<色> を使う。色はつながる向きで描き分けられないので物を分ける
+DESCRIBE_COLORS = {"red": (195, 13, 35), "blue": (29, 32, 136), "green": (0, 105, 52), "yellow": (248, 182, 45)}
+DESCRIBES = {f"{PREFIX}describe_{_c}{_s}": (_c, _s == "_elev") for _c in DESCRIBE_COLORS for _s in ("", "_elev")}
 # 歩道の種類（#119。ADR 0008 の ami_sidewalk_<舗装>）: 舗装の名前。ami_sidewalk（灰色の敷石）は名前を変えずに残す
 SIDEWALK_PAVINGS = ("asphalt", "brick", "tile")
 SIDEWALK_ELEV = "ami_sidewalk_elev"  # 高架の歩道（system_type=1。敷石は ami_sidewalk と同じ）

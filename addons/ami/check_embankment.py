@@ -216,7 +216,8 @@ def check_obj(o, side, src, sheets, cache, errors):
 def main(src):
     errors, sheets, cache = [], {}, {}
     checked = 0
-    objs = {o["name"]: o for o in read_dats(src) if o["name"].startswith("ami_embankment_")}
+    # way だけを見る（盛土の建物の版 ami_embankment_building* は type=cur の building で、別の作り。#372）
+    objs = {o["name"]: o for o in read_dats(src) if o["name"].startswith("ami_embankment_") and o["obj"] == "way"}
     for name in objs:
         if name.rsplit("_", 1)[1] not in SIDES:
             errors.append(f"{name}: 版の名前が {'・'.join(SIDES)} のどれでもない")

@@ -48,6 +48,8 @@ KINDS = {
     "junction6_out": Kind("street", DEADENDS | TEES, (3, 7), "[nsw]", "出", True),
     "junction6_m": Kind("street", DEADENDS | TEES, (3, 5), "[nse]", "中", True),
     "junction6_c": Kind("street", DEADENDS | {CROSS}, (3, 9), "[nsew]", "心", False),
+    # ラウンドアバウト 3×3（#372）: 行き止まり = 腕、T字 = 腕のある辺、曲がり = 輪の角、1 タイル = 中心の島
+    "roundabout": Kind("street", DEADENDS | CURVES | TEES | {SINGLE}, (2, 5), "[sw]", "環", False),
     # 高速道路の分岐・合流（#188）: 行き止まり = テーパー、T字 = 平行、曲がり = 分かれ
     "diverge_main": Kind("expwy", _ARM4, (0, 7), "[n]", "分", False),
     "diverge_ramp": Kind("expwy", _ARM4, (0, 7), "[n]", "岐", False),

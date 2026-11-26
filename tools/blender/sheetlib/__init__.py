@@ -27,6 +27,8 @@
     turntable    転車台・遷車台の way（道路の waytype。つながりの無い 1 タイルが転車台、直線が遷車台）のシート（名前が turntable で始まるものだけを出す）
     marking      多車線と交差点の路面表示の way のシート（道路に重ねる白線と路面。名前が marking・MARKING で始まるものだけを出す）
     roadsign     道路標識（roadsign）のシート（柱を描き、板の 2D の絵を押す）
+    describe     説明用の色つきの way のシート（1 色の帯。名前が describe・DESCRIBE で始まるものだけを出す）
+    embankment_building 盛土の建物の版のシート（盛土の way の形を使う。名前が embankment_building・EMBANKMENT_BUILDING で始まるものだけを出す）
 
 アドオンの入口と判定の道具からは `import sheetlib as R` で、どのモジュールの名前も `R.名前` で引ける（下で全部をここに出す）。
 """
@@ -41,6 +43,8 @@ from . import canal
 from . import canal_crossing
 from . import roadsign
 from . import marking
+from . import describe
+from . import embankment_building
 
 for _m in (core, track_parts, slab_parts, tram_parts, monorail_parts, maglev_parts, wall_parts, catenary_parts, road_parts, assemble, cells, _sheets, sidewalk, crossing, depot, yard, roadsign):
     globals().update({_k: _v for _k, _v in vars(_m).items() if not _k.startswith("__")})
@@ -52,3 +56,7 @@ globals().update({_k: _v for _k, _v in vars(canal_crossing).items() if _k.lower(
 globals().update({_k: _v for _k, _v in vars(turntable).items() if _k.lower().startswith("turntable")})
 # 路面表示も同じく、名前が marking・MARKING で始まるものだけを出す
 globals().update({_k: _v for _k, _v in vars(marking).items() if _k.lower().startswith("marking")})
+# 説明用の色の way も同じく、名前が describe・DESCRIBE で始まるものだけを出す
+globals().update({_k: _v for _k, _v in vars(describe).items() if _k.lower().startswith("describe")})
+# 盛土の建物の版
+globals().update({_k: _v for _k, _v in vars(embankment_building).items() if _k.lower().startswith("embankment_building")})

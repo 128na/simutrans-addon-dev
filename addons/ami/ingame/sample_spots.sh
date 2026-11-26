@@ -112,7 +112,10 @@ YARD_SPOTS="Y1:2:3 YP:6:4 YE:3:13 YG:11:4 YW:15:3 YT:19:5 YX:30:4"
 #   VE 東西の遷車台、VX 十字・T 字（VX2 はカーブ）、VC 線路を横切らせた試し（踏切になる）
 #   TIT・TIV は iss と並べた所（#331。転車台は北が AMI・南が iss、遷車台は西が AMI・東が iss）
 TURNTABLE_SPOTS="TT:6:2 VN:17:3 VE:4:11 VX:32:4 VX2:46:3 VC:56:3 TIT:66:4 TIV:72:3"
+# 景観の補助の見本（ingame/scenic_sample.nut。#372）: ラウンドアバウト・説明用の線（地上と高架）・盛土の建物
+SCENIC_SPOTS="RA:6:6 DG:23:6 DE:21:19 MB:40:8 EW:45:8"
 case "${NUT:-}" in
+  *scenic_sample.nut) SPOTS=${SPOTS:-$SCENIC_SPOTS} ;;
   *tram_sample.nut) SPOTS=${SPOTS:-$TRAM_SPOTS} ;;
   *road_sample.nut) SPOTS=${SPOTS:-$ROAD_SPOTS} ;;
   *curve_sample.nut) SPOTS=${SPOTS:-$CURVE_SPOTS} ;;

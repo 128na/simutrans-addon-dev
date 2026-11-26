@@ -99,6 +99,10 @@ def describe(d):
     m = re.search(r"_(single|back|center|front|twin)(_arc|_ell)?(_catenary|_divider|_pole)?$", name)
     info = dict(name=name, version=m.group(1) if m else None, speed=None, struct=None, label=None,
                 old=catalog.is_old(name))  # old: 旧描画位置（SIS に合う。#26）の物。アイコンの左下に「旧」
+    if name.startswith("ami_describe_"):  # 説明用の色の way（#372）: 左上に「説」。地上は路面軌道、高架は線路の一覧に出る。高架は下の帯
+        elev = name.endswith("_elev")
+        info.update(way="rail" if elev else "tram", kind="describe", label="説", struct="elev" if elev else None)
+        return info
     if name.startswith(("ami_tram", "ami_embankment", "ami_mark_")):  # 盛土・路面表示は tram_track の way（路面軌道の道具の一覧に出る）
         info["way"] = "tram"
     elif name.startswith("ami_road_expressway"):

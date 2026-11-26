@@ -691,8 +691,102 @@ def _tile_v(inbound):
     return MARKING_W4_LANE if inbound else -MARKING_W4_LANE
 
 
+# ---------------------------------------------------------------- ラウンドアバウト 3×3（AMI #372。手本は iss の util/road_misc の round_about1）
+# 道路を 3×3 の輪（角は曲がり、辺は T字）に敷き、4 本の腕を足して、この表示を同じ形に重ねる。座標は輪の中心（中心のタイルの中心）が原点の (x, y)。
+# 左側通行なので、輪は時計回り
+MARKING_RA_OUT = TILE + EDGE_LINE        # 13.37 輪の外の白線の半径
+MARKING_RA_IN = TILE - EDGE_LINE         # 6.63 内の白線の半径
+MARKING_RA_ISLAND = 5.0                  # 中心の島の半径（中心のタイルに収まる）
+MARKING_RA_PAVE = 15.8                   # 路面を敷く半径（下の道路の角の円弧の外の線まで覆う）
+MARKING_RA_STEPS = 96                    # 円を割る数
+MARKING_RA_DASH = 6                      # 腕の口の点線の分割（口の幅 ±EDGE_LINE を割る）
+MARKING_RA_SPLITTER = (19.8, 24.0, 1.2)  # 腕の分離の導流帯（三角）: 輪の側の底の u、先の u、底の半幅
+MARKING_RA_CROSSWALK = (17.2, 19.2)      # 腕の横断歩道の u（u は輪の中心から腕の向き）
+
+
+def _ra_circle(r, n=MARKING_RA_STEPS):
+    return [(r * math.cos(2 * math.pi * i / n), r * math.sin(2 * math.pi * i / n)) for i in range(n)]
+
+
+def _ra_shape(plan):
+    """ラウンドアバウトの全体（原点が輪の中心）。タイルへの切り抜きは emit がする"""
+    plan.accents.append(_ra_circle(MARKING_RA_ISLAND))
+    dirs = list(_DIRS.values())
+    mouth = math.asin(EDGE_LINE / MARKING_RA_OUT)  # 腕の口の、腕の向きから測った半角
+    for i in range(MARKING_RA_STEPS):
+        t0, t1 = 2 * math.pi * i / MARKING_RA_STEPS, 2 * math.pi * (i + 1) / MARKING_RA_STEPS
+        mid = (t0 + t1) / 2
+        near = min(abs(math.atan2(math.sin(mid - math.atan2(y, x)), math.cos(mid - math.atan2(y, x)))) for x, y in dirs)
+        plan.seg(*[(MARKING_RA_IN * math.cos(t), MARKING_RA_IN * math.sin(t)) for t in (t0, t1)])
+        if near >= mouth:
+            plan.seg(*[(MARKING_RA_OUT * math.cos(t), MARKING_RA_OUT * math.sin(t)) for t in (t0, t1)])
+    edge_u = math.sqrt(MARKING_RA_OUT ** 2 - EDGE_LINE ** 2)
+    for dx, dy in dirs:
+        arm = _Plan()
+        # 口の点線（輪の外の白線の続き）
+        for k in range(MARKING_RA_DASH):
+            if k % 2 == 0:
+                a0 = -mouth + 2 * mouth * k / MARKING_RA_DASH
+                a1 = a0 + 2 * mouth / MARKING_RA_DASH
+                arm.seg(*[(MARKING_RA_OUT * math.cos(t), MARKING_RA_OUT * math.sin(t)) for t in (a0, a1)])
+        # 腕の縁の線（輪の白線から辺の T字のタイルの端まで）
+        for v in (-EDGE_LINE, EDGE_LINE):
+            arm.line(v, edge_u, 3 * MARKING_HALF)
+        # 腕のタイル: 路面、横断歩道、分離の導流帯、その先の中央線
+        arm.pave(3 * MARKING_HALF, 5 * MARKING_HALF, -MARKING_PAVE_IN, MARKING_PAVE_IN)
+        arm.crosswalk([-2.5, -1.5, -0.5, 0.5, 1.5, 2.5], MARKING_RA_CROSSWALK)
+        u0, u1, half = MARKING_RA_SPLITTER
+        tri = [(u0, -half), (u1, 0.0), (u0, half)]
+        for p, q in zip(tri, tri[1:] + tri[:1]):
+            arm.seg(p, q)
+        arm.zebra(tri)
+        arm.line(0.0, u1, 5 * MARKING_HALF)
+        turn = lambda pts: [(dx * u - dy * v, dy * u + dx * v) for u, v in pts]
+        plan.polys += [turn(p) for p in arm.polys]
+        plan.paves += [turn(p) for p in arm.paves]
+    # 輪の中の進行方向の矢印（時計回り。角のタイルの対角線の上）
+    for k in range(4):
+        t = math.pi / 4 + math.pi / 2 * k
+        pt = lambda a, r=TILE: (r * math.cos(a), r * math.sin(a))
+        head = t - 0.10  # 時計回り = 角が減る向き
+        plan.seg(pt(t + 0.14), pt(t))
+        plan.seg(pt(t), pt(head))
+        plan.poly([pt(head, TILE - 0.5), pt(head - 0.12), pt(head, TILE + 0.5)])
+
+
+def _ra_tile(tx, ty):
+    """輪の中心から (tx, ty) タイルのずれたタイルの絵"""
+    def draw(plan):
+        p = _Plan()
+        _ra_shape(p)
+        if max(abs(tx), abs(ty)) < 2:  # 輪の路面は輪と中心のタイルだけ（腕のタイルに掛けると、手前の縁に細い路面が出る）
+            p.pave_poly(_ra_circle(MARKING_RA_PAVE))
+        shift = lambda pts: [(x - tx * TILE, y - ty * TILE) for x, y in pts]
+        plan.polys += [shift(q) for q in p.polys]
+        plan.paves += [shift(q) for q in p.paves]
+        plan.accents += [shift(q) for q in p.accents]
+    return draw
+
+
+def _roundabout_jobs():
+    d = lambda c: _DIRS[c]
+    jobs = {MARKING_SINGLE_CELL: (_ra_tile(0, 0), None, 0.0, None)}
+    for rc, c in MARKING_CURVES.items():  # 輪の角: つながる 2 向きの反対の側
+        x, y = (-(d(c[0])[i] + d(c[1])[i]) for i in (0, 1))
+        jobs[rc] = (_ra_tile(x, y), None, 0.0, None)
+    for rc, m in MARKING_TEES.items():    # 腕のある辺: 欠ける向きの反対の側
+        x, y = d(m)
+        jobs[rc] = (_ra_tile(-x, -y), None, 0.0, None)
+    for rc, c in MARKING_DEADENDS.items():  # 腕: つながる向き（輪の側）の反対の 2 タイル先
+        x, y = d(c)
+        jobs[rc] = (_ra_tile(-2 * x, -2 * y), None, 0.0, None)
+    return jobs
+
+
 def marking_jobs(kind):
     """種類 → {セル: (描く関数, 向き a か None, 横位置のずらし, 坂)}"""
+    if kind == "roundabout":
+        return _roundabout_jobs()
     if kind in MARKING_EXPWY_KINDS:
         return _expwy_jobs(kind)
     if kind in MARKING_COLOR_KINDS:

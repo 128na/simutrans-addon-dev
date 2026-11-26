@@ -9,7 +9,7 @@ src/ の dat から、全部入りのまとめ（dist/ami.pak）と、種類別�
     dist/ami_canal.pak    運河（ami_canal*。地上の way と船の車庫 ami_canal_depot）
     dist/ami_narrow.pak   狭軌（ami_narrow_*。地上の 30・60、60 のトンネルと車庫 ami_narrow_depot。#370）
     dist/ami_extra.pak  付属（壁・橋脚・歩道・歩道の柵・踏切: ami_wall_*（歩道の柵 ami_wall_sidewalk_* と柵つきの電柱を含む）・ami_pier_*・ami_sidewalk*（電柱 ami_sidewalk_pole_* を含む）・ami_crossing_*）
-    dist/ami_scenery.pak 景観（盛土・道路標識: ami_embankment_*・ami_sign_*）
+    dist/ami_scenery.pak 景観（盛土の way・建物・道路標識・説明用の色の way: ami_embankment_*・ami_sign_*・ami_describe_*）
     dist/ami_rail_old.pak 旧描画位置（SIS に合う）の線路と、その壁・架線・橋脚（catalog.is_old。#26・ADR 0011）。全部入りの ami.pak と、上の種類別の pak には入らない
 dat が 1 つも無い種類の pak は作らない。makeobj の出力に WARNING か ERROR があれば、出力を見せて 1 で終わる（ACCEPTANCE 1-5）。
 作った後、分岐の追加画像（Y字分岐・三方分岐。絵の番号 26〜35）を継ぎ足す: src/ex_donors.dat（blender/ami_dat.py が書く提供用の物）を
@@ -52,7 +52,7 @@ KINDS = {
     "ami_maglev.pak": ("ami_maglev",),  # リニア（#371。ADR 0017）。ガイドと車庫 ami_maglev_depot も入る
     "ami_narrow.pak": ("ami_narrow_",),  # 狭軌（#370）。トンネルと車庫 ami_narrow_depot も入る
     "ami_extra.pak": ("ami_wall_", "ami_pier_", "ami_sidewalk", "ami_crossing_"),  # 踏切（#111）は線路・道路と組で使うので付属に入れる
-    "ami_scenery.pak": ("ami_embankment_", "ami_sign_"),  # 景観（ADR 0008。盛土 #123・道路標識 #122）
+    "ami_scenery.pak": ("ami_embankment_", "ami_sign_", "ami_describe_"),  # 景観（ADR 0008。盛土 #123・道路標識 #122。盛土の建物・説明用の色の way #372）
     "ami_rail_old.pak": (),  # 旧描画位置の線路・壁・架線・橋脚（#26。ADR 0011）。名前の頭でなく catalog.is_old で決める（belongs）
 }
 OLD_PAK = "ami_rail_old.pak"
