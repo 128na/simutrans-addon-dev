@@ -10,7 +10,8 @@
 数え方: 道路の dat（ami_road_*.dat）ごとに、温帯と雪（image[..][0]・[1]）のカーブ 4 つ（sw・nw・ne・se）を、つながる 2 方向の隣に
 直線（ns・ew）を置いてゲームと同じ並びに重ね、透明で、左右か上下の両隣が塗られた画素を数える。タイルの菱形の頂点の近く
 （VERTEX_R × 倍率の画素）は数えない（3 枚の角が寄る所で、直す前から 1〜2 画素ある。路面の外）。1 つのつなぎで MIN_HOLES 画素以上あれば失敗にする。
-直す前は、生活道路の base_single の雪で 128 は 6 画素、256 は 85 画素だった。
+直す前は、生活道路の base_single の雪で 128 は 6 画素（sw・se が各 3。しきい値の余裕は無い）、256 は 85 画素だった。
+セルはどれも dat の位置合わせ（offset）が同じとみなして重ねる（AMI の道路の dat は全部同じ値。違うセルが混ざったら読むように直す）。
 """
 import os
 import re
@@ -51,7 +52,7 @@ def holes(layers):
 
 def main(src):
     skip = bool(os.environ.get("CHECK_SKIP_MISSING"))
-    errors, lines, checked = [], [], 0
+    errors, checked = [], 0
     sheets = {}
     for dat in sorted(f for f in os.listdir(src) if f.startswith("ami_road_") and f.endswith(".dat")):
         with open(os.path.join(src, dat), encoding="utf-8", errors="replace") as f:
@@ -68,7 +69,7 @@ def main(src):
                 if not skip:
                     errors.append(f"{dat}: シートが無い {missing}")
                 continue
-            for s in {v[0] for v in cells.values()}:
+            for s in {v[0] for (k, se), v in cells.items() if se == season}:
                 if s not in sheets:
                     with Image.open(os.path.join(src, s + ".png")) as im:
                         a = np.asarray(im.convert("RGBA"))
@@ -85,8 +86,6 @@ def main(src):
                     errors.append(f"{dat}: {'雪' if season else '温帯'}のカーブ {cv} と隣の直線の境に、透ける画素が {len(hs)}"
                                   f"（カーブのセルの座標 {hs[:6]}。#378）")
     print(f"check_curve_join: {src}（セル {CELL}px）: 道路の dat の季節 {checked} 組")
-    for line in lines:
-        print(line)
     if errors:
         for e in errors:
             print("ERROR:", e)
