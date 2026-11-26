@@ -4,6 +4,7 @@
 
 ## 狭軌の作り（#370）
 
+- 範囲に入れた理由は [ADR 0017](../../../../docs/adr/0017-ami-scope-narrow-gauge-and-linear.md)（車両は別のアドオンに任せる）
 - 物: 地上の 2 種 `ami_narrow_wood`（30 km/h。木のまくらぎと土の道床の軽便）・`ami_narrow_ballast`（60 km/h。在来線と同じ砕石と PC まくらぎ）、60 のトンネル `ami_narrow_ballast_tunnel`（中の way は `ami_narrow_ballast`）、車庫 `ami_narrow_depot`（[「車庫の作り」](depot.md)）。並びは iss の狭軌（`../refs/iss/src/way/rail/narrow.dat` の `iss_wng_0030`・`iss_wng_0060`。地上だけ）とトンネル（`iss_tn_0060`）に合わせた。基盤・高架・橋・壁・架線・旧描画位置の版は作らない（iss にも無い。線路の壁・架線は waytype が `track` の way-object で、狭軌には重ならない）
 - 部品: 在来線（`ami_rail_ballast`）の部品（まくらぎ・レール・頭頂面の帯・汚れ・車止め・道床）を使い回し、軌間だけを内へ寄せる（`blender/render.py` の `NARROW_*`。土台の `sheetlib` は変えていない）
   - まくらぎ・汚れ・まくらぎの間の砕石・車止めは、横幅を `NARROW_GAUGE_K`（0.7）倍にする

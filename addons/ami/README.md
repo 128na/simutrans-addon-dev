@@ -16,6 +16,7 @@ pak128 用のインフラアドオン集。絵は Blender のスクリプトで�
 - [ADR 0014](../../docs/adr/0014-ami-scope-stations-and-signals.md): 駅・停留所・線路の信号を範囲に入れていた。ADR 0015 に置き換えられた
 - [ADR 0015](../../docs/adr/0015-ami-scope-back-to-iss.md): 範囲を iss にある物に戻す。閉塞信号 `ami_rail_signal` を外し、ADR 0014 を置き換える
 - [ADR 0016](../../docs/adr/0016-ami-remove-road-stops.md): 道路の停留所を外す（pak256 が自前を用意した）。ADR 0015 の「停留所は残す」を置き換える
+- [ADR 0017](../../docs/adr/0017-ami-scope-narrow-gauge-and-linear.md): 狭軌とリニアを範囲に入れる（車両は別のアドオンに任せる）。ADR 0015 の「狭軌とリニアを入れない」を置き換える
 
 ## 目的と中身
 

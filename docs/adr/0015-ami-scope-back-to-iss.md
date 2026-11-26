@@ -1,6 +1,6 @@
 # ADR: AMI の範囲を iss にある物に戻し、閉塞信号を外す（ADR 0014 の置き換え）
 
-> ステータス: Accepted (2026-11-26)。[ADR 0014](0014-ami-scope-stations-and-signals.md) を置き換える（0014 は Superseded）。停留所を残す決定は [ADR 0016](0016-ami-remove-road-stops.md) が置き換えた
+> ステータス: Accepted (2026-11-26)。[ADR 0014](0014-ami-scope-stations-and-signals.md) を置き換える（0014 は Superseded）。停留所を残す決定は [ADR 0016](0016-ami-remove-road-stops.md) が、狭軌とリニアを入れない決定は [ADR 0017](0017-ami-scope-narrow-gauge-and-linear.md) が置き換えた
 > 由来: [#292](https://github.com/128na/simutrans-addon-dev/issues/292)・[#264](https://github.com/128na/simutrans-addon-dev/issues/264)（0014 の元の範囲の見直し）・[#277](https://github.com/128na/simutrans-addon-dev/issues/277)・[#278](https://github.com/128na/simutrans-addon-dev/issues/278)
 
 ## 背景と問題

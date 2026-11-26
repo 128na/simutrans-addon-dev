@@ -6,7 +6,7 @@ AMI 第 6 弾（管理 #374）の [#370](https://github.com/128na/simutrans-addo
 
 ## 分かったこと（事実）
 
-- ADR 0008・0014・0015 は「狭軌とリニアを入れない」のまま（0008 の「入れない物」、0014・0015 が引き継いだ）。#370 の範囲は、進捗管理の判断で入れたもの。ADR の書き手は進捗管理に問い合わせた（[#370 のコメント](https://github.com/128na/simutrans-addon-dev/issues/370)）
+- ADR 0008・0014・0015 は「狭軌とリニアを入れない」のまま（0008 の「入れない物」、0014・0015 が引き継いだ）。#370 の範囲は、進捗管理の判断で入れたもの。ADR の書き手は進捗管理に問い合わせた（[#370 のコメント](https://github.com/128na/simutrans-addon-dev/issues/370)）。答えはユーザーの判断 74（2026-11-26、「両方作る」）で、作業者がこの PR で [ADR 0017](../adr/0017-ami-scope-narrow-gauge-and-linear.md) を書いた
 - iss の狭軌は地上だけ（高架・橋・壁なし）。`iss_wng_0030` と `iss_wng_0060` は費用 15000・維持費 300 が同じで、絵も同じ（分岐の絵の向きだけ違う）。付属にトンネル `iss_tn_0060`（60 km/h、費用 60000・維持費 1200）、地下の way、車庫、留置線、踏切（道路 × 狭軌 3、狭軌 × 線路 1、狭軌 × 水路 1）がある
 - iss のレールの間は、ew のセルで狭軌 4px・標準軌 6px（`../refs/iss/release/pak128/way/rail/narrow_kt.png`・`standard_kt.png`）。AMI の在来線は約 6.1px。レールの中心を 0.7 倍に寄せた狭軌は約 4.3px
 - refs の pak128・pak128.japan に `waytype=narrowgauge_track` の車両の dat は無い
