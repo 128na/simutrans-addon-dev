@@ -103,13 +103,15 @@ MARKING6_SPOTS="X6:9:9 W6:5:9 S6:9:14 N6:9:4 E6:14:9 L6:2:9 L6N:9:2"
 #   D0 分岐の平行 0 マス、D2 平行 2 マスでランプが斜め、M0 合流の平行 0 マスでランプが斜め
 EXPWY_MARKING_SPOTS="DE:9:9 DS:32:7 DW:59:10 DN:77:15 ME:9:31 MS:32:29 MW:59:32 MN:77:37 D0:8:55 D2:33:55 M0:62:55"
 # 路面の色と黄色の中央線の見本（ingame/color_marking_sample.nut。#313）: PE 東西の 5 本、PN 南北の 5 本、PY・PNY 黄線の辺り（東西・南北）、PX 赤の十字、PT 青の T字
-COLOR_MARKING_SPOTS="PE:6:8 PN:22:7 PY:6:13 PNY:27:8 PX:40:5 PT:55:6"
+#   PI・PI2 は iss の同じ物と並べた所（#331。左が AMI、右が iss。PI は赤・青・緑、PI2 は緑・赤の縞・黄線）
+COLOR_MARKING_SPOTS="PE:6:8 PN:22:7 PY:6:13 PNY:27:8 PX:40:5 PT:55:6 PI:70:5 PI2:70:12"
 # 操車場の見本（ingame/yard_sample.nut）: Y1 南北の 1・3 タイル、YP 乗客の駅の隣、YE 東西の 1・3 タイル、YG 並べた留置線、
 #   YW 壁つきの基盤の版、YT 列車を止めた操車場、YX 斜め・坂・高架に建てる試し
 YARD_SPOTS="Y1:2:3 YP:6:4 YE:3:13 YG:11:4 YW:15:3 YT:19:5 YX:30:4"
 # 転車台・遷車台の見本（ingame/turntable_sample.nut。#314）: TT 転車台（東西・南北の線路の行き止まりの間と単独）、VN 南北の遷車台、
 #   VE 東西の遷車台、VX 十字・T 字（VX2 はカーブ）、VC 線路を横切らせた試し（踏切になる）
-TURNTABLE_SPOTS="TT:6:2 VN:17:3 VE:4:11 VX:32:4 VX2:46:3 VC:56:3"
+#   TIT・TIV は iss と並べた所（#331。転車台は北が AMI・南が iss、遷車台は西が AMI・東が iss）
+TURNTABLE_SPOTS="TT:6:2 VN:17:3 VE:4:11 VX:32:4 VX2:46:3 VC:56:3 TIT:66:4 TIV:72:3"
 case "${NUT:-}" in
   *tram_sample.nut) SPOTS=${SPOTS:-$TRAM_SPOTS} ;;
   *road_sample.nut) SPOTS=${SPOTS:-$ROAD_SPOTS} ;;

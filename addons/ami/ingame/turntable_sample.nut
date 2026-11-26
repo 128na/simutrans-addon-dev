@@ -10,10 +10,16 @@
 //   VE 東西の遷車台: y=11 の x 0〜8。北から南北の線路（y 7〜10）を x 0・3・6 に、南から（y 12〜15）を x 0・4・8 に。台車は西の端 (0,11)
 //   VX 分かれ目: 十字（中心 (30,4)、腕 4 マス）・T 字（中心 (40,4)、南へ枝）・カーブ（(48,0)〜(48,4)〜(52,4)）
 //   VC 試し: 南北の遷車台 x=56（y 0〜6）を、東西の線路（y=3、x 54〜58）で横切る
+//   TI iss と並べる（#331）: 転車台を AMI (66,2)・iss (66,6) に、それぞれ東西の線路の行き止まり（x 64〜65・67〜68）の間に置く。
+//     南北の遷車台を AMI x=71・iss x=73（y 0〜6）に置き、AMI の西（x 69〜70）と iss の東（x 74〜75）から y 0・3・6 に線路を突き当てる。
+//     iss（iss_util_rail_misc.pak の iss_wrg_turntable_traverser）が無ければ iss の分は敷かず、[info] に書く（sample_parallel.sh の EXTRA_PAKS で足す）
+// ラウンドの版（#56・#331）: SUFFIX を転車台の名前の末尾に付ける。線路には付けない（sample_parallel.sh の SUFFIX が置き換える）
+local SUFFIX = "";
 local ORIGINS = [[20, 20], [276, 20]];
 local SNOW = 1;
-local AREA = [[-3, -4], [62, 18]];
-local TT = "ami_rail_turntable";
+local AREA = [[-3, -4], [78, 18]];
+local TT = "ami_rail_turntable" + SUFFIX;
+local ISS_TT = "iss_wrg_turntable_traverser";
 local RAIL = "ami_rail_ballast";
 local pl = player_x(0);
 local report = "";
@@ -64,6 +70,17 @@ function lay() {
   local t = square_x(OX + 56, OY + 3).get_ground_tile();
   local rw = t.get_way(wt_rail);
   infos += "[info] VC rail across (56,3): " + (e == null ? "built" : e) + " crossing=" + (rw == null ? "-" : rw.is_crossing()) + "\n";
+  // TI（iss と並べる）
+  local iss = way_desc_x(ISS_TT) != null;
+  if (!iss) infos += "[info] TI " + ISS_TT + " desc=[missing]\n";
+  foreach (i, n in iss ? [TT, ISS_TT] : [TT]) {
+    local y = 2 + 4 * i, x = 71 + 2 * i;
+    way("TI", RAIL, 64, y, 65, y); way("TI", RAIL, 67, y, 68, y);
+    way("TI", n, 66, y, 66, y);
+    way("TI", n, x, 0, x, 6);
+    foreach (yy in [0, 3, 6]) way("TI", RAIL, i == 0 ? 69 : 74, yy, i == 0 ? 70 : 75, yy);
+  }
+  expect("TI", 66, 2, 0); expect("TI", 71, 0, 4);
 }
 
 foreach (n, o in ORIGINS) {

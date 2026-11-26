@@ -39,7 +39,8 @@ from sheet_rows import MARKING_COLS, MARKING_EMPTY_CELL, MARKING_ROWS, MARKING_S
 from . import sheetlib as _s
 from .cells import ROAD_CY, make_sheet, render_cell
 from .core import H, TILE, apply_slope, clear_models, material, mesh_object, set_anchor
-from .road_parts import CENTER_DASHES, CENTER_DASHES_WIDE, CENTER_DASH_FRAC, CENTER_DASH_FRAC_WIDE, EDGE_CORNER_R, EDGE_LINE, LINE_TOP, LINE_W, SNOW_LAYERS
+from .road_parts import (CENTER_DASHES, CENTER_DASHES_WIDE, CENTER_DASH_FRAC, CENTER_DASH_FRAC_WIDE, EDGE_CORNER_R, EDGE_LINE, LINE_TOP, LINE_W,
+                         SNOW_LAYERS, WEAR_LAYERS)
 
 # ---------------------------------------------------------------- 寸法（部品の 1 単位 ≈ 1 m。タイル 1 辺 10）
 # 腕の位置は、交差点の向き a の座標で、u（a の向き。タイルの中心が 0、交差点の側の辺が +5）と v（a の左を正。左側通行で入る側）で表す
@@ -125,6 +126,9 @@ MARKING_COLOR_STRIPE_W = 1.0       # 縞の幅（道に沿う向き）
 MARKING_COLOR_STRIPE_PERIOD = 2.0  # 縞の周期（タイル 1 辺 10 に 5 本。タイルの辺をまたいでも周期がそろう）
 MARKING_COLOR_IN = EDGE_LINE - MARKING_PAVE_IN  # 色の帯の内の端の、中央線の中心からの距離（0.9。外の端は MARKING_PAVE_IN = 路側線の中心から 0.9 内）
 MARKING_TEE_MOUTH_DASH = 0.3   # 下の一般道路の T字の、枝の口の点線の太さ（sheetlib の mouth_dash）
+# 色の舗装の走行跡（#331。精細化のラウンド 1 の 1wp）: 色の帯の上の、車輪の通る所だけ色が褪せた帯。下の一般道路の走行跡（road_parts の
+# WEAR_LAYERS の 2 段目）と同じ所を通し、色の帯の範囲（MARKING_COLOR_IN〜MARKING_PAVE_IN）で切る。材質は marking_sheet の wear（無ければ描かない）
+MARKING_COLOR_WEAR = WEAR_LAYERS[1][0]
 MARKING_ACCENT_Z = (MARKING_PAVE_Z[0], MARKING_PAVE_Z[1] + 0.001)  # 縞の板（路面の板と同じ高さ。白線より下）
 MARKING_KINDS = ("lane4", "junction2", "junction2_t", "junction4_in", "junction4_out", "junction4_c",
                  "lane6_a", "lane6_b", "lane6_m", "junction6_in", "junction6_out", "junction6_m", "junction6_c") + MARKING_COLOR_KINDS
@@ -196,10 +200,15 @@ class _Plan:
         self.paves = []
         self.snows = []
         self.accents = []
+        self.wears = []
 
     def accent(self, u0, u1, v0, v1):
         """色の板（長方形。赤の縞など。marking_sheet の accent の材質）"""
         self.accents.append([(u0, v0), (u1, v0), (u1, v1), (u0, v1)])
+
+    def wear(self, u0, u1, v0, v1):
+        """色の舗装の走行跡の板（長方形。#331。marking_sheet の wear の材質）"""
+        self.wears.append([(u0, v0), (u1, v0), (u1, v1), (u0, v1)])
 
     def pave(self, u0, u1, v0, v1):
         """路面の板（長方形）"""
@@ -280,15 +289,18 @@ class _Plan:
         """路面の板（凸の多角形）"""
         self.paves.append(list(pts))
 
-    def emit(self, a, mat, voff=0.0, pave_mat=None, snow_mat=None, slush=None, accent_mat=None):
+    def emit(self, a, mat, voff=0.0, pave_mat=None, snow_mat=None, slush=None, accent_mat=None, wear_mat=None):
         """向き a（単位ベクトル。None なら (u, v) をそのまま (x, y) とする）のタイルへ、横位置を voff だけずらして
-        （タイルの v = V - voff）、タイルの範囲で切り抜いて板にする。pave_mat が有れば路面の板も、accent_mat が有れば色の板も作る"""
+        （タイルの v = V - voff）、タイルの範囲で切り抜いて板にする。pave_mat が有れば路面の板も、accent_mat が有れば色の板も、
+        wear_mat が有れば色の舗装の走行跡の板（色の板と同じ高さ）も作る"""
         box = (((1, 0), MARKING_HALF), ((-1, 0), MARKING_HALF), ((0, 1), MARKING_HALF), ((0, -1), MARKING_HALF))
         layers = [("marking", self.polys, mat, MARKING_Z)]
         if pave_mat is not None:
             layers.append(("marking_pave", self.paves, pave_mat, MARKING_PAVE_Z))
         if accent_mat is not None and self.accents:
             layers.append(("marking_accent", self.accents, accent_mat, MARKING_ACCENT_Z))
+        if wear_mat is not None and self.wears:
+            layers.append(("marking_accent", self.wears, wear_mat, MARKING_ACCENT_Z))
         if snow_mat is not None and self.snows:
             # 雪の板の縁のぼかし（#197）: 板を縦（v）に広げた帯を、外が暗く内が明るい順に下から重ねる（slush は外 → 内の (広げる幅, 材質)）
             for i, (d, sm) in enumerate(slush or ()):
@@ -572,16 +584,24 @@ def _center6_pave(plan):
 
 
 # ---------------------------------------------------------------- 種類と形 → 絵
-def _color_bands(put, u0, u1):
+def _color_bands(put, u0, u1, wear=None):
     """道の向きの u0〜u1 に、中央線の両側の色の帯を置く（put(u0, u1, v0, v1)）。帯は中央線の中心から MARKING_COLOR_IN、外の路側線の中心から
-    MARKING_COLOR_IN 内のあいだ（白線 → 路面の隙間 → 色 → 路面の隙間 → 中央線。隙間は両側とも MARKING_COLOR_IN - LINE_W / 2）"""
+    MARKING_COLOR_IN 内のあいだ（白線 → 路面の隙間 → 色 → 路面の隙間 → 中央線。隙間は両側とも MARKING_COLOR_IN - LINE_W / 2）。
+    wear（put と同じ形）を渡すと、帯の上に走行跡（MARKING_COLOR_WEAR を帯の範囲で切ったもの）を左右に重ねる（#331）"""
     for v0, v1 in ((MARKING_COLOR_IN, MARKING_PAVE_IN), (-MARKING_PAVE_IN, -MARKING_COLOR_IN)):
         put(u0, u1, v0, v1)
+    if wear is None:
+        return
+    for a, b in MARKING_COLOR_WEAR:
+        a, b = max(a, MARKING_COLOR_IN), min(b, MARKING_PAVE_IN)
+        if b > a:
+            wear(u0, u1, a, b)
+            wear(u0, u1, -b, -a)
 
 
 def _color_lane(plan):
-    """色の舗装の直線の 1 タイル（向き a の座標。#313）: 中央線の両側の帯（_color_bands）。線は下の一般道路の線が見える"""
-    _color_bands(plan.pave, -MARKING_HALF, MARKING_HALF)
+    """色の舗装の直線の 1 タイル（向き a の座標。#313）: 中央線の両側の帯（_color_bands）と走行跡。線は下の一般道路の線が見える"""
+    _color_bands(plan.pave, -MARKING_HALF, MARKING_HALF, plan.wear)
 
 
 def _color_striped(plan):
@@ -599,11 +619,12 @@ def _color_center_line(plan):
     plan.line(0.0, -MARKING_HALF, MARKING_HALF)
 
 
-def _put_xy(plan, axis):
-    """_color_bands の put を、(x, y) の座標の plan.pave に写す。axis が "x" なら u = x・v = y、"y" なら u = y・v = x"""
+def _put_xy(plan, axis, layer="pave"):
+    """_color_bands の put を、(x, y) の座標の plan の layer（"pave" か、走行跡の "wear"）に写す。axis が "x" なら u = x・v = y、"y" なら u = y・v = x"""
+    f = getattr(plan, layer)
     if axis == "x":
-        return lambda u0, u1, v0, v1: plan.pave(u0, u1, v0, v1)
-    return lambda u0, u1, v0, v1: plan.pave(v0, v1, u0, u1)
+        return lambda u0, u1, v0, v1: f(u0, u1, v0, v1)
+    return lambda u0, u1, v0, v1: f(v0, v1, u0, u1)
 
 
 def _color_cross(plan):
@@ -612,9 +633,9 @@ def _color_cross(plan):
     P, h = MARKING_PAVE_IN, MARKING_HALF
     plan.pave(-P, P, -P, P)
     for axis in "xy":
-        put = _put_xy(plan, axis)
-        _color_bands(put, P, h)
-        _color_bands(put, -h, -P)
+        put, wear = _put_xy(plan, axis), _put_xy(plan, axis, "wear")
+        _color_bands(put, P, h, wear)
+        _color_bands(put, -h, -P, wear)
 
 
 def _color_tee(m):
@@ -627,9 +648,9 @@ def _color_tee(m):
 
     def draw(plan):
         h = MARKING_HALF
-        _color_bands(_put_xy(plan, through), -h, h)
+        _color_bands(_put_xy(plan, through), -h, h, _put_xy(plan, through, "wear"))
         u0 = EDGE_LINE + MARKING_TEE_MOUTH_DASH / 2 + (MARKING_COLOR_IN - LINE_W / 2)
-        _color_bands(_put_xy(plan, branch), *sorted((sgn * u0, sgn * h)))
+        _color_bands(_put_xy(plan, branch), *sorted((sgn * u0, sgn * h)), _put_xy(plan, branch, "wear"))
     return draw
 
 
@@ -762,17 +783,18 @@ def _tee(m, closed_edge):
     return draw
 
 
-def marking_sheet(sheet, kind, label="M", paving=None, snow=None, line=None, slush=None, accent=None):
+def marking_sheet(sheet, kind, label="M", paving=None, snow=None, line=None, slush=None, accent=None, wear=None):
     """多車線と交差点の路面表示の way のシート（4 行 × 10 列）。種類ごとの形 → 絵は marking_jobs。絵の無い形のセル
     （MARKING_EMPTY_CELL ほか）は空。アイコン（0,0）は仮の絵（AMI は icons.py が描き直す）、カーソル（0,1）は MARKING_CURSOR の絵。
     line は白線の材質を返す関数（擦れのまだら。#197。無ければ一色の MARKING_LINE）、slush は雪の板の縁のぼかしの段（外 → 内の (広げる幅, 材質を返す関数)）。
     paving は路面の材質を返す関数（下の道路のアスファルトと同じ物。AMI は render.py の _road_asphalt_skin の "asphalt"。色の舗装（#313）は色の材質）。
-    無ければ白線だけ。accent は色の板（赤の縞。#313）の材質を返す関数"""
+    無ければ白線だけ。accent は色の板（赤の縞。#313）の材質を返す関数、wear は色の舗装の走行跡（#331）の材質を返す関数（無ければ描かない）"""
     assert kind in MARKING_KINDS, kind
     set_anchor(ROAD_CY)  # 道路と同じ（dat のオフセット -64,-32）
     mat = line() if line else material(*MARKING_LINE)
     pave_mat = paving() if paving else None
     accent_mat = accent() if accent else None
+    wear_mat = wear() if wear else None
     snow_mat = snow() if (snow and kind in MARKING_SNOW_KINDS) else None
     slush_mats = [(d, f()) for d, f in (slush or ())] if snow_mat is not None else None
     seasons = (0, 1) if snow_mat is not None else (0,)
@@ -783,7 +805,7 @@ def marking_sheet(sheet, kind, label="M", paving=None, snow=None, line=None, slu
             clear_models()
             plan = _Plan()
             (functools.partial(draw, snow=True) if season and "snow" in inspect.signature(draw).parameters else draw)(plan)
-            plan.emit(a, mat, voff, pave_mat, snow_mat if season else None, slush_mats if season else None, accent_mat)
+            plan.emit(a, mat, voff, pave_mat, snow_mat if season else None, slush_mats if season else None, accent_mat, wear_mat)
             if slope:
                 for ob in list(bpy.context.scene.objects):
                     if ob.type == "MESH" and ob.name.startswith("marking"):
@@ -796,7 +818,7 @@ def marking_sheet(sheet, kind, label="M", paving=None, snow=None, line=None, slu
     draw, a, voff, _ = jobs[cursor]
     plan = _Plan()
     draw(plan)
-    plan.emit(a, mat, voff, pave_mat, accent_mat=accent_mat)
+    plan.emit(a, mat, voff, pave_mat, accent_mat=accent_mat, wear_mat=wear_mat)
     cells[(0, 0)] = _s.render_icon(sheet + "_icon", 0.5, shift=(-0.14, 0.2), label=label, style="tram")
     make_sheet(cells, MARKING_ROWS * len(seasons), MARKING_COLS, os.path.join(_s.SRC, sheet + ".png"))
 
