@@ -6,7 +6,7 @@
 #   MAKEOBJ_FROM_PATH=1 bash addons/ami/check.sh   # ci.env の makeobj でなく、PATH の makeobj を使う
 #   HEADLESS_SIM_BIN=<sim> HEADLESS_PAKSET=<simutrans-test-base.zip> bash addons/ami/check.sh   # 画面を出さない本体で pak を読む検査（下記）。Windows の手元はこれを渡す。渡さないと飛ばす
 # 道具の版は ci.env。makeobj と dat_linter は TOOLS_DIR（既定は ~/.cache/simutrans-addon-dev/ci-tools）に取ってくる。
-# 要るもの: Python（と Pillow。check_cells.py が PNG を速く読む。無くても通るが数分かかる）、gh（道具を取るとき。サインイン済み）、uvx か pipx（ruff）。
+# 要るもの: Python（と Pillow。check_cells.py が PNG を速く読む。無くても通るが数分かかる。numpy は check_ground_mask.py が要る。版は ci.env）、gh（道具を取るとき。サインイン済み）、uvx か pipx（ruff）。
 # シートの描画（Blender）はしない（#50）。
 set -euo pipefail
 unset CHECK_SKIP_MISSING  # 環境に残っていると、128 の検査もシートの無い物を黙って飛ばす。256 の検査の行だけで付ける
@@ -87,6 +87,9 @@ rm -rf "$snap256"
 
 step "256 の dat の名前が pak128 と同じか、組まない物の表が実在するか（check_scaled.py。256 の PNG が無い CI でも見る。#261・#301）"
 "$PY" -X utf8 "$AMI/check_scaled.py"
+
+step "256 の持ち分マスクが pak256 の地面の形と画素で一致するか（tools/blender/check_ground_mask.py。Blender なし。#321）"
+"$PY" -X utf8 "$ROOT/tools/blender/check_ground_mask.py"
 
 step "アイコン・カーソルの参照先（セルの重なり・絵の有無・背景色・別のシートの絵・カーソルの offset。check_icons.py）"
 "$PY" -X utf8 "$AMI/check_icons.py"
