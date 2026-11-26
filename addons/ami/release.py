@@ -27,6 +27,7 @@ import os
 import re
 import shutil
 import sys
+import tempfile
 import zipfile
 
 import lineup
@@ -42,7 +43,7 @@ TEXTS = os.path.join(TEMPLATE, "text")
 THUMBNAIL = os.path.join(HERE, "docs", "thumbnail", "thumbnail.png")
 KINDS = ("ami_rail", "ami_road", "ami_tram", "ami_monorail", "ami_canal", "ami_extra", "ami_scenery", "ami_rail_old")  # build.py の KINDS と同じ
 # 固定の版名（版は beta.<n>・タグは ami-beta.<n>。256 の試しは alpha.<n>。README の「配る形」）。前が英数字なら版名ではない
-FIXED_VERSION = re.compile(r"(?<![A-Za-z0-9])(?:alpha|beta)\.\d+")
+FIXED_VERSION = re.compile(r"(?<![A-Za-z0-9])(?:alpha|beta)\.\d+", re.IGNORECASE)
 
 
 def fixed_versions(text):
@@ -60,16 +61,30 @@ def check_readme(path):
 
 
 def self_test():
-    """固定の版名を見つけるか、置き換えの記号や版名でない語を見逃すかを確かめる"""
-    bad = ["ami-beta.3 からの変更", "ami-beta.3.zip を消してから", "beta.3-old の zip", "（beta.12）", "alpha.1"]
+    """固定の版名を見つけるか、置き換えの記号や版名でない語を見逃すか、配る zip を組む経路で止まるかを確かめる"""
+    bad = ["ami-beta.3 からの変更", "ami-beta.3.zip を消してから", "beta.3-old の zip", "（beta.12）", "alpha.1", "Beta.3 からの変更"]
     good = ["AMI（AI Marunage Infrastructure）{version}", "ami-{version}.zip", "beta 版", "alphabeta.3", "pak128.japan", "v1.2"]
     errors = [s for s in bad if not fixed_versions(s)] + [s for s in good if fixed_versions(s)]
+    # 組む経路: 版名入りの readme なら、pak を探す前に止まる（無い pak の名前を渡しても readme の件で止まる）。
+    # 256 の zip は readme を入れないので、この確かめは pak128 のときだけ
+    if sheet_settings.SCALE != 1:
+        sys.exit("[release] --self-test は SHEET_PAK_SIZE を付けずに流す")
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "readme.txt")
+        with open(path, "w", encoding="utf8") as f:
+            f.write("AMI {version}\n## ami-beta.3 からの変更\n")
+        try:
+            main(["--version", "selftest", "--paks", "no_such_pak", "--readme", path])
+            errors.append("版名入りの readme で main が止まらない")
+        except SystemExit as e:
+            if "固定の版名" not in str(e.code):
+                errors.append(f"版名入りの readme で main が別の理由で止まった: {e.code}")
     if errors:
         sys.exit("[release] self-test 失敗: " + " / ".join(errors))
-    print(f"[release] self-test ok（見つける {len(bad)}・見逃す {len(good)}）")
+    print(f"[release] self-test ok（見つける {len(bad)}・見逃す {len(good)}・組む経路で止まる）")
 
 
-def main():
+def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--version", help="版の名前（zip の名前と readme に入る）")
     ap.add_argument("--paks", nargs="+", help="入れる dist/ の pak の名前（拡張子なし）")
@@ -78,7 +93,7 @@ def main():
     ap.add_argument("--extract", action="store_true", help="work/release/ami-<版>/ にも展開する")
     ap.add_argument("--check", action="store_true", help="release/readme*.txt に固定の版名が無いかだけを確かめる（check.sh）")
     ap.add_argument("--self-test", action="store_true", help="固定の版名の検出を確かめる")
-    a = ap.parse_args()
+    a = ap.parse_args(argv)
 
     if a.self_test:
         self_test()
@@ -94,6 +109,9 @@ def main():
     if not a.version or not a.paks:
         ap.error("--version と --paks が要る")
 
+    scaled = sheet_settings.SCALE != 1  # pak128 以外の大きさ: pak だけの zip（#266）
+    if not scaled:
+        check_readme(a.readme)  # pak を作り直す前に気づけるよう、pak を探すより先に見る
     if "ami" in a.paks and any(p in KINDS and p != "ami_rail_old" for p in a.paks):  # 旧描画位置（#26）の pak は ami に入らないので、一緒に入れてよい
         sys.exit("[release] 全部入りの ami と種類別の pak を同時に入れると、同じ物を二重に読む")
     paks = []
@@ -103,8 +121,7 @@ def main():
             sys.exit(f"[release] {path} が無い（先に build.py）")
         paks.append(path)
 
-    scaled = sheet_settings.SCALE != 1  # pak128 以外の大きさ: pak だけの zip（#266）
-    name = f"ami-{sheet_settings.PAK_SIZE}-{a.version}" if scaled else f"ami-{a.version}"
+    name =f"ami-{sheet_settings.PAK_SIZE}-{a.version}" if scaled else f"ami-{a.version}"
     os.makedirs(OUT, exist_ok=True)
     zpath = os.path.join(OUT, name + ".zip")
     if scaled:
@@ -128,7 +145,6 @@ def main():
 
 def write_full_zip(zpath, a, paks):
     """pak128 の配る zip（pak・readme・許諾・一覧・訳・サムネイル）を書く"""
-    check_readme(a.readme)
     with open(a.readme, encoding="utf8") as f:
         readme = f.read().replace("{version}", a.version)
     try:
