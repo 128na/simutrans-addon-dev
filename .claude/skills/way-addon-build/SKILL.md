@@ -73,7 +73,7 @@ description: Simutrans の way 系アドオン（AMI・blender-poc の線路・�
 | 部品の出方 | `SHEET_LAYOUT=1` で描いて `work/layout/` を見る。部品の色は `sheetlib/layout_colors.py` に足す |
 | 一部のセルだけ試す | `SHEET_ONLY=ew,nse,diag_nw` を付けて描く。シートは `work/only/` に書かれ、`src/` は変わらない |
 | 既存の絵が変わらない | `git status` の `src/` の差分と `tools/blender/sheet_diff.py` |
-| 描画の道具を直して絵が変わらない（AMI） | 基準はコミット済みの PNG にせず、変更前のコードで描いた絵にする（コミット済みの絵が今の描画とずれていることがある）。`origin/main` の別の worktree で、直す作業と並べて描いておくと待ちが減る。描いた後は `icons.py`（全部）まで流してから比べる（[AMI の「ビルド」](../../../addons/ami/README.md#ビルド)）。全シートの比較は `sheet_diff.py` を `xargs -P8` で 1 組ずつ回す（約 1.5 分）。比べた後は `src/` を戻す |
+| 描画の道具を直して絵が変わらない（AMI） | 基準はコミット済みの PNG にせず、変更前のコードで描いた絵にする（コミット済みの絵が今の描画とずれていることがある）。`origin/main` の別の worktree で、直す作業と並べて描いておくと待ちが減る（同じ worktree で作るなら、新しい版を一時のコミットで退避し、変更前に戻して描き、新しい版に戻して描く）。描いた後は `icons.py`（全部）まで流してから比べる（[AMI の「ビルド」](../../../addons/ami/README.md#ビルド)）。全シートの比較は `sheet_diff.py` を `xargs -P8` で 1 組ずつ回す（約 1.5 分）。比べた後は `src/` を戻す |
 | 描く対象の集まりの前後（AMI） | `bpy` を差し替えると、Blender なしで `render.py` を import して `render.SHEETS` を読める（やり方は PR #309 の本文） |
 | ゲームでの前後（AMI） | 撮影の手順を自分で作らず、`ingame/before_after.sh` を使う。前の pak は `git worktree add <一時の場所> <前のコミット>` で別の worktree を作ってビルドし（使い終えたら `git worktree remove`）、`before_after.sh` の `PAKDIR_BEFORE` か `sample_parallel.sh` の `PAK=` で渡す。拡大の切り抜きは座標で決める（差分から位置を探すと片方が外れる）。`game.sh` の既定の地図（512 四方）と `before_after.sh` のカタログ（1024 四方）は座標が違うので、流用するときは地図を確かめる |
 | AMI の全体 | README の「導入と検証」の順に `blender/ami_dat.py`・`build.py`・`ingame/sample_check.sh`・`ingame/sample_capture.sh`。全区画をまとめて撮るだけなら `ingame/sample_parallel.sh`（8 台） |

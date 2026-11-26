@@ -23,7 +23,9 @@ TOOLS_DIR="${TOOLS_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/simutrans-addon-dev/ci-t
 
 # ほかの ami_dat.py・build.py・check.sh と同時に走らない（#326。重なって src/*.dat が消え、壊れた pak ができた: #197）。
 # 自分をロックの下で走らせ直す。先に取った物があれば待つ。中で呼ぶ ami_dat.py・build.py は取り直さない（blender/src_lock.py）
-if [ "${AMI_SRC_LOCK:-}" != "$("$PY" -c 'import os,sys; sys.path.insert(0, sys.argv[1]); import src_lock; print(src_lock.LOCK)' "$AMI/blender")" ]; then
+lock="$("$PY" -c 'import sys; sys.path.insert(0, sys.argv[1]); import src_lock; print(src_lock.LOCK)' "$AMI/blender")"
+[ -n "$lock" ] || { echo "blender/src_lock.py のロックの場所が分からない" >&2; exit 1; }
+if [ "${AMI_SRC_LOCK:-}" != "$lock" ]; then
   exec "$PY" -X utf8 "$AMI/blender/src_lock.py" run check.sh -- "$BASH" "${BASH_SOURCE[0]}" "$@"  # bash の名前で呼ぶと、Windows では PATH の WSL の bash を拾う
 fi
 
@@ -44,8 +46,9 @@ fi
 # （以前は消して書き直してから戻していたので、ほかの ami_dat.py・build.py と重なったり途中で止めたりすると dat が消えた。#326）
 dat_compare() {  # <src のフォルダ名> <SHEET_PAK_SIZE>
   local src="$AMI/$1" gen report n
-  gen="$(mktemp -d)"
-  SHEET_PAK_SIZE="$2" "$PY" -X utf8 "$AMI/blender/ami_dat.py" --out "$gen" > /dev/null
+  # if の条件の中で呼ぶので set -e が効かない。失敗は 2 で返す（1 は差分あり）
+  gen="$(mktemp -d)" || return 2
+  SHEET_PAK_SIZE="$2" "$PY" -X utf8 "$AMI/blender/ami_dat.py" --out "$gen" > /dev/null || { echo "blender/ami_dat.py が落ちた（SHEET_PAK_SIZE=$2）"; rm -rf "$gen"; return 2; }
   report="$gen.report.txt"
   : > "$report"
   for n in $( (cd "$gen" && ls *.dat; cd "$src" && ls *.dat) | sort -u ); do
@@ -62,14 +65,22 @@ dat_compare() {  # <src のフォルダ名> <SHEET_PAK_SIZE>
 }
 
 step "dat の書き忘れ（blender/ami_dat.py の出力と src/ の dat を比べる）"
-if ! dat_compare src 128; then
+rc=0; dat_compare src 128 || rc=$?
+if [ "$rc" = 1 ]; then
   echo "${GITHUB_ACTIONS:+::error::}blender/ami_dat.py の出力と src/ の dat が違う。ami_dat.py を実行し、出た dat をコミットする"
+  exit 1
+elif [ "$rc" != 0 ]; then
+  echo "${GITHUB_ACTIONS:+::error::}src/ の dat の書き忘れを確かめられなかった（ami_dat.py が落ちた）"
   exit 1
 fi
 
 step "256 の dat の書き忘れ（SHEET_PAK_SIZE=256 の blender/ami_dat.py の出力と src256/ の dat を比べる。#266）"
-if ! dat_compare src256 256; then
+rc=0; dat_compare src256 256 || rc=$?
+if [ "$rc" = 1 ]; then
   echo "${GITHUB_ACTIONS:+::error::}SHEET_PAK_SIZE=256 の blender/ami_dat.py の出力と src256/ の dat が違う。ami_dat.py を実行し、出た dat をコミットする"
+  exit 1
+elif [ "$rc" != 0 ]; then
+  echo "${GITHUB_ACTIONS:+::error::}src256/ の dat の書き忘れを確かめられなかった（ami_dat.py が落ちた）"
   exit 1
 fi
 

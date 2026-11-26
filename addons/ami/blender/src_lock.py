@@ -56,7 +56,10 @@ def hold(who):
     os.makedirs(os.path.dirname(LOCK), exist_ok=True)
     f = open(LOCK, "a+")
     try:
-        limit = float(os.environ.get("SRC_LOCK_WAIT", "1800"))
+        try:
+            limit = float(os.environ.get("SRC_LOCK_WAIT") or "1800")
+        except ValueError:
+            sys.exit(f"[src_lock] SRC_LOCK_WAIT は秒数: {os.environ.get('SRC_LOCK_WAIT')}")
         start = time.monotonic()
         told = False
         while not _try_lock(f):

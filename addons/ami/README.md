@@ -163,7 +163,7 @@ python -X utf8 build.py                                                        #
 - `build.py` は続けて、`src/ex_donors.dat` から提供用の pak（`work/ex/donors.pak`）を作り、各 pak の線路・路面軌道・道路の way と架線つきの壁へ ex 画像を継ぎ足す（[「分岐の追加画像」](docs/objects/rail.md)）。継ぎ足した数を出し、pak ごとに名前で当たる提供用の物が全部写ったことと、継ぎ足した絵（26〜29・31〜34 番が空でなく、通常の T字・十字と違うこと、30・35 番が通常の十字と同じこと）を確かめ、違えば止まる。pak の中の ex 画像の数は `python -X utf8 ex_graft.py --list dist/ami.pak` で見られる
 - シートを複数描くときは `python -X utf8 ..\..\tools\blender\render_parallel.py <対象>...`。レイアウト検証用モードは `SHEET_LAYOUT=1`（`work/layout/` に書く）
   - `render.py` に対象を並べて 1 本で順に描かず、`render_parallel.py` で並列に描く。ほかの作業者と同時に描いても、マシン全体で共有する描画の枠（`SHEET_SLOTS`）を取って順番待ちにするので、`--jobs` と `SHEET_SLOTS` は既定のままにする（`SHEET_SLOTS` を変えるときは全員でそろえる）
-  - 全対象の名前は `catalog.SCALED_TARGETS` で取る。`src/*.png` から作らない（壁の `ami_wall_rail_*` の 8 枚は基盤の対象 `ami_rail_*_base_*` が一緒に書くので、対象に渡すと「unknown target」で止まる）。全対象の描画は、手元の 24 コアで約 14 分（ほかの作業者と重なると 25 分を超える）
+  - 全対象の名前は `catalog.SCALED_TARGETS` で取る。`src/*.png` から作らない（壁の `ami_wall_rail_*` の 8 枚は基盤の対象 `ami_rail_*_base_*` が一緒に書くので、対象に渡すと「unknown target」で止まる）。全対象の描画は約 14 分かかる（ほかの作業者の描画と重なると、枠の順番待ちでさらに延びる）
   - `render_parallel.py` は `render.py` を `--own` で描くので、描いたシートの外にあるアイコン・カーソル（トンネルのアイコンなど）は書かない（[アイコン・カーソル](docs/objects/icons.md)）。シートを描き直して前後で比べるときは、描いた後に `icons.py`（全部）を流してから比べる（流さないと、アイコンだけの違いが描画のずれに見える）
   - `icons.py` は Blender で流す（`D:/bin/blender/blender.exe -b --factory-startup --python blender/icons.py`）。`python` で流すと `bpy` が無く終了コード 1 で終わり、出力をログに向けていると見落とす
   - 描き直すと `src/*.road_cells.txt`・`*.icon_sources.txt` の改行（LF/CRLF）だけが変わることがある。比べるためだけに描いたときは、比べた後に `git checkout -- addons/ami/src` で戻す
