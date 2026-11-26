@@ -206,7 +206,7 @@ def brick_material(name, rgb, mortar, scale):
 
 def tiled_concrete_material(name, rgb, amp, grain, stain=0.0, stain_scale=0.35, joint=None, rough=0.8,
                             tint=None, streak=0.0, streak_scale=3.0, streak_stretch=0.12, grime=0.0, grime_z=(0.0, 1.0)):
-    """コンクリートの面の材質（AMI の線路の基盤・高架の躯体。#78）: rgb を中心に ±amp のまだら（grain は部品の座標 1 単位あたりの細かさ）に、
+    """コンクリートの面の材質（AMI の線路の基盤・高架の躯体。#78）: rgb を中心に ±amp のまだら（grain は pak128 での部品の座標 1 単位あたりの細かさ。中で SCALE を掛ける）に、
     大きなしみ（stain_scale の細かさ、最大 stain だけ暗く）を掛ける。joint=(間隔, 幅, 色の倍率) を渡すと、x・y が間隔の半分ずれた所ごとに
     縦横の暗い線を引く（タイルの辺には置かない）。
     模様はタイルの 1 辺（TILE）を周期にし、タイルの辺で必ずつながる（x・y をそれぞれ円に巻いた 4 次元のノイズ。円の半径を TILE/2π にして、
@@ -269,7 +269,10 @@ def tiled_concrete_material(name, rgb, amp, grain, stain=0.0, stain_scale=0.35, 
     ramp.color_ramp.elements[0].color = (*(x * (1 - amp) for x in rgb), 1)
     ramp.color_ramp.elements[1].position = 0.65
     ramp.color_ramp.elements[1].color = (*(x * (1 + amp) for x in rgb), 1)
-    L.new(noise(grain, 2.0), ramp.inputs["Fac"])
+    # 粒は画素の細かさで決めるので、pak の大きさに比例させる（noisy_material と同じ。呼ぶ所は掛けない。#355。SCALE 1 は同じ値）。
+    # しみ・雨だれは物の大きさの模様なので掛けない（タイルに対する大きさを 128 と同じにする）。座標を円に巻いているので、
+    # Scale を変えてもタイルの 1 辺の周期は変わらない
+    L.new(noise(grain * SCALE, 2.0), ramp.inputs["Fac"])
     col = ramp.outputs["Color"]
     k = None  # 色に掛ける倍率（しみ・継ぎ目）
     if stain:
