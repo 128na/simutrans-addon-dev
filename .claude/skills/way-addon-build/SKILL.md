@@ -78,7 +78,7 @@ description: Simutrans の way 系アドオン（AMI・blender-poc の線路・�
 | シート全体の欠陥の候補 | `tools/blender/sheet_audit.py`（参照先の空セル、端の切れ、小さな穴と点、つないだときのすき間）。同じ作りの軌道は `--compare` で塗りの範囲を比べる |
 | ドットの欠け・はみ出し・接続部のずれ | 見たい所を `tools/blender/zoom.py` で 3 倍以上に拡大して読む。等倍の画像だけで「問題なし」としない（限界はリファレンスの 8.3） |
 | 色加減 | 前後の比較は `ALL=1` を付けた `sheet_diff.py`、タイルどうしの比較は同じ部品の画素の値で見る。小さな色の差は画像を読んでも分からない。最後の見た目はユーザーが見る |
-| アイコン・カーソル（AMI） | 書き込みは `addons/ami/blender/icons.py`、ゲームのメニュー・カーソルの撮影は `addons/ami/ingame/icon_capture.sh`。流し方・札の字などの決まりは [AMI の README「アイコン・カーソル」](../../../addons/ami/README.md#アイコンカーソル25)。シートを描き直した後の流し直しの条件もそこにある |
+| アイコン・カーソル（AMI） | 書き込みは `addons/ami/blender/icons.py`、ゲームのメニュー・カーソルの撮影は `addons/ami/ingame/icon_capture.sh`。流し方・札の字などの決まりは [AMI の「アイコン・カーソル」](../../../addons/ami/docs/objects/icons.md#アイコンカーソル25)。シートを描き直した後の流し直しの条件もそこにある |
 | 雪 | 検証の地図（リファレンスの 8.1）の降雪側（x=256〜）に同じ見本を敷く |
 | 車両との重なり | スクリプトで走らせられるものは走らせ、最後の見た目はユーザーが見る |
 
