@@ -18,20 +18,23 @@ pak256 の進捗管理からの依頼（[issue 379](https://github.com/128na/sim
 | 坑口の屋根 | 1.87 | 1.62 | 1.58 | 1.04 | 1.12 |
 
 - しみの大きさを 128 と同じ画素にする案（`stain_scale` を 2 倍）は、屋根で見てまだらのままだった（[案の比べ](../../addons/ami/docs/379_concrete_stain/cases_tunnel_1x.png)）。粒の案の比べは [こちら](../../addons/ami/docs/379_concrete_stain/cases_grain.png)。
+- 表の値を測った面は、256 のシートの `ami_pier_rail` の (735, 215)〜(765, 250)、`ami_rail_ballast_bridge` の (3262, 1855)〜(3288, 1878)、`ami_rail_ballast_tunnel` の (1227, 675)〜(1307, 725)。道路は `ami_pier_road`・`ami_road_general_bridge`・`ami_road_general_tunnel` の同じ座標。明るさ（グレースケール）で測った。
+- `TRACK_SURFACE` を使う物は線路だけではない。`render.py` の `TRACK_MAT_SKIN`・`TRACK_WALL_SKIN`・`TRACK_PIER_SKIN`・`TRACK_GATE_SKIN` を通して、線路の基盤・高架の版と橋、線路の壁、単柱と門型の橋脚、線路・モノレール・リニア・狭軌のトンネルの坑口、超電導リニアのガイドウェイの描き分けに入る。ほかに転車台のまわりのコンクリートの輪（`TURNTABLE_SKIN`）。
 - 雨だれ（`streak`）は、AMI のどの呼び出しも渡していない。
 - 128 の絵は、全対象を描き直して、アイコン・カーソルを描いた後も、コミット済みの PNG とバイトで同じだった。
 
 ## 推測・未確認事項
 
 - ゲームでの見た目は確かめていない。
+- 256 で描いて見たのは、在来線の壁・単柱の橋脚・橋・坑口と、転車台。リニア・モノレール・狭軌の坑口とガイドウェイ、門型の橋脚、高架の躯体の側面は見ていない。
 - しみ 7% でも、広い面の大きな明暗（ぼかし 5px の後のばらつき）は道路より大きい。
 - 影の側の面の斜めの筋は残る。しみを 0 にしても出るので、粒の模様の出方と見ている。
 
 ## 結果どうしたか
 
-ユーザーの決定（2026-11-27、判断 82）: 256 だけ、しみの濃さを 15% → 7% にし、粒を 2 倍細かくする（`grain` 2.5 → 5.0）。
+ユーザーの決定（2026-11-27、判断 82）: 256 だけ、しみの濃さを 15% → 7% にし、粒を 2 倍細かくする（`grain` 2.5 → 5.0。`grain` は `tiled_concrete_material` の中で pak の倍率が掛かる前の値）。
 
 - 変えたのは `addons/ami/blender/render.py` の `TRACK_SURFACE` だけ。土台の `sheetlib` は変えていない。
 - 「256 の粒は画素で 128 と同じ大きさ」（[PR 361](https://github.com/128na/simutrans-addon-dev/pull/361)）は、線路のコンクリートでは使わないことになった。ほかのまだらは変わらない。
-- 同じ `TRACK_SURFACE` を使う転車台のまわりのコンクリートの輪も、256 で同じに変わる。
+- `TRACK_SURFACE` を使う物（上の「分かったこと」）は、256 でどれも同じに変わる。
 - 決まりは [way アドオンのリファレンス](../reference/way-addon.md) に足した。[前後の比べ](../../addons/ami/docs/379_concrete_stain/before_after_road.png)。
