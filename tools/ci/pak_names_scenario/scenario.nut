@@ -30,6 +30,10 @@ function dump() {
   }
   // 駅・車庫・桟橋・駅の拡張の建物は、どの種類を渡しても同じ一覧（station_building）が出る
   foreach (d in building_desc_x.get_building_list(building_desc_x.depot)) print("PAKNAMES building " + d.get_name())
+  // 名所の建物（AMI の盛土の建物は type=cur。#372）は、駅の一覧には出ない
+  foreach (bt in [building_desc_x.attraction_land, building_desc_x.attraction_city]) {
+    foreach (d in building_desc_x.get_building_list(bt)) print("PAKNAMES building " + d.get_name())
+  }
   print("PAKNAMES done")
 }
 
