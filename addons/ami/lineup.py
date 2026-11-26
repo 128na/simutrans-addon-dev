@@ -40,6 +40,7 @@ SPECIAL = {
     "ami_wall_sidewalk_": "歩道の柵",
     "ami_embankment_": "盛土",
     "ami_mark_": "路面表示",
+    "ami_describe_": "説明用の線",  # 説明用の色の way（#372）。地上は路面軌道、高架は線路。速さ 1
     "ami_rail_turntable": "転車台・遷車台",  # 道路の way（iss と同じ。#314）。速さ 65535 は自動で選ばれないための値なので、速度の欄は空ける
 }
 OBJ_ORDER = ("way", "bridge", "tunnel", "way-object", "crossing", "building")
@@ -94,6 +95,8 @@ def _kind_label(o):
     if t == "way-object" and "_pole" in name:
         # 歩道の電柱（ami_sidewalk_pole_<版>）と柵つきの電柱（ami_wall_sidewalk_<版>_pole。#120）。SPECIAL の歩道・歩道の柵より先に当てる
         return "柵つきの電柱" if name.startswith("ami_wall_") else "電柱"
+    if t == "building" and name.startswith("ami_embankment_"):
+        return "盛土の建物"  # 盛土の建物の版（#372）。SPECIAL の盛土の way より先に当てる
     for prefix, label in SPECIAL.items():
         if name.startswith(prefix):
             return label + ("（高架）" if t == "way" and o.get("system_type") == "1" else "")

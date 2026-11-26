@@ -279,7 +279,8 @@ def main(src):
     targets = []  # (物, キー, セル)
     reported = set()
     for o in objs:
-        if o["obj"] in NO_TOOL_OBJS:
+        # 盛土の建物（type=cur。#372）は、道具でなく建物の一覧から選んで建てるので、アイコン・カーソルを持たない
+        if o["obj"] in NO_TOOL_OBJS or (o["obj"] == "building" and o["keys"].get("type") == "cur"):
             continue
         for key in ("icon", "cursor"):
             if key not in o["keys"]:

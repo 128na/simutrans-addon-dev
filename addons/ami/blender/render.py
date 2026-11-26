@@ -864,7 +864,10 @@ def _marking_faded(color):
 MARKING_LINE_YELLOW = lambda: R.noisy_material("ami_marking_line_yellow", MARKING_YELLOW[0], MARKING_YELLOW[1], scale=MARKING_YELLOW[2],
                                                rough=0.6, emit=0.35, ramp=ROAD_ASPHALT_RAMP)
 # 種類 → marking_sheet に渡す材質（無い種類は白線・下の道路のアスファルト）
-MARKING_COLOR_ARGS = {"paving_red": dict(paving=_marking_color("red"), wear=_marking_faded("red")),
+MARKING_ISLAND = lambda: R.noisy_material("ami_marking_island", (0.19, 0.19, 0.185), (0.28, 0.28, 0.275), scale=60.0, rough=0.9,
+                                          ramp=ROAD_ASPHALT_RAMP)  # ラウンドアバウトの中心の島（#372。コンクリート）
+MARKING_COLOR_ARGS = {"roundabout": dict(accent=MARKING_ISLAND),
+                      "paving_red": dict(paving=_marking_color("red"), wear=_marking_faded("red")),
                       "paving_blue": dict(paving=_marking_color("blue"), wear=_marking_faded("blue")),
                       "paving_green": dict(paving=_marking_color("green"), wear=_marking_faded("green")),
                       "paving_red_striped": dict(paving=None, accent=_marking_color("red")),
@@ -932,6 +935,16 @@ _emb_skin = lambda nm, spec: {R.EMBANKMENT_MAT[0]: lambda: R.noisy_material(nm, 
 for _name, _side in catalog.EMBANKMENTS.items():
     SHEETS[_name] = (lambda n, s: lambda: R.embankment_sheet(n, s, mat_skin=_emb_skin("ami_embankment_grass", EMBANKMENT_GRASS),
                                                              snow_skin=_emb_skin("ami_embankment_snow", EMBANKMENT_SNOW)))(_name, _side)
+
+# 盛土の建物の版（#372）: 盛土の way と同じ楔と芝・雪の材質（sheetlib の embankment_building_sheet）
+for _name, _kind in catalog.EMBANKMENT_BUILDINGS.items():
+    SHEETS[_name] = (lambda n, k: lambda: R.embankment_building_sheet(
+        n, k, mat_skin=_emb_skin("ami_embankment_grass", EMBANKMENT_GRASS),
+        snow_skin=_emb_skin("ami_embankment_snow", EMBANKMENT_SNOW)))(_name, _kind)
+
+# 説明用の色の way（#372）: 色ごとに 1 枚のシート（地上と高架の dat が同じシートを指す。sheetlib の describe_sheet）
+for _c, _rgb in catalog.DESCRIBE_COLORS.items():
+    SHEETS[f"{catalog.PREFIX}describe_{_c}"] = (lambda n, rgb: lambda: R.describe_sheet(n, rgb))(f"{catalog.PREFIX}describe_{_c}", _rgb)
 
 # 踏切（#111）: 道路の種類ごとに 1 枚（線路の 4 種で共有）。奥の絵の下地に、その道路の直線のセルを写すので、道路のシートの後に描く
 # （SHEETS の登録順に描く。別の Blender で並べて描くときは、道路のシートを先に描き終えておく）。

@@ -36,7 +36,8 @@ def main(src):
     sheets = {}
     checked = 0
     for o in read_dats(src):
-        if o["obj"] != "building":
+        # 盛土の建物（type=cur。#372）は箱に積まない。絵は盛土の way と同じ持ち分（地面の菱形の列）で切るので、見ない
+        if o["obj"] != "building" or o["keys"].get("type") == "cur":
             continue
         for key, value in o["keys"].items():
             if not (key.startswith("backimage[") or key.startswith("frontimage[")):

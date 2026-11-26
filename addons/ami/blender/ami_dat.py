@@ -485,6 +485,50 @@ def embankment_dat_text(name, sheet):
             out.append(f"{key}{idx}[{season}]={sheet}.{row + season * EMBANKMENT_SNOW_ROWS}.{col},{OFFSET}")
     return NL.join(out) + NL
 
+# 盛土の建物の版（#372。ADR 0018）: type=cur の 1 タイルの建物。passengers=0 で乗客の行き先にならず（本体の weight_by_distance は 0 を 0 にする）、
+# chance=0 で地図の作成や町の成長で建たない（hausbauer の get_random_desc は 0 を選ばない）。4 向きは layout 0〜3
+EMBANKMENT_BUILDING_VALUES = dict(cost=1000, intro_year=1900)
+
+
+def embankment_building_dat_text(name):
+    """盛土の建物の dat。シートは 2 行（夏・雪）× 4 列（layout）で、絵の位置は way と同じ（OFFSET）"""
+    v = EMBANKMENT_BUILDING_VALUES
+    out = _head(f"# AMI: {name}（CC BY 4.0）。高架の脇の地面に建てる盛土（法面）の建物。シートは blender/render.py が描く", "building", name,
+                v["intro_year"], before=["type=cur"],
+                after=["dims=1,1,4", "passengers=0", "chance=0", "noconstruction=1", "needs_ground=1",
+                       "climates=desert,tropic,mediterran,temperate,tundra,rocky,arctic", f"cost={v['cost']}"])
+    for layout in range(4):
+        for season in (0, 1):
+            out.append(f"backimage[{layout}][0][0][0][0][{season}]={name}.{season}.{layout},{OFFSET}")
+    return NL.join(out) + NL
+
+
+# 説明用の色の way（#372。ADR 0018）: iss の util/describe と同じ値（速さ 1・費用 1・維持費 1）。地上は tram_track、高架は track の system_type=1
+DESCRIBE_VALUES = dict(cost=1, maintenance=1, intro_year=1900, topspeed=1)
+
+
+def describe_dat_text(name, color, elevated):
+    """説明用の色の way の dat。地上と高架は同じシート。高架のアイコン・カーソルは (0,4)・(1,4)。雪の絵は夏と同じ。
+    近い斜め（close）と分岐の絵は T字・十字のセル（持たない）"""
+    v = DESCRIBE_VALUES
+    sheet = f"{catalog.PREFIX}describe_{color}"
+    cell = {(key, idx): (row, col) for key, idx, row, col in IMAGES}
+    icon, cursor = ("0.4", "1.4") if elevated else ("0.0", "0.1")
+    waytype = "track" if elevated else "tram_track"
+    out = _head(f"# AMI: {name}（CC BY 4.0）。説明用の色の way（{color}。{'高架' if elevated else '地上'}）。シートは blender/render.py が描く",
+                "way", name, v["intro_year"],
+                after=[f"waytype={waytype}", f"cost={v['cost']}", f"maintenance={v['maintenance']}", f"topspeed={v['topspeed']}",
+                       f"system_type={1 if elevated else 0}", f"icon=> {sheet}.{icon}", f"cursor={sheet}.{cursor},{OFFSET}"])
+    for season in (0, 1):
+        for key, idx, row, col in IMAGES:
+            if idx.startswith("[close"):
+                continue
+            if key == "image" and idx in PIER_SWITCH:
+                row, col = cell[("image", PIER_SWITCH[idx])]
+            out.append(f"{key}{idx}[{season}]={sheet}.{row}.{col},{OFFSET}")
+    return NL.join(out) + NL
+
+
 # 多車線と交差点の路面表示の way（#187。ADR 0012）: 道路に重ねて敷く白線と路面の way。waytype は橋脚・盛土と同じ tram_track、速さ 1
 # （路面軌道・線路とつながっても速く走れない。車の速さは変わらない）。値は橋脚・盛土と同じ（ADR 0012）
 MARKING_VALUES = dict(waytype="tram_track", cost=1000, maintenance=100, intro_year=1900, topspeed=1)
@@ -792,6 +836,10 @@ def write_all():
         put(name, embankment_dat_text(name, name))
     for name, kind in catalog.MARKINGS.items():
         put(name, marking_dat_text(name, kind))
+    for name in catalog.EMBANKMENT_BUILDINGS:
+        put(name, embankment_building_dat_text(name))
+    for name, (color, elevated) in catalog.DESCRIBES.items():
+        put(name, describe_dat_text(name, color, elevated))
     # 分岐の追加画像の提供用の物（build.py が別の pak に作り、ex_graft.py で写す）。1 つの dat に --- で区切って並べる
     donors = [dat_text(n, BUILT[n], donor=True) for n in EX_WAYS]
     donors += [wall_dat_text(n, CATENARY[n], catenary=True, donor=True) for n in EX_WAYOBJS]
