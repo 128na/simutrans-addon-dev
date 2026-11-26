@@ -202,6 +202,10 @@ def check_written(src, targets, skipped_names=()):
             if len(t) != 5 or t[1] not in ("icon", "cursor") or not t[2].isdigit() or not t[3].isdigit():
                 errors.append(f"{sheet}{CELLS_SUFFIX}: 控えの行の形が違う（物 icon|cursor 行 列 sha256）: {line.strip()}")
                 continue
+            if (t[0], t[1]) in rows_of:  # セルが別のシートへ移った後、前のシートを流し直していない（icons.py の全部の流しで消える）
+                errors.append(f"{t[0]} の {t[1]} の行が {rows_of[(t[0], t[1])][0]}{CELLS_SUFFIX} と {sheet}{CELLS_SUFFIX} の両方にある。"
+                              f"blender/icons.py（全部）を流し直す")
+                continue
             rows_of[(t[0], t[1])] = (sheet, int(t[2]), int(t[3]), t[4])
     want = {}
     for o, key, cell in targets:
