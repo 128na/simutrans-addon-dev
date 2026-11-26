@@ -66,7 +66,7 @@ class CheckTest(unittest.TestCase):
                 ".claude/worktrees/w/addons/y/README.md": "[x](no.md)\n",
             }
         )
-        self.assertEqual((sources, count, errors), (2, 6, []))
+        self.assertEqual((sources, count, errors), (3, 6, []))
 
     def test_broken(self):
         _, _, errors = self.run_check(
@@ -94,6 +94,12 @@ class CheckTest(unittest.TestCase):
                 )
             ],
         )
+
+    def test_root_and_docs(self):
+        sources, _, errors = self.run_check(
+            {"README.md": "[a](docs/r.md#no)\n", "docs/r.md": "# r\n[b](#no)\n"}
+        )
+        self.assertEqual((sources, len(errors)), (2, 2))
 
     def test_inside_a_worktree(self):
         # root の途中に .claude/worktrees があっても飛ばさない（#304 の空振り）

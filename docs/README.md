@@ -129,3 +129,5 @@ npx docs-lint
 ```
 
 CI（`.github/workflows/docs-lint.yml`）でも同じものが走る。
+
+アンカー（`#見出し`）の切れは docs-lint では分からない。`python -X utf8 tools/ci/check_md_links.py`（CI の `md-links`）で、すべての md の相対リンクとアンカーを検査する。

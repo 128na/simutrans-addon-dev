@@ -12,6 +12,7 @@ Simutrans アドオンのモノレポ。新しいアドオンは `addons/<addon-
 - リポジトリ全体のビルドは無い。変更するアドオンの README とスクリプトに従い、そこに書かれたビルド・検証だけを実行する。
 - `.dat` から pak を作るときは `makeobj`（`PATH` にある）を使う。アドオンのフォルダで `makeobj pak128 .\dist\example.pak .\src\example.dat`（`pak128` は対象の pakset に合わせる）。生成物はアドオンが決めた出力先に置く。
 - 文書は `npx docs-lint` で検査する（CI でも走る）。対象はリポジトリ直下と `docs/` の md。規約は `docs/README.md`。
+- md の相対リンクとアンカー（`#見出し`）は `md-links` が検査する（CI でも走る）。対象はすべての md（`addons/`・`.claude/` も）。手元ではリポジトリの直下で `python -X utf8 tools/ci/check_md_links.py`。md のほかに、リンク先のファイルを移動・削除したときや見出しを変えたときも流す。
 - 自動の検査が無いものは、範囲を絞って手で確かめ、確かめていないことを報告する。ゲーム内の見た目はユーザーが確認する。
 
 ## 書き方と名前
