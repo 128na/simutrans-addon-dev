@@ -9,7 +9,13 @@
 #   PORT=47300 bash ingame/game.sh STOP                                                    … 閉じて写しを消す
 # 道路の見本（road_sample.nut）は ROAD_NAMES="ami_road_expressway"・CLIMATES="snow" で種類・気候を絞れる（空白区切り。既定は全部）
 # NUT の中の行頭の「local OX = <数>;」は、OX を渡すとその値に置き換える（降雪側に同じ見本を敷くとき）
-PORT=${PORT:?PORT を指定する}
+#   ほかの ingame/ のスクリプトと同じ形の STOP=1・RUN=1・CAPTURE=1（環境変数）も同じに扱う（#326。以前は環境変数の STOP=1 を見ずに
+#   起動の側へ進み、ゲームが止まらなかった。#208）。PORT が無いと何もせずに止まる
+PORT=${PORT:?PORT を指定する（閉じるときも、起動したときと同じ PORT を渡す）}
+MODE=${1:-}
+if [ -z "$MODE" ]; then
+  for m in STOP RUN CAPTURE; do [ "${!m:-}" = 1 ] && MODE=$m && break; done
+fi
 INGAME=$(cd "$(dirname "$0")" && pwd)
 cd "$INGAME/.." || exit 1  # アドオンのディレクトリ（work/ と相対のパスはここから）
 WORK="work/game/$PORT"
@@ -40,7 +46,12 @@ script_of() {
 # 絞り込みの値が不正なら、ゲームを起動する前に止める（script_of の中の exit は $(...) では効かない）
 [ -n "$NUT" ] && { script_of "$NUT" > /dev/null || exit 1; }
 
-case "$1" in
+case "$MODE" in
+  "") ;;
+  STOP|RUN|CAPTURE) ;;
+  *) echo "game.sh の引数は STOP・RUN・CAPTURE か、無し（起動）: $MODE" >&2; exit 1 ;;
+esac
+case "$MODE" in
   STOP) game_stop; echo "[game] stopped"; exit 0 ;;
   RUN) echo "$($M --run-squirrel "$(script_of "${NUT:?NUT を指定する}")" --timeout 300)"; exit 0 ;;
   CAPTURE)

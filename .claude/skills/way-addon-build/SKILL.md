@@ -73,6 +73,9 @@ description: Simutrans の way 系アドオン（AMI・blender-poc の線路・�
 | 部品の出方 | `SHEET_LAYOUT=1` で描いて `work/layout/` を見る。部品の色は `sheetlib/layout_colors.py` に足す |
 | 一部のセルだけ試す | `SHEET_ONLY=ew,nse,diag_nw` を付けて描く。シートは `work/only/` に書かれ、`src/` は変わらない |
 | 既存の絵が変わらない | `git status` の `src/` の差分と `tools/blender/sheet_diff.py` |
+| 描画の道具を直して絵が変わらない（AMI） | 基準はコミット済みの PNG にせず、変更前のコードで描いた絵にする（コミット済みの絵が今の描画とずれていることがある）。`origin/main` の別の worktree で、直す作業と並べて描いておくと待ちが減る。描いた後は `icons.py`（全部）まで流してから比べる（[AMI の「ビルド」](../../../addons/ami/README.md#ビルド)）。全シートの比較は `sheet_diff.py` を `xargs -P8` で 1 組ずつ回す（約 1.5 分）。比べた後は `src/` を戻す |
+| 描く対象の集まりの前後（AMI） | `bpy` を差し替えると、Blender なしで `render.py` を import して `render.SHEETS` を読める（やり方は PR #309 の本文） |
+| ゲームでの前後（AMI） | 撮影の手順を自分で作らず、`ingame/before_after.sh` を使う。前の pak は `git worktree add <一時の場所> <前のコミット>` で別の worktree を作ってビルドし（使い終えたら `git worktree remove`）、`before_after.sh` の `PAKDIR_BEFORE` か `sample_parallel.sh` の `PAK=` で渡す。拡大の切り抜きは座標で決める（差分から位置を探すと片方が外れる）。`game.sh` の既定の地図（512 四方）と `before_after.sh` のカタログ（1024 四方）は座標が違うので、流用するときは地図を確かめる |
 | AMI の全体 | README の「導入と検証」の順に `blender/ami_dat.py`・`build.py`・`ingame/sample_check.sh`・`ingame/sample_capture.sh`。全区画をまとめて撮るだけなら `ingame/sample_parallel.sh`（8 台） |
 | blender-poc の全体 | README の手順と `addons/blender-poc/ingame/` の各スクリプト |
 | シート全体の欠陥の候補 | `tools/blender/sheet_audit.py`（参照先の空セル、端の切れ、小さな穴と点、つないだときのすき間）。同じ作りの軌道は `--compare` で塗りの範囲を比べる |
@@ -128,3 +131,8 @@ description: Simutrans の way 系アドオン（AMI・blender-poc の線路・�
 - 動作検証のゲームは検証の地図で起動する（地図の名前と決まりはリファレンスの 8.1）。開くたびに空なので、見本は毎回流す
 - 画像は必要なセルだけ切り出し、拡大して読む（`tools/blender/zoom.py`・`hcat.py`）。数値で判定できるものは先に数値で見る
 - スクリプトのファイルは heredoc ではなく Write・Edit で書く
+- 複数の物が共有する定数（例: 道路の中央線の破線の割り方 `CENTER_DASHES`）を変えるときは、先に `grep` で、その値を読んでいる・写している所（例: 路面表示の `marking.py`）を探し、描き直す対象に入れる
+- ゲームの並べ方（隣のタイルとのつながり、斜めの描き方など）の理解が要る直しは、着手の前に本体の描画の決まりを調べる時間を見込む。決まりが分からないまま値を試さない
+- PR のブランチで、後から main に入った道具（スクリプトなど）を使うときは、`git merge origin/main` で取り込んでから使う
+- 片付けで `rm -rf` するのは `work/`・`dist/` など git 管理外の一時の置き場だけにする。その下に追跡しているフォルダ（AMI の `rounds/` など）があるときは避ける
+- ゲームを起動するスクリプトを裏で流すときは、Bash ツールの `run_in_background` でコマンドそのものを流す。`( … ) &` で切り離すと、ツールの呼び出しが終わった時点で子が消えて空振りする。出力はパイプでつながずファイルに向ける（[AMI の「導入と検証」](../../../addons/ami/README.md#導入と検証)）
