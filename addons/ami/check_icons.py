@@ -45,6 +45,7 @@ BG_BORROW = {
     "ami_pier_rail_old": "track",  # 旧描画位置（#26）の橋脚も同じ
     "ami_pier_rail_old_gate": "track",
     "ami_pier_road": "road",  # 道路の下に立てる橋脚なので道路の色（#25）
+    "ami_rail_turntable": "track",  # 転車台は iss と同じく road の way だが、線路につなぐ物なので線路の色（#314）
     "ami_sidewalk": "road",  # 歩道は water の way だが、道路の脇に敷く物なので道路の色（#25）
     **{_n: "road" for _n in ("ami_sidewalk_asphalt", "ami_sidewalk_brick", "ami_sidewalk_tile", "ami_sidewalk_elev",
                              "ami_wall_sidewalk_single", "ami_wall_sidewalk_back", "ami_wall_sidewalk_front")},  # 同上（歩道の種類・高架・柵。#119）

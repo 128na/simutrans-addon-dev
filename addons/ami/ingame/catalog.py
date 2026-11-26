@@ -158,6 +158,7 @@ REUSE = [
     ("monorail", "monorail.nut", 110, 390, {}),
     ("suspended", "suspended_sample.nut", 212, 390, {}),
     ("canal_scenic", "canal.nut", 314, 390, {"ami_canal\"": "ami_canal_scenic\""}),
+    ("turntable", "turntable_sample.nut", 416, 390, {}),
     ("crossing", "crossing_sample.nut", 8, 480, {}),
 ]
 

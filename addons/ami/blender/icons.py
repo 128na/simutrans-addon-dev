@@ -60,6 +60,7 @@ PLATE_H = 14
 PLATE_CHAR_W = 8
 YARD_LABEL = "操"  # 操車場のアイコンの左上の字と、カーソルの札（#115）
 DEPOT_LABEL = "庫"  # 車庫のアイコンの左上の字と、カーソルの札（#112）
+TURNTABLE_LABEL = "転"  # 転車台・遷車台のアイコンの左上の字と、カーソルの札（#314）
 NS_STEP = (64 * SCALE, -32 * SCALE)  # 南北の直線で、北の隣のタイルの画面のずれ（pak128 のタイルは幅 128・高さ 64）
 
 
@@ -121,6 +122,8 @@ def describe(d):
         info.update(kind="pier", label="門" if name.endswith("_gate") else "脚", struct="elev")
     elif name.startswith("ami_sidewalk"):  # 歩道の種類と高架の歩道（#119）も同じ決まり。高架は下の帯
         info.update(kind="sidewalk", label="歩", struct="elev" if name.endswith("_elev") else None)
+    elif name == catalog.RAIL_TURNTABLE:  # 転車台・遷車台（#314）。道路の way だが線路の色。速度は出さず、左上に「転」
+        info.update(kind="turntable", label=TURNTABLE_LABEL, way="rail")
     elif obj == "building" and d.get("type") == "stop":  # 操車場（#115）。速度は無く、左上に「操」
         info.update(kind="yard", label=YARD_LABEL)
     elif obj == "building":  # 車庫（#112）。速度は無く、左上に「庫」
@@ -150,6 +153,8 @@ def picture_keys(d, kind, for_cursor):
         return [["backimage[ns][0]"]]
     if kind == "yard":  # 1 タイルの南北の線路（layout 6。両端に階段）の奥の絵
         return [["backimage[6][0][0][0][0][0]"]]
+    if kind == "turntable":  # つながりの無い 1 タイル（転車台）の絵（#314）
+        return [["image[-][0]"]]
     if kind == "depot":  # 道が南へ出る向き（layout 0）の奥と手前の絵
         return [["backimage[0][0][0][0][0][0]", "frontimage[0][0][0][0][0][0]"]]
     if kind == "marking":  # 路面表示（#187）: MARK_PICTURE のセル
@@ -417,7 +422,7 @@ def icon_picture(d, info, dats):
         return crosswalk_picture(layers(d, keys))
     if info["kind"] == "sign":  # 標識の上の側（板と柱の上）を ICON/2 四方で切り、画素のまま 2 倍にする（板の字がつぶれないように）
         return sign_picture(layers(d, keys))
-    if info["kind"] in ("sidewalk", "depot", "yard"):  # 敷石・車庫はタイル 1 枚なので、つなげず、タイル 1 枚を 1/4 にして菱形を見せる
+    if info["kind"] in ("sidewalk", "depot", "yard", "turntable"):  # 敷石・車庫・転車台はタイル 1 枚なので、つなげず、タイル 1 枚を 1/4 にして菱形を見せる
         return down(center_crop(layers(d, keys), 4 * ICON * SCALE), 4 * SCALE)
     return down(center_crop(layers(d, keys, extend=True), 2 * ICON * SCALE), 2 * SCALE)
 

@@ -315,6 +315,8 @@ ami_rail_slab_old_tunnel
 高速線（スラブ軌道）（旧位置）のトンネル（AMI）
 ami_rail_slab_tunnel
 高速線（スラブ軌道）のトンネル（AMI）
+ami_rail_turntable
+転車台・遷車台（AMI）
 ami_rail_yard
 操車場（AMI）
 ami_road_depot

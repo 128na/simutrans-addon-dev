@@ -804,6 +804,8 @@ for _d in catalog.DEPOTS:
     SHEETS[_d.name] = (lambda d: lambda: R.depot_sheet(R.sheet_path(d.name + ".png"), d.kind, R.WORK))(_d)
 # 操車場（#115）: 線路の脇の構内通路。形と寸法は sheetlib の yard.py
 SHEETS[catalog.RAIL_YARD] = lambda: R.yard_sheet(R.sheet_path(catalog.RAIL_YARD + ".png"), R.WORK)
+# 転車台・遷車台（#314）: 形と寸法は sheetlib の turntable.py。桁・台車の上の線路は在来線と同じ基準面とレール（水路の踏切の線路の床と同じ渡し方）
+SHEETS[catalog.RAIL_TURNTABLE] = lambda: R.turntable_sheet(catalog.RAIL_TURNTABLE, datums=_DATUMS, rail=(RAIL_IN, RAIL_OUT, RAIL_Z1))
 
 # 道路標識（#122）: 標識ごとに 1 枚。柱を描き、板の 2D の絵を押す（sheetlib の roadsign.py）
 for _n, _k in catalog.ROADSIGNS.items():
