@@ -18,6 +18,8 @@
   twin の壁は front の版の斜め）を書き直す（#141）。render.py は --own を付けて呼び、描いたシートにだけ書く（並べて描くとき、
   ほかのプロセスが描いている途中のシートを上書きしないように）。ほかのシートにある分は、描き終えてから流す命令を出す
 - ほかのシートの絵から作った物は、絵のセルの sha256 を、書いたシートの横の <シート>.icon_sources.txt に控える。check_icons.py が比べる
+- 書いたアイコン・カーソルのセルの sha256 を、書いたシートの横の <シート>.icon_cells.txt に控える。check_icons.py が比べ、
+  icons.py を流していないシート（描画の仮のアイコンのまま）に気づく（#330）
 """
 import glob
 import hashlib
@@ -469,6 +471,7 @@ def main(targets=None, own_only=False):
         d = read_dat(p)
         dats[d["name"]] = d
     touched, skipped = set(), set()
+    written = {}  # シート → {(物, icon|cursor): (行, 列)}。書いたセルの控え（write_cells）に使う
     targets = set(targets or ())
     for name, d in dats.items():
         if "icon" not in d:
@@ -501,17 +504,21 @@ def main(targets=None, own_only=False):
         # 絵を読み終えてから書く（同じシートのセルを読む物がある）
         put(isheet, ir, ic_, cell)
         put(csheet, cr, cc, cur)
+        written.setdefault(isheet, {})[(name, "icon")] = (ir, ic_)
+        written.setdefault(csheet, {})[(name, "cursor")] = (cr, cc)
         touched |= {isheet, csheet}
         print(f"[icon] {name}: {isheet}.{ir}.{ic_} / {csheet}.{cr}.{cc} {plate_label(info)}")
     for sheet in sorted(touched):
         R.save_rgb(os.path.join(SRC, sheet + ".png"), _sheets[sheet][..., :3])
         print(f"[icon] wrote {sheet}.png")
         write_stamps(sheet, dats)
+        write_cells(sheet, dats, written.get(sheet, {}), {k for w in written.values() for k in w})
     if not targets:  # 全部を書いたときは、アイコンを書かなくなったシートの控えを消す
-        for path in glob.glob(os.path.join(SRC, "*" + STAMP_SUFFIX)):
-            if os.path.basename(path)[:-len(STAMP_SUFFIX)] not in touched:
-                os.remove(path)
-                print(f"[icon] removed {os.path.basename(path)}")
+        for suffix in (STAMP_SUFFIX, CELLS_SUFFIX):
+            for path in glob.glob(os.path.join(SRC, "*" + suffix)):
+                if os.path.basename(path)[:-len(suffix)] not in touched:
+                    os.remove(path)
+                    print(f"[icon] removed {os.path.basename(path)}")
     if skipped:
         print("[icon] 描いたシートの絵から作るアイコン・カーソルが、ほかのシートにある（書いていない）。描き終えたら作り直す: "
               "blender -b --factory-startup --python blender/icons.py -- " + " ".join(sorted(targets)))
@@ -553,6 +560,38 @@ def write_stamps(sheet, dats):
         f.write(STAMP_HEADER + "\n")
         for t in rows:
             f.write("%s %s %s %d %d %s\n" % t)
+
+
+# ---------------------------------------------------------------- 書いたセルの控え（#330）
+# icons.py が書いたアイコン・カーソルのセルの sha256 を、そのシートの横の控え（<シート>.icon_cells.txt）に書く。
+# check_icons.py が今のシートと比べ、icons.py を流さずに描いたシート（render_icon の仮のアイコン・仮のカーソルのまま）に気づく
+# （#318 で、ami_mark_junction4_c が仮の「M」のアイコンのままマージされた）。控えをシートごとに分けるのは、上の控えと同じ理由
+CELLS_SUFFIX = ".icon_cells.txt"  # check_icons.py と同じ
+CELLS_HEADER = "# 物 icon|cursor 行 列 sha256（blender/icons.py が書いたセル。check_icons.py が今のシートと比べる。#330）"
+
+
+def write_cells(sheet, dats, rows_now, written_any):
+    """書いたセルの控えを書く。前の控えのうち、今回どこかのシートに書いた物（written_any。セルが別のシートへ移った物を含む）と
+    dat に無い物の行は落とす（own_only で書かなかった物の行は残す）。sha256 は put の後のシート（保存する画素）から取る"""
+    path = os.path.join(SRC, sheet + CELLS_SUFFIX)
+    rows = {}
+    if os.path.exists(path):
+        for line in open(path, encoding="utf8"):
+            t = line.split()
+            if len(t) == 5 and not line.startswith("#") and t[2].isdigit() and t[3].isdigit():
+                rows[(t[0], t[1])] = (int(t[2]), int(t[3]), t[4])
+    rows = {k: v for k, v in rows.items() if k not in written_any}
+    for (name, kind), (r, c) in rows_now.items():
+        rows[(name, kind)] = (r, c, cell_digest(sheet, r, c))
+    rows = {k: v for k, v in rows.items() if k[0] in dats}
+    if not rows:
+        if os.path.exists(path):
+            os.remove(path)
+        return
+    with open(path, "w", encoding="utf8", newline="\n") as f:
+        f.write(CELLS_HEADER + "\n")
+        for (name, kind), (r, c, digest) in sorted(rows.items()):
+            f.write(f"{name} {kind} {r} {c} {digest}\n")
 
 
 def run_in_new_blender(targets):

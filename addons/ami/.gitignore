@@ -7,3 +7,5 @@ dist256/
 src256/*.png
 src256/*.txt
 !src256/ami_road_local.png
+# 生活道路のシートの、icons.py が書いたセルの控え（CI の check_icons.py が見る。#330）
+!src256/ami_road_local.icon_cells.txt

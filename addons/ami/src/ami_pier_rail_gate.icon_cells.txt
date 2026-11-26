@@ -1,0 +1,3 @@
+# 物 icon|cursor 行 列 sha256（blender/icons.py が書いたセル。check_icons.py が今のシートと比べる。#330）
+ami_pier_rail_gate cursor 0 1 86302c8783e4565945406915ef70e174a77e71764659bba19dd921c211ab76f2
+ami_pier_rail_gate icon 0 0 aa0590aa0944d7458455ca0efc6b6f641c5dff619b974648bfe533ba4addf8e8
