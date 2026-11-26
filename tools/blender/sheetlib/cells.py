@@ -126,7 +126,8 @@ GROUND_PHASE = -(SCALE // 2)
 # 道路を描く位置。SIS・pak128 標準の道路は、菱形を地面より 1px 下にずらした絵で、自分の菱形の上の1行は描かず、
 # 奥のタイルの絵が下へ1行はみ出して埋める（平らな地面は先にまとめて描かれ、はみ出しは消えない）。
 # 同じ決まりにしないと、標準の道路とのつなぎ目に草の線（手前が標準）や 1px の段（奥が標準）が出る。
-# 持ち分も絵と同じだけ下げるので、形が曲がる所と持ち分の境がそろい、自分どうしのつなぎ目は地面の位置で描いたときと同じになる
+# 持ち分も絵と同じだけ下げるので、形が曲がる所と持ち分の境がそろい、自分どうしのつなぎ目は地面の位置で描いたときと同じになる。
+# 持ち分の上の行を空けるのは pak128 だけ。大きいほう（_ground_mask_direct）は地面の位置まで塗る（#333）
 _ROAD_CY_1 = 128
 ROAD_CY = _ROAD_CY_1 * SCALE
 
@@ -147,8 +148,10 @@ def _ground_mask_direct(slope, side=None, cy=GROUND_CY, spill=0, solid=False, lo
     half_row = SCALE // 2
     m = _column_mask(slope, side, cy)
     if solid and slope:
-        for k in range(32):
-            m |= _column_mask(lambda x, y, k=k: slope(x, y) * k / 32, side, cy)
+        # 刻みは 1x の 32 の SCALE 倍。32 のままだと 2 段の坂（1x で 32 行）が 256 では 2 行刻みになり、薄い列に穴ができる（#333）
+        steps = 32 * SCALE
+        for k in range(steps):
+            m |= _column_mask(lambda x, y, k=k: slope(x, y) * k / steps, side, cy)
     if spill:
         # 手前の 2 辺を spill 行と半行広げる（_ground_mask_1x の cy + spill と cy + spill + 0.5）。
         # 2 つのずらしだけでなく、間のずらしも全部足す。列ごとの判定では、左右の角の近くの列は縦の幅が 2 画素より薄く、
@@ -159,8 +162,13 @@ def _ground_mask_direct(slope, side=None, cy=GROUND_CY, spill=0, solid=False, lo
         # 手前の縁を半行広げる（_ground_mask_1x の cy + 0.5）
         for k in range(1, half_row + 1):
             m |= _column_mask(slope, side, cy + k)
-        if slope:
-            m |= _column_mask(slope, side, GROUND_CY)
+        # 地面の位置から cy までの間のずらしも全部足す（1 行刻み）。間を抜くと、坂の辺が緩い角（台の上の十字の奥の角など）は
+        # 列の縦の幅が 2 画素より薄く、抜けた 1 行が持ち分の穴になって地面の草が見えた（#333）。
+        # _ground_mask_1x は坂だけ地面の位置を足し、平らは奥の 2 辺を 1 行空けて奥のタイルのはみ出しに任せる（pak128 標準の道路とそろえる。ROAD_CY の注）。
+        # 大きいほうは平らも足す: 坂と平らの境で奥の縁が SCALE 行跳び、256 で出っ張りに見えた（#333）。
+        # pak256 には pak128 標準の道路が無いので空ける理由が無く、平らな道路・路面軌道・運河・踏板の奥の縁が地面の菱形の縁とそろう
+        for k in range(min(GROUND_CY, cy), max(GROUND_CY, cy)):
+            m |= _column_mask(slope, side, k)
     if lower:
         base = m.copy()
         for k in range(1, lower + 1):
