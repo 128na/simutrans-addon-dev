@@ -142,6 +142,15 @@ MONORAIL_POWERS = {f"{PREFIX}monorail_power": False, f"{PREFIX}monorail_suspende
 CANAL = "ami_canal"
 CANAL_SCENIC = "ami_canal_scenic"  # 景観の運河（#161）。実用の運河と同じ値（速さ 60 で #117 の跳ね橋を共用）。水面が 13px 下（iss と同じ）
 
+# 狭軌（narrowgauge_track。#370）: iss の狭軌（../refs/iss/src/way/rail/narrow.dat の iss_wng_0030・iss_wng_0060）と同じく地上の版だけで、
+# 速さ 30（木のまくらぎ・土の道床）と 60（PC まくらぎ・砕石）の 2 種。部品は在来線の物を使い回し、軌間だけを内へ寄せる（render.py の
+# 「狭軌」）。waytype が線路と違い、線路の壁・架線（waytype=track の way-object）も踏切も載らないので、TRACKS に入れない（TRACKS の種類は
+# 基盤・高架・橋・旧描画位置の版・踏切の名前を導く）。トンネルは 60 だけ（iss の iss_tn_0060 と同じ）。名前の頭 ami_narrow_ で build.py が ami_narrow.pak に入れる
+NARROW_WOOD = "ami_narrow_wood"  # 30 km/h（軽便）
+NARROW_BALLAST = "ami_narrow_ballast"  # 60 km/h
+NARROWS = (NARROW_WOOD, NARROW_BALLAST)
+NARROW_TUNNEL = f"{NARROW_BALLAST}_tunnel"
+
 ROAD_LOCAL = Road("road_local", ("single",))  # 生活道路（40 km/h、中央線なし）
 ROAD_GENERAL = Road("road_general", ("single",))  # 一般道路（120 km/h、中央線は白の実線）
 ROAD_TRUNK = Road("road_trunk")  # 幹線道路（#257。最高速度 240 km/h（確定）、中央線は白の破線（直線 4・斜め 3 で高速道路より細かい）。4 車線は道路を 2 本並べる。カーブは高速道路と同じ斜めの直線）
@@ -255,7 +264,7 @@ class Depot:
 
 
 DEPOTS = (Depot("rail", "track"), Depot("tram", "tram_track"), Depot("road", "road"), Depot("monorail", "monorail_track"),
-          Depot("canal", "water"))
+          Depot("canal", "water"), Depot("narrow", "narrowgauge_track"))  # 狭軌（#370）
 
 # 操車場（building の stop。#115。ADR 0008 の ami_rail_yard）: 荷を扱わない線路の駅の建物。線路の脇の構内通路（2026-11-22、ユーザーの決定）。
 # 名前の頭 ami_rail_ で、build.py が線路の pak（ami_rail.pak）に入れる
@@ -279,6 +288,7 @@ DIAG_CURVE_WAYS = {_t.way for _t in ALL_TRACKS} | {_r.way for _r in ROADS if _r.
 DIAG_CURVE_WAYS |= {MONORAIL, *MONORAIL_ELEVS}  # 跨座式モノレールは高架の版もカーブを斜めの絵（#113。手本の iss の跨座式の dat と同じ）
 DIAG_CURVE_WAYS.add(CANAL)  # 運河もカーブは斜めの絵（#114）
 DIAG_CURVE_WAYS |= {*MONORAIL_SUSPENDEDS, *MONORAIL_SUSPENDED_ELEVS}  # 懸垂式（#116）も跨座式と同じ
+DIAG_CURVE_WAYS |= set(NARROWS)  # 狭軌（#370）も線路と同じく斜めの絵（iss の narrow.dat も image[sw] などが斜めと別のセルだが、AMI の線路にそろえる）
 
 
 # ---------------------------------------------------------------- way の絵の並びの性質（#242）
@@ -318,6 +328,7 @@ for _v in MONORAIL_SUSPENDED_VARIANTS:  # 懸垂式（#116）: 並びは跨座�
         if _elev:
             ELEVATED_WAYS.add(_n)
 BUILT_WAYS += [CANAL, CANAL_SCENIC]  # 運河（近い斜めの絵は持つ）
+BUILT_WAYS += list(NARROWS)  # 狭軌（#370。線路の通常の版と同じく近い斜めの絵を持つ）
 BUILT_WAYS = tuple(BUILT_WAYS)
 NO_CLOSE_WAYS = frozenset(NO_CLOSE_WAYS)  # 書き換えられないようにする（ami_dat.py などが別名で持つ）
 ELEVATED_WAYS = frozenset(ELEVATED_WAYS)
