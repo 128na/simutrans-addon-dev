@@ -274,7 +274,7 @@ for _t in catalog.ALL_TRACKS:
 # tram（waytype=tram_track）で道路の上に重ねて敷く（ADR 0002）。コンクリートで固めた床・縁の明るい帯・レールの頭・溝・さび（sheetlib の
 # tram_parts）。床は道路の路面と同じ高さ（基準面は動かさない FLAT）で、絵の基準位置と持ち分は道路と同じ ROAD_CY（spill 0）。
 # pak128 標準の Tram_Track_050_A もレールは地面の菱形の位置（ref_measure で直線のずれ +0。AMI の在来線は +2）で、下げていない。
-# カーブは曲線のまま（diag_curves を使わない。2026-11-17 のユーザーの指摘。README の「残っていること」）。行き止まりのレールは在来線と同じく
+# カーブは曲線のまま（diag_curves を使わない。2026-11-17 のユーザーの指摘。docs/objects/rail.md の「路面軌道の作り」）。行き止まりのレールは在来線と同じく
 # 閉じた側の端から END_FROM_EDGE で止め（床はタイルの端まで。2026-11-20 のユーザーの指摘）、車止めは置かない（道路の上に立つので）。雪の絵は道路の車道と同じく除雪された夏の絵（TRAM_SNOW_SKIN）
 TRAM_KEY = catalog.profile(catalog.TRAM)
 TRAM_DATUMS = R.FLAT  # tram_bed（床と縁の帯）は分岐の絵で作り直さない基準面（スラブ軌道の slab_bed と同じ考え方）
@@ -386,7 +386,7 @@ for _t in catalog.ALL_TRACKS:
 
 # ---------------------------------------------------------------- 架線つきの壁の way-object（ADR 0003。#17）
 # 壁の way-object に架線（柱・梁・吊り金具・トロリ線。tools/blender/sheetlib/catenary_parts.py）を足した版（ami_wall_rail_<版>_catenary）。
-# center は壁が無く、架線（梁・トロリ線）と行き止まりの端の壁だけ。寸法は catenary_parts の CAT_* にまとめた（値は仮。README の「架線の作り」）。
+# center は壁が無く、架線（梁・トロリ線）と行き止まりの端の壁だけ。寸法は catenary_parts の CAT_* にまとめた（値は仮。docs/objects/rail.md の「架線の作り」）。
 # 壁は基盤の版と同じ形で描き（groups も同じにする。手前/奥の分け方が本体の重心で決まるため）、way のシートは書かない（wall_only。
 # way は基盤の版の対象が書く）。sheet は作業ファイルの名前だけに使い、基盤の版と分ける（同時に描いても work/ のセルが混ざらない）
 CATENARY_LABEL = "E"  # 架線つきの壁のアイコンの文字（仮。アイコンはステップ 13 でまとめて作る）
@@ -430,7 +430,7 @@ PIER_GATE_LABEL = "G"
 # ---------------------------------------------------------------- 橋とトンネル（ADR 0003。#19）
 # 橋（ami_rail_ballast_bridge、obj=bridge）: 欄干を描かず、壁・架線は地上と同じ way-object を橋の上に重ねる（橋の 4 版は作らない）。
 # 橋は 1 つで、single の壁を重ねる（2026-11-18、ユーザーの決定）。床（基盤）と躯体は高架の single と同じ作りで、壁の外の面で止める
-# （壁の外に床の縁が出ない。README の「橋とトンネルの作り」）。端の坂の躯体（rampbody）と坂から始まる端の躯体（build_start_body）も、
+# （壁の外に床の縁が出ない。docs/objects/rail.md の「橋とトンネルの作り」）。端の坂の躯体（rampbody）と坂から始まる端の躯体（build_start_body）も、
 # sheetlib の既定で壁の外の面までの幅になる。
 # 壁は way-object が描くので、ここでは基盤を削るためだけに置き、シートには書かない（write_walls。高架の版と同じ）。
 # セルは blender-poc の橋（track_bridge）と同じ並び: 行 0 の列 2・3 が平らな橋、行 1 が端の坂（Ramp・Ramp2）、行 2 が橋脚、行 3 が坂から始まる端
@@ -448,7 +448,7 @@ for _t in catalog.ALL_TRACKS:
 
 # トンネル（ami_rail_ballast_tunnel、obj=tunnel）: blender-poc の坑口（sheetlib の tunnel_sheet。躯体はタイル全体の箱、口は低い側の辺）に、
 # 在来線の通常の版の道床（砕石のまだら）・まくらぎ・レール・汚れを入れたもの。壁・架線は坑口のタイルにも way-object を重ねる
-# （坑口の躯体は way の手前の絵で、way-object の絵より後に描かれるので、躯体の中へ入る壁・架線は躯体に隠れる。README の「橋とトンネルの作り」）
+# （坑口の躯体は way の手前の絵で、way-object の絵より後に描かれるので、躯体の中へ入る壁・架線は躯体に隠れる。docs/objects/rail.md の「橋とトンネルの作り」）
 
 # ---------------------------------------------------------------- 線路の基盤・高架の面のコンクリート（#78）
 # 基盤の板（材質の名前 base）と高架の躯体（elev_body）を、一色から打ち放しのコンクリートにする: 元の色を中心に ±12% のまだら（粒は約 4px。
@@ -495,11 +495,11 @@ for _w, _ in _WALL_TRACKS:
 #         高速道路の暗く青みのある色を元にする（走行跡と路肩の雪のぼかしも同じ色から作る。sheetlib の asphalt_skin）。
 #         明るさと粒は下の「道路一式の質感」で変えてある
 # カーブは 3 種とも斜めの絵（dat の image[sw] などが diagonal と同じセル）。道路の壁（#22）は 3 種で共通の way-object にするので、
-# カーブの形を種類でそろえる（README の「道路の作り」）。分岐の絵（switch 画像 1・2）の中身は sheetlib の road_sheet の switch_lines。
+# カーブの形を種類でそろえる（docs/objects/road.md の「道路の作り」）。分岐の絵（switch 画像 1・2）の中身は sheetlib の road_sheet の switch_lines。
 # T字の 1・2 は、どちらも枝の無い側を実線でふさいだ T字の形で、違いは轍（走行跡）のカーブの向きだけ（switch_ruts。向きは
 # sheetlib の road_parts の SWITCH_RUT_ARCS）。十字の分岐の絵（nsew1・nsew2。固定の道具・詳細ダイアログでだけ選べる）は
 # 優先道路のある十字（priority_cross。nsew1 が南北優先、nsew2 が東西優先）。どちらも 2026-11-19、ユーザーの決定
-# （README の「道路の作り」）。sheetlib の road_sheet に渡す:
+# （docs/objects/road.md の「道路の作り」）。sheetlib の road_sheet に渡す:
 #   DRIVE_LEFT: 優先道路の十字の停止線の通行の側。日本は左側通行。右側通行の版を作るときは偽にしたプロファイルを別に作る
 #     （停止線が進入する車線の反対の半分へ移る。今は作らない）（drive_left）
 DRIVE_LEFT = True

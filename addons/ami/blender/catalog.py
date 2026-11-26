@@ -45,7 +45,7 @@ def profile(name):
 class Road:
     """道路の種類 1 つ。key は way の名前から PREFIX を除いたもの（render.py の ROAD_PROFILES の名前の元）。
     通常の版の way・地上の基盤の版と高架の 4 版・橋・トンネル（#21・#22）。基盤の版は 2026-11-19 にユーザーが確定（
-    README の「道路の壁・高架・橋脚・橋・トンネルの作り」）"""
+    docs/objects/road.md の「道路の壁・高架・橋脚・橋・トンネルの作り」）"""
     key: str
     variants: tuple = VARIANTS  # 基盤・高架を作る版（一般道路・生活道路は single だけ。#260）
 
@@ -99,7 +99,7 @@ def pier_rail(gate=False, old=False):
     return f"{PREFIX}pier_rail{'_old' if old else ''}{'_gate' if gate else ''}"
 
 # 路面軌道（60 km/h、tram で道路に重ねる。ADR 0002）。通常の版だけ（壁・基盤・高架・橋・トンネルを作らない）ので、TRACKS に入れない
-# （TRACKS の種類は基盤・高架・橋・トンネルの名前を導き、カーブを斜めの絵にする。路面軌道のカーブは曲線のまま。README の「残っていること」）
+# （TRACKS の種類は基盤・高架・橋・トンネルの名前を導き、カーブを斜めの絵にする。路面軌道のカーブは曲線のまま。docs/objects/rail.md の「路面軌道の作り」）
 TRAM = "ami_tram"
 
 # 跨座式モノレール（150 km/h、monorail_track。#113。名前は ADR 0008）。物の並びは iss の跨座式（地上・高架の front・center・back・トンネル）に合わせる
@@ -117,7 +117,7 @@ MONORAIL_ELEVS = tuple(monorail_elev(_v) for _v in MONORAIL_ELEV_VARIANTS)
 MONORAIL_TUNNEL = f"{MONORAIL}_tunnel"
 
 # 懸垂式モノレール（150 km/h、monorail_track。#116。名前は ADR 0008）。物の並びは iss の懸垂式に合わせる（2026-11-22、進捗管理の決定。
-# 支柱は way の絵に持たせる案 A）: 地上・高架とも柱の側で front・center・back の 3 版。トンネルは作らない（README の「懸垂式モノレールの作り」）
+# 支柱は way の絵に持たせる案 A）: 地上・高架とも柱の側で front・center・back の 3 版。トンネルは作らない（docs/objects/monorail.md の「懸垂式モノレールの作り」）
 MONORAIL_SUSPENDED = "ami_monorail_suspended"
 MONORAIL_SUSPENDED_VARIANTS = MONORAIL_ELEV_VARIANTS
 
@@ -134,7 +134,7 @@ MONORAIL_SUSPENDED_ELEVS = tuple(monorail_suspended(_v, True) for _v in MONORAIL
 MONORAIL_POWERS = {f"{PREFIX}monorail_power": False, f"{PREFIX}monorail_suspended_power": True}
 
 # 運河（60 km/h、water。#114。名前は ADR 0008）。物の並びは iss の運河（地上だけ。高架・橋・トンネルは無い）に合わせる
-# （2026-11-22、ユーザーの決定）。歩道（ami_sidewalk）と同じ waytype なので、突き当てるとつながる（README の「運河の作り」）
+# （2026-11-22、ユーザーの決定）。歩道（ami_sidewalk）と同じ waytype なので、突き当てるとつながる（docs/objects/canal.md の「運河の作り」）
 CANAL = "ami_canal"
 CANAL_SCENIC = "ami_canal_scenic"  # 景観の運河（#161）。実用の運河と同じ値（速さ 60 で #117 の跳ね橋を共用）。水面が 13px 下（iss と同じ）
 
@@ -179,7 +179,7 @@ WALL_ROAD = ROAD_GENERAL  # 道路の壁のシートを描く元の道路（壁�
 # 幹線道路・高速道路と、橋・トンネルは ami_wall_road_single（カーブは斜め）を使う
 ROAD_WALL_CURVED = {f"ami_wall_road_single_{_s}": _s for _s in ("arc", "ell")}
 ROAD_WALL_VARIANTS = ("single", "back", "center", "front")  # 道路の壁の way-object の版（README の名前の表。center は行き止まりの端の壁だけ）
-# 近い斜めの分け合うタイル用の道路の壁（名前は 2026-11-19 にユーザーが確定。README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
+# 近い斜めの分け合うタイル用の道路の壁（名前は 2026-11-19 にユーザーが確定。docs/objects/road.md の「道路の壁・高架・橋脚・橋・トンネルの作り」）
 ROAD_WALL_TWIN = "ami_wall_road_twin"
 # 中央分離帯つきの壁（#118。ADR 0008）: 4 車線（道路を 2 タイル並べる）の手前のタイルに重ね、奥の側壁の位置に縁石の帯とガードレールを立てる。
 # front_divider は手前の側壁つき、center_divider は側壁なし（行き止まりの端の壁は持つ）。奥のタイルは今の ami_wall_road_back のまま
@@ -282,7 +282,7 @@ ROADSIGN_CROSSWALKS = {f"{PREFIX}sign_crosswalk": False, f"{PREFIX}sign_crosswal
 # カーブを斜めの絵で表すシート（pak128 標準の線路と同じ。dat の image[sw]・[nw]・[ne]・[se] が diagonal と同じセルを指す）。
 # 唯一の定義。dat を書く ami_dat.py（DIAG_CURVES）と、判定・比較の道具が読む addon_config.py（DIAG_CURVE_SHEETS）がここから引く（#227。別々に書いて片方を直し忘れた）
 # 基盤の版・高架の版（線路・道路）はカーブを斜めの形の別のセル（基盤の壁の無い側を削らない）に描くので、ここには入れない。render.py の diag_curves と同じにする
-DIAG_CURVE_WAYS = {_t.way for _t in ALL_TRACKS} | {_r.way for _r in ROADS if _r.key not in ROAD_CURVE_SHAPES}  # 高速道路・幹線道路もカーブは斜めの絵（一般道路は円弧、生活道路は L 字。#259。README の「道路の作り」）
+DIAG_CURVE_WAYS = {_t.way for _t in ALL_TRACKS} | {_r.way for _r in ROADS if _r.key not in ROAD_CURVE_SHAPES}  # 高速道路・幹線道路もカーブは斜めの絵（一般道路は円弧、生活道路は L 字。#259。docs/objects/road.md の「道路の作り」）
 DIAG_CURVE_WAYS |= {MONORAIL, *MONORAIL_ELEVS}  # 跨座式モノレールは高架の版もカーブを斜めの絵（#113。手本の iss の跨座式の dat と同じ）
 DIAG_CURVE_WAYS.add(CANAL)  # 運河もカーブは斜めの絵（#114）
 DIAG_CURVE_WAYS |= {*MONORAIL_SUSPENDEDS, *MONORAIL_SUSPENDED_ELEVS}  # 懸垂式（#116）も跨座式と同じ
