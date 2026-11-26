@@ -6,6 +6,7 @@ ROUND_SETTINGS: ラウンドの鍵 → 設定。apply(cfg, n, R, render): 描く
 ラウンド 3（2026-11-20）を本番（render.py の「道路一式の質感」と、sheetlib の asphalt_skin の ramp・wear_t、road_sheet・tunnel_sheet・
 pier_sheet の mat_skin、road_sheet の snow_skin、sidewalk_sheet の paving・snow）に入れた。ラウンド 1〜4 の鍵と apply は、入れる前の本番に
 重ねる作りで、今の本番に重ねると本番とラウンドの設定が混ざる（今の本番を土台にした比べにならない）ので、#351 で外した。
+ラウンド 4（路面を 5.5 倍に明るくする案）は本番に入れなかった（docs/objects/road.md の「道路の作り」。絵は rounds/ami_road_round4.pak）。
 試した葉と決めた値は docs/records/2026-11-20_ami-road-refine-round<n>.md、外す前の設定と apply は a15b576 のこのファイルにある。
 第 4 弾の物は、今の本番を土台にした系統 road4（blender/round_road4.py）で回した。
 

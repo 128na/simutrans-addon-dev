@@ -12,11 +12,11 @@ dat は src/ のものを写し、ami_ で始まる名前を全部 _round<n> 付
 関数（_render・_trial_parts）は、入れる前の render.py に重ねる作りで、今の render.py に重ねると二重にかかるので、#351 で外した。
 試した葉と決めた値は docs/records/2026-11-20_ami-refine-round<n>.md、外す前の設定と関数は a15b576 のこのファイルにある。
 在来線の次のラウンドを回すときは、ほかの系統と同じく今の render.py を土台にした round_<系統>.py（ROUND_SETTINGS と apply）を足し、
-FAMILIES の module に名前を書く（今の render.py はまくらぎの形を間隔ごと束ねて作るので、まくらぎの間隔を変えるときは sleeper の部品を作り直す）。
+FAMILIES の rail_ballast の module に名前を書く（鍵の検査と描く入口は module で分かれるので、ほかは変えなくてよい。今の render.py はまくらぎの形を間隔ごと束ねて作るので、まくらぎの間隔を変えるときは sleeper の部品を作り直す）。
 
 系統（family）: 在来線一式のほかの系統は、環境変数 AMI_FAMILY で選ぶ（FAMILIES。既定は rail_ballast）。
 系統ごとの描き分けは blender/round_<系統>.py の ROUND_SETTINGS と apply(cfg, n, R, render)（render.py の設定の上に重ねる）。
-rail_ballast は今は描き分けの鍵を持たない（module が None）。描かずに pak を作る（ラウンド 0 など）ことだけができる。
+module が None の系統（今は rail_ballast）は描き分けの鍵を持たず、描かずに pak を作る（ラウンド 0 など）ことだけができる。
 描いた絵は work/rounds/<系統>/round<n>/src/、pak は rounds/ami_<系統>_round<n>.pak（rail_ballast だけは前からの名前のまま）。
 
     AMI_FAMILY=road4 AMI_ROUND=1sh python -X utf8 ../../tools/blender/render_parallel.py --entry blender/round.py <対象 ...>
@@ -79,7 +79,7 @@ if FAMILY not in FAMILIES:
     sys.exit(f"[round] AMI_FAMILY は {' '.join(FAMILIES)} のどれか: {FAMILY}")
 
 
-# rail_ballast の描き分けの鍵（ラウンド 1〜7 は本番に入れたので #351 で外した。上の説明）
+# module が None の系統の描き分けの鍵（rail_ballast のラウンド 1〜7 は本番に入れたので #351 で外した。上の説明）
 ROUND_SETTINGS = {}
 
 
@@ -213,7 +213,8 @@ if __name__ == "__main__":
                 ap.error("鍵の形でない引数: " + " ".join(bad))
             # 綴り違い（abc など）で空の名前の pak を作らない: 系統の ROUND_SETTINGS の鍵、ラウンド 0、描いた絵のあるラウンドだけ受ける
             sys.path.insert(0, _HERE)
-            known = set(ROUND_SETTINGS if FAMILY == "rail_ballast" else importlib.import_module(FAMILIES[FAMILY]["module"]).ROUND_SETTINGS)
+            mod = FAMILIES[FAMILY]["module"]
+            known = set(ROUND_SETTINGS if mod is None else importlib.import_module(mod).ROUND_SETTINGS)
             unknown = [k for k in args.rounds if k != "0" and k not in known and not os.path.isdir(os.path.join(round_dir(k), "src"))]
             if unknown:
                 ap.error(f"系統 {FAMILY} に無いラウンドの鍵: " + " ".join(unknown))
@@ -222,6 +223,6 @@ if __name__ == "__main__":
     else:
         sys.path.insert(0, _HERE)
         sys.path.insert(0, os.path.join(_HERE, "..", "..", "..", "tools", "blender"))
-        if FAMILY == "rail_ballast":
-            sys.exit("[round] rail_ballast の描き分けの鍵は無い（#351 で外した。冒頭の説明）")
+        if FAMILIES[FAMILY]["module"] is None:
+            sys.exit(f"[round] {FAMILY} の描き分けの鍵は無い（#351 で外した。冒頭の説明）")
         _render_family(os.environ["AMI_ROUND"])
