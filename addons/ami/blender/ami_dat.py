@@ -472,6 +472,7 @@ MARKING_CELLS = {
     "junction2_t": _MARK_DEADENDS | _MARK_TEES | {(0, 9), (3, 9)},
     "junction4_in": _MARK_DEADENDS | _MARK_TEES | {(2, 5), (2, 6), (2, 7), (2, 8)},
     "junction4_out": _MARK_DEADENDS | _MARK_TEES | {(2, 5), (2, 6), (2, 7), (2, 8)},
+    "junction4_c": {(2, 5), (2, 6), (2, 7), (2, 8)},
     "lane6_a": {(0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (1, 5), (1, 6), (1, 7), (1, 8)} | _MARK_DEADENDS,
     "lane6_b": {(0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (1, 5), (1, 6), (1, 7), (1, 8)} | _MARK_DEADENDS,
     "lane6_m": {(0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (1, 5), (1, 6), (1, 7), (1, 8)} | _MARK_DEADENDS,

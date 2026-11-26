@@ -69,6 +69,8 @@ ami_mark_junction4_in
 路面表示・4 車線の交差点（入口）（AMI）
 ami_mark_junction4_out
 路面表示・4 車線の交差点（出口）（AMI）
+ami_mark_junction4_c
+路面表示・4 車線の交差点（中心）（AMI）
 ami_mark_junction6_c
 路面表示・6 車線の交差点（交点）（AMI）
 ami_mark_junction6_in

@@ -9,13 +9,15 @@
                  路面は MARKING_PAVE_IN の内だけで、2 つの列のあいだの帯と外の路肩は、下の道路の絵（雪も）を見せる
   junction2:     2 車線の腕（行き止まり）、2 車線どうしの中心（十字・1 タイル。中心の印）、4 車線 × 2 車線の中心（T字。欠ける向きが相方のタイル）
   junction2_t:   2 車線の腕（行き止まり）、2 車線の T字路の中心（T字。欠ける向きの側に路側線）、十字・1 タイルは junction2 と同じ
-  junction4_in:  4 車線の腕の入る側。行き止まり = 2 マス目（導流帯の三角）、T字 = 1 マス目（矢印・停止線・横断歩道）、曲がり = 中心（角の縁石と中心の印）
+  junction4_in:  4 車線の腕の入る側。行き止まり = 2 マス目（導流帯の三角）、T字 = 1 マス目（矢印・停止線・横断歩道）、曲がり = 中心（角の縁石）
   junction4_out: 4 車線の腕の出る側。行き止まり = 2 マス目、T字 = 1 マス目、曲がり = 中心のスクランブル（中心の 4 タイルの対角線に沿う X の横断歩道。
                  iss の intersection2-2 と同じ）
   lane6_m:       6 車線（#189。3 タイル）の真ん中のタイル（分離帯）の直線。外のタイルの直線は lane4、中心の角は junction4_in の曲がりを使う
   junction6_in・junction6_out: 6 車線の腕の入る側・出る側の外の列。行き止まり = 2 マス目、T字 = 1 マス目（欠ける向きが外の側）
   junction6_m:   6 車線の腕の真ん中の列（右折車線）。行き止まり = 2 マス目、T字 = 1 マス目（欠ける向きが交差点の側）
-  junction6_c:   6 車線の中心 3×3 の角を除く 5 枚（辺の 4 枚 = 行き止まり、中央 = 十字）。タイル全面の路面だけ（線は無い）
+  junction4_c:   4 車線どうしの中心の 4 枚（曲がり = 中心の角の縁石と、4 枚が接する角の中心の印の 1/4。#313）。ふつうの十字の中心は
+                 junction4_in の代わりにこれで敷き直す（junction4_in の曲がりは 6 車線の中心の角にも使うので、印を持たない）
+  junction6_c:   6 車線の中心 3×3 の角を除く 5 枚（辺の 4 枚 = 行き止まり、中央 = 十字）。タイル全面の路面と、中央の中心の印
   paving_<色>・paving_red_striped・center_yellow: 路面の色と黄色の中央線（#313。MARKING_COLOR_KINDS の注記）
 4 車線の腕は 2 マス（iss の 2-1・2-2 と同じ）。右折車線は、2 タイルの境をはさむ 2 本の路側線のあいだの帯をそのまま使い、
 通る車線の線は動かさない。腕の 2 列（入る側・出る側）は、2 タイル共通の横位置 V（境が 0、入る側のタイルの中心が +5）で描き、
@@ -98,12 +100,12 @@ MARKING_W2_PAVE = EDGE_LINE
 MARKING_SCRAMBLE_GAP = 1.9    # 内の端の、交差点の中心からの距離（対角線の上）
 MARKING_SCRAMBLE_OUT = 4.6    # 縞を置く外の限り（タイルの中心からの距離。対角線の上。角の円弧の中ほどは約 5.1）。
 # 外の端の縞は、路面で覆わない角の四角（MARKING_PAVE_IN より外）にかかる（降雪では下の道路のまだらの雪の上に乗る）
-# 交差点の中心の印（#313。iss の intersection1 の十字と intersection2-1 の曲がりにある小さな印）: 白線の菱形 ◇。2 車線の十字（junction2・
-# junction2_t の十字・1 タイル）はタイルの中心に 1 つ、4 車線の中心（junction4_in の曲がり）は iss と同じく 1 枚に 1 つ、タイルの中心から
-# 交差点の中心の角の側へ MARKING_CENTER_MARK_SHIFT ずらして置く（4 枚で中心のまわりに 4 つ。6 車線の中心の角でも同じ絵になる）。
-# スクランブル（junction4_out の曲がり）には描かない（iss の intersection2-2 にも無く、X の縞と重なる）
+# 交差点の中心の印（#313。iss の intersection1 の十字と intersection2-1 の曲がりにある小さな印）: 白線の菱形 ◇（頂点を車線の向きに置く）。
+# 交差点の本当の中心に 1 つだけ置く（2026-11-26、ユーザーの指摘。1 枚に 1 つの案は取り消し）: 2 車線の十字（junction2・junction2_t の十字・
+# 1 タイル）はタイルの中心、4 車線どうし（junction4_c の曲がり）は 4 枚が接する角（各タイルが 1/4 ずつ描き、タイルの範囲で切り抜く）、
+# 6 車線どうし（junction6_c の十字 = 中央のタイル）はタイルの中心。スクランブル（junction4_out の曲がり）には描かない
+# （iss の intersection2-2 にも無く、X の縞と重なる）。6 車線の中心の角（junction4_in の曲がり）には描かない
 MARKING_CENTER_MARK_R = 0.8       # 菱形の中心から頂点までの距離（線の中心まで）
-MARKING_CENTER_MARK_SHIFT = 2.5   # 4 車線の中心のタイルで、印をタイルの中心から交差点の中心の角の側へ（x・y とも）ずらす量
 
 # 6 車線（#189。3 タイル。腕の座標は 4 車線と同じく V: 真ん中のタイルの中心が 0、入る側の外のタイルの中心が +10、出る側が -10）
 MARKING_W6_TILE = 2 * MARKING_HALF                 # 10 外のタイルの中心（V）
@@ -121,8 +123,10 @@ MARKING_W6_CURB = EDGE_LINE / 2                    # 1.685 分離帯の縁（真
 MARKING_COLOR_KINDS = ("paving_red", "paving_blue", "paving_green", "paving_red_striped", "center_yellow")
 MARKING_COLOR_STRIPE_W = 1.0       # 縞の幅（道に沿う向き）
 MARKING_COLOR_STRIPE_PERIOD = 2.0  # 縞の周期（タイル 1 辺 10 に 5 本。タイルの辺をまたいでも周期がそろう）
+MARKING_COLOR_IN = EDGE_LINE - MARKING_PAVE_IN  # 色の帯の内の端の、中央線の中心からの距離（0.9。外の端は MARKING_PAVE_IN = 路側線の中心から 0.9 内）
+MARKING_TEE_MOUTH_DASH = 0.3   # 下の一般道路の T字の、枝の口の点線の太さ（sheetlib の mouth_dash）
 MARKING_ACCENT_Z = (MARKING_PAVE_Z[0], MARKING_PAVE_Z[1] + 0.001)  # 縞の板（路面の板と同じ高さ。白線より下）
-MARKING_KINDS = ("lane4", "junction2", "junction2_t", "junction4_in", "junction4_out",
+MARKING_KINDS = ("lane4", "junction2", "junction2_t", "junction4_in", "junction4_out", "junction4_c",
                  "lane6_a", "lane6_b", "lane6_m", "junction6_in", "junction6_out", "junction6_m", "junction6_c") + MARKING_COLOR_KINDS
 _DIRS = {"n": (0, 1), "e": (1, 0), "s": (0, -1), "w": (-1, 0)}
 # セル（行, 列）→ 形。位置は ami_dat.py の IMAGES と同じ（iss・blender-poc の線路の並び）
@@ -568,22 +572,26 @@ def _center6_pave(plan):
 
 
 # ---------------------------------------------------------------- 種類と形 → 絵
+def _color_bands(put, u0, u1):
+    """道の向きの u0〜u1 に、中央線の両側の色の帯を置く（put(u0, u1, v0, v1)）。帯は中央線の中心から MARKING_COLOR_IN、外の路側線の中心から
+    MARKING_COLOR_IN 内のあいだ（白線 → 路面の隙間 → 色 → 路面の隙間 → 中央線。隙間は両側とも MARKING_COLOR_IN - LINE_W / 2）"""
+    for v0, v1 in ((MARKING_COLOR_IN, MARKING_PAVE_IN), (-MARKING_PAVE_IN, -MARKING_COLOR_IN)):
+        put(u0, u1, v0, v1)
+
+
 def _color_lane(plan):
-    """色の舗装の直線の 1 タイル（向き a の座標。#313）: 路面は ±MARKING_PAVE_IN の内（lane4 と同じ）、下の一般道路の中央線（実線）を描き直す"""
-    h, P = MARKING_HALF, MARKING_PAVE_IN
-    plan.pave(-h, h, -P, P)
-    plan.line(0.0, -h, h)
+    """色の舗装の直線の 1 タイル（向き a の座標。#313）: 中央線の両側の帯（_color_bands）。線は下の一般道路の線が見える"""
+    _color_bands(plan.pave, -MARKING_HALF, MARKING_HALF)
 
 
 def _color_striped(plan):
-    """赤の縞の直線の 1 タイル（#313）: 道を横切る縞を ±MARKING_PAVE_IN の内に並べ、中央線を描き直す。路面は敷かない（縞のあいだは下の道路）"""
-    h, P = MARKING_HALF, MARKING_PAVE_IN
+    """赤の縞の直線の 1 タイル（#313）: 道を横切る縞を、中央線の両側の帯（_color_bands）の幅に並べる。路面は敷かない（縞のあいだは下の道路）"""
+    h = MARKING_HALF
     w = MARKING_COLOR_STRIPE_W / 2
     c = -h + MARKING_COLOR_STRIPE_PERIOD / 2
     while c < h:
-        plan.accent(c - w, c + w, -P, P)
+        _color_bands(plan.accent, c - w, c + w)
         c += MARKING_COLOR_STRIPE_PERIOD
-    plan.line(0.0, -h, h)
 
 
 def _color_center_line(plan):
@@ -591,34 +599,37 @@ def _color_center_line(plan):
     plan.line(0.0, -MARKING_HALF, MARKING_HALF)
 
 
+def _put_xy(plan, axis):
+    """_color_bands の put を、(x, y) の座標の plan.pave に写す。axis が "x" なら u = x・v = y、"y" なら u = y・v = x"""
+    if axis == "x":
+        return lambda u0, u1, v0, v1: plan.pave(u0, u1, v0, v1)
+    return lambda u0, u1, v0, v1: plan.pave(v0, v1, u0, u1)
+
+
 def _color_cross(plan):
-    """色の舗装の十字・1 タイル（(x, y) の座標。#313）: 4 つの角の円弧と、腕の口から辺までの中央線（下の一般道路の開いた十字と同じ線）。
-    路面は角の MARKING_PAVE_IN より外の四角を除く全面（_center_pave）"""
-    _center(plan, (("n", "e"), ("e", "s"), ("s", "w"), ("w", "n")))
-    for c in "nesw":
-        dx, dy = _DIRS[c]
-        plan.seg((dx * (EDGE_LINE + EDGE_CORNER_R), dy * (EDGE_LINE + EDGE_CORNER_R)), (dx * MARKING_HALF, dy * MARKING_HALF))
+    """色の舗装の十字・1 タイル（(x, y) の座標。#313）: 交差点の中の ±MARKING_PAVE_IN の四角と、4 本の腕の帯（四角の辺からタイルの辺まで）。
+    線（角の円弧・腕の中央線）は下の一般道路の線が見える"""
+    P, h = MARKING_PAVE_IN, MARKING_HALF
+    plan.pave(-P, P, -P, P)
+    for axis in "xy":
+        put = _put_xy(plan, axis)
+        _color_bands(put, P, h)
+        _color_bands(put, -h, -P)
 
 
 def _color_tee(m):
-    """色の舗装の T字（欠ける向き m。#313）: 枝の側の 2 つの角の円弧と、通り抜ける道路の中央線（下の一般道路の T字と同じ線）。
-    路面は閉じた側の MARKING_PAVE_IN より外と枝の側の角の四角を除く。下の道路の枝の口の点線の端は、junction2_t と同じく角の内の
-    小さな四角（MARKING_TEE_MOUTH_COVER）で覆う"""
+    """色の舗装の T字（欠ける向き m。#313）: 通り抜ける道路の帯（タイルの全長）と、枝の帯。枝の帯は、下の一般道路の枝の口の点線
+    （中心から EDGE_LINE、太さ MARKING_TEE_MOUTH_DASH）の外から、隙間をあけてタイルの辺まで。線は下の一般道路の線が見える"""
     opp = {"n": "s", "s": "n", "e": "w", "w": "e"}[m]
-    sides = [c for c in "nesw" if c not in (m, opp)]
+    through = "x" if opp in "ns" else "y"
+    branch = "y" if through == "x" else "x"
+    sgn = sum(_DIRS[opp])  # 枝の向きの符号
 
     def draw(plan):
-        _center(plan, ((opp, sides[0]), (opp, sides[1])), (m,))
-        ox, oy = _DIRS[opp]
-        w = MARKING_TEE_MOUTH_COVER
-        for sd in sides:
-            sx_, sy_ = _DIRS[sd]
-            xs = sorted((ox * MARKING_PAVE_IN + sx_ * MARKING_PAVE_IN, ox * w + sx_ * w))
-            ys = sorted((oy * MARKING_PAVE_IN + sy_ * MARKING_PAVE_IN, oy * w + sy_ * w))
-            plan.pave(xs[0], xs[1], ys[0], ys[1])
-        a, b = _DIRS[sides[0]], _DIRS[sides[1]]
         h = MARKING_HALF
-        plan.seg((a[0] * h, a[1] * h), (b[0] * h, b[1] * h))
+        _color_bands(_put_xy(plan, through), -h, h)
+        u0 = EDGE_LINE + MARKING_TEE_MOUTH_DASH / 2 + (MARKING_COLOR_IN - LINE_W / 2)
+        _color_bands(_put_xy(plan, branch), *sorted((sgn * u0, sgn * h)))
     return draw
 
 
@@ -690,8 +701,15 @@ def marking_jobs(kind):
             jobs[rc] = (draw, d(axis[1]), 0.0, slope)
         return jobs
     if kind == "junction6_c":
-        for rc in list(MARKING_DEADENDS) + [MARKING_CROSS_CELL]:
+        for rc in MARKING_DEADENDS:
             jobs[rc] = (_center6_pave, None, 0.0, None)
+        jobs[MARKING_CROSS_CELL] = (lambda p: (_center6_pave(p), _center_mark(p)), None, 0.0, None)
+        return jobs
+    if kind == "junction4_c":
+        # 曲がり（外の角が c）だけ。印は 4 枚が接する角（外の角の反対）に中心を置き、タイルの範囲で切り抜く（4 枚で 1 つの ◇）
+        for rc, c in MARKING_CURVES.items():
+            jobs[rc] = ((lambda cc: lambda p: (_center(p, ((cc[0], cc[1]),)), _center_mark(
+                p, *(-(_DIRS[cc[0]][i] + _DIRS[cc[1]][i]) * MARKING_HALF for i in (0, 1)))))(c), None, 0.0, None)
         return jobs
     if kind in ("junction6_in", "junction6_out", "junction6_m"):
         # 3 つの列（入る側の外・分離帯・出る側の外）。つながる形が向きを決める: 行き止まり = 2 マス目（つながる向きが交差点）、
@@ -712,8 +730,7 @@ def marking_jobs(kind):
         a = (my, -mx) if inbound else (-my, mx)  # 欠ける向き（外の側）が、入る側は a の左、出る側は a の右
         jobs[rc] = (_arm4_first, a, _tile_v(inbound), None)
     for rc, c in MARKING_CURVES.items():
-        jobs[rc] = ((lambda cc: lambda p: (_center(p, ((cc[0], cc[1]),)), _center_mark(
-                        p, *(-(_DIRS[cc[0]][i] + _DIRS[cc[1]][i]) * MARKING_CENTER_MARK_SHIFT for i in (0, 1)))))(c) if inbound else
+        jobs[rc] = ((lambda cc: lambda p: _center(p, ((cc[0], cc[1]),)))(c) if inbound else
                     (lambda cc: lambda p: (_center(p, ((cc[0], cc[1]),)), _scramble(p, cc)))(c), None, 0.0, None)
     return jobs
 
@@ -785,7 +802,7 @@ def marking_sheet(sheet, kind, label="M", paving=None, snow=None, line=None, slu
 
 
 # カーソルの絵のセル: 北南の直線、北へ向かう 2 車線の腕（行き止まり [n]）、北へ向かう 4 車線の腕の 1 マス目（入る側は T字 [nse]、出る側は [nsw]）
-MARKING_CURSOR = {"lane4": (0, 2), "junction2": (0, 7), "junction2_t": (0, 7), "junction4_in": (3, 5), "junction4_out": (3, 7),
+MARKING_CURSOR = {"lane4": (0, 2), "junction2": (0, 7), "junction2_t": (0, 7), "junction4_in": (3, 5), "junction4_out": (3, 7), "junction4_c": (2, 8),
                   "lane6_a": (0, 2), "lane6_b": (0, 2), "lane6_m": (0, 2), "junction6_in": (3, 5), "junction6_out": (3, 7), "junction6_m": (3, 5), "junction6_c": (3, 9),
                   **{k: (0, 2) for k in MARKING_COLOR_KINDS}}
 

@@ -151,9 +151,10 @@ ROAD_CURVE_SHAPES = {ROAD_LOCAL.key: "ell", ROAD_GENERAL.key: "arc"}
 # 一般道路（ROAD_GENERAL）に重ね、白線と路面を描く（下の道路の線と、帯・交差点の中の雪を覆う）。
 # lane4 は 4 車線の直線（2 列とも）、junction2 は 2 車線の腕と中心（4 車線 × 2 車線の中心も）、
 # junction2_t は 2 車線の T字路の中心、junction4_in・junction4_out は 4 車線の腕の入る側・出る側と中心（出る側の中心はスクランブル）。
+# junction4_c は 4 車線どうしのふつうの中心の 4 枚（junction4_in の曲がりに、4 枚が接する角の中心の印を足した物。#313）。
 # 6 車線（#189。外のタイルの直線は lane4、中心の角は junction4_in の曲がりを使う）: lane6_m は真ん中のタイルの直線、junction6_in・junction6_out は
 # 腕の入る側・出る側の外の列、junction6_m は腕の真ん中の列（右折車線）、junction6_c は中心 3×3 の角を除く 5 枚（路面で覆うだけ）
-MARKINGS = {f"{PREFIX}mark_{_k}": _k for _k in ("lane4", "junction2", "junction2_t", "junction4_in", "junction4_out",
+MARKINGS = {f"{PREFIX}mark_{_k}": _k for _k in ("lane4", "junction2", "junction2_t", "junction4_in", "junction4_out", "junction4_c",
                                                  "lane6_a", "lane6_b", "lane6_m", "junction6_in", "junction6_out", "junction6_m", "junction6_c")}
 # 高速道路の分岐・合流（#188）: 高速道路（ROAD_EXPRESSWAY）に重ねる。本線の列（_main）とランプの列（_ramp）。路面は高速道路のアスファルト
 MARKINGS_EXPWY = {f"{PREFIX}mark_{_k}": _k for _k in ("diverge_main", "diverge_ramp", "merge_main", "merge_ramp")}
@@ -163,7 +164,7 @@ MARKINGS_COLOR = {f"{PREFIX}mark_{_k}": _k for _k in ("paving_red", "paving_blue
 MARKINGS.update(MARKINGS_COLOR)
 # 路面表示のアイコンの左上の字（icons.py が書く。#187）。MARKINGS の全部に 1 字ずつ要る
 MARK_LABELS = {"ami_mark_lane4": "線", "ami_mark_junction2": "交", "ami_mark_junction2_t": "丁",
-               "ami_mark_junction4_in": "入", "ami_mark_junction4_out": "出",
+               "ami_mark_junction4_in": "入", "ami_mark_junction4_out": "出", "ami_mark_junction4_c": "印",
                "ami_mark_lane6_a": "甲", "ami_mark_lane6_b": "乙", "ami_mark_lane6_m": "央", "ami_mark_junction6_in": "入",
                "ami_mark_junction6_out": "出", "ami_mark_junction6_m": "中", "ami_mark_junction6_c": "心",
                # 高速道路の分岐・合流（#188）
