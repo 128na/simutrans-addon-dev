@@ -7,9 +7,9 @@
 種類（marking_sheet の kind）と、つながる形ごとの絵（左側通行。右側通行の版は作らない）:
   lane4:         4 車線の直線の 1 タイル（2 列とも同じ絵。左右対称なので、地図を回しても崩れない）。直線・坂・行き止まり（直線と同じ絵）。
                  路面は MARKING_PAVE_IN の内だけで、2 つの列のあいだの帯と外の路肩は、下の道路の絵（雪も）を見せる
-  junction2:     2 車線の腕（行き止まり）、2 車線どうしの中心（十字・1 タイル）、4 車線 × 2 車線の中心（T字。欠ける向きが相方のタイル）
+  junction2:     2 車線の腕（行き止まり）、2 車線どうしの中心（十字・1 タイル。中心の印）、4 車線 × 2 車線の中心（T字。欠ける向きが相方のタイル）
   junction2_t:   2 車線の腕（行き止まり）、2 車線の T字路の中心（T字。欠ける向きの側に路側線）、十字・1 タイルは junction2 と同じ
-  junction4_in:  4 車線の腕の入る側。行き止まり = 2 マス目（導流帯の三角）、T字 = 1 マス目（矢印・停止線・横断歩道）、曲がり = 中心（角の縁石）
+  junction4_in:  4 車線の腕の入る側。行き止まり = 2 マス目（導流帯の三角）、T字 = 1 マス目（矢印・停止線・横断歩道）、曲がり = 中心（角の縁石と中心の印）
   junction4_out: 4 車線の腕の出る側。行き止まり = 2 マス目、T字 = 1 マス目、曲がり = 中心のスクランブル（中心の 4 タイルの対角線に沿う X の横断歩道。
                  iss の intersection2-2 と同じ）
   lane6_m:       6 車線（#189。3 タイル）の真ん中のタイル（分離帯）の直線。外のタイルの直線は lane4、中心の角は junction4_in の曲がりを使う
@@ -98,6 +98,12 @@ MARKING_W2_PAVE = EDGE_LINE
 MARKING_SCRAMBLE_GAP = 1.9    # 内の端の、交差点の中心からの距離（対角線の上）
 MARKING_SCRAMBLE_OUT = 4.6    # 縞を置く外の限り（タイルの中心からの距離。対角線の上。角の円弧の中ほどは約 5.1）。
 # 外の端の縞は、路面で覆わない角の四角（MARKING_PAVE_IN より外）にかかる（降雪では下の道路のまだらの雪の上に乗る）
+# 交差点の中心の印（#313。iss の intersection1 の十字と intersection2-1 の曲がりにある小さな印）: 白線の菱形 ◇。2 車線の十字（junction2・
+# junction2_t の十字・1 タイル）はタイルの中心に 1 つ、4 車線の中心（junction4_in の曲がり）は iss と同じく 1 枚に 1 つ、タイルの中心から
+# 交差点の中心の角の側へ MARKING_CENTER_MARK_SHIFT ずらして置く（4 枚で中心のまわりに 4 つ。6 車線の中心の角でも同じ絵になる）。
+# スクランブル（junction4_out の曲がり）には描かない（iss の intersection2-2 にも無く、X の縞と重なる）
+MARKING_CENTER_MARK_R = 0.8       # 菱形の中心から頂点までの距離（線の中心まで）
+MARKING_CENTER_MARK_SHIFT = 2.5   # 4 車線の中心のタイルで、印をタイルの中心から交差点の中心の角の側へ（x・y とも）ずらす量
 
 # 6 車線（#189。3 タイル。腕の座標は 4 車線と同じく V: 真ん中のタイルの中心が 0、入る側の外のタイルの中心が +10、出る側が -10）
 MARKING_W6_TILE = 2 * MARKING_HALF                 # 10 外のタイルの中心（V）
@@ -635,6 +641,14 @@ def _color_jobs(kind):
     return jobs
 
 
+def _center_mark(plan, cx=0.0, cy=0.0):
+    """交差点の中心の印: (cx, cy)（タイルの (x, y) の座標）を中心にした白線の菱形 ◇"""
+    r = MARKING_CENTER_MARK_R
+    pts = [(cx + r, cy), (cx, cy + r), (cx - r, cy), (cx, cy - r)]
+    for p, q in zip(pts, pts[1:] + pts[:1]):
+        plan.seg(p, q)
+
+
 def _tile_v(inbound):
     """4 車線の腕の、入る側（inbound）か出る側のタイルへの横位置のずらし（タイルの中心の V）"""
     return MARKING_W4_LANE if inbound else -MARKING_W4_LANE
@@ -657,7 +671,7 @@ def marking_jobs(kind):
             jobs[rc] = (_lane4, d(axis[1]), 0.0, slope)
         return jobs
     if kind in ("junction2", "junction2_t"):
-        four = lambda p: _center(p, (("n", "e"), ("e", "s"), ("s", "w"), ("w", "n")), (), "nesw")
+        four = lambda p: (_center(p, (("n", "e"), ("e", "s"), ("s", "w"), ("w", "n")), (), "nesw"), _center_mark(p))
         jobs[MARKING_CROSS_CELL] = jobs[MARKING_SINGLE_CELL] = (four, None, 0.0, None)
         for rc, c in MARKING_DEADENDS.items():
             jobs[rc] = (_arm2, d(c), 0.0, None)
@@ -698,7 +712,8 @@ def marking_jobs(kind):
         a = (my, -mx) if inbound else (-my, mx)  # 欠ける向き（外の側）が、入る側は a の左、出る側は a の右
         jobs[rc] = (_arm4_first, a, _tile_v(inbound), None)
     for rc, c in MARKING_CURVES.items():
-        jobs[rc] = ((lambda cc: lambda p: _center(p, ((cc[0], cc[1]),)))(c) if inbound else
+        jobs[rc] = ((lambda cc: lambda p: (_center(p, ((cc[0], cc[1]),)), _center_mark(
+                        p, *(-(_DIRS[cc[0]][i] + _DIRS[cc[1]][i]) * MARKING_CENTER_MARK_SHIFT for i in (0, 1)))))(c) if inbound else
                     (lambda cc: lambda p: (_center(p, ((cc[0], cc[1]),)), _scramble(p, cc)))(c), None, 0.0, None)
     return jobs
 
