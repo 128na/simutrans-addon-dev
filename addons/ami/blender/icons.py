@@ -87,7 +87,8 @@ MARK_PICTURE = {"ami_mark_lane4": "image[ns][0]", "ami_mark_junction2": "image[n
                 "ami_mark_junction4_in": "image[nse][0]", "ami_mark_junction4_out": "image[nsw][0]",
                 "ami_mark_lane6_a": "image[ns][0]", "ami_mark_lane6_b": "image[ns][0]", "ami_mark_lane6_m": "image[ns][0]", "ami_mark_junction6_in": "image[nse][0]", "ami_mark_junction6_out": "image[nsw][0]",
                 "ami_mark_junction6_m": "image[nse][0]", "ami_mark_junction6_c": "image[nsew][0]",
-                **{f"ami_mark_{_k}": "image[n][0]" for _k in ("diverge_main", "diverge_ramp", "merge_main", "merge_ramp")}}
+                **{f"ami_mark_{_k}": "image[n][0]" for _k in ("diverge_main", "diverge_ramp", "merge_main", "merge_ramp")},
+                **{f"ami_mark_{_k}": "image[ns][0]" for _k in ("paving_red", "paving_blue", "paving_green", "paving_red_striped", "center_yellow")}}
 
 
 def describe(d):

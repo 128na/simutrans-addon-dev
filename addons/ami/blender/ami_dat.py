@@ -482,6 +482,11 @@ MARKING_CELLS = {
     # 高速道路の分岐・合流（#188）: 行き止まり = テーパー、T字 = 平行、曲がり = 分かれ
     **{_k: _MARK_DEADENDS | _MARK_TEES | {(2, 5), (2, 6), (2, 7), (2, 8)}
        for _k in ("diverge_main", "diverge_ramp", "merge_main", "merge_ramp")},
+    # 路面の色と黄色の中央線（#313）: 直線・坂・行き止まり（直線と同じ絵）。色の舗装は十字・1 タイル・T字も
+    **{_k: {(0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (1, 5), (1, 6), (1, 7), (1, 8)} | _MARK_DEADENDS | _MARK_TEES | {(0, 9), (3, 9)}
+       for _k in ("paving_red", "paving_blue", "paving_green")},
+    **{_k: {(0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (1, 5), (1, 6), (1, 7), (1, 8)} | _MARK_DEADENDS
+       for _k in ("paving_red_striped", "center_yellow")},
 }
 MARKING_EMPTY_CELL = sheet_rows.MARKING_EMPTY_CELL
 # 雪の絵（[1]）を夏と別のセルに持つ種類（tools/blender/sheetlib/marking.py の MARKING_SNOW_KINDS）。雪は MARKING_ROWS 行下
