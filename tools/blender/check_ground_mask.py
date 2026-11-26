@@ -100,6 +100,44 @@ for name in ("spill", "road"):
     if (tiled(cells._ground_mask(None, **WIDENED[name])) == 0).any():
         fails.append(f"{name} の平らの並びに隙間がある")
 
+# 平らな道路（ROAD_CY）の奥の辺の上の帯（地面の菱形の中で、道路の位置の菱形より上）: つながる辺（北・西）は空ける（奥のタイルの絵が埋める。
+# 塗ると、白線が向きを変える所で奥の線の端を覆った。#354）。つながらない辺は地面の位置まで塗る（坂と平らの境の跳び。#333）。
+# 左右の列の仮定を使わず、地図の上の位置で見る: 北・西の隣のタイルの道路の菱形を、画面のずれ（北は右上、西は左上へ半タイル）に置き、
+# 手前のタイルの持ち分と重なるか。つながる辺なら重ならない（奥のタイルの絵だけが見える）、つながらない辺なら帯の分だけ重なる
+_HALF_W, _HALF_H = 64 * SCALE, 32 * SCALE
+_NEIGHBOR = {"n": (_HALF_W, -_HALF_H), "w": (-_HALF_W, -_HALF_H)}  # 奥の隣のセルの、画面での位置のずれ（x, y）
+
+
+def _shifted(mask, dx, dy):
+    out = np.zeros_like(mask)
+    h, w = mask.shape
+    out[max(0, dy):h + min(0, dy), max(0, dx):w + min(0, dx)] = mask[max(0, -dy):h - max(0, dy), max(0, -dx):w - max(0, dx)]
+    return out
+
+
+_road = cells._column_mask(None, None, cells.ROAD_CY)
+for exits in ("", "ns", "ew", "nsew", "ne", "sw", "nw", "se"):
+    m = cells._ground_mask(None, cy=cells.ROAD_CY, exits=exits)
+    for d, (dx, dy) in _NEIGHBOR.items():
+        n = int((m & _shifted(_road, dx, dy)).sum())
+        if d in exits and n:
+            fails.append(f"平らな道路（つながる辺 {exits!r}）: つながる {d} の隣の道路の菱形に {n} 画素かかる")
+        if d not in exits and n == 0:
+            fails.append(f"平らな道路（つながる辺 {exits!r}）: つながらない {d} の辺の上の帯を塗らない")
+# 坂は exits で変わらない（坂は本体が地面を後から描くので、つながる辺の上も地面の位置まで塗る。#333）
+for s in [(1, 1, 0, 0), (0, 0, 1, 1), (1, 0, 0, 0), (0, 0, 2, 2)]:
+    sl = slope_of(*s)
+    if (cells._ground_mask(sl, cy=cells.ROAD_CY, exits="nsew") != cells._ground_mask(sl, cy=cells.ROAD_CY)).any():
+        fails.append(f"坂 {s}: exits で持ち分が変わる")
+# render_cell が持ち分の絵（_own.png）を書くときに exits を渡すか（bpy は差し替えてあり、描画はしない）
+_saved = []
+with mock.patch.object(cells, "save_rgba", lambda path, img: _saved.append(img[..., 0] > 0)):
+    cells.render_cell("check_exits", "nsew", cy=cells.ROAD_CY)
+    cells.render_cell("check_exits", "", cy=cells.ROAD_CY)
+if len(_saved) != 2 or not (_saved[0] != _saved[1]).any():
+    fails.append("render_cell の持ち分の絵が exits で変わらない（_render_ground に exits が届かない）")
+
+
 def gaps(mask):
     """列ごとに、一番上と一番下の行の間で抜けている画素の数"""
     n = 0
