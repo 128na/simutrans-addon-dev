@@ -25,6 +25,8 @@ tube 8 29
 tube_diag 21 29
 pair 9 40
 pair_elev 27 40
+tube_pair 45 40
+center 9 46
 tunnel 4 51
 elev_single 49 3
 elev_single_r 63 3
