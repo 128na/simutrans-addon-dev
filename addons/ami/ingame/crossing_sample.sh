@@ -21,7 +21,7 @@ ORIGINS="temperate:20:24 snow:276:24"
 START=10; SP=6; VX=4; VY=12
 # 区画 M（crossing_sample.nut の MIXED。温暖側だけ）: j 番目の踏切は (ox + MX + j * 8, oy + 2)。MX = LEN + 14
 MX=$((START + 16 * SP + 4 + 14)); NMIXED=5
-# 区画 M の組ごとに出る踏切（ami = AMI の踏切、other = ほかの pak の踏切）。README の「踏切の作り」に書いた結果（2026-11-21）
+# 区画 M の組ごとに出る踏切（ami = AMI の踏切、other = ほかの pak の踏切）。docs/objects/crossing.md の「踏切の作り」に書いた結果（2026-11-21）
 MIXED_EXPECT=${MIXED_EXPECT:-"other other ami ami ami"}
 # 画面（704x536、gui.jump で踏切のタイルへ飛んだとき）のうち、格子に並べる範囲（x0,y0,x1,y1）。踏切のタイルが中ほどに来る
 CROP=${CROP:-196,250,456,470}

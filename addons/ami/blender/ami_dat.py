@@ -1,6 +1,6 @@
 """AMI の dat を書き出す（Blender は使わない。アドオンのディレクトリで `python -X utf8 blender/ami_dat.py`）。
 
-値（速度・費用・維持費・登場年）は VALUES が持つ。README の「値の一覧」と同じにする。
+値（速度・費用・維持費・登場年）は VALUES が持つ。README の「今の決まりごと」と同じにする。
 旧描画位置（SIS に合う。#26）の線路は catalog.OLD_TRACKS。名前（ami_rail_<種類>_old…・ami_wall_rail_old_…）と絵のシートが違うだけで、dat の並び・値は新と同じ。
 まだ絵を作っていない way は BUILT に入れない（dat も pak も作らない）。シートの行の並びは
     夏の絵 4 行（奥の絵）→ 雪の絵 4 行
@@ -12,14 +12,14 @@
 奥の線と手前の線を別の版にできる。docs/reference/way-addon.md の 6 章）。壁の way-object（ami_wall_rail_<版>）のシートは
     奥の絵 4 行（backimage）→ 手前の絵 4 行（frontimage）
 で、セルの位置は way と同じ。雪の絵は無い（way-object に雪のキーが無い）。ami_wall_rail_twin は近い斜めの分け合うタイル用で、
-back と front のシートの斜めのセルを指す（README の「壁の敷き方」）。
+back と front のシートの斜めのセルを指す（docs/objects/rail.md の「壁の敷き方」）。
 
 架線つきの壁の way-object（ami_wall_rail_<版>_catenary）は壁と同じ並びで、own_waytype=electrified_track（電化）。
 ami_wall_rail_twin_catenary は近い斜めの分け合うタイル用で、斜めの梁を短くした back と front の架線つきのシート
-（ami_wall_rail_twin_catenary_<back|front>）の斜めのセルを指す（README の「架線の作り」）。
+（ami_wall_rail_twin_catenary_<back|front>）の斜めのセルを指す（docs/objects/rail.md の「架線の作り」）。
 
 橋（BRIDGES）とトンネル（TUNNELS）は blender-poc の橋・トンネルと同じシートの並びで、手前の絵は無い（壁は way-object）。
-makeobj は橋の手前のキーが無いと警告するので、手前のキーは全部、空のセル（BRIDGE_EMPTY_CELL）を指す（README の「橋とトンネルの作り」）。
+makeobj は橋の手前のキーが無いと警告するので、手前のキーは全部、空のセル（BRIDGE_EMPTY_CELL）を指す（docs/objects/rail.md の「橋とトンネルの作り」）。
 
 way・基盤・高架・橋・トンネルの名前は、軌道の種類の表（blender/catalog.py）から展開する。
 """
@@ -67,7 +67,7 @@ DONOR_SUFFIX = "__ex_donor"  # ex_graft.py の DONOR_SUFFIX と同じにする
 # 分岐の絵（switch 画像）の添字。dat の image[<添字>] の 1・2 の 10 枚
 SWITCH_IDX = {f"[{_s}{_n}]" for _s in ("nse", "new", "nsw", "sew", "nsew") for _n in (1, 2)}
 # 道路の way（waytype=road）の dat に分岐の絵を書くか。真（既定）で書く。OTRP v64 で KUTA 流の道路の決まりが無くなり、戻した（#46、teamhimeh/simutrans#816、2026-11-23）。外すときは偽にする。
-# 外していた間（2026-11-20〜23）の経緯は README の「分岐の絵（switch 画像 1・2）」。シートの分岐のセルは描いたまま残す。
+# 外していた間（2026-11-20〜23）の経緯は docs/objects/road.md の「分岐の絵（switch 画像 1・2）」。シートの分岐のセルは描いたまま残す。
 # 真にしたら ingame/road_sample.nut の SWITCH_IMAGES も真にする
 ROAD_SWITCH_IMAGES = True
 
@@ -121,7 +121,7 @@ for _t in catalog.ALL_TRACKS:
 # 道路（ROAD_SWITCH_IMAGES）とはそろえず入れる（2026-11-20、ユーザーの決定。#23）。偽にすると dat から 10 枚を外す（シートのセルは残る）
 TRAM_SWITCH_IMAGES = True
 # 道路の地上の基盤の版（#22。2026-11-19 にユーザーが確定）: 線路の基盤の版と同じく近い斜めの絵を持たず、カーブはカーブのセル（斜めの形）。
-# 値は通常の版と同じ（README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
+# 値は通常の版と同じ（docs/objects/road.md の「道路の壁・高架・橋脚・橋・トンネルの作り」）
 for _r in catalog.ROADS:
     for _v in _r.variants:
         _n = _r.base(_v)
@@ -167,12 +167,12 @@ NO_DIAG = {catalog.CANAL_SCENIC}  # 斜めの絵（diagonal[...]）を書かな�
 NO_SWITCH = {catalog.CANAL, catalog.CANAL_SCENIC}  # 分岐の絵（image[nse1] など）を書かない way
 
 # ---------------------------------------------------------------- 橋脚の way（#18）
-# 高架の真下の地面のタイルに敷く。waytype は tram_track（iss と同じ。ユーザーの決定、2026-11-18。README の「高架と橋脚の作り」）。
+# 高架の真下の地面のタイルに敷く。waytype は tram_track（iss と同じ。ユーザーの決定、2026-11-18。docs/objects/rail.md の「高架と橋脚の作り」）。
 # 本体は track（system_type=7）として読むので、線路の網とつながり、線路の way-object（壁・架線）も載り、道路に重ねられる。
 # 値は仮（iss の橋脚と同じ費用・維持費）。topspeed は走らせる物ではないので 1
 PIER_VALUES = dict(waytype="tram_track", cost=1000, maintenance=100, intro_year=1900, topspeed=1)
 PIERS = {catalog.pier_rail(_g, _o): catalog.pier_rail(_g, _o) for _o in (False, True) for _g in (False, True)}  # 単柱と門型（門型は #18 の追加）。旧描画位置（#26）の橋脚も同じ並び
-# 道路用の橋脚（#22）: 線路用と同じ waytype（tram_track。2026-11-19 にユーザーが確定）と値（仮）。シートの並びは単柱の橋脚と同じ（README の「道路の壁・高架・橋脚・橋・トンネルの作り」）
+# 道路用の橋脚（#22）: 線路用と同じ waytype（tram_track。2026-11-19 にユーザーが確定）と値（仮）。シートの並びは単柱の橋脚と同じ（docs/objects/road.md の「道路の壁・高架・橋脚・橋・トンネルの作り」）
 PIERS[catalog.PIER_ROAD] = catalog.PIER_ROAD
 # 手前の絵（frontimage）を持つ橋脚: 名前 → 手前の絵の行のずらし。シートを描く側の tools/blender/sheetlib/sheetlib.py の
 # PIER_GATE_FRONT_ROW（tools/blender/sheet_rows.py）を引く。門型は柱・梁を手前の絵に描く
@@ -191,7 +191,7 @@ WALL_TWIN_TOPSPEED = WALL_VALUES["topspeed"] + 1
 WALLS = {catalog.wall_rail(_v, _o): catalog.wall_rail(_v, _o) for _o in (False, True) for _v in BASE_VARIANTS}  # 新と旧（#26）
 WALL_FRONT_ROW = sheet_rows.WALL_FRONT_ROW  # 壁のシートの手前の絵の行（sheetlib も同じ定義）
 WAYOBJ_KEYS = {"image": "image", "imageup": "imageup", "imageup2": "imageup2", "diagonal": "diagonal"}  # way のキー → way-object の back/front の後ろ
-# 近い斜めの分け合うタイル用: 斜めの向きごとに、タイルの角の側の壁を持つ版のシート（back は nw・sw、front は ne・se。README の「壁の敷き方」）
+# 近い斜めの分け合うタイル用: 斜めの向きごとに、タイルの角の側の壁を持つ版のシート（back は nw・sw、front は ne・se。docs/objects/rail.md の「壁の敷き方」）
 # 壁だけの twin のアイコン・カーソルのセル（back の版のシートの、どの dat も指さないセル。icons.py が書く。#25）
 TWIN_ICON_CELLS = ("0.4", "1.4")
 TWIN_FROM = {"[nw]": "ami_wall_rail_back", "[sw]": "ami_wall_rail_back", "[ne]": "ami_wall_rail_front", "[se]": "ami_wall_rail_front"}
@@ -212,7 +212,7 @@ ROAD_DIVIDERS = {_n: _n for _n in catalog.ROAD_DIVIDERS.values()}
 ROAD_DIVIDER_TWIN_FROM = {k: (v if v.endswith("_back") else catalog.ROAD_DIVIDERS["front"]) for k, v in ROAD_TWIN_FROM.items()}
 
 # ---------------------------------------------------------------- 架線つきの壁の way-object（線路用、電化。#17）
-# 値は仮（README の「架線の作り」）。架線の way-object の topspeed は、電化した編成の速さを縛る（本体の max_wayobj_speed）ので、
+# 値は仮（docs/objects/rail.md の「架線の作り」）。架線の way-object の topspeed は、電化した編成の速さを縛る（本体の max_wayobj_speed）ので、
 # いちばん速い線路（高速線 480 km/h）より大きくする。壁だけの版（1000・twin 1001）より速くして、壁の上に敷くと架線つきに置き換わる
 # （逆に、架線つきの上に壁だけの版を敷いても置き換わらない。外してから敷く）。近い斜めの分け合うタイル用の twin は 1 速くする（壁だけの版と同じ理由。
 # 壁だけの twin 1001 も置き換える）。twin の絵は、斜めの梁を短くした back・front の版のシート（render.py の TWIN_FROM）
@@ -233,7 +233,7 @@ EX_WAYOBJS = list(CATENARY)
 
 # ---------------------------------------------------------------- 橋とトンネル（#19）
 # 橋は欄干を描かず、壁・架線は地上と同じ way-object を重ねる（ADR 0003）。値は仮: 費用・維持費は地上の BRIDGE_COST_K・TUNNEL_COST_K 倍、
-# 速さは地上と同じ（README の「橋とトンネルの作り」）。橋の pillar_distance は iss の橋と同じ 1（全部のタイルに橋脚）。
+# 速さは地上と同じ（docs/objects/rail.md の「橋とトンネルの作り」）。橋の pillar_distance は iss の橋と同じ 1（全部のタイルに橋脚）。
 # 橋のシートの並び（render.py の rail_ballast_bridge。blender-poc の橋と同じセル）: 行 0 の列 2・3 が平らな橋（NS・EW）、
 # 行 1 が端の坂（列 0〜3 が 1 段、5〜8 が 2 段。並びは way の imageup と同じ 12・9・3・6）、行 2 の列 0・1 が橋脚（南北の橋・東西の橋）、
 # 行 3 が坂から始まる端（列 0〜3 が 1 段、5〜8 が 2 段。並びは n・s・e・w）。雪の絵は BRIDGE_SNOW_ROWS 下（橋脚は夏と同じセル）。
@@ -517,10 +517,10 @@ def marking_dat_text(name, kind):
             out.append(f"{key}{idx}[{season}]={name}.{row}.{col},{OFFSET}")
     return NL.join(out) + NL
 
-# 歩道の way（ami_sidewalk。#24）。waytype は iss の歩道（../refs/iss/src/util/sidewalk/ground.dat）と同じ water（README の「歩道の作り」）。
+# 歩道の way（ami_sidewalk。#24）。waytype は iss の歩道（../refs/iss/src/util/sidewalk/ground.dat）と同じ water（docs/objects/roadside.md の「歩道の作り」）。
 # 値は仮（費用・維持費は橋脚と同じ考え方の小さい値。速さ 1 は橋脚と同じ）
 SIDEWALK_VALUES = dict(waytype="water", cost=1000, maintenance=20, intro_year=1900, topspeed=1)
-# 高架の歩道（ami_sidewalk_elev。#119）: 値は #110 の一覧（README の「歩道の作り」）。高架は地上の 2 倍
+# 高架の歩道（ami_sidewalk_elev。#119）: 値は #110 の一覧（docs/objects/roadside.md の「歩道の作り」）。高架は地上の 2 倍
 SIDEWALK_ELEV_VALUES = dict(SIDEWALK_VALUES, cost=2000, maintenance=40)
 # 歩道の柵（ami_wall_sidewalk_<版>。#119）: water の way-object。値は #110 の一覧（壁と同じ。速さ 1000 は道路の壁と同じで、
 # 電柱だけの物（#120、同じ速さ）と重ねると先に置いた方が残る。柵つきの電柱（速さ 1010）を重ねると置き換わる）
@@ -620,7 +620,7 @@ def canal_crossing_dat_text(name, way):
 
 # 車庫（building の depot。#112）。シートの並びは sheetlib の depot.py（列 = layout 0〜3、行 0・1 が夏の奥・手前、行 2・3 が雪の奥・手前、
 # 列 4 の行 0・1 がアイコン・カーソル）。layout は道の出る向き（0 = 南・1 = 東・2 = 北・3 = 西。simtool.cc の tool_depot_aux）。
-# 費用・維持費は省かず pak128 の既定値を書く（README の「車庫の作り」。省いたり 0 にしたりしない）。dat の値は 1/100 cr
+# 費用・維持費は省かず pak128 の既定値を書く（docs/objects/depot.md の「車庫の作り」。省いたり 0 にしたりしない）。dat の値は 1/100 cr
 DEPOT_VALUES = {"track": dict(cost=850000, maintenance=1800), "tram_track": dict(cost=850000, maintenance=1800),
                 "road": dict(cost=700000, maintenance=1800), "monorail_track": dict(cost=850000, maintenance=1800),
                 "water": dict(cost=900000, maintenance=1800)}  # 船の車庫（#114）
@@ -649,7 +649,7 @@ def depot_dat_text(depot):
 
 # 操車場（building の stop。#115）。シートの並びは sheetlib の yard.py（列 = layout 0〜7、行 0・1 が夏・雪の奥の絵、列 8 の行 0・1 が
 # アイコン・カーソル）。layout は線路の向きと、隣の駅の建物の有無（ビット 0 = 東西、2 = 南・東の端、4 = 北・西の端。本体の
-# hausbauer.cc の build_station_extension_depot。README の「操車場の作り」）。荷を扱わない（enables_* を書かない）。
+# hausbauer.cc の build_station_extension_depot。docs/objects/depot.md の「操車場の作り」）。荷を扱わない（enables_* を書かない）。
 # 費用・維持費は省かず書く（#110。pak128 の cost_multiply_station 600 cr・maintenance_building 1800。dat の値は 1/100 cr）
 YARD_VALUES = dict(cost=60000, maintenance=1800, level=1)
 YARD_INTRO_YEAR = 1900
@@ -675,7 +675,7 @@ def yard_dat_text(name):
 # 転車台・遷車台（#314）。iss の転車台とトラバーサー（../refs/iss/src/util/rail_misc/table.dat）と同じく道路（road）の way 1 つで、
 # つながりの無い 1 タイル（image[-]）が転車台、直線と行き止まりが遷車台。速さ 65535 は iss と同じで、本体が道路を自動で選ぶとき
 # （橋・トンネルの上の way・町の道路。bauer/wegbauer.cc の weg_search は求める速さ以下でいちばん速い物を選ぶ）に選ばれないようにする。
-# 絵はシートの way の位置（IMAGES）で、カーブ・T 字・十字も持つ（iss は持たず、敷くと見えない way が残る）。坂・斜め・分岐の絵は持たない（README の「転車台・遷車台の作り」）
+# 絵はシートの way の位置（IMAGES）で、カーブ・T 字・十字も持つ（iss は持たず、敷くと見えない way が残る）。坂・斜め・分岐の絵は持たない（docs/objects/depot.md の「転車台・遷車台の作り」）
 TURNTABLE_VALUES = dict(waytype="road", cost=1000, maintenance=100, topspeed=65535, intro_year=1900)
 TURNTABLE_KEYS = ("[ns]", "[ew]", "[s]", "[w]", "[n]", "[e]", "[-]", "[sw]", "[nw]", "[ne]", "[se]", "[nse]", "[new]", "[nsw]", "[sew]", "[nsew]")
 

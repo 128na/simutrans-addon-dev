@@ -2,7 +2,7 @@
 // 検証用の flat_512_left_v64.sve に、温暖側 (20,20) と降雪側 (276,20) の 2 か所へ同じ並びで敷き、降雪側は一帯を降雪に塗り直す。
 // 使い方（アドオンのディレクトリで）: sample_parallel.sh に NUT=ingame/marking6_sample.nut を付ける（撮る場所は sample_spots.sh の MARKING6_SPOTS）。
 // 返り値の先頭が ok なら全部敷けて、[check] で比べた名前も期待どおり。違えば先頭が check で、「名前 場所=[…]」が続く。
-// 直線の外の列は lane6_a・lane6_b。敷き方は README の「路面表示の作り」の 6 車線と同じ。区画は 19×19 で、中心 3×3 が (8..10, 8..10)。
+// 直線の外の列は lane6_a・lane6_b。敷き方は docs/objects/marking.md の「路面表示の作り」の 6 車線と同じ。区画は 19×19 で、中心 3×3 が (8..10, 8..10)。
 //   左側通行。西の腕は東へ向かう（入る側が北の列 y=8、分離帯 y=9、出る側が南の列 y=10）、東の腕は西へ（入る側 y=10、出る側 y=8）、
 //   北の腕は南へ（入る側 x=10、出る側 x=8）、南の腕は北へ（入る側 x=8、出る側 x=10）。1 マス目は交差点の隣、2 マス目はその外
 local ORIGINS = [[20, 20], [276, 20]];
@@ -25,7 +25,7 @@ function way(tag, n, x0, y0, x1, y1) {
   report += r(tag + " " + n, command_x.build_way(pl, c(x0, y0), c(x1, y1), w, true));
 }
 function one(tag, n, x, y) { way(tag, n, x, y, x, y); }
-// d は表示のつながる向き（北 1・東 2・南 4・西 8 の和）。null なら比べない。絵はつながる向きで決まる（README の「路面表示の作り」）ので、
+// d は表示のつながる向き（北 1・東 2・南 4・西 8 の和）。null なら比べない。絵はつながる向きで決まる（docs/objects/marking.md の「路面表示の作り」）ので、
 // 向きの取り違え（分離帯の T字が交差点の辺とつながるなど）も、ここで見つける
 function expect(tag, x, y, road, mark, d) {
   local t = square_x(OX + x, OY + y).get_ground_tile();

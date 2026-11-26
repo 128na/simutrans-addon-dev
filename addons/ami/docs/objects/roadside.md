@@ -55,7 +55,7 @@
 - 高さ: 柱の足元から板の上端まで 30px（128px 座標。上の角の絵で y68 から y38）。高架の高さ（pak128 で 32px。[hakozumi.md](../../../../docs/reference/hakozumi.md) の 4 章）より低い。pak128 の `Minimum80` は 33px
 - 雪の絵は無い（roadsign は季節の絵を持たない）。降雪の地面でも同じ絵（`docs/roadsign122_snow.png`）
 - アイコンは道路の色に、標識の板を画素のまま 2 倍にした絵だけ（字も札も無い。板の模様で見分ける）。北行きの絵から作るので、板はゲームの中と同じく斜め。カーソルは北行きの絵（`blender/icons.py`）
-- 名前の訳: 道具の説明に出る名前を日本語にする訳のファイル `release/text/ja_ami.tab`（6 種だけ）。配る zip の `pak128/text/ja_ami.tab` に入り、ゲームの `addons/pak128/text/` から読まれる（本体はファイル名の先頭 2 文字で言語を決める。[way-addon.md](../../../../docs/reference/way-addon.md) の 5 章）
+- 名前の訳: 道具の説明に出る名前を日本語にする訳のファイル `release/text/ja_ami.tab`（6 種だけ）。配る zip の `pak128/text/ja_ami.tab` に入り、ゲームの `addons/pak128/text/` から読まれる（本体はファイル名の先頭 2 文字で言語を決める。[way-addon.md](../../../../docs/reference/way-addon.md) の 5 章）。英語の表示では名前だけが出て「飾り」の注記が出ない（dat に説明のキーが無いので、注記は訳のファイルにだけ書いた）
 - 値: 費用 500 cr、登場 1900（#110 の一覧。`blender/ami_dat.py` の `ROADSIGN_*`）。維持費のキーは無い。`ami_scenery.pak` に入る（ADR 0008）
 - 見本: `ingame/roadsign_sample.nut`。6 種を南北・東西の一般道路に置き、一方通行を 1 回・2 回置いて向きを変える。温暖側 (20,24) と降雪側 (276,24)。`[check]` の行で、置いた標識の名前、一方通行か、道の向き（`dirs`）と標識で絞った向き（`masked`）を期待と比べ（飾りの標識は絞らない、一方通行は南北で 4・2 回で 1、東西で 8・2 回で 2）、訳（`translate`）を出す。最低速度は script から読めないので、情報の窓の「最低速度: 50」で見た（`docs/roadsign122_info_min50.png`）
 - 左側通行: 左側通行の地図で見た（2026-11-22）。検証用の `flat_512.sve` は右側通行なので、起動した写しのゲームで、`gui.open_dialog_tool(27)`（高度な設定の窓）を開き、`gui.click` で `drive_left` の箱を押して窓を閉じ（`settings.get_drive_on_left()` が `true`）、見本を流した。標識は道路の反対の側の角へずれる（南北の道路では表の見える北行きの板が西の側、東西の道路では西行きの板が南の側）。撮った画面は `docs/roadsign122_left_temperate.png`（拡大率 4）、`roadsign122_left_ns.png`・`roadsign122_left_ew.png`（拡大率 1）、`roadsign122_left_oneway.png`（区画 O、拡大率 3）。車両を走らせての奥・手前の重なりは見ていない

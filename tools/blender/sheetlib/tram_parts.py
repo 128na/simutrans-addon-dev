@@ -2,7 +2,7 @@
 道路の上に重ねて敷く想定で、どれも路面（高さ 0）のすぐ上の薄い板にする。レールの横位置は線路の部品（track_parts）と同じ。
 TRACK_PROFILES の "track_parts"・"replace"・"snow_skin" に渡す（共通の描画の道具 sheetlib の一部。tools/README.md）。
 
-見た目の手本は AMI の README の「見た目の手本」（ユーザーから受け取った写真の書き起こし）: 床はコンクリートで固め、レールの頭だけが床の面に出る。
+見た目の手本は AMI の docs/objects/rail.md の「見た目の手本」（ユーザーから受け取った写真の書き起こし）: 床はコンクリートで固め、レールの頭だけが床の面に出る。
 レールの内側と周りにさび色の汚れの帯、軌道の縁は明るい色の帯。
 """
 from dataclasses import replace
