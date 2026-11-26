@@ -124,7 +124,7 @@ ROUND_SETTINGS.update({
 _R3 = ROUND_SETTINGS["3"]
 ROUND_SETTINGS.update({
     # ラウンド 4: 生活道路・一般道路の路面の明るさ。ゲームの画面で一般道路 51 で、一般道路の手本（SIS 一般道 67・iss 74・pak128 104）の
-    # どれより暗い。README の決まり（pak128 標準の道路とつなぐので街路の灰色）からも離れる。高速道路（29。SIS 高速道路 30・iss 35）は変えない
+    # どれより暗い。docs/objects/road.md の「道路の作り」の決まり（pak128 標準の道路とつなぐので街路の灰色）からも離れる。高速道路（29。SIS 高速道路 30・iss 35）は変えない
     #   4lift: 路面の 2 色を 3.2 倍（ラウンド 1 は 2.4 倍）。4lift2: 4.0 倍
     "4lift": dict(_R3, street_lift=3.2),
     "4lift2": dict(_R3, street_lift=4.0),

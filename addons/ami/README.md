@@ -412,4 +412,4 @@ PORT=47300 bash ingame/game.sh STOP
 ## 残っていること
 
 - できたと言う条件と、その状態（未確認・仮のものを含む）は [ACCEPTANCE.md](ACCEPTANCE.md)。ベータの既知の課題と、後に回した issue は [ACCEPTANCE.md の「ベータ版（第 1 弾）での扱い」](ACCEPTANCE.md#ベータ版第-1-弾での扱い)
-- やり残し・未解決の課題は、このリポジトリの issue（ラベル `AMI`）で追う（[AGENTS.md](../../AGENTS.md) の「TODO・未解決の課題」）。物ごとの作りで値が仮のものは、物ごとの文書（上の「物ごとの作り」）の各節に書く
+- やり残し・未解決の課題は、このリポジトリの [issue（ラベル `AMI`）](https://github.com/128na/simutrans-addon-dev/issues?q=is%3Aissue+is%3Aopen+label%3AAMI) で追う（[AGENTS.md](../../AGENTS.md) の「TODO・未解決の課題」）。物ごとの作りで値が仮のものは、物ごとの文書（上の「物ごとの作り」）の各節に書く

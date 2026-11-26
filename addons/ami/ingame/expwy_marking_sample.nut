@@ -1,7 +1,7 @@
 // AMI の高速道路の分岐・合流の路面表示（ami_mark_diverge_*・ami_mark_merge_*。#188）の見本。高速道路（ami_road_expressway）を敷き、表示を重ねる。
 // 検証用の flat_512_left_v64.sve に、温暖側 (20,20) と降雪側 (276,20) の 2 か所へ同じ並びで敷き、降雪側は一帯を降雪に塗り直す。
 // 使い方（アドオンのディレクトリで）: sample_parallel.sh に NUT=ingame/expwy_marking_sample.nut を付ける（撮る場所は sample_spots.sh の EXPWY_MARKING_SPOTS）。
-// 返り値の先頭が ok なら全部敷けて、[check] で比べた名前と、表示のつながる向き（README の形の表から導いた値）も期待どおり。違えば先頭が check で、「名前 場所=[…]」が続く。最後に [check] の行が続く。
+// 返り値の先頭が ok なら全部敷けて、[check] で比べた名前と、表示のつながる向き（docs/objects/marking.md の「高速道路の分岐・合流の路面表示の作り」の形の表から導いた値）も期待どおり。違えば先頭が check で、「名前 場所=[…]」が続く。最後に [check] の行が続く。
 // 敷き方は docs/objects/marking.md の「高速道路の分岐・合流の路面表示の作り」と同じ（f は進む向き、l は左。本線の列が l=0、ランプの列が l=1）:
 //   分岐: 1. 本線を高速道路で敷く（反対の車道も l=-1 に） 2. ランプの道路を、分かれのマス（f=L）の本線から横の l=1 へ、そこから進む向き（直線か斜め）へ
 //         3. 本線の列の f=0〜L を diverge_main で区間 4. ランプの列の f=0〜L を diverge_ramp で区間
@@ -72,7 +72,7 @@ function lay(tag, cx, cy, d, merge, npar, diag) {
   local f0 = merge ? 0 : 1, f1 = merge ? L - 1 : L;   // 横につなぐマス（テーパーのマスを除く）
   for (local f = f0; f <= f1; f++) way(tag + " link", ramp, P(f, 0), P(f, 1));
   for (local f = f0; f <= f1; f++) way(tag + " relay", main, P(f, 0), P(f, 0));
-  // 表示のつながる向き（README の形の表）: 前後のマスへ（区間の端は片側だけ）と、横につないだマスは本線の列が左・ランプの列が右
+  // 表示のつながる向き（docs/objects/marking.md の「高速道路の分岐・合流の路面表示の作り」の形の表）: 前後のマスへ（区間の端は片側だけ）と、横につないだマスは本線の列が左・ランプの列が右
   local bk = rb([-FV[0], -FV[1]]), fw = rb(FV), lf = rb(LV), rt = rb([-LV[0], -LV[1]]);
   for (local f = 0; f <= L; f++) {
     local dd = (f > 0 ? bk : 0) | (f < L ? fw : 0), linked = f >= f0 && f <= f1;

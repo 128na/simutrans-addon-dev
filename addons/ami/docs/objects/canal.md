@@ -34,7 +34,7 @@
 - pak は `ami_canal.pak`（名前の頭 `ami_canal` で入る）。見本は `WAY=ami_canal_scenic` を付けた `ingame/canal.sh`
 - 確認画像（2026-11-23、`OTRPv64_3.exe`、`flat_512.sve`）: `docs/canal_scenic_ground.png`（輪・十字・車庫の口の T字）、`canal_scenic_diag.png`（斜め。2026-11-23 時点の絵で、景観の運河は今は斜めを持たない）、`canal_scenic_slope.png`（閘門の坂・急坂）、`canal_scenic_close.png`（近い斜め）、`canal_scenic_depot.png`（車庫と船）、`canal_scenic_snow_ground.png`・`canal_scenic_snow_slope.png`（降雪側）
 
-## 運河の汚し（#197）
+## 運河の汚しと景観の運河の斜め・行き止まり（#197・#217）
 
 第 3 弾の運河の汚しと、景観の運河の斜めと行き止まりの直し（2026-11-23〜24。路面表示の分は [marking.md](marking.md) の「路面表示の汚し（#197）」）。直す前後の画像は [docs/197_weathering/](../197_weathering/)（拡大率 3。座標は `catalog` の保存データ `ami_catalog.sve` のもの）。
 

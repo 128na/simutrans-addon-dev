@@ -14,7 +14,7 @@ cfg の鍵（無ければ今の本番の値）:
   edge_u0    縁の明るい帯の内側（外側は床の縁 TRAM_BED_U）。edge_rgb はその色
   wear       汚れの帯 {名前: ((u0, u1), さび色への寄せ具合)}。oil は (半幅, 寄せ具合)。drop は描かない帯の名前
   joint      床の目地（横向きの暗い線）の (間隔, 幅)。間隔はタイルの辺から数え、タイルの継ぎ目でそろう
-雪の絵は夏と同じ（README の路面軌道の項目。除雪された想定）なので、汚れの帯を作り直したら snow_skin も同じ材質にする。
+雪の絵は夏と同じ（docs/objects/rail.md の「路面軌道の作り」。除雪された想定）なので、汚れの帯を作り直したら snow_skin も同じ材質にする。
 
 ラウンド 4（2026-11-20）を本番（sheetlib の tram_parts と track_sheet の cell_fills）に入れた。ROUND_SETTINGS の 1〜4 と apply は、
 入れる前の本番に重ねる作りとして残してある（記録のため）。apply は本番で無くした定数（TRAM_SEAM_W・TRAM_OIL_U）を読むので、今の本番では動かない。
