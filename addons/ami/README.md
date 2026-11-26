@@ -146,7 +146,7 @@ CC BY 4.0。
 
 ## 必要なもの
 
-- Blender 4.5 LTS
+- Blender 4.5 LTS（`PATH` には無い。場所は `D:/bin/blender/blender.exe` で、`tools/blender/sheet_settings.py` の既定なので `render_parallel.py` には渡さなくてよい。別の場所は `--blender` か環境変数 `SHEET_BLENDER` で渡す）
 - makeobj（`PATH` にある）
 
 ## ビルド
@@ -162,6 +162,14 @@ python -X utf8 build.py                                                        #
 - `build.py` は、全部入りのまとめ `dist/ami.pak` と、種類別の `ami_rail.pak`（線路）・`ami_tram.pak`（路面軌道）・`ami_road.pak`（道路と路面表示 `ami_mark_*`）・`ami_monorail.pak`（モノレール）・`ami_canal.pak`（運河）・`ami_extra.pak`（付属）・`ami_scenery.pak`（景観）と、旧描画位置の物（#26）だけを集めた `ami_rail_old.pak` を作る。旧の物は `ami.pak` と種類別の pak（旧の `ami_rail_old.pak` 以外）に入らない（`build.py` の `belongs`）。dat が無い種類は作らない。makeobj の出力に警告かエラーがあれば止まる
 - `build.py` は続けて、`src/ex_donors.dat` から提供用の pak（`work/ex/donors.pak`）を作り、各 pak の線路・路面軌道・道路の way と架線つきの壁へ ex 画像を継ぎ足す（[「分岐の追加画像」](docs/objects/rail.md)）。継ぎ足した数を出し、pak ごとに名前で当たる提供用の物が全部写ったことと、継ぎ足した絵（26〜29・31〜34 番が空でなく、通常の T字・十字と違うこと、30・35 番が通常の十字と同じこと）を確かめ、違えば止まる。pak の中の ex 画像の数は `python -X utf8 ex_graft.py --list dist/ami.pak` で見られる
 - シートを複数描くときは `python -X utf8 ..\..\tools\blender\render_parallel.py <対象>...`。レイアウト検証用モードは `SHEET_LAYOUT=1`（`work/layout/` に書く）
+  - `render.py` に対象を並べて 1 本で順に描かず、`render_parallel.py` で並列に描く。ほかの作業者と同時に描いても、マシン全体で共有する描画の枠（`SHEET_SLOTS`）を取って順番待ちにするので、`--jobs` と `SHEET_SLOTS` は既定のままにする（`SHEET_SLOTS` を変えるときは全員でそろえる）
+  - 全対象の名前は `catalog.SCALED_TARGETS` で取る。`src/*.png` から作らない（壁の `ami_wall_rail_*` の 8 枚は基盤の対象 `ami_rail_*_base_*` が一緒に書くので、対象に渡すと「unknown target」で止まる）。全対象の描画は約 14 分かかる（ほかの作業者の描画と重なると、枠の順番待ちでさらに延びる）
+  - `render_parallel.py` は `render.py` を `--own` で描くので、描いたシートの外にあるアイコン・カーソル（トンネルのアイコンなど）は書かない（[アイコン・カーソル](docs/objects/icons.md)）。シートを描き直して前後で比べるときは、描いた後に `icons.py`（全部）を流してから比べる（流さないと、アイコンだけの違いが描画のずれに見える）
+  - `icons.py` は Blender で流す（`D:/bin/blender/blender.exe -b --factory-startup --python blender/icons.py`）。`python` で流すと `bpy` が無く終了コード 1 で終わり、出力をログに向けていると見落とす
+  - 描き直すと `src/*.road_cells.txt`・`*.icon_sources.txt` の改行（LF/CRLF）だけが変わることがある。比べるためだけに描いたときは、比べた後に `git checkout -- addons/ami/src` で戻す
+- `build.py`・`blender/ami_dat.py`・`check.sh` は、1 つの作業ツリーの中で同時に 1 つしか動かない（`blender/src_lock.py` のロック。`work/src.lock`。#326）。先に動いている物があれば、その持ち主を 1 行出して終わるまで待つ（上限は環境変数 `SRC_LOCK_WAIT` の秒数。既定 1800。超えたら止まる）。ロックは OS のファイルロックなので、強制終了しても残らない。`check.sh` が中で呼ぶ `ami_dat.py`・`build.py` は取り直さない。シートの描画（`render.py`・`render_parallel.py`・`icons.py`）はロックを取らない
+  - `check.sh` は dat の書き忘れを、`src/` の dat を消さずに、`ami_dat.py --out <一時のフォルダ>` の出力と比べて見る
+- `ami_dat.py` は dat を LF で書くので、CRLF で取り出した作業ツリーでは改行だけの差分が出る。`git add -A src` でステージすると、本当に変わった物だけが残る
 - レイアウト検証用モードの pak は `SHEET_LAYOUT=1` で描いた後、`SHEET_LAYOUT=1 python -X utf8 build.py`（`work/layout/dist/` に作る）
 - 同じシートの通常の描画とレイアウト検証用の描画を同時に動かさない。セルごとの生の絵（`work/<シート>_<セル>.png`）の名前が同じで、互いのセルを取り込んだシートができた（2026-11-17）
 - `src/`（dat とシート）はコミットする。`dist/` と `work/` はコミットしない
@@ -308,6 +316,10 @@ PORT=47300 bash ingame/game.sh STOP
 ```
 
 - `ingame/game.sh` は、`work/game/<PORT>/` に検証用のフォルダの写しを作って起動する（`GAME_DIR` には書き込まない）。`RUN` で動いているゲームに見本を流し、`CAPTURE` で場所ごとに撮り、`STOP` で閉じて写しを消す。`OX` を渡すと、見本の行頭の `local OX = <数>;` を置き換える
+- `game.sh` は、起動・`RUN`・`CAPTURE`・`STOP` のどれも `PORT` が要る（無いと何もせずに止まる。閉じるときも、起動したときと同じ `PORT` を渡す）。ほかの起動スクリプトと同じ形の環境変数 `STOP=1`・`RUN=1`・`CAPTURE=1` も、引数と同じに扱う（#326）。`before_after.sh` の `STOP=1` も `PORT` を要る（既定の 47200 で閉じに行かない）
+- ゲームを起動するスクリプト（`game.sh`・`sample_check.sh` など）の出力を、パイプ（`| tail`・`| cut` など）でつながない。子のゲームがパイプを握り続けて、コマンドが終わらない。出力はファイルに向けて（`> work/x.log 2>&1`）、終わってから読む
+- 相対パスの `ingame/…`（`NUT` など）は、アドオンのディレクトリで使う
+- 前後の撮り方、前の pak の作り方、作業の注意（片付け・ブランチへの道具の取り込み）は、スキル [way-addon-build](../../.claude/skills/way-addon-build/SKILL.md) の [4 章](../../.claude/skills/way-addon-build/SKILL.md#4-確かめ方) と [6 章](../../.claude/skills/way-addon-build/SKILL.md#6-作業の注意)
 - `ingame/sidewalk_struct.nut` は、温暖側 (20,20) と降雪側 (276,20) に、舗装の種類（P）、地上の柵（F1 道路の両脇・F2 L字・F3 広場・F4 坂・F5 T字）、高架（E1 高架の道路の両脇・E2 地上の道路を横切る・E3 L字）を敷く。表は `sidewalk_struct.nut` の冒頭
 - `[check]` の行: 高架の歩道のタイル（高さ 2）の way と柵、地上の歩道の way と柵
 - 確認画像は `sidewalk119_*.png`（2026-11-21）。`P_*` は舗装の種類、`F_*` は地上の柵、`E_*` は高架、末尾が気候（`temperate`・`snow`）

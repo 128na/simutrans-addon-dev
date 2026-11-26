@@ -23,6 +23,7 @@
 # ゲームは work/ba_game/<PORT>/ の写し（GAME_DIR の exe・dll・設定 settings.xml.v64 と pak128 などに、PAKDIR の pak だけを足す）で起動し、
 # 撮り終えたら閉じて写しを消す（このスクリプトが起動したゲームだけ）。GAME_DIR には書き込まない。
 # 降雪側は温暖側の x に 512 を足した所（カタログの決まり）。画面の撮影（--capture）は 704×560 で、上の道具の帯が写る
+[ "$STOP" = 1 ] && [ -z "$PORT" ] && { echo "[ba] STOP=1 には、起動したときの PORT を渡す（既定の 47200 で閉じに行かない。#326）" >&2; exit 1; }
 OUT=${OUT:?OUT を指定する}; PORT=${PORT:-47200}
 if [ -n "$PAKDIR_BEFORE$PAKDIR_AFTER" ]; then  # 前後を一度に撮る（#227）。自分を 2 回呼び、撮り終えたら並べる
   [ -n "$PAKDIR_BEFORE" ] && [ -n "$PAKDIR_AFTER" ] || { echo "[ba] PAKDIR_BEFORE と PAKDIR_AFTER を両方渡す"; exit 1; }
