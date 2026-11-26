@@ -18,7 +18,7 @@
 - 盛土の建物の版を入れる。`type=cur`・`passengers=0`・`chance=0`。直線の 4 向きと外の角の 4 向きの 2 つの物にする（`dims=1,1,4`）。8 向きの 1 物にしないのは、8 layout の名所の建物は地図の回転で向きが崩れるため（本体の `obj/gebaeude.cc` の `rotate_layout`。4 以下は順に回る）。名前は `ami_embankment_building`・`ami_embankment_building_corner`
 - 説明用の色の way を入れる。iss の `util/describe` と同じ 4 色 × 地上（`tram_track`）・高架（`track` の `system_type=1`）の 8 物で、速さ 1。名前は `ami_describe_<色>`・`ami_describe_<色>_elev`。色はつながる向きで描き分けられないので、色ごとに物を分ける
 - ラウンドアバウトの路面表示を入れる。手本は iss の `util/road_misc/round_about.dat`。3×3 の 1 物 `ami_mark_roundabout`。iss の 4×4（2 物）は作らない
-- 橋に見せる補助の way は、この ADR では決めない（作りの判断を [#372](https://github.com/128na/simutrans-addon-dev/issues/372) で別に行う）
+- 橋に見せる補助の way は、この ADR では決めない。#372 の範囲から外し、[#382](https://github.com/128na/simutrans-addon-dev/issues/382) に分けた（2026-11-27、ユーザーの判断 80）
 
 ## 検討した代替案と却下理由
 
