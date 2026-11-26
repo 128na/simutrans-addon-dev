@@ -90,7 +90,7 @@ step "256 の dat の名前が pak128 と同じか、組まない物の表が実
 step "256 の持ち分マスクが pak256 の地面の形と画素で一致するか（tools/blender/check_ground_mask.py。Blender なし。#321）"
 "$PY" -X utf8 "$ROOT/tools/blender/check_ground_mask.py"
 
-step "アイコン・カーソルの参照先（セルの重なり・絵の有無・背景色・別のシートの絵・カーソルの offset。check_icons.py）"
+step "アイコン・カーソルの参照先（セルの重なり・絵の有無・背景色・別のシートの絵・カーソルの offset・icons.py が書いた物か（*.icon_cells.txt と比べる。#330）。check_icons.py）"
 "$PY" -X utf8 "$AMI/check_icons.py"
 
 step "dat が指すセルが空（全部透明）でないか（check_cells.py。意図して空のものは check_cells.allow.txt。#241）"

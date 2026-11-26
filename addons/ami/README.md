@@ -166,7 +166,8 @@ python -X utf8 build.py                                                        #
   - 全対象の名前は `catalog.SCALED_TARGETS` で取る。`src/*.png` から作らない（壁の `ami_wall_rail_*` の 8 枚は基盤の対象 `ami_rail_*_base_*` が一緒に書くので、対象に渡すと「unknown target」で止まる）。全対象の描画は約 14 分かかる（ほかの作業者の描画と重なると、枠の順番待ちでさらに延びる）
   - `render_parallel.py` は `render.py` を `--own` で描くので、描いたシートの外にあるアイコン・カーソル（トンネルのアイコンなど）は書かない（[アイコン・カーソル](docs/objects/icons.md)）。シートを描き直して前後で比べるときは、描いた後に `icons.py`（全部）を流してから比べる（流さないと、アイコンだけの違いが描画のずれに見える）
   - `icons.py` は Blender で流す（`D:/bin/blender/blender.exe -b --factory-startup --python blender/icons.py`）。`python` で流すと `bpy` が無く終了コード 1 で終わり、出力をログに向けていると見落とす
-  - 描き直すと `src/*.road_cells.txt`・`*.icon_sources.txt` の改行（LF/CRLF）だけが変わることがある。比べるためだけに描いたときは、比べた後に `git checkout -- addons/ami/src` で戻す
+  - シートの PNG をコミットするときは、`icons.py` が書いたセルの控え `src/<シート>.icon_cells.txt` も一緒にコミットする（#330）。描画はアイコン・カーソルのセルに仮の絵を描き、`icons.py` がそれを描き直して、書いたセルの sha256 をこの控えに書く（`render.py` は描いたシートの分だけ `icons.py --own` を自分で呼ぶ。ほかのシートにある分は、上のとおり描き終えてから `icons.py` を流す）。`check.sh` の `check_icons.py` が控えと今のシートを比べるので、仮の絵のままのセルや、控えをコミットし忘れたシートは落ちる
+  - 描き直すと `src/*.road_cells.txt`・`*.icon_sources.txt`・`*.icon_cells.txt` の改行（LF/CRLF）だけが変わることがある。比べるためだけに描いたときは、比べた後に `git checkout -- addons/ami/src` で戻す
 - `build.py`・`blender/ami_dat.py`・`check.sh` は、1 つの作業ツリーの中で同時に 1 つしか動かない（`blender/src_lock.py` のロック。`work/src.lock`。#326）。先に動いている物があれば、その持ち主を 1 行出して終わるまで待つ（上限は環境変数 `SRC_LOCK_WAIT` の秒数。既定 1800。超えたら止まる）。ロックは OS のファイルロックなので、強制終了しても残らない。`check.sh` が中で呼ぶ `ami_dat.py`・`build.py` は取り直さない。シートの描画（`render.py`・`render_parallel.py`・`icons.py`）はロックを取らない
   - `check.sh` は dat の書き忘れを、`src/` の dat を消さずに、`ami_dat.py --out <一時のフォルダ>` の出力と比べて見る
 - `ami_dat.py` は dat を LF で書くので、CRLF で取り出した作業ツリーでは改行だけの差分が出る。`git add -A src` でステージすると、本当に変わった物だけが残る
