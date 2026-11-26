@@ -6,7 +6,11 @@
 """
 import os
 import re
+import sys
 from dataclasses import dataclass
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "tools", "blender"))
+import marking_kinds  # noqa: E402  路面表示の種類ごとの表（Blender を使わない。#352）
 
 PREFIX = "ami_"
 VARIANTS = ("single", "back", "center", "front")  # 基盤・高架の版（並びは iss・SIS と同じ）
@@ -147,32 +151,21 @@ ROADS = (ROAD_LOCAL, ROAD_GENERAL, ROAD_TRUNK, ROAD_EXPRESSWAY)
 # 速さで描き分ける（一般は円弧、生活道路は L 字）。カーブの絵は way のシートの行 2 の列 5〜8 に描き、dat の image[sw] などがそれを指す。
 # 基盤・高架の single と壁（ROAD_WALL_CURVED）も同じ形にそろえた（3 本目の #260）
 ROAD_CURVE_SHAPES = {ROAD_LOCAL.key: "ell", ROAD_GENERAL.key: "arc"}
-# 多車線と交差点の路面表示の way（#187。ADR 0012）: 道路に重ねて敷く tram_track の way。名前 → 種類（sheetlib の marking の MARKING_KINDS）。
+# 多車線と交差点の路面表示の way（#187。ADR 0012）: 道路に重ねて敷く tram_track の way。名前 → 種類（tools/blender/marking_kinds.py の KINDS。
+# 種類の一覧・セル・アイコンの字はそこに 1 か所だけ置く。#352）。
 # 一般道路（ROAD_GENERAL）に重ね、白線と路面を描く（下の道路の線と、帯・交差点の中の雪を覆う）。
 # lane4 は 4 車線の直線（2 列とも）、junction2 は 2 車線の腕と中心（4 車線 × 2 車線の中心も）、
 # junction2_t は 2 車線の T字路の中心、junction4_in・junction4_out は 4 車線の腕の入る側・出る側と中心（出る側の中心はスクランブル）。
 # junction4_c は 4 車線どうしのふつうの中心の 4 枚（junction4_in の曲がりに、4 枚が接する角の中心の印を足した物。#313）。
 # 6 車線（#189。外のタイルの直線は lane4、中心の角は junction4_in の曲がりを使う）: lane6_m は真ん中のタイルの直線、junction6_in・junction6_out は
 # 腕の入る側・出る側の外の列、junction6_m は腕の真ん中の列（右折車線）、junction6_c は中心 3×3 の角を除く 5 枚（路面で覆うだけ）
-MARKINGS = {f"{PREFIX}mark_{_k}": _k for _k in ("lane4", "junction2", "junction2_t", "junction4_in", "junction4_out", "junction4_c",
-                                                 "lane6_a", "lane6_b", "lane6_m", "junction6_in", "junction6_out", "junction6_m", "junction6_c")}
+MARKINGS = {f"{PREFIX}mark_{_k}": _k for _k in marking_kinds.KINDS}
 # 高速道路の分岐・合流（#188）: 高速道路（ROAD_EXPRESSWAY）に重ねる。本線の列（_main）とランプの列（_ramp）。路面は高速道路のアスファルト
-MARKINGS_EXPWY = {f"{PREFIX}mark_{_k}": _k for _k in ("diverge_main", "diverge_ramp", "merge_main", "merge_ramp")}
-MARKINGS.update(MARKINGS_EXPWY)
+MARKINGS_EXPWY = {f"{PREFIX}mark_{_k}": _k for _k in marking_kinds.kinds_of("expwy")}
 # 路面の色と黄色の中央線（#313。iss の util/road_misc の pav_*・line）: 一般道路に重ねる。色の舗装 3 色・赤の縞・黄色の中央線
-MARKINGS_COLOR = {f"{PREFIX}mark_{_k}": _k for _k in ("paving_red", "paving_blue", "paving_green", "paving_red_striped", "center_yellow")}
-MARKINGS.update(MARKINGS_COLOR)
-# 路面表示のアイコンの左上の字（icons.py が書く。#187）。MARKINGS の全部に 1 字ずつ要る
-MARK_LABELS = {"ami_mark_lane4": "線", "ami_mark_junction2": "交", "ami_mark_junction2_t": "丁",
-               "ami_mark_junction4_in": "入", "ami_mark_junction4_out": "出", "ami_mark_junction4_c": "印",
-               "ami_mark_lane6_a": "甲", "ami_mark_lane6_b": "乙", "ami_mark_lane6_m": "央", "ami_mark_junction6_in": "入",
-               "ami_mark_junction6_out": "出", "ami_mark_junction6_m": "中", "ami_mark_junction6_c": "心",
-               # 高速道路の分岐・合流（#188）
-               "ami_mark_diverge_main": "分", "ami_mark_diverge_ramp": "岐", "ami_mark_merge_main": "合", "ami_mark_merge_ramp": "流",
-               # 路面の色と黄色の中央線（#313）
-               "ami_mark_paving_red": "赤", "ami_mark_paving_blue": "青", "ami_mark_paving_green": "緑",
-               "ami_mark_paving_red_striped": "縞", "ami_mark_center_yellow": "黄"}
-assert set(MARK_LABELS) == set(MARKINGS), "MARK_LABELS が MARKINGS と合っていない（路面表示を足したら字も足す。#300）"
+MARKINGS_COLOR = {f"{PREFIX}mark_{_k}": _k for _k in marking_kinds.kinds_of("color")}
+# 路面表示のアイコンの左上の字（icons.py が書く。#187）: marking_kinds.KINDS の label
+MARK_LABELS = {_n: marking_kinds.KINDS[_k].label for _n, _k in MARKINGS.items()}
 WALL_ROAD = ROAD_GENERAL  # 道路の壁のシートを描く元の道路（壁の形は 3 種で同じ。断面とカーブの作りが同じため）
 # カーブの形ごとの壁（#260）: 一般道路（円弧）・生活道路（L 字）の基盤・高架は single だけなので、カーブのセルが円弧・L 字の single の壁を別に持つ。
 # 名前 → 形（ROAD_CURVE_SHAPES の値）。直線・T字・十字・坂・端の壁は ami_wall_road_single と同じ絵で、カーブのセル（行 2 の列 5〜8）だけが違う。

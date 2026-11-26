@@ -35,6 +35,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(_HERE, "..", "..", "..", "tools", "blender"))
 sys.path.insert(0, _HERE)  # Blender の --python は、スクリプトのディレクトリを探す先に入れない
 import catalog  # noqa: E402
+import marking_kinds  # noqa: E402  路面表示の種類ごとの表（アイコンの絵にする形。#352）
 import sheetlib as R  # noqa: E402
 
 SCALE = R.SCALE  # pak の大きさ（pak128 を 1 とする倍率。sheet_settings.PAK_SIZE）。アイコン（ICON px）は大きさによらず 32px のまま
@@ -85,13 +86,9 @@ def ref(v):
     return sheet, int(r), int(c)
 
 
-# 路面表示（#187）の、絵にするセル（北へ向かう腕・北南の直線・北が閉じた T字の中心）。左上の字は catalog.MARK_LABELS
-MARK_PICTURE = {"ami_mark_lane4": "image[ns][0]", "ami_mark_junction2": "image[n][0]", "ami_mark_junction2_t": "image[sew][0]",
-                "ami_mark_junction4_in": "image[nse][0]", "ami_mark_junction4_out": "image[nsw][0]", "ami_mark_junction4_c": "image[se][0]",
-                "ami_mark_lane6_a": "image[ns][0]", "ami_mark_lane6_b": "image[ns][0]", "ami_mark_lane6_m": "image[ns][0]", "ami_mark_junction6_in": "image[nse][0]", "ami_mark_junction6_out": "image[nsw][0]",
-                "ami_mark_junction6_m": "image[nse][0]", "ami_mark_junction6_c": "image[nsew][0]",
-                **{f"ami_mark_{_k}": "image[n][0]" for _k in ("diverge_main", "diverge_ramp", "merge_main", "merge_ramp")},
-                **{f"ami_mark_{_k}": "image[ns][0]" for _k in ("paving_red", "paving_blue", "paving_green", "paving_red_striped", "center_yellow")}}
+# 路面表示（#187）の、絵にするセル（北へ向かう腕・北南の直線・北が閉じた T字の中心）: tools/blender/marking_kinds.py の KINDS の icon（#352）。
+# 左上の字は catalog.MARK_LABELS
+MARK_PICTURE = {_n: f"image{marking_kinds.KINDS[_k].icon}[0]" for _n, _k in catalog.MARKINGS.items()}
 
 
 def describe(d):
