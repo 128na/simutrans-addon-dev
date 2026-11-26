@@ -88,6 +88,8 @@ def _kind_label(o):
     if t == "way-object" and name.startswith("ami_monorail") and name.endswith("_power"):
         # モノレールの電化（#116）。見た目が合うのは、それぞれの方式の way の上
         return "モノレールの電化（" + ("懸垂式用" if "_suspended_" in name else "跨座式用") + "）"
+    if t == "way-object" and name == "ami_tram_catenary":
+        return "路面軌道の架線"  # #376。道具は線路の way-object の一覧に出る（本体が tram_track を track として読む）
     if t == "way-object" and name == "ami_maglev_guide":
         return "リニアのガイド（電化）"  # 超電導のガイド（#371）。own_waytype=electrified_track
     if t == "way-object" and name == "ami_maglev_tube_cover":

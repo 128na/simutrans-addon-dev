@@ -208,5 +208,115 @@ def beam_part(reach_diag):
     return dataclasses.replace(beam, shape=beam_shape(reach_diag))
 
 
+# ---------------------------------------------------------------- 路面の架線（AMI #376。路面軌道 ami_tram の電化の way-object）
+# 道路に重ねる軌道なので、柱は車道の外（歩道）に片側 1 本だけ立て、軌道の中心を少し越える腕を出す。線（ちょう架線・トロリ線・ハンガー）と
+# 吊り金具は線路の架線の部品をそのまま使い、高さも同じ。柱の側は奥（東西は北、南北は西。画面で縦向きの斜めは画面の左）で、
+# 分岐でその側へ枝が出るときは反対側、両側に出る十字では柱を立てず線だけにする。
+# 柱・腕・吊り金具は経路の全部から側を決めるので、TRACK_PROFILES の "cell_fills" に渡す（TRAM_CAT_FILLS）。
+# 基準面は "tram_bed"（路面軌道の床と同じ）: cell_fills は、部品の基準面の部品を持つ組にだけ作られるので、分岐の絵の走行面（rail）の組で
+# 二重に作らない
+TRAM_CAT_POLE_U = 4.2    # 柱の横位置（経路の中心から）。AMI の道路の車道の半幅 3.6・縁石の外 3.85 より外（歩道の上）
+TRAM_CAT_ARM_OVER = 0.4  # 腕が軌道の中心を越える長さ（吊り金具の上を覆う）
+TRAM_CAT_BLOCK = 1.5     # 経路の点が、柱の側へこれより離れていれば、その側に枝がある
+_VIEWER = Vector((1, -1)) / math.sqrt(2)  # 平面で手前（カメラ）へ向かう向き
+
+
+def _tram_straight(path):
+    """経路が 1 本の直線か（曲線のカーブでないか）"""
+    a, b = path[0], path[-1]
+    d = Vector((b.x - a.x, b.y - a.y))
+    if d.length < 1e-9:
+        return True
+    d.normalize()
+    return all(abs((p.x - a.x) * d.y - (p.y - a.y) * d.x) < 1e-3 for p in path)
+
+
+def _tram_supports(paths):
+    """セルで柱を立てる所の一覧: (経路の上の点, 経路の向き, 柱の側の単位ベクトル)。
+    経路が 1 本ならその経路、分岐・十字は通り抜ける直線（南北・東西）にだけ立てる"""
+    through = paths if len(paths) == 1 else [
+        p for p in paths if all(abs(v.x) < 1e-6 for v in p) or all(abs(v.y) < 1e-6 for v in p)]
+    out = []
+    for path in through:
+        p, d = _anchor(path)
+        n = Vector((d.y, -d.x))
+        toward = n.dot(_VIEWER)
+        if toward > 1e-6 or (abs(toward) <= 1e-6 and n.x + n.y > 0):
+            n = -n  # 奥の側。手前でも奥でもない向き（画面で縦向きの斜め）は画面の左
+        blocked = lambda s: any((Vector((q.x, q.y)) - p).dot(s) > TRAM_CAT_BLOCK
+                                for other in paths if other is not path for q in other)
+        side = next((s for s in (n, -n) if not blocked(s)), None)
+        if side is not None:
+            out.append((p, d, side))
+    return out
+
+
+def _tram_support_make(build):
+    """cell_fills の make: 経路の一覧から、柱を立てる所ごとの形 build(p, d, n, path, k) をまとめた形の関数を返す（無ければ None）"""
+    def make(paths):
+        spots = _tram_supports(paths)
+        if not spots:
+            return None
+
+        def shape(path, k):
+            geos = [build(p, d, n, k) for p, d, n in spots]
+            return merge(geos)
+        return shape
+    return make
+
+
+def _tram_u(k):
+    return TRAM_CAT_POLE_U * (math.sqrt(0.5) if _diag(k) else 1.0)  # 斜めの道路の横幅は直線の 1/√2
+
+
+def _tram_pole(p, d, n, k):
+    c = p + n * _tram_u(k)
+    return box(c.x, c.y, CAT_POLE_TOP / 2, CAT_POLE_S, CAT_POLE_S, CAT_POLE_TOP, rot=math.atan2(d.y, d.x))
+
+
+def _tram_arm(p, d, n, k):
+    u = _tram_u(k)
+    c = p + n * ((u - TRAM_CAT_ARM_OVER) / 2)
+    return box(c.x, c.y, CAT_POLE_TOP - CAT_BEAM_H / 2, CAT_BEAM_T, u + TRAM_CAT_ARM_OVER, CAT_BEAM_H, rot=math.atan2(d.y, d.x))
+
+
+def _tram_hanger(p, d, n, k):
+    path = [p - d, p + d]  # 画面で横向きの斜めの線の上げ幅（_line_z）を、経路の向きから決める
+    return _thin_post(p, d, _line_z(path, k, CAT_MESSENGER_Z), CAT_POLE_TOP - CAT_BEAM_H)
+
+
+TRAM_CAT_FILLS = tuple(
+    (Part(name, "tram_bed", "bed", mat, None, "catenary", tall=True, **flags), _tram_support_make(build))
+    for name, mat, build, flags in (
+        ("cat_pole_tram", _M_POLE, _tram_pole, {}),
+        ("cat_arm_tram", _M_BEAM, _tram_arm, dict(front=True, widen=True)),
+        ("cat_hanger", _M_WIRE, _tram_hanger, dict(front=True, thin=True)),
+    ))
+
+
+def _tram_dropper_shape(path, k):
+    """ハンガー: 直線は線路と同じ（_dropper_shape）。曲線のカーブ（路面軌道は曲線で描く）は、接線でなく経路の上に等間隔で下ろす"""
+    if _tram_straight(path):
+        return _dropper_shape(path, k)
+    pts = [Vector((q.x, q.y)) for q in path]
+    lengths = [(b - a).length for a, b in zip(pts[:-1], pts[1:])]
+    total = sum(lengths)
+    n = max(1, round(total / (TILE / CAT_DROPPER_N)))
+    posts = []
+    for i in range(n):
+        s = (i + 0.5) * total / n
+        for a, b, length in zip(pts[:-1], pts[1:], lengths):
+            if length > 1e-9 and s <= length:
+                c = a.lerp(b, s / length)
+                if max(abs(c.x), abs(c.y)) <= TILE / 2:
+                    posts.append(_thin_post(c, (b - a).normalized(), CAT_WIRE_Z, CAT_MESSENGER_Z + CAT_WIRE_H))
+                break
+            s -= length
+    return merge(posts) if posts else None
+
+
+TRAM_CAT_DROPPER = dataclasses.replace(next(p for p in CATENARY_PARTS if p.name == "cat_dropper"), shape=_tram_dropper_shape)
+
+
 def is_catenary(ob):
     return str(ob.get("pname", "")).startswith("cat_")

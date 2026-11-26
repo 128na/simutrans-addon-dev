@@ -105,6 +105,8 @@ def pier_rail(gate=False, old=False):
 # 路面軌道（60 km/h、tram で道路に重ねる。ADR 0002）。通常の版だけ（壁・基盤・高架・橋・トンネルを作らない）ので、TRACKS に入れない
 # （TRACKS の種類は基盤・高架・橋・トンネルの名前を導き、カーブを斜めの絵にする。路面軌道のカーブは曲線のまま。docs/objects/rail.md の「路面軌道の作り」）
 TRAM = "ami_tram"
+# 路面軌道の架線の way-object（#376。waytype=tram_track・電化）。名前の頭 ami_tram で build.py が ami_tram.pak に入れる
+TRAM_CATENARY = "ami_tram_catenary"
 
 # 跨座式モノレール（150 km/h、monorail_track。#113。名前は ADR 0008）。物の並びは iss の跨座式（地上・高架の front・center・back・トンネル）に合わせる
 # （2026-11-21、ユーザーの決定）。線路と違い基盤・橋を作らないので、TRACKS に入れない（TRACKS の種類は基盤・高架・橋の名前を導く）
