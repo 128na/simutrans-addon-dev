@@ -2,7 +2,10 @@
 blender/round.py が AMI_FAMILY=wave5 のときに読む。
 
 土台は今の本番（render.py の MARKING_COLOR_ARGS と sheetlib の turntable.py）。ここは本番の値を書き換えず、このプロセスの中でだけ
-材質の差し替え（skin）と部品の足し・寸法の差し替えをする。本番に入れた葉を重ねると二重にかかるので、入れた後は "1" を描き直さない。
+材質の差し替え（skin）と部品の足し・寸法の差し替えをする。
+ラウンド 3 は本番に入れた（#331）。入れた葉（wear・lift・tt_skin・coping_w・apron_ring・hut_window）は、本番の上に重ねると
+二重にかかり、wear は本番の marking.py の口（_color_bands・_put_xy の引数）が変わったので差し替えが合わずに落ちる。
+"1"〜"3" と、これらの葉の試しは描き直さない（記録のために残す）。入れていない葉（1ap・1pt）も tt_skin を使い、本番の skin と重なるので、描き直すのは 0null で作りを確かめるときだけにする。
 
 意味の木と試しの判断は docs/records/2026-11-26_ami-wave5-refine-round1.md。
 
