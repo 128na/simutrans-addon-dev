@@ -28,6 +28,7 @@ from sheet_rows import WAY_SNOW_ROWS  # 雪の絵の行のずらし。dat を書
 from . import sheetlib as _s
 from .cells import GROUND_CY, _ground_mask, exits_of, make_sheet, render_cell, save_rgba
 from .core import SCALE, TILE, _SNOW, box, clear_models, datum_move, make_material, merge, mesh_object, set_anchor
+from .deck_track import DECK_LOOK, deck_top, deck_track
 
 # ---- 寸法（タイル 1 辺 = 10。高さ 1 段は H ≈ 2.04 で、画面の 16px。1px ≈ 0.13）
 PIT_D = 0.5              # ピットの深さ（約 4px）
@@ -54,10 +55,6 @@ TT_BRIDGE_END = TT_R - 0.12  # 桁の端（中心から）
 TT_HUT = (0.9, 0.9, 1.0)    # 運転室（桁に沿う向きの長さ・横切る向きの長さ・高さ）
 TT_APRON_W = 0.9         # まわりのコンクリートの輪の幅（ピットの縁から。#331 の 2ringd。タイルいっぱいの四角は草の中で浮いたので、角は地面を見せる）
 HUT_WINDOW = (0.25, 0.55)  # 運転室の窓の暗い帯（高さ、帯の下の端の高さ ÷ 運転室の高さ。#331 の 2win。転車台・遷車台の両方）
-# 線路（桁・台車の上）: まくらぎ（長さ・幅・高さ）と間隔。canal_crossing の線路の床と同じ作り
-SLEEPER = (2.4, 0.22, 0.14)
-SLEEPER_STEP = 0.65
-DECK_UNDER = 0.12        # 線路のまくらぎの下面から、桁・台車の上面までの下げ（まくらぎを載せる板の厚み）
 # 持ち分を上へ広げる行数（運転室の高さ 約 8px と屋根・まくらぎ・レールに余り）
 TURNTABLE_RISE = 14 * SCALE
 
@@ -70,10 +67,11 @@ _M_CARRIAGE = ("turntable_carriage", (0.70, 0.30, 0.12), 0.6)  # 遷車台の台
 _M_HUT = ("turntable_hut", (0.78, 0.78, 0.75), 0.8)           # 運転室の壁
 _M_HUT_ROOF = ("turntable_hut_roof", (0.34, 0.35, 0.37), 0.7)  # 運転室の屋根
 _M_PIVOT = ("turntable_pivot", (0.36, 0.36, 0.36), 0.6)       # 中心の支点
-_M_SLEEPER = ("turntable_sleeper", (0.16, 0.11, 0.07), 0.9)   # まくらぎ（木）
-_M_SLEEPER_SNOW = ("turntable_sleeper_snow", (0.80, 0.84, 0.90), 0.9)
-_M_RAIL = ("turntable_rail", (0.92, 0.91, 0.88), 0.4)         # レールの頭（AMI の線路と同じ色）
-_M_RAIL_SIDE = ("turntable_rail_side", (0.25, 0.18, 0.13), 0.6)  # レールの腹（さび）
+# 桁・台車の上の線路の材質（色は deck_track の DECK_LOOK。水路の踏切と共通）
+_M_SLEEPER = ("turntable_sleeper", *DECK_LOOK["sleeper"])
+_M_SLEEPER_SNOW = ("turntable_sleeper_snow", *DECK_LOOK["sleeper_snow"])
+_M_RAIL = ("turntable_rail", *DECK_LOOK["rail_head"])
+_M_RAIL_SIDE = ("turntable_rail_side", *DECK_LOOK["rail_side"])
 # ピットの床の、台車・桁の車輪が走るレール（ゆっくり動くだけで磨かれない。画面で約 1px の幅なので、頭と腹を分けず 1 色）
 _M_FLOOR_RAIL = ("turntable_floor_rail", (0.30, 0.26, 0.22), 0.5)
 _M_HUT_WINDOW = ("turntable_hut_window", (0.10, 0.12, 0.15), 0.3)  # 運転室の窓
@@ -98,28 +96,13 @@ def _obj(name, parts, spec):
 
 # ---------------------------------------------------------------- 線路（桁・台車の上）
 def _track(axis, a, b, top, snow, rail):
-    """axis（"x" か "y"）に沿って a〜b の範囲に、まくらぎとレールを置く。top はまくらぎの下面の高さ。
-    rail は AMI の線路のレール (内側, 外側, 上面)。部品（頂点, 面）の組を材質ごとに返す"""
-    sleepers, webs, heads = [], [], []
-    n = max(1, round(abs(b - a) / SLEEPER_STEP))
-    for i in range(n):
-        s = a + (b - a) * (i + 0.5) / n
-        if axis == "x":
-            sleepers.append(box(s, 0, top + SLEEPER[2] / 2, SLEEPER[1], SLEEPER[0], SLEEPER[2]))
-        else:
-            sleepers.append(box(0, s, top + SLEEPER[2] / 2, SLEEPER[0], SLEEPER[1], SLEEPER[2]))
-    r_in, r_out, r_top = rail
-    z_web0, z_head0 = top + SLEEPER[2], r_top - 0.02
-    for sgn in (-1, 1):
-        u = sgn * (r_in + r_out) / 2
-        w = r_out - r_in
-        mid, ln = (a + b) / 2, abs(b - a)
-        for lst, z0, z1 in ((webs, z_web0, z_head0), (heads, z_head0, r_top)):
-            if axis == "x":
-                lst.append(box(mid, u, (z0 + z1) / 2, ln, w, z1 - z0))
-            else:
-                lst.append(box(u, mid, (z0 + z1) / 2, w, ln, z1 - z0))
-    return {"sleeper": sleepers, "web": webs, "head": heads}
+    """axis（"x" か "y"）に沿って a〜b の範囲に、まくらぎとレール（deck_track の部品。水路の踏切と共通）を置く。
+    top はまくらぎの下面の高さ。rail は AMI の線路のレール (内側, 外側, 上面)。部品（頂点, 面）の組を材質ごとに返す"""
+    def place(c):  # 経路の座標 (u, s, z) の中心と寸法 → タイルの座標
+        cu, cs, cz, su, ss, sz = c
+        return box(cs, cu, cz, ss, su, sz) if axis == "x" else box(cu, cs, cz, su, ss, sz)
+    sleepers, rails = deck_track(a, b, top, rail)
+    return {"sleeper": [place(c) for c in sleepers], "web": [place(w) for w, _ in rails], "head": [place(h) for _, h in rails]}
 
 
 def _track_objs(prefix, parts, snow):
@@ -128,11 +111,6 @@ def _track_objs(prefix, parts, snow):
         _obj(prefix + "_rail_web", parts["web"], _M_RAIL_SIDE),
         _obj(prefix + "_rail_head", parts["head"], _M_RAIL),
     ) if ob is not None]
-
-
-def _deck_top(rail):
-    """桁・台車の上面の高さ（まくらぎの下面から DECK_UNDER 下）"""
-    return rail[2] - 0.02 - SLEEPER[2] - DECK_UNDER
 
 
 def _hut(cx, cy, sx, sy, sz, z0, snow):
@@ -192,7 +170,7 @@ def _carriage(snow, rail):
     上に東西の線路を載せる（両脇の線路のタイルとつなぐ）。運転室は西の端の北の側"""
     half = TILE / 2
     xa, xb = -(half - WALL_T - CAR_GAP), half - WALL_T - CAR_GAP
-    top = _deck_top(rail)
+    top = deck_top(rail)  # 桁・台車の上面（水路の踏切と共通）
     z0 = -PIT_D + TRAV_RAIL[1]
     body = [box((xa + xb) / 2, 0, (z0 + top) / 2, xb - xa, 2 * CAR_HALF_W, top - z0)]
     hx, hy, hz = CAR_HUT
@@ -264,7 +242,7 @@ def _turntable(snow, rail):
            _obj("turntable_ring_rail", [ring_rail], _M_FLOOR_RAIL),
            _obj("turntable_pivot", [pivot], _M_PIVOT)]
     # 桁（東西）と線路。両端は円のレールに載る（下端はピットの床の上）
-    top = _deck_top(rail)
+    top = deck_top(rail)
     z0 = -PIT_D + TRAV_RAIL[1]
     bridge = [box(0, 0, (z0 + top) / 2, 2 * TT_BRIDGE_END, 2 * TT_BRIDGE_HALF, top - z0)]
     hx, hy, hz = TT_HUT

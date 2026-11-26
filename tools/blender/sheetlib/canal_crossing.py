@@ -30,6 +30,7 @@ from .canal import CANAL_BANK, CANAL_SNOW_ROWS
 from .cells import GROUND_CY, ROAD_CY, make_sheet, save_rgba
 from .core import TILE, _SNOW, box, clear_models, clip_to_tile, datum_move, make_material, mesh_object, set_anchor
 from .crossing import CROSSING_COLS, CROSSING_SNOW_ROW, ROAD_STAMP_SUFFIX, _layer, _over, _road_cell
+from .deck_track import DECK_LOOK, deck_top, deck_track
 
 # ---------------------------------------------------------------- 寸法（タイル 1 辺 = 10）
 CANAL_CROSSING_HINGE = TILE / 2 - CANAL_BANK  # 桁の軸の、タイルの中心からの距離（水面の縁）
@@ -45,18 +46,17 @@ RAILING_H = 0.8                # 欄干の高さ（床から）
 RAILING_W = 0.06               # 欄干の柱・手すりの太さ
 RAILING_POST = 1.1             # 欄干の柱の間隔
 JOINT_W = 0.08                 # 桁の継ぎ目（軸と、2 枚が出会う中心）の線の幅
-SLEEPER = (2.4, 0.22, 0.14)    # まくらぎ（長さ・幅・高さ）
-SLEEPER_STEP = 0.65            # まくらぎの間隔
 _M_DECK = ("canal_crossing_deck", (0.30, 0.31, 0.32), 0.7)       # 床の板（鋼。灰色）
 _M_DECK_SNOW = _SNOW
 _M_GIRDER = ("canal_crossing_girder", (0.20, 0.33, 0.45), 0.6)   # 桁（青灰の塗装の鋼。道路の橋の桁の青に寄せた）
 _M_RAILING = ("canal_crossing_railing", (0.85, 0.86, 0.86), 0.5)  # 欄干（白）
 _M_JOINT = ("canal_crossing_joint", (0.04, 0.04, 0.04), 0.8)     # 継ぎ目
 _M_ASPHALT = ("canal_crossing_asphalt", (0.035, 0.036, 0.04), 0.9)  # 起こした桁の路面（道路）
-_M_SLEEPER = ("canal_crossing_sleeper", (0.16, 0.11, 0.07), 0.9)  # まくらぎ（木）
-_M_SLEEPER_SNOW = ("canal_crossing_sleeper_snow", (0.80, 0.84, 0.90), 0.9)
-_M_RAIL = ("canal_crossing_rail", (0.92, 0.91, 0.88), 0.4)       # レールの頭（AMI の線路の RAIL_HEAD_RGB と同じ色）
-_M_RAIL_SIDE = ("canal_crossing_rail_side", (0.25, 0.18, 0.13), 0.6)  # レールの腹（さび）
+# 線路の床の材質（色は deck_track の DECK_LOOK。転車台と共通）
+_M_SLEEPER = ("canal_crossing_sleeper", *DECK_LOOK["sleeper"])
+_M_SLEEPER_SNOW = ("canal_crossing_sleeper_snow", *DECK_LOOK["sleeper_snow"])
+_M_RAIL = ("canal_crossing_rail", *DECK_LOOK["rail_head"])
+_M_RAIL_SIDE = ("canal_crossing_rail_side", *DECK_LOOK["rail_side"])
 
 # 線路・道路の向き → (運河のセル（直線）、手前の岸の向き（線路・道路の経路の座標 s の符号）)
 # 南北の線路・道路は東西の運河を渡り、手前は南の岸（s < 0）。東西の線路・道路は南北の運河を渡り、手前は東の岸（s > 0）
@@ -76,6 +76,11 @@ class _Part:
 
     def box(self, u0, u1, s0, s1, z0, z1, mat, name):
         v, f = box((u0 + u1) / 2, (s0 + s1) / 2, (z0 + z1) / 2, abs(u1 - u0), abs(s1 - s0), abs(z1 - z0))
+        self.items.append(([Vector(p) for p in v], f, mat, name))
+
+    def box_at(self, c, mat, name):
+        """中心と寸法 (u, s, z, 横, 沿う向き, 高さ) の直方体（deck_track の部品）"""
+        v, f = box(*c)
         self.items.append(([Vector(p) for p in v], f, mat, name))
 
     def raised(self, hinge, z_h, deg):
@@ -141,18 +146,16 @@ def _leaf(kind, hinge, snow, rail, top):
 
 
 def _rails(p, s0, s1, snow, rail, top):
-    """まくらぎとレール（線路の way のレールと同じ横の範囲 rail[0]〜rail[1] と上面の高さ rail[2]）"""
+    """まくらぎとレール（deck_track の部品。転車台と共通）。
+    レールは、線路の way のレールと同じ横の範囲 rail[0]〜rail[1] と上面の高さ rail[2]"""
     sl = make_material(_M_SLEEPER_SNOW if snow else _M_SLEEPER, "canal_crossing_sleeper")
-    n = max(1, round(abs(s1 - s0) / SLEEPER_STEP))
-    for i in range(n):
-        s = s0 + (s1 - s0) * (i + 0.5) / n
-        p.box(-SLEEPER[0] / 2, SLEEPER[0] / 2, s - SLEEPER[1] / 2, s + SLEEPER[1] / 2, top, top + SLEEPER[2], sl,
-              "canal_crossing_sleeper")
     head, side = make_material(_M_RAIL, "rail_head"), make_material(_M_RAIL_SIDE, "canal_crossing_rail_side")
-    for sgn in (-1, 1):
-        a, b = sorted((sgn * rail[0], sgn * rail[1]))
-        p.box(a, b, s0, s1, top + SLEEPER[2], rail[2] - 0.02, side, "canal_crossing_rail_web")
-        p.box(a, b, s0, s1, rail[2] - 0.02, rail[2], head, "rail_head")
+    sleepers, rails = deck_track(s0, s1, top, rail)
+    for c in sleepers:
+        p.box_at(c, sl, "canal_crossing_sleeper")
+    for web, rail_head in rails:
+        p.box_at(web, side, "canal_crossing_rail_web")
+        p.box_at(rail_head, head, "rail_head")
 
 
 def _bank(kind, snow, rail, top, sign):
@@ -200,7 +203,7 @@ def canal_crossing_sheet(sheet, canal_sheet, kind, datums=None, rail=None, road_
     # 道路は道路・運河と同じ位置（ROAD_CY）、線路はレールを隣の線路のタイルとつなぐので線路と同じ位置（GROUND_CY）。どちらも dat は -64,-32
     set_anchor(ROAD_CY if kind == "road" else GROUND_CY)
     move = datum_move(datums["rail"]) if kind == "rail" else None
-    top = 0.0 if kind == "road" else rail[2] - 0.02 - SLEEPER[2] - 0.12
+    top = 0.0 if kind == "road" else deck_top(rail)
     cells, stamp = {}, []
     for snow in (False, True):
         for way_dir, (canal_cell, near) in CANAL_CROSSING_DIRS.items():
