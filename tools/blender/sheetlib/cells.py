@@ -147,8 +147,10 @@ def _ground_mask_direct(slope, side=None, cy=GROUND_CY, spill=0, solid=False, lo
     half_row = SCALE // 2
     m = _column_mask(slope, side, cy)
     if solid and slope:
-        for k in range(32):
-            m |= _column_mask(lambda x, y, k=k: slope(x, y) * k / 32, side, cy)
+        # 刻みは 1x の 32 の SCALE 倍。32 のままだと 2 段の坂（1x で 32 行）が 256 では 2 行刻みになり、薄い列に穴ができる（#333）
+        steps = 32 * SCALE
+        for k in range(steps):
+            m |= _column_mask(lambda x, y, k=k: slope(x, y) * k / steps, side, cy)
     if spill:
         # 手前の 2 辺を spill 行と半行広げる（_ground_mask_1x の cy + spill と cy + spill + 0.5）。
         # 2 つのずらしだけでなく、間のずらしも全部足す。列ごとの判定では、左右の角の近くの列は縦の幅が 2 画素より薄く、
@@ -160,7 +162,11 @@ def _ground_mask_direct(slope, side=None, cy=GROUND_CY, spill=0, solid=False, lo
         for k in range(1, half_row + 1):
             m |= _column_mask(slope, side, cy + k)
         if slope:
-            m |= _column_mask(slope, side, GROUND_CY)
+            # 地面の位置（_ground_mask_1x の _GROUND_CY_1）から cy までの間のずらしも全部足す。1x では差が 1 行で隣り合うが、
+            # 256 では 2 行離れ、間の 1 行が抜ける。坂の辺が緩い角（台の上の十字の奥の角など）は列の縦の幅が 2 画素より薄く、
+            # 抜けた 1 行が持ち分の穴になって地面の草が見えた（#333）
+            for k in range(min(GROUND_CY, cy), max(GROUND_CY, cy)):
+                m |= _column_mask(slope, side, k)
     if lower:
         base = m.copy()
         for k in range(1, lower + 1):

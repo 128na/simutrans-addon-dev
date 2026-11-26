@@ -9,6 +9,8 @@ bpy などを差し替えて cells を読み、SHEET_PAK_SIZE=256 で次を確�
 - side の上下・左右が重ならず、合わせると全体になる（既定の引数のとき）
 - 広げたマスク（線路の spill、道路の cy = ROAD_CY、高架の lower、橋の端の solid）が、平らと坂で素のマスクを含み、
   平らの spill・道路のマスクを格子に並べて隙間が無い
+- 広げたマスクの列に途中の穴が無い（65 形。#333）
+- 1 段の台の上の十字と四方の坂の道路（pak256 の scene.py の slope_road）を並べて、台の地面に道路の穴が無い（#333）
 地面の形は pak256（128-bit-net/pak256 の 54fc440）の objects/ground/temperate/draw_ground.py の column_span・covered と同じ決まり
 （列 x の中心 x + 0.5 で上の辺（左→上→右の角）と下の辺（左→下→右の角）を引き、行 y を 上 <= y < 下 で塗る）を、
 ここに書き写して使う（別のリポジトリなので読み込まない。原本が変わったら写し直す）。
@@ -95,6 +97,46 @@ for name in ("spill", "road"):
     if (tiled(cells._ground_mask(None, **WIDENED[name])) == 0).any():
         fails.append(f"{name} の平らの並びに隙間がある")
 
+def gaps(mask):
+    """列ごとに、一番上と一番下の行の間で抜けている画素の数"""
+    n = 0
+    for col in mask.T:
+        rows = np.nonzero(col)[0]
+        if len(rows):
+            n += int(rows[-1] - rows[0] + 1 - len(rows))
+    return n
+
+
+# 広げたマスクの列が途切れない（#333: 道路の坂は地面の位置と道路の位置の形の和で、間のずらしが抜けると、
+# 縦の幅が 2 画素より薄い角の近くの列に 1 行の穴ができ、台の上の十字の奥の角に草の線が出た）
+for s in shapes:
+    sl = slope_of(*s)
+    for name, kw in list(WIDENED.items()) + ([("solid", dict(solid=True))] if sl else []):
+        n = gaps(cells._ground_mask(sl, **kw))
+        if n:
+            fails.append(f"{name} の形 {s}: 列の途中の穴 {n} 画素")
+
+
+def scene_hole():
+    """1 段の台の上の十字と、四方の坂の道路（pak256 の scene.py の slope_road）を並べ、
+    台の地面の範囲で、どの道路のマスクにも覆われない画素の数を返す"""
+    canvas, ground_ = (np.zeros((CELL * 3, CELL * 3), bool) for _ in range(2))
+
+    def put(target, mask, i, j, base):
+        ox, oy = CELL + (i - j) * GCELL // 2, CELL + (i + j) * GCELL // 4 - base * STEP
+        target[oy:oy + CELL, ox:ox + CELL] |= mask
+    # (i, j) = (東, 南)。台は高さ 1。北の坂は南の 2 角、南の坂は北の 2 角、西の坂は東の 2 角、東の坂は西の 2 角が上がる
+    put(canvas, cells._ground_mask(None, cy=cells.ROAD_CY), 0, 0, 1)
+    for (i, j), corner in {(0, -1): (1, 1, 0, 0), (0, 1): (0, 0, 1, 1), (-1, 0): (0, 1, 1, 0), (1, 0): (1, 0, 0, 1)}.items():
+        put(canvas, cells._ground_mask(slope_of(*corner), cy=cells.ROAD_CY), i, j, 0)
+    put(ground_, cells._ground_mask(None), 0, 0, 1)
+    return int((ground_ & ~canvas).sum())
+
+
+n = scene_hole()
+if n:
+    fails.append(f"台の上の十字と四方の坂の道路: 台の地面で道路に覆われない画素 {n}")
+
 for s in [(0, 0, 0, 0), (1, 1, 0, 0), (0, 1, 1, 0), (1, 0, 0, 0), (2, 2, 0, 0)]:
     sl = slope_of(*s)
     full = cells._ground_mask(sl)
@@ -106,4 +148,5 @@ for s in [(0, 0, 0, 0), (1, 1, 0, 0), (0, 1, 1, 0), (1, 0, 0, 0), (2, 2, 0, 0)]:
 if fails:
     print("\n".join(fails))
     sys.exit(1)
-print(f"[ground-mask] 256 の持ち分マスク: 地面と一致 {len(shapes)} 形・平らの並びに隙間と重なり無し・side の分け方・広げたマスク OK（GROUND_PHASE {cells.GROUND_PHASE}）")
+print(f"[ground-mask] 256 の持ち分マスク: 地面と一致 {len(shapes)} 形・平らの並びに隙間と重なり無し・side の分け方・広げたマスク（列の穴無し）・"
+      f"台の上の十字 OK（GROUND_PHASE {cells.GROUND_PHASE}）")
