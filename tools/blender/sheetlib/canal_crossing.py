@@ -30,7 +30,7 @@ from .canal import CANAL_BANK, CANAL_SNOW_ROWS
 from .cells import GROUND_CY, ROAD_CY, make_sheet, save_rgba
 from .core import TILE, _SNOW, box, clear_models, clip_to_tile, datum_move, make_material, mesh_object, set_anchor
 from .crossing import CROSSING_COLS, CROSSING_SNOW_ROW, ROAD_STAMP_SUFFIX, _layer, _over, _road_cell
-from .deck_track import deck_top, deck_track
+from .deck_track import DECK_LOOK, deck_top, deck_track
 
 # ---------------------------------------------------------------- 寸法（タイル 1 辺 = 10）
 CANAL_CROSSING_HINGE = TILE / 2 - CANAL_BANK  # 桁の軸の、タイルの中心からの距離（水面の縁）
@@ -52,10 +52,11 @@ _M_GIRDER = ("canal_crossing_girder", (0.20, 0.33, 0.45), 0.6)   # 桁（青灰�
 _M_RAILING = ("canal_crossing_railing", (0.85, 0.86, 0.86), 0.5)  # 欄干（白）
 _M_JOINT = ("canal_crossing_joint", (0.04, 0.04, 0.04), 0.8)     # 継ぎ目
 _M_ASPHALT = ("canal_crossing_asphalt", (0.035, 0.036, 0.04), 0.9)  # 起こした桁の路面（道路）
-_M_SLEEPER = ("canal_crossing_sleeper", (0.16, 0.11, 0.07), 0.9)  # まくらぎ（木）
-_M_SLEEPER_SNOW = ("canal_crossing_sleeper_snow", (0.80, 0.84, 0.90), 0.9)
-_M_RAIL = ("canal_crossing_rail", (0.92, 0.91, 0.88), 0.4)       # レールの頭（AMI の線路の RAIL_HEAD_RGB と同じ色）
-_M_RAIL_SIDE = ("canal_crossing_rail_side", (0.25, 0.18, 0.13), 0.6)  # レールの腹（さび）
+# 線路の床の材質（色は deck_track の DECK_LOOK。転車台と共通）
+_M_SLEEPER = ("canal_crossing_sleeper", *DECK_LOOK["sleeper"])
+_M_SLEEPER_SNOW = ("canal_crossing_sleeper_snow", *DECK_LOOK["sleeper_snow"])
+_M_RAIL = ("canal_crossing_rail", *DECK_LOOK["rail_head"])
+_M_RAIL_SIDE = ("canal_crossing_rail_side", *DECK_LOOK["rail_side"])
 
 # 線路・道路の向き → (運河のセル（直線）、手前の岸の向き（線路・道路の経路の座標 s の符号）)
 # 南北の線路・道路は東西の運河を渡り、手前は南の岸（s < 0）。東西の線路・道路は南北の運河を渡り、手前は東の岸（s > 0）
@@ -145,7 +146,8 @@ def _leaf(kind, hinge, snow, rail, top):
 
 
 def _rails(p, s0, s1, snow, rail, top):
-    """まくらぎとレール（deck_track の部品。転車台と共通）。レールは線路の way のレールと同じ横の範囲 rail[0]〜rail[1] と上面の高さ rail[2]"""
+    """まくらぎとレール（deck_track の部品。転車台と共通）。
+    レールは、線路の way のレールと同じ横の範囲 rail[0]〜rail[1] と上面の高さ rail[2]"""
     sl = make_material(_M_SLEEPER_SNOW if snow else _M_SLEEPER, "canal_crossing_sleeper")
     head, side = make_material(_M_RAIL, "rail_head"), make_material(_M_RAIL_SIDE, "canal_crossing_rail_side")
     sleepers, rails = deck_track(s0, s1, top, rail)
