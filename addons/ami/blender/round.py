@@ -70,6 +70,10 @@ FAMILIES = {
     # 第 3 弾の物（#197）: 路面表示（ami_mark_*）と運河・景観の運河。運河の踏切のシートは運河のセルが下地なので、系統に入れない
     "wave3": {"dats": ("ami_mark_*", "ami_canal", "ami_canal_scenic"), "targets": ("ami_mark_*", "ami_canal", "ami_canal_scenic"),
               "module": "round_wave3"},
+    # 第 5 弾の物（#331）: 路面の色・黄色の中央線・交差点の中心の印（ami_mark_* の見本が _round<n> で引くので、路面表示は全部 pak に入れる）と
+    # 転車台・遷車台。描くのは試す物だけ（ほかの路面表示は src/ のまま）
+    "wave5": {"dats": ("ami_mark_*", "ami_rail_turntable"),
+              "targets": ("ami_mark_paving_*", "ami_mark_center_yellow", "ami_rail_turntable"), "module": "round_wave5"},
 }
 FAMILY = os.environ.get("AMI_FAMILY", "rail_ballast")
 if FAMILY not in FAMILIES:

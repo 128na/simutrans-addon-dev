@@ -46,6 +46,7 @@ sys.path.insert(0, _HERE)  # Blender の --python は、スクリプトのディ
 import catalog  # noqa: E402
 import sheet_rows  # noqa: E402  行の並び（手前の絵の行など）。dat を書く ami_dat.py も同じ定義を読む（#302）
 import sheetlib as R  # noqa: E402
+import sheetlib.road_parts as RP  # noqa: E402  路面の走行跡の色（色の舗装の走行跡。#331）
 
 _p = catalog.profile  # way・シートの名前 → TRACK_PROFILES の名前
 
@@ -701,10 +702,17 @@ def _marking_slush(t):
 MARKING_SLUSH = tuple((_d, _marking_slush(_t)) for _d, _t in MARKING_SLUSH_T)
 # 路面の色と黄色の中央線（#313）: 色の舗装は、色の 2 色のまだら（Scale 60。アスファルトと同じ粒の段 ROAD_ASPHALT_RAMP）を路面に渡す（MARKING_COLORS）。
 #   赤の縞は、路面は敷かず、縞を赤の舗装と同じ材質で描く（accent）。黄色の中央線は、白線の擦れ（MARKING_WORN）と同じ作りの黄の線（MARKING_YELLOW）。
-#   色は、アスファルトに近い暗さで色みだけを付けたカラー舗装の色（値は仮。ゲームの画面でユーザーが確かめる）
-MARKING_COLORS = {"red": ((0.20, 0.035, 0.025), (0.28, 0.05, 0.035)),
-                  "blue": ((0.03, 0.07, 0.20), (0.045, 0.10, 0.27)),
-                  "green": ((0.05, 0.15, 0.05), (0.07, 0.21, 0.07))}
+#   色は、アスファルトに近い暗さで色みだけを付けたカラー舗装の色（#313）に、MARKING_COLOR_LIFT を掛けたもの（#331。精細化のラウンド 1 の 1lift。
+#   iss の色の舗装と並べると沈んで見えたので明るくした）。
+#   色の舗装（赤・青・緑）の帯には、走行跡（#331。ラウンド 1 の 1wp）を重ねる: 帯の色を、下の道路の走行跡の灰色（街路のアスファルトの
+#   走行跡の色 × 持ち上げ）へ MARKING_COLOR_FADE だけ寄せた粗いまだら（Scale 25、段 0.40〜0.60。褪せた所がほつれて見える）。
+#   形と位置は sheetlib の marking.py の MARKING_COLOR_WEAR。記録は docs/records/2026-11-26_ami-wave5-refine-round1.md
+MARKING_COLOR_LIFT = 1.6
+MARKING_COLOR_FADE = 0.5
+MARKING_COLORS = {c: tuple(tuple(min(1.0, x * MARKING_COLOR_LIFT) for x in rgb) for rgb in v) for c, v in {
+    "red": ((0.20, 0.035, 0.025), (0.28, 0.05, 0.035)),
+    "blue": ((0.03, 0.07, 0.20), (0.045, 0.10, 0.27)),
+    "green": ((0.05, 0.15, 0.05), (0.07, 0.21, 0.07))}.items()}
 MARKING_YELLOW = ((0.74, 0.40, 0.02), (0.88, 0.50, 0.04), 12.0)
 
 
@@ -713,11 +721,21 @@ def _marking_color(color):
     return lambda: R.noisy_material(f"ami_marking_paving_{color}", lo, hi, scale=60.0, rough=0.9, ramp=ROAD_ASPHALT_RAMP)
 
 
+def _marking_faded(color):
+    lift = ROAD_ASPHALT_LIFT["street"]
+    gray = tuple(tuple(x * lift for x in c) for c in (RP._WEAR_LO, RP._WEAR_HI))
+    mix = lambda a, b: tuple(x + (y - x) * MARKING_COLOR_FADE for x, y in zip(a, b))
+    lo, hi = MARKING_COLORS[color]
+    return lambda: R.noisy_material(f"ami_marking_paving_{color}_faded", mix(lo, gray[0]), mix(hi, gray[1]), scale=25.0, rough=0.9,
+                                    ramp=(0.40, 0.60))
+
+
 MARKING_LINE_YELLOW = lambda: R.noisy_material("ami_marking_line_yellow", MARKING_YELLOW[0], MARKING_YELLOW[1], scale=MARKING_YELLOW[2],
                                                rough=0.6, emit=0.35, ramp=ROAD_ASPHALT_RAMP)
 # 種類 → marking_sheet に渡す材質（無い種類は白線・下の道路のアスファルト）
-MARKING_COLOR_ARGS = {"paving_red": dict(paving=_marking_color("red")), "paving_blue": dict(paving=_marking_color("blue")),
-                      "paving_green": dict(paving=_marking_color("green")),
+MARKING_COLOR_ARGS = {"paving_red": dict(paving=_marking_color("red"), wear=_marking_faded("red")),
+                      "paving_blue": dict(paving=_marking_color("blue"), wear=_marking_faded("blue")),
+                      "paving_green": dict(paving=_marking_color("green"), wear=_marking_faded("green")),
                       "paving_red_striped": dict(paving=None, accent=_marking_color("red")),
                       "center_yellow": dict(paving=None, line=MARKING_LINE_YELLOW)}
 for _name, _kind in catalog.MARKINGS.items():
@@ -805,7 +823,15 @@ for _d in catalog.DEPOTS:
 # 操車場（#115）: 線路の脇の構内通路。形と寸法は sheetlib の yard.py
 SHEETS[catalog.RAIL_YARD] = lambda: R.yard_sheet(R.sheet_path(catalog.RAIL_YARD + ".png"), R.WORK)
 # 転車台・遷車台（#314）: 形と寸法は sheetlib の turntable.py。桁・台車の上の線路は在来線と同じ基準面とレール（水路の踏切の線路の床と同じ渡し方）
-SHEETS[catalog.RAIL_TURNTABLE] = lambda: R.turntable_sheet(catalog.RAIL_TURNTABLE, datums=_DATUMS, rail=(RAIL_IN, RAIL_OUT, RAIL_Z1))
+# 汚し（#331。精細化のラウンド 1〜3。記録は docs/records/2026-11-26_ami-wave5-refine-round1.md）: まわりのコンクリートの輪は、線路の基盤と同じ
+# 打ち放しの肌（TRACK_SURFACE。段 2）で、色を 0.60 から 0.50 へ下げた（明るい輪が草の中で浮く。2ringd）。ピットの床は砂利と泥の細かいまだら
+# （±25%、粒は約 1px。1fl から大きなしみを外した 3fl2。しみは遷車台の長いピットでタイルごとに同じ形で並んで見えた）
+TURNTABLE_SKIN = {
+    "turntable_apron": lambda: R.tiled_concrete_material("ami_turntable_apron", (0.50, 0.50, 0.48), **TRACK_SURFACE),
+    "turntable_floor": lambda: R.tiled_concrete_material("ami_turntable_floor", (0.42, 0.41, 0.39), 0.25, 10.0),
+}
+SHEETS[catalog.RAIL_TURNTABLE] = lambda: R.turntable_sheet(catalog.RAIL_TURNTABLE, datums=_DATUMS, rail=(RAIL_IN, RAIL_OUT, RAIL_Z1),
+                                                           skin=TURNTABLE_SKIN)
 
 # 道路標識（#122）: 標識ごとに 1 枚。柱を描き、板の 2D の絵を押す（sheetlib の roadsign.py）
 for _n, _k in catalog.ROADSIGNS.items():

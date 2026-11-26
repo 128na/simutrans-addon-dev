@@ -121,7 +121,8 @@
   - 赤の縞: 路面は敷かず、道を横切る赤の縞（幅 1.0・周期 2.0。タイルに 5 本。`marking.py` の `MARKING_COLOR_STRIPE_*`）を、色の舗装と同じ帯の幅に並べる。縞のあいだは下の道路の路面
   - 黄色の中央線: 下の道路の中央線と同じ位置・幅の黄の線だけ（下の白線を覆う）
   - iss の色は半透明（アルファ 153）で下の白線が透けるが、AMI の描画の道具は透過を二分する（[pak-image-color.md](../../../../docs/reference/pak-image-color.md) の 1 章）ので、不透明に描き、線にかからない帯にした
-  - 色は、アスファルトに近い暗さで色みを付けた値（`blender/render.py` の `MARKING_COLORS`・`MARKING_YELLOW`）。雪の絵は夏と同じセル（ほかの路面表示と同じ）
+  - 色は、アスファルトに近い暗さで色みを付けた値に、1.6 倍の明るさを掛けたもの（`blender/render.py` の `MARKING_COLORS`・`MARKING_COLOR_LIFT`・`MARKING_YELLOW`）。1.6 倍は #331 の精細化のラウンド 1（`1lift`）で、iss の色の舗装と並べると沈んで見えたので足した。雪の絵は夏と同じセル（ほかの路面表示と同じ）
+  - 走行跡（#331。ラウンド 1 の `1wp`）: 色の舗装（赤・青・緑）の帯の上に、車輪の通る所だけ色が褪せた帯を重ねる。位置は下の一般道路の走行跡（`sheetlib/road_parts.py` の `WEAR_LAYERS` の 2 段目。中央線の中心から 0.70〜1.25・1.95〜2.50）を帯の範囲で切ったもの（`marking.py` の `MARKING_COLOR_WEAR`）。色は帯の色を路面の走行跡の灰色へ半分寄せた粗いまだら（`render.py` の `MARKING_COLOR_FADE`・`_marking_faded`）。十字・T字の腕にも付け、交差点の中の四角には付けない。赤の縞・黄線には付けない。経緯は [記録](../../../../docs/records/2026-11-26_ami-wave5-refine-round1.md)
 - 形と絵:
 
 | way | 直線・坂 | 行き止まり | 十字・1 タイル | T字 | 曲がり・斜め |
@@ -133,4 +134,4 @@
 - 値・pak・道具: #187 の路面表示と同じ（速さ 1・費用 1000・維持費 100・登場 1900。`ami_road.pak`。路面軌道のメニュー）。iss の速さ 65500 は写さない（路面軌道・線路とつながっても速く走れないようにするため。ADR 0012）。アイコンの字は `paving_red` 赤、`paving_blue` 青、`paving_green` 緑、`paving_red_striped` 縞、`center_yellow` 黄
 - 敷く手順: 一般道路を敷き、色を付ける区間に表示を区間で敷く（区間の両端は行き止まりの形で、直線と同じ絵）。十字・T字の色の舗装は、交差点を通して腕へ敷く
 - 注意: 路面軌道の way は 1 タイルに 1 本なので、色・黄線・交差点の表示（`junction*` など）は同じタイルに重ねられない（後から敷いた物に置き換わるか、敷けない）。曲がり・斜めの絵は無く、何も描かれない（一般道路の曲がりは円弧で、表示の板の作りでは合わせていない）。下の道路は一般道路にする（中央線の種類と路面の範囲を一般道路に合わせてある）。路面軌道・線路のタイルには置かない
-- 見本: `ingame/color_marking_sample.nut`（撮る場所は `ingame/sample_spots.sh` の `COLOR_MARKING_SPOTS`）。東西・南北の道路 5 本ずつに 5 種を重ね、赤の十字・青の T字を、温暖側と降雪側に敷く。`[check]` で、道路と表示の名前を期待と比べる。撮る場所は PE・PN（東西・南北の 5 本）、PY・PNY（縞と黄線の辺り）、PX（赤の十字）、PT（青の T字）。撮った画面は `docs/313_road_color/<区画>_temperate_snow.png`（左が温暖、右が降雪。等倍）と、要所の拡大 `docs/313_road_color/<区画>_<気候>_<所>_x<倍>.png`
+- 見本: `ingame/color_marking_sample.nut`（撮る場所は `ingame/sample_spots.sh` の `COLOR_MARKING_SPOTS`）。東西・南北の道路 5 本ずつに 5 種を重ね、赤の十字・青の T字を、温暖側と降雪側に敷く。`[check]` で、道路と表示の名前を期待と比べる。撮る場所は PE・PN（東西・南北の 5 本）、PY・PNY（縞と黄線の辺り）、PX（赤の十字）、PT（青の T字）、PI・PI2（iss の同じ物と同じ道路に並べた所。#331。`sample_parallel.sh` の `EXTRA_PAKS` で `../refs/iss/release/pak128/iss_util_road_misc.pak` を足す。無ければ iss の分は敷かない）。ラウンドの版は `SUFFIX` で表示の名前だけを差し替える。撮った画面は `docs/313_road_color/<区画>_temperate_snow.png`（左が温暖、右が降雪。等倍）と、要所の拡大 `docs/313_road_color/<区画>_<気候>_<所>_x<倍>.png`
