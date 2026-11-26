@@ -27,6 +27,7 @@ import os
 import sys
 
 import catalog
+import src_lock
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "tools", "blender"))
 import sheet_rows  # noqa: E402  行の並び（雪の絵・手前の絵の行のずらし）と offset。シートを描く側（sheetlib）も同じ定義を読む（#302）
@@ -738,6 +739,20 @@ def put(name, text):
 
 
 def main():
+    # --out <フォルダ>: src/ の代わりにそこへ書く（check.sh が src/ を消さずに書き忘れを比べる。#326）。src/ に書くときは、
+    # check.sh・build.py と重ならないようにロックを取る（src_lock.py）
+    global SRC
+    if len(sys.argv) == 3 and sys.argv[1] == "--out":
+        SRC = sys.argv[2]
+        write_all()
+        return
+    if len(sys.argv) != 1:
+        sys.exit("使い方: ami_dat.py [--out <フォルダ>]")
+    with src_lock.hold("ami_dat.py"):
+        write_all()
+
+
+def write_all():
     os.makedirs(SRC, exist_ok=True)
     for name, sheet in BUILT.items():
         put(name, dat_text(name, sheet))

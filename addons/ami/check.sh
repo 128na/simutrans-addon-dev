@@ -21,6 +21,14 @@ case "$(uname -s)" in
 esac
 TOOLS_DIR="${TOOLS_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/simutrans-addon-dev/ci-tools}"
 
+# ほかの ami_dat.py・build.py・check.sh と同時に走らない（#326。重なって src/*.dat が消え、壊れた pak ができた: #197）。
+# 自分をロックの下で走らせ直す。先に取った物があれば待つ。中で呼ぶ ami_dat.py・build.py は取り直さない（blender/src_lock.py）
+lock="$("$PY" -c 'import sys; sys.path.insert(0, sys.argv[1]); import src_lock; print(src_lock.LOCK)' "$AMI/blender")"
+[ -n "$lock" ] || { echo "blender/src_lock.py のロックの場所が分からない" >&2; exit 1; }
+if [ "${AMI_SRC_LOCK:-}" != "$lock" ]; then
+  exec "$PY" -X utf8 "$AMI/blender/src_lock.py" run check.sh -- "$BASH" "${BASH_SOURCE[0]}" "$@"  # bash の名前で呼ぶと、Windows では PATH の WSL の bash を拾う
+fi
+
 step() {
   [ -n "${GITHUB_ACTIONS:-}" ] && echo "::endgroup::"
   echo "${GITHUB_ACTIONS:+::group::}== $1"
@@ -34,56 +42,47 @@ else
 fi
 (cd "$ROOT" && "${ruff[@]}" check addons/ami tools)
 
+# dat の書き忘れ: ami_dat.py に一時のフォルダへ書かせて、src/（src256/）の dat と比べる。src/ の dat は消さない
+# （以前は消して書き直してから戻していたので、ほかの ami_dat.py・build.py と重なったり途中で止めたりすると dat が消えた。#326）
+dat_compare() {  # <src のフォルダ名> <SHEET_PAK_SIZE>
+  local src="$AMI/$1" gen report n
+  # if の条件の中で呼ぶので set -e が効かない。失敗は 2 で返す（1 は差分あり）
+  gen="$(mktemp -d)" || return 2
+  SHEET_PAK_SIZE="$2" "$PY" -X utf8 "$AMI/blender/ami_dat.py" --out "$gen" > /dev/null || { echo "blender/ami_dat.py が落ちた（SHEET_PAK_SIZE=$2）"; rm -rf "$gen"; return 2; }
+  report="$gen.report.txt"
+  : > "$report"
+  for n in $( (cd "$gen" && ls *.dat; cd "$src" && ls *.dat) | sort -u ); do
+    if [ ! -f "$src/$n" ]; then echo "生成されたが $1/ に無い: $n" >> "$report"
+    elif [ ! -f "$gen/$n" ]; then echo "$1/ にあるが生成されない: $n" >> "$report"
+    elif ! diff -q --strip-trailing-cr "$src/$n" "$gen/$n" > /dev/null; then
+      echo "中身が違う: $n" >> "$report"
+      diff --strip-trailing-cr "$src/$n" "$gen/$n" | head -20 >> "$report" || true
+    fi
+  done
+  rm -rf "$gen"
+  if [ -s "$report" ]; then cat "$report"; rm -f "$report"; return 1; fi
+  rm -f "$report"
+}
+
 step "dat の書き忘れ（blender/ami_dat.py の出力と src/ の dat を比べる）"
-snap="$(mktemp -d)"
-cp "$AMI"/src/*.dat "$snap/"
-rm -f "$AMI"/src/*.dat
-"$PY" -X utf8 "$AMI/blender/ami_dat.py" > /dev/null
-report="$snap/report.txt"
-: > "$report"
-for n in $( (cd "$snap" && ls *.dat; cd "$AMI/src" && ls *.dat) | sort -u ); do
-  if [ ! -f "$snap/$n" ]; then echo "生成されたが src/ に無い: $n" >> "$report"
-  elif [ ! -f "$AMI/src/$n" ]; then echo "src/ にあるが生成されない: $n" >> "$report"
-  elif ! diff -q --strip-trailing-cr "$snap/$n" "$AMI/src/$n" > /dev/null; then
-    echo "中身が違う: $n" >> "$report"
-    diff --strip-trailing-cr "$snap/$n" "$AMI/src/$n" | head -20 >> "$report" || true
-  fi
-done
-# 作業ツリーは元に戻す（この検査で dat を書き換えたままにしない）
-rm -f "$AMI"/src/*.dat
-cp "$snap"/*.dat "$AMI/src/"
-if [ -s "$report" ]; then
-  cat "$report"
-  rm -rf "$snap"
+rc=0; dat_compare src 128 || rc=$?
+if [ "$rc" = 1 ]; then
   echo "${GITHUB_ACTIONS:+::error::}blender/ami_dat.py の出力と src/ の dat が違う。ami_dat.py を実行し、出た dat をコミットする"
   exit 1
-fi
-rm -rf "$snap"
-
-step "256 の dat の書き忘れ（SHEET_PAK_SIZE=256 の blender/ami_dat.py の出力と src256/ の dat を比べる。#266）"
-snap256="$(mktemp -d)"
-cp "$AMI"/src256/*.dat "$snap256/"
-rm -f "$AMI"/src256/*.dat
-SHEET_PAK_SIZE=256 "$PY" -X utf8 "$AMI/blender/ami_dat.py" > /dev/null
-report256="$snap256/report.txt"
-: > "$report256"
-for n in $( (cd "$snap256" && ls *.dat; cd "$AMI/src256" && ls *.dat) | sort -u ); do
-  if [ ! -f "$snap256/$n" ]; then echo "生成されたが src256/ に無い: $n" >> "$report256"
-  elif [ ! -f "$AMI/src256/$n" ]; then echo "src256/ にあるが生成されない: $n" >> "$report256"
-  elif ! diff -q --strip-trailing-cr "$snap256/$n" "$AMI/src256/$n" > /dev/null; then
-    echo "中身が違う: $n" >> "$report256"
-    diff --strip-trailing-cr "$snap256/$n" "$AMI/src256/$n" | head -20 >> "$report256" || true
-  fi
-done
-rm -f "$AMI"/src256/*.dat
-cp "$snap256"/*.dat "$AMI/src256/"
-if [ -s "$report256" ]; then
-  cat "$report256"
-  rm -rf "$snap256"
-  echo "${GITHUB_ACTIONS:+::error::}SHEET_PAK_SIZE=256 の blender/ami_dat.py の出力と src256/ の dat が違う。ami_dat.py を実行し、出た dat をコミットする"
+elif [ "$rc" != 0 ]; then
+  echo "${GITHUB_ACTIONS:+::error::}src/ の dat の書き忘れを確かめられなかった（ami_dat.py が落ちた）"
   exit 1
 fi
-rm -rf "$snap256"
+
+step "256 の dat の書き忘れ（SHEET_PAK_SIZE=256 の blender/ami_dat.py の出力と src256/ の dat を比べる。#266）"
+rc=0; dat_compare src256 256 || rc=$?
+if [ "$rc" = 1 ]; then
+  echo "${GITHUB_ACTIONS:+::error::}SHEET_PAK_SIZE=256 の blender/ami_dat.py の出力と src256/ の dat が違う。ami_dat.py を実行し、出た dat をコミットする"
+  exit 1
+elif [ "$rc" != 0 ]; then
+  echo "${GITHUB_ACTIONS:+::error::}src256/ の dat の書き忘れを確かめられなかった（ami_dat.py が落ちた）"
+  exit 1
+fi
 
 step "256 の dat の名前が pak128 と同じか、組まない物の表が実在するか（check_scaled.py。256 の PNG が無い CI でも見る。#261・#301）"
 "$PY" -X utf8 "$AMI/check_scaled.py"

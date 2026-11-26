@@ -33,6 +33,7 @@ sys.path.insert(0, os.path.join(HERE, "blender"))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "tools", "blender"))
 import catalog  # noqa: E402
 import sheet_settings  # noqa: E402  pak の大きさ（SHEET_PAK_SIZE。既定は pak128）
+import src_lock  # noqa: E402  check.sh・ami_dat.py と同時に走らないためのロック（#326）
 # SHEET_LAYOUT=1 のときは、レイアウト検証用モードのシートと dat（render.py が work/layout/ に書く）から、
 # work/layout/dist/ に pak を作る（ゲームで部品の配置と接合を見るため。src/・dist/ は変えない）
 LAYOUT = os.environ.get("SHEET_LAYOUT") == "1"
@@ -152,4 +153,5 @@ def graft_ex(outs):
 
 
 if __name__ == "__main__":
-    main()
+    with src_lock.hold("build.py"):  # check.sh・ami_dat.py と重ならないように（#326）
+        main()
