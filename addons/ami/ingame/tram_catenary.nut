@@ -2,6 +2,7 @@
 // 2 つの組（UNDER の順に SPACING タイルずつ南へ）: AMI の一般道路の上と、土の上。原点 (ox,oy) から:
 //   A 直線の行き止まり（東西・南北）・B 輪と十字（カーブ・T字）・C 斜めの階段 2 本（se・ne）・D 坂の十字・E 急坂の十字
 //   F 並べた 2 本の直線（柱が線の間に立つ）
+//   G 近い斜め（分け合うタイル）・H 車庫を建てた後に車庫のタイルまで架線を張る
 // 電車（V）: 輪の外の直線の西の端に路面軌道の車庫を建て、電化の要る路面電車を 1 編成入れて、東の端と車庫の前を往復させる（出すのは .sh の CAPTURE）。
 // 返り値の先頭が ok なら全部敷けた。[check] の行は、電化されたか（elec）と、使った車両
 local TRAM = "ami_tram";
@@ -71,6 +72,19 @@ foreach (ui, under in UNDER) {
   }
   report += r("F1", line(0, 14, 8, 14));
   report += r("F2", line(0, 15, 8, 15));
+
+  // G 近い斜め（1 タイルを 2 本の斜めが分け合う。路面軌道は近い斜めの絵を持つ way 1 本になる）
+  local gx = 22, gy = 0;
+  for (local k = 0; k < 5; k++) {
+    report += r("G h" + k, line(gx + k, gy + k, gx + k + 2, gy + k));
+    report += r("G v" + k, line(gx + k + 1, gy + k - 1, gx + k + 1, gy + k + 1));
+  }
+  // H 車庫を建てた後に、車庫のタイルまで架線を張る
+  report += r("H way", command_x.build_way(pl, c(22, 12), c(27, 12), w, true));
+  report += r("H depot", command_x.build_depot(pl, c(22, 12), depots[DEPOT]));
+  report += r("H catenary", command_x.build_wayobj(pl, c(22, 12), c(27, 12), wo));
+  local hway = square_x(ox + 22, oy + 12).get_ground_tile().get_way(wt_rail);
+  checks += "[check] depot-after (" + (ox + 22) + "," + (oy + 12) + ")=" + (hway == null ? "-" : (hway.is_electrified() ? "elec" : "NG")) + "\n";
 
   // V: 車庫と電車
   local y = 18;

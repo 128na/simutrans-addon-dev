@@ -309,7 +309,7 @@ GAME_DIR=<検証用のフォルダ> NUT=ingame/tram_sample.nut OUT=work/tram bas
 - `ingame/tram_sample.nut` は、線路の見本と同じ区画（A・F・C・B・D・E・G・I・H）を、土の上と、AMI の道路 3 種・pak128 標準の `Road_050` の上（道路を先に敷いて同じ経路に重ねる）に、温暖側 (20,20) と降雪側 (276,20) で 30 ずつ南へずらして敷く。土の上の区画には、橋脚とのつながりの区画 P もある。表は `tram_sample.nut` の冒頭
 - `[check]` の行: 区画 G の分け合うタイル（道路の上では道路と路面軌道で `two_ways=true` になる）、区画 I の固定の絵、区画 H の自動選択の絵（通常の T字と同じなら `(plain)`）、道路の上の区画で道路が残っているか（`road=`）、区画 P のタイルの way。判定は `tram_sample.nut` の `SWITCH_IMAGES`（`ami_dat.py` の `TRAM_SWITCH_IMAGES` と同じにする）で変わる
 - 撮る場所は `sample_spots.sh` の `TRAM_SPOTS`（`GR`・`LO`・`GE`・`EX`・`ST` は土・生活道路・一般道路・高速道路・`Road_050` の上）。47 か所 × 温暖側・降雪側で 94 画面
-- 路面軌道の架線（#376）は `GAME_DIR=<検証用のフォルダ> PORT=<ポート> bash ingame/tram_catenary.sh`。一般道路の上と土の上に路面軌道と架線を敷き、電化の路面電車の車庫を建てる。`CAPTURE=1`（区画と走る電車を撮る）・`TOOLBAR=1`（鉄道と路面軌道のメニューを撮る）・`STOP=1`（閉じて写しを消す）。区画の表は `ingame/tram_catenary.nut` の冒頭、`[check]` の行は電化（`elec`）と使った車両
+- 路面軌道の架線（#376）は `GAME_DIR=<検証用のフォルダ> PORT=<ポート> bash ingame/tram_catenary.sh`。一般道路の上と土の上に路面軌道と架線を敷き、電化の路面電車の車庫を建てる。`CAPTURE=1`（区画と走る電車を撮る）・`TOOLBAR=1`（鉄道と路面軌道のメニューを撮る）・`STOP=1`（閉じて写しを消す）。区画の表は `ingame/tram_catenary.nut` の冒頭、`[check]` の行は電化（`elec`）と使った車両。Y字・三方分岐の線は `WAYS='[["ami_tram", "ami_tram_catenary"]]' ... bash ingame/ex_check.sh`
 - 確認画像は `tram_*.png`（2026-11-20）。`GE_B`・`EX_B`・`ST_B`・`GR_B` は輪と十字（一般道路・高速道路・`Road_050`・土の上）、`GE_B_zoom` はその十字・カーブ・T字の 4 倍、`GE_AFC`・`GR_AFC`（行き止まり・1 タイル・斜め）、`GE_DE`（坂と急坂）、`GR_G1`・`GE_G1`（近い斜め）、`GR_I`（十字の固定の 1・2）、`GR_H0`（分岐の自動選択）、`switch_H0_zoom`（左が分岐の絵あり、右が無し。5 倍）、`GR_P`（橋脚の列を横切る）、`snow_*` は降雪側、`layout_*` はレイアウト検証用モード
 
 歩道の見本も別のゲームで敷く:

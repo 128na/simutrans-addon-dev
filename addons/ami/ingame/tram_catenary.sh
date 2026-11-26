@@ -30,6 +30,8 @@ if [ "$CAPTURE" = 1 ]; then
     shot 23 $((oy + 8)) "${n}_loop"
     shot 31 $((oy + 8)) "${n}_hill"
     shot 24 $((oy + 15)) "${n}_double"
+    shot 44 $((oy + 3)) "${n}_close"
+    shot 44 $((oy + 12)) "${n}_depot_after"
     shot 26 $((oy + 18)) "${n}_depot"
   done
   # 電車: 車庫（西の端）から出して、続けて撮る
@@ -38,7 +40,6 @@ if [ "$CAPTURE" = 1 ]; then
     shot 25 38 "train_$i"
     sleep 1
   done
-  $M --run-squirrel "local o = \"\"; foreach (c in convoy_list_x()) o += c.get_name() + \" pos=\" + c.get_pos().tostring() + \" speed=\" + c.get_speed() + \"; \"; return o;"
   exit 0
 fi
 

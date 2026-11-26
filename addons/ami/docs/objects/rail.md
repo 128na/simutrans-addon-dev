@@ -89,10 +89,10 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 部品: `tools/blender/sheetlib/catenary_parts.py` の `TRAM_CAT_FILLS`（柱・腕・吊り金具）と `TRAM_CAT_DROPPER`。柱と腕は経路の全部から側を決めるので、`TRACK_PROFILES` の `cell_fills` に渡す（`sheetlib.py` は変えていない）。描く対象は `ami_tram_catenary`（way のシートは書かない）
 - 値（仮）: 費用 4000・維持費 100・登場 1900（架線つきの壁と同じ）、速さ 500。AMI の線路でいちばん速い 480 より上で電化した編成の速さを縛らず、壁（1000）・架線つきの壁（1100）より下（`blender/ami_dat.py` の `TRAM_CATENARY_VALUES`）。1 タイルの way-object は 1 つなので、壁・架線つきの壁を重ねると置き換わる
 - 分岐の追加画像（Y字・三方分岐）: 架線つきの壁と同じく、路面軌道の走行面に合わせた線の絵を継ぎ足す（`EX_WAYOBJS`）
-- 近い斜めの分け合うタイル: way-object には近い斜めの絵のキーが無い（[reference](../../../../docs/reference/way-addon.md) の 10 章）。路面軌道は近い斜めの絵を持つので、分け合うタイルの架線は十字の絵（線だけ）になる。分け合うタイル用の way-object は作っていない
+- 近い斜めの分け合うタイル: way-object には近い斜めの絵のキーが無い（[reference](../../../../docs/reference/way-addon.md) の 10 章）。路面軌道は近い斜めの絵を持つので、分け合うタイルの架線は十字の絵（線だけ。直線 2 本と曲線の全部の線）になり、並べると線が輪のように重なって見える（`docs/tram_catenary_close.png`）。分け合うタイル用の way-object は作っていない
 - 雪: way-object に雪の絵は無いので、降雪側も同じ絵
 - 見た手本: pak128 の `tramway_classic`（`../refs/pak128/infrastructure/catenary_all/tramway_classic.dat`。`waytype=tram_track` と速さ 70、上下 2 本の線とハンガー。取り入れた。柱の置き方（線の端に細い柱）は取り入れず、歩道の片側の柱と腕にした）。iss の路面軌道の架線は無い（`../refs/iss/src/way-object/rail/` は `waytype=track` だけ）
-- 確かめ方: `ingame/tram_catenary.sh`（`ingame/tram_catenary.nut`）。一般道路の上と土の上に路面軌道と架線を敷き、電化されたことと、電化の路面電車が走ることを見る。画像は `docs/tram_catenary_*.png`（`loop`: 輪と十字・T字（道路の上と土の上）、`diag_hill`: 斜めと坂、`double`: 並べた 2 本と直線、`train`: 走る電車（4 倍）、`menu`: 鉄道と路面軌道のツールバー、`wire_color`: 線の色の比べ）
+- 確かめ方: `ingame/tram_catenary.sh`（`ingame/tram_catenary.nut`）。一般道路の上と土の上に路面軌道と架線を敷き、電化されたことと、電化の路面電車が走ることを見る。画像は `docs/tram_catenary_*.png`（`loop`: 輪と十字・T字（道路の上と土の上）、`diag_hill`: 斜めと坂、`double`: 並べた 2 本と直線、`train`: 走る電車（4 倍）、`menu`: 鉄道と路面軌道のツールバー、`wire_color`: 線の色の比べ、`close`: 近い斜め（道路の上と土の上）、`ex`: Y字と三方分岐（土の上。2 倍。`ingame/ex_check.sh` に `WAYS='[["ami_tram", "ami_tram_catenary"]]'`））
 
 ## 高速線の作り（スラブ軌道、#20）
 
