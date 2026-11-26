@@ -16,6 +16,7 @@ bpy などを差し替えて cells を読み、SHEET_PAK_SIZE=256 で次を確�
 （列 x の中心 x + 0.5 で上の辺（左→上→右の角）と下の辺（左→下→右の角）を引き、行 y を 上 <= y < 下 で塗る）を、
 ここに書き写して使う（別のリポジトリなので読み込まない。原本が変わったら写し直す）。
 """
+import inspect
 import itertools
 import os
 import sys
@@ -28,6 +29,7 @@ for _m in ("bpy", "bmesh", "mathutils", "bpy_extras", "bpy_extras.object_utils")
 
 import numpy as np  # noqa: E402
 from sheetlib import cells  # noqa: E402
+from sheetlib import sheetlib as S  # noqa: E402
 from sheetlib.core import CELL, H, SCALE, TILE  # noqa: E402
 
 GCELL = 128 * SCALE  # 地面のマス（pak256 は 256）
@@ -136,6 +138,13 @@ with mock.patch.object(cells, "save_rgba", lambda path, img: _saved.append(img[.
     cells.render_cell("check_exits", "", cy=cells.ROAD_CY)
 if len(_saved) != 2 or not (_saved[0] != _saved[1]).any():
     fails.append("render_cell の持ち分の絵が exits で変わらない（_render_ground に exits が届かない）")
+# 線路の版の prof["fill_back_band"]（路面軌道）は、持ち分に exits を空で渡し、つながる辺の上も塗る（#365）。
+# track_sheet（中身の _track_sheet）は持ち分（render_cell・render_layers）に track_own_exits の値だけを渡す（exits_of を直に渡す枝が残ると、印が効かない）
+if S.track_own_exits({"fill_back_band": True}, "nsew2") != "" or S.track_own_exits({}, "nsew2") != "nsew":
+    fails.append("track_own_exits: fill_back_band のときに空、無いときに exits_of と同じ値を返さない")
+_track_src = inspect.getsource(S._track_sheet)
+if "exits_of(" in _track_src or _track_src.count("own_exits") < 4:
+    fails.append("track_sheet が持ち分に track_own_exits を通さない exits を渡す所がある（fill_back_band が効かない）")
 
 
 def gaps(mask):
