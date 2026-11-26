@@ -15,6 +15,7 @@ WORK="work/maglev_game/$PORT"
 OX=20; OY=20
 [ "$SNOW" = 1 ] && OX=$((OX + 256))
 NUT_SED="s/^local OX = 20;/local OX = $OX;/"
+[ "$SNOW" = 1 ] && NUT_SED="$NUT_SED;s/^local SNOW = 9;/local SNOW = 0;/"
 PRE=""; [ "$SNOW" = 1 ] && PRE="snow_"
 # 撮る所: 名前 x y（maglev.nut の区画の原点からのずれ）
 SPOTS="guideway 8 5

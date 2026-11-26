@@ -15,7 +15,7 @@
 | チューブ式 | `ami_maglev_tube_<版>`（`single`・`back`・`center`・`front`） | `ami_maglev_tube_elev_<版>`（同じ 4 版） | チューブ `ami_maglev_tube_cover`、トンネル `ami_maglev_tube_tunnel`（中の way は `center` の版） |
 
 - 車庫 `ami_maglev_depot`（[「車庫の作り」](depot.md)。入口は線路と同じ幅）。橋と留置線は作らない（iss にも橋は無い。高架で渡る）。marine_express の開削トンネルとトンネル専用の way も作らない
-- 値: 1200 km/h（iss と同じ）。費用・維持費は地上 60000・1200（高速線の 1.5 倍）、高架はその 2 倍、トンネルは 4 倍。ガイドは 4000・100（架線と同じ）で、`topspeed` 1300（電化した編成の速さを縛るので way より大きい）。チューブは 240000・4800（marine_express のチューブと軌道の比に合わせて地上の way の 4 倍）で、`topspeed` 1300。車庫は 850000・1800（モノレールと同じ）。登場 1900。値は `blender/ami_dat.py` の `MAGLEV_VALUES`・`MAGLEV_GUIDE_VALUES`・`MAGLEV_TUBE_COVER_VALUES`
+- 値: 1200 km/h（iss と同じ）。費用・維持費は地上 60000・1200（高速線の 1.5 倍）、高架はその 2 倍、トンネルは 4 倍。ガイドは 4000・100（架線と同じ）で、`topspeed` 1300（電化した編成の速さを縛るので way より大きい）。チューブは 240000・4800（marine_express のチューブと軌道の費用の比（約 4 倍）に合わせて、維持費も地上の way の 4 倍）で、`topspeed` 1300。車庫は 850000・1800（モノレールと同じ）。登場 1900。値は `blender/ami_dat.py` の `MAGLEV_VALUES`・`MAGLEV_GUIDE_VALUES`・`MAGLEV_TUBE_COVER_VALUES`
 - pak は `ami_maglev.pak`（`build.py` の `KINDS`。ガイド・チューブと車庫も入る）
 - 部品: `tools/blender/sheetlib/maglev_parts.py`。寸法は iss の配布物の東西のセルを縦に走査し、上面と側面の色の境目で測った。常電導の桁の幅とチューブの径は、測った値ではゲームで細すぎたので、AMI のシートを手本の絵と同じ倍率で並べて合わせ直した（タイルの 1 辺は 10 単位）
 - アイコン: 背景は紅（`blender/icons.py` の `WAY_BG` の `maglev`。色相 349）。版のある物は右下に版の札、高架は下の帯
@@ -38,7 +38,7 @@
 ### チューブ式
 
 - 軌道: marine_express と同じく、広い床と中央の溝 1 本。版・基盤・高架の躯体と真下の橋脚の way は超電導と同じで、側壁は線路の側壁と同じ高さ（1.2）で way の絵に描く（手前の側は手前の絵）
-- チューブ `ami_maglev_tube_cover`: marine_express の `marine_express_tube` と同じく、軌道に重ねる way-object（`waytype`・`own_waytype` とも `maglev_track`。電化しない。marine_express の車両は水素で走る）。地上・高架のどちらにも重ねられる。径 6.4（中心は床の上面から 1.2。側壁を包む。床の上面より上だけを描く）。手本のチューブは透ける輪だが、AMI のシートは 2 値（透明か不透明）なので、輪（2.5 おき）と縦の線の骨組みで描く。並びはガイドと同じで、手前の側の半分は手前の絵
+- チューブ `ami_maglev_tube_cover`: marine_express の `marine_express_tube` と同じく、軌道に重ねる way-object（`waytype`・`own_waytype` とも `maglev_track`。電化しない。marine_express の車両は水素で走る）。地上・高架のどちらにも重ねられる。way-object は waytype ごとに 1 タイルに 1 つなので、ガイドと同じタイルには重ねられず、チューブのタイルは電化されない（電化の要る車両はチューブ式を走れない）。径 6.4（中心は床の上面から 1.2。側壁を包む。床の上面より上だけを描く）。手本のチューブは透ける輪だが、AMI のシートは 2 値（透明か不透明）なので、輪（2.5 おき）と縦の線の骨組みで描く。並びはガイドと同じで、手前の側の半分は手前の絵
 - 雪の絵: 床と溝を雪にする（側壁とチューブは夏と同じ）
 
 ### 見本と確かめたこと

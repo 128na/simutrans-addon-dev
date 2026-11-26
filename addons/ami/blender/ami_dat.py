@@ -265,7 +265,7 @@ TUNNEL_DIRS = (("n", 2), ("s", 3), ("e", 4), ("w", 5))
 TUNNELS = {_t.tunnel: (_t.way, _t.tunnel) for _t in catalog.ALL_TRACKS}  # 名前 → (中の way, シート)
 TUNNELS.update({_r.tunnel: (_r.way, _r.tunnel) for _r in catalog.ROADS})  # 道路のトンネル（#22）。シートの並びは線路のトンネルと同じ
 TUNNELS[catalog.MONORAIL_TUNNEL] = (catalog.MONORAIL, catalog.MONORAIL_TUNNEL)  # 跨座式モノレールのトンネル（#113）。中の way は地上の版
-TUNNELS.update({_n: (_w, _n) for _n, _w in catalog.MAGLEV_TUNNELS.items()})  # リニアのトンネル（#371）。中の way は地上の way（超電導は center の版）
+TUNNELS.update({_n: (_w, _n) for _n, _w in catalog.MAGLEV_TUNNELS.items()})  # リニアのトンネル（#371）。中の way は地上の way（超電導・チューブ式は center の版）
 
 
 def _head(comment, obj, name, intro_year, before=(), after=()):
@@ -412,7 +412,7 @@ MONORAIL_POWER_VALUES = dict(CATENARY_VALUES)
 # 値は架線と同じ費用・維持費（ユーザーの判断 75）。topspeed は電化した編成の速さを縛るので、way（1200 km/h）より大きくする
 MAGLEV_GUIDE_VALUES = dict(CATENARY_VALUES, topspeed=1300)
 # チューブ式のチューブ（ami_maglev_tube_cover。#371）: waytype・own_waytype とも maglev_track（電化しない。手本の marine_express の
-# marine_express_tube と同じ）。費用・維持費は手本の比（軌道の 4 倍）で、地上の way の 4 倍。topspeed は way より大きくして縛らない
+# marine_express_tube と同じ）。費用・維持費は手本の費用の比（軌道の約 4 倍。維持費の比は約 4.4 倍）に合わせて、どちらも地上の way の 4 倍。topspeed は way より大きくして縛らない
 MAGLEV_TUBE_COVER_VALUES = dict(cost=MAGLEV_VALUES["cost"] * 4, maintenance=MAGLEV_VALUES["maintenance"] * 4, topspeed=1300,
                                 intro_year=MAGLEV_VALUES["intro_year"])
 

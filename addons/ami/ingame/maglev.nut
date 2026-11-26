@@ -15,6 +15,7 @@
 // カタログ（ingame/catalog.py の REUSE）でも、原点を書き換えて流す
 local OX = 20;
 local OY = 20;
+local SNOW = 9;  // 0 で区画を降雪に塗る（maglev.sh の SNOW=1、catalog.py の降雪側が書き換える）
 local ELEV_UP = 2;
 local pl = player_x(0);
 local report = "";
@@ -96,6 +97,7 @@ foreach (k in [[gb, gf, 0, 0, GUIDE], [eb, ef, 18, ELEV_UP, GUIDE], [tb, tf, 36,
   wo("P ew front", k[4], c(x + 6, 39, k[3]), c(x + 14, 39, k[3]));
 }
 way("P center", wd("ami_maglev_guideway_center"), c(0, 46), c(8, 46));
+wo("P center", GUIDE, c(0, 46), c(8, 46));
 way("P center", wd("ami_maglev_tube_center"), c(10, 46), c(18, 46));
 wo("P center", COVER, c(10, 46), c(18, 46));
 
@@ -118,13 +120,13 @@ local VEHICLES = {
   plain = [["MarineExpress_Msc1", "MarineExpress_Ms1", "MarineExpress_Msc2"], ["test_maglev_d"]]
 };
 function find_set(kind) {
-  foreach (names in VEHICLES[kind]) {
+  foreach (cand in VEHICLES[kind]) {
     local set = [];
-    foreach (n in names) {
+    foreach (n in cand) {
       local e = vehicle_desc_x(n);
       if (e.is_valid()) set.append(e);
     }
-    if (set.len() == names.len()) return set;
+    if (set.len() == cand.len()) return set;
   }
   return null;
 }
@@ -157,6 +159,6 @@ function names(x, y, z) {
 foreach (q in [["G loop", 5, 2, 0], ["G cross", 7, 2, 0], ["EG single", 42, 3, ELEV_UP], ["EG pier", 42, 3, 0], ["P elev", 20, 40, ELEV_UP],
                ["U loop", 5, 26, 0], ["EU single", 122, 3, ELEV_UP]])
   report += "[check] " + q[0] + " " + names(OX + q[1], OY + q[2], q[3]) + "\n";
-if (OX >= 256) r("climate", command_x(tool_set_climate).work(pl, c(-2, -2), c(152, 58), "7"));
+if (SNOW == 0) r("climate", command_x(tool_set_climate).work(pl, c(-2, -2), c(152, 58), "7"));
 gui.close_all_windows();
 return report;

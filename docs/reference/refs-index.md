@@ -19,6 +19,7 @@ way 系アドオンを作るときに、既存のアドオンや本家のどこ�
 | `../refs/rtx` | 道路・路面の dat をテンプレートから作る | dat の生成方法、速度からコストを出す式、歩道の配置 | CC BY 4.0（`package.json` だけ MIT） | 手法の参考 |
 | `../refs/rtg` | 正方形のテクスチャを菱形のタイルへ変換する道具 | 路面の画像変換の実例 | MIT | 手法の参考。線路には使わない |
 | `../refs/Simutrans_KUTA_211212` | OTRP v30 系の改造本体の配布物 | 当時の機能の説明（`README.md`） | Artistic License に従うと記載 | 文書だけ読む。exe は動かさない |
+| `../refs/marine_express_1.1` | ユーザーのアドオン marine_express（チューブ式のリニア）。dat・絵と、ビルド済みの pak（`pak/for_double_Slope(120.0~)/`）がある | チューブ式のリニアの作り（床の way と、軌道に重ねるチューブの way-object）、値の比、動作の確かめの車両 | WTFPL（`readme.html`） | 形と値の比の参考。車両の pak は検証の写しにだけ入れ、リポジトリに入れない（#371） |
 | `../refs/image` | 実物の構造の参考画像 | スラブ軌道、架線、車止めの形 | 記載なし | 形を文章に書き起こすだけ。リポジトリにコピーしない |
 | `../refs/simutrans-blender-kit` | Blender から Simutrans の絵と dat を作るアドオン（kit。Dkijas/simutrans-blender-kit、コミット `0bc64b7`、0.10.1）。6 つの部品を回して 16 通りの絵を作る。pak64・pak128 向け | dat の linter（kit 内の lint_dat.py）と、本体のソースから作ったキー表（`core/dat_schema.json`）、特殊色の近似の検査（`core/colorcheck.py`）、way・橋・トンネルの dat の枠。経緯は [blender-kit-survey](../records/2026-11-24_blender-kit-survey.md) | コード・テンプレートは MIT（`assets/` の 3D モデルは CC BY 4.0 などで別） | 考え方を借りる。置き換え・取り込みはしない。コードやキー表を使うときは MIT の著作権表示と許諾の文を残す（例: `tools/dat_lint_extra/LICENSE.simutrans-blender-kit`）。`assets/` は使わない。way の坂の綴り `imageup[n\|w\|e\|s]` はこの fork の writer（3・6・9・12）と合わないので借りない |
 
@@ -41,6 +42,7 @@ way 系アドオンを作るときに、既存のアドオンや本家のどこ�
 | 歩道 | `../refs/iss/src/util/sidewalk/ground.dat`・`elevated.dat`・`ground_road.dat`、`../refs/rtx/workspace/side/` | 別の waytype を歩道に流用する作り | iss は `water` を使う |
 | 跨座式モノレール | `../refs/iss/src/way/monorail/straddle.dat`、`../refs/iss/src/tunnel/monorail/tunnel.dat`、`../refs/iss/src/building/depot/depot.dat` | 地上・高架の版の並び（高架は front・center・back）、カーブが斜めの絵を指すこと、トンネルと車庫のキー | iss の跨座式には雪の絵・近い斜め・橋が無い。動作の確かめの車両は pak128.japan の跨座式（ユーザーが渡した物。リポジトリに入れない） |
 | 運河 | `../refs/iss/src/way/water/canal.dat`、`../refs/pak128/infrastructure/water_all/canal_020.dat`・`shipdepot.dat` | iss はタイルいっぱいの水面と薄い壁（地上だけ。坂は閘門）、pak128 は水面と石の縁（斜めは半分のタイル）。船の車庫 | 運河と歩道はどちらも waytype が water で、突き当てるとつながる（[AMI の運河の作り](../../addons/ami/docs/objects/canal.md) の「運河の作り」） |
+| リニア | `../refs/iss/src/way/maglev/`・`../refs/iss/src/way-object/maglev/linear_guide.dat`・`../refs/iss/src/tunnel/maglev/`、`../refs/marine_express_1.1/marine_express/` | iss は超電導・常電導（ガイドの way-object が電化を兼ねる）、marine_express はチューブ式（チューブは電化しない way-object） | 作りは [AMI のリニアの作り](../../addons/ami/docs/objects/maglev.md) |
 | 路面軌道 | `../refs/iss/src/way/rail/tram.dat`、`../refs/pak128/infrastructure/tram_tracks/tram_track_050_a.dat` | waytype の持たせ方 | iss は `tram_track`、pak128 は `track` と `system_type=7` |
 | アイコン・カーソル | `../refs/iss/src/icon_way1.png`〜`icon_way3.png`・`icon_bridge.png`、`../refs/pak128/base/misc_GUI/` | 共有シートとシート内蔵の違い | 位置の値は資料ごとに違う |
 
