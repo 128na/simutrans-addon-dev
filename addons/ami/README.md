@@ -195,7 +195,7 @@ pak の大きさは、環境変数 `SHEET_PAK_SIZE`（タイルの幅の画素�
 
   | 場所 | pak128 → 256 |
   |---|---|
-  | `sheetlib/core.py` | セル `CELL` 256 → 512、高さ 1 段 16px → 32px（`H` は世界の単位なので同じ）。まだらの粒の細かさ（`noisy_material` の模様は #298、`tiled_concrete_material` の粒は #355。画素で 128 と同じ大きさの粒にする）。コンクリートのしみ・雨だれは物の大きさの模様なので掛けない（タイルに対する大きさを 128 と同じにする。線路のコンクリートのしみの濃さだけは `render.py` の `TRACK_SURFACE` で 256 は 15% → 7%。#379） |
+  | `sheetlib/core.py` | セル `CELL` 256 → 512、高さ 1 段 16px → 32px（`H` は世界の単位なので同じ）。まだらの粒の細かさ（`noisy_material` の模様は #298、`tiled_concrete_material` の粒は #355。画素で 128 と同じ大きさの粒にする）。コンクリートのしみ・雨だれは物の大きさの模様なので掛けない（タイルに対する大きさを 128 と同じにする）。例外は線路のコンクリート（`render.py` の `TRACK_SURFACE`）で、256 は粒を画素で 128 の半分の大きさにし、しみの濃さを 15% → 7% にする（道路のコンクリートとそろえる。ユーザーの決定、判断 82、#379） |
   | `sheetlib/cells.py` | 地面の菱形の中心 `GROUND_CY` 127 → 254、道路 `ROAD_CY` 128 → 256。持ち分マスクは、その大きさで直接作る（下） |
   | `sheetlib/sheetlib.py` | 絵の基準位置 128 → 256、`BALLAST_DY` −1 → −2、`DIAG_PX`、持ち分を上へ広げる行数（`WALL_RISE`・`TUNNEL_RISE`） |
   | `render.py` | 基準面の下げ幅 `_DATUMS`、`spill` |
