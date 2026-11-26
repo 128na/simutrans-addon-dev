@@ -111,9 +111,15 @@ def near_frame(name, paths, origin=None):
 
 # ゲームが地面の菱形を塗る位置（セルの中で、タイル中心が何px目か）。dat のオフセット -64,-32 と対応し、
 # 線路の描画位置（TRACK_PROFILES の dy）には関係しない。ゲーム画面との比較（blender/ingame_diff.py）で合わせた
-# 持ち分マスクは pak128 の大きさ（_ground_mask_1x）で作り、SCALE 倍に拡大する。値の _1 は pak128 の画素。
+# 値の _1 は pak128 の画素。pak128 の持ち分マスクは _ground_mask_1x、ほかの大きさは _ground_mask_direct で作る。
 _GROUND_CY_1 = 127
 GROUND_CY = _GROUND_CY_1 * SCALE
+
+# pak128 より大きいときの持ち分マスクの縦の位相（_ground_mask_direct）。菱形の角を cy + GROUND_PHASE の行の上の縁に置く。
+# -1 のとき、マスクは pak256 の地面（256 四方のマス）をセルの (128, 61) に置いた形と、平らと坂の 65 形すべてで画素で一致する。
+# pak128 のマスクが地面の約 1.5 行上（地面のマスを 30〜31 行下に置いた形）なのを 2 倍にした位置。
+# ゲーム（pak256 の地面）で -1・0・1 を比べて決めた（#321）: 1 は平らな道路のタイルの継ぎ目に草の線、0 は坂の継ぎ目に 1 画素の草が出た。-1 は出ない
+GROUND_PHASE = -1
 
 
 # 道路を描く位置。SIS・pak128 標準の道路は、菱形を地面より 1px 下にずらした絵で、自分の菱形の上の1行は描かず、
@@ -125,14 +131,66 @@ ROAD_CY = _ROAD_CY_1 * SCALE
 
 
 def _ground_mask(slope, side=None, cy=GROUND_CY, spill=0, solid=False, lower=0):
-    """持ち分マスク（地面の範囲。下の _ground_mask_1x の説明）。pak128 以外の大きさ（SCALE が 2 以上）は、pak128 の大きさで作ったマスクを
-    SCALE 倍に拡大する（最近傍）。地面の菱形の縁の階段は、pak128 を整数倍にした地面（pak256poc）と同じ段になる。
-    大きさに合わせて菱形を引き直すと、細かい段（2×1）が地面の段（4×2）とずれ、坂の継ぎ目に 1 画素の草が 4 画素おきに出た（#266。ゲームで確認）。
-    cy・spill・lower は SCALE 倍の画素で受け取る"""
+    """持ち分マスク（地面の範囲。下の _ground_mask_1x の説明）。cy・spill・lower は SCALE 倍の画素で受け取る。
+    pak128 は _ground_mask_1x（画素の中心が四角形の中か）。pak128 より大きいときは _ground_mask_direct（列ごとの判定。pak256 の地面と同じ決まり）。
+    以前（#266）は pak128 の大きさで作って最近傍で拡大していた。地面が pak128 を 2 倍にした pak256poc（縁の段が 4×2）のときはそれで合ったが、
+    pak256 の地面（段が 2×1）では道路の縁が 4×2 の階段になった（#321）"""
     if SCALE == 1:
         return _ground_mask_1x(slope, side, cy, spill, solid, lower)
-    m = _ground_mask_1x(slope, side, cy / SCALE, spill / SCALE, solid, -(-lower // SCALE))
-    return np.kron(m, np.ones((SCALE, SCALE), dtype=bool))
+    return _ground_mask_direct(slope, side, cy, spill, solid, lower)
+
+
+def _ground_mask_direct(slope, side=None, cy=GROUND_CY, spill=0, solid=False, lower=0):
+    """pak128 より大きいときの持ち分マスク。広げ方は _ground_mask_1x と同じ意味で、pak128 の半行は SCALE // 2 画素にあたる。
+    地面の形は列ごとの判定（_column_mask）なので、行をずらすと形はそのまま動く。広げるのは、ずらした形の和で作る"""
+    half_row = SCALE // 2
+    m = _column_mask(slope, side, cy)
+    if solid and slope:
+        for k in range(32):
+            m |= _column_mask(lambda x, y, k=k: slope(x, y) * k / 32, side, cy)
+    if spill:
+        # 手前の 2 辺を spill 行と半行広げる（_ground_mask_1x の cy + spill と cy + spill + 0.5）
+        for k in range(1, spill + half_row + 1):
+            m |= _column_mask(slope, side, cy + k)
+    if cy != GROUND_CY:
+        # 手前の縁を半行広げる（_ground_mask_1x の cy + 0.5）
+        for k in range(1, half_row + 1):
+            m |= _column_mask(slope, side, cy + k)
+        if slope:
+            m |= _column_mask(slope, side, GROUND_CY)
+    if lower:
+        base = m.copy()
+        for k in range(1, lower + 1):
+            m[k:] |= base[:-k]
+    return m
+
+
+def _column_mask(slope, side, cy):
+    """pak128 より大きいときの菱形（坂は四隅を結んだ形）。列 x ごとに、上の辺（左→上→右の角）と下の辺（左→下→右の角）を
+    列の中心（x + 0.5）で引き、その間の行 y（上 <= y < 下）を 255 にする。pak256 の地面（objects/ground の draw_ground.py の column_span）と同じ決まりで、
+    凸でない坂（3 つの角が上がった形など）も地面と同じ形になる。角の縦の位置は cy + GROUND_PHASE。
+    side は、中心を通る横の線（cy + GROUND_PHASE の行の上の縁）・縦の線（セルの中央の列の左の縁）のその側だけにする（上と下、左と右は重ならず、合わせると全体）"""
+    half = TILE / 2
+    up = PX_PER_UNIT * math.sin(math.radians(60))  # 高さ 1 → 画面で上へ何px
+    c = cy + GROUND_PHASE
+    corner = {}
+    for key, (x, y) in {"left": (-half, -half), "bottom": (half, -half), "right": (half, half), "top": (-half, half)}.items():
+        z = slope(x, y) if slope else 0.0
+        corner[key] = c + (x - y) * 32 * SCALE / TILE - z * up
+    w = 64 * SCALE  # 菱形の幅の半分
+    x0 = CELL / 2 - w
+    xc = np.arange(CELL) + 0.5
+    t = np.where(xc < CELL / 2, corner["left"] + (corner["top"] - corner["left"]) * (xc - x0) / w,
+                 corner["top"] + (corner["right"] - corner["top"]) * (xc - CELL / 2) / w)
+    b = np.where(xc < CELL / 2, corner["left"] + (corner["bottom"] - corner["left"]) * (xc - x0) / w,
+                 corner["bottom"] + (corner["right"] - corner["bottom"]) * (xc - CELL / 2) / w)
+    inside_x = (xc > x0) & (xc < CELL / 2 + w)
+    yy = np.arange(CELL)[:, None]
+    m = (t[None, :] <= yy) & (yy < b[None, :]) & inside_x[None, :]
+    if side is not None:
+        xx = np.arange(CELL)[None, :]
+        m &= {"top": yy < c, "bottom": yy >= c, "left": xx < CELL // 2, "right": xx >= CELL // 2}[side]
+    return m
 
 
 def _ground_mask_1x(slope, side=None, cy=_GROUND_CY_1, spill=0, solid=False, lower=0):
