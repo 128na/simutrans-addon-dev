@@ -148,6 +148,11 @@ MARKING_SLOPES = {(1, 0): ("ns", lambda x, y: H * (y + MARKING_HALF) / TILE),
                   (1, 6): ("ew", lambda x, y: 2 * H * (MARKING_HALF - x) / TILE),
                   (1, 7): ("ns", lambda x, y: 2 * H * (MARKING_HALF - y) / TILE),
                   (1, 8): ("ew", lambda x, y: 2 * H * (x + MARKING_HALF) / TILE)}
+# 上の表は形ごとの描き方（向き・坂の高さ）。セルの位置は marking_kinds.py の形ごとのセルと同じでないといけない（#352）
+assert (set(MARKING_DEADENDS), set(MARKING_CURVES), set(MARKING_TEES), set(MARKING_STRAIGHTS), set(MARKING_SLOPES),
+        MARKING_CROSS_CELL, MARKING_SINGLE_CELL) == (marking_kinds.DEADENDS, marking_kinds.CURVES, marking_kinds.TEES,
+                                                    marking_kinds.STRAIGHTS, marking_kinds.SLOPES, marking_kinds.CROSS,
+                                                    marking_kinds.SINGLE), "marking.py の形のセルが marking_kinds.py と違う"
 
 
 # ---------------------------------------------------------------- 多角形（(u, v) の凸の多角形を集め、切り抜いてから板にする）

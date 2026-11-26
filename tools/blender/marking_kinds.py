@@ -3,7 +3,7 @@
 種類を 1 つ足すと、種類の一覧・絵のあるセル・カーソルのセル・アイコンの絵・アイコンの字・雪の絵を持つかを、
 描く側（sheetlib の marking.py）と dat を書く側（AMI の ami_dat.py）・アイコンを書く側（AMI の icons.py）・物の一覧（AMI の catalog.py）が
 別々の表に持っていた（6 つ。#349 の記録の案 4）。ここに 1 つだけ置き、どれもここから引く。種類を足すときに触るのは、この表と、
-描く関数（marking.py の marking_jobs）だけ。描いたセルがこの表の cells と違えば、marking.py の marking_sheet が止める。
+描く関数（marking.py の marking_jobs）と、材質を変える種類ならアドオンの描き分け（AMI の render.py）。描いたセルがこの表の cells と違えば、marking.py の marking_sheet が止める。
 
 置くのは種類ごとの値（種類は描き方で、どのアドオンが使っても同じ）だけ。どの物の名前で配るか（ami_mark_<種類>）はアドオンの側に置く。
 セルの位置は sheetlib の way のシートの並び（AMI の ami_dat.py の IMAGES と同じ。iss・blender-poc の線路の並び）。
