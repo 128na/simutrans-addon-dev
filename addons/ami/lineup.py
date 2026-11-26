@@ -87,6 +87,10 @@ def _kind_label(o):
     if t == "way-object" and name.startswith("ami_monorail") and name.endswith("_power"):
         # モノレールの電化（#116）。見た目が合うのは、それぞれの方式の way の上
         return "モノレールの電化（" + ("懸垂式用" if "_suspended_" in name else "跨座式用") + "）"
+    if t == "way-object" and name == "ami_maglev_guide":
+        return "リニアのガイド（電化）"  # 超電導のガイド（#371）。own_waytype=electrified_track
+    if t == "way-object" and name == "ami_maglev_tube_cover":
+        return "リニアのチューブ"  # チューブ式のチューブ（#371）。電化しない
     if t == "way-object" and "_pole" in name:
         # 歩道の電柱（ami_sidewalk_pole_<版>）と柵つきの電柱（ami_wall_sidewalk_<版>_pole。#120）。SPECIAL の歩道・歩道の柵より先に当てる
         return "柵つきの電柱" if name.startswith("ami_wall_") else "電柱"

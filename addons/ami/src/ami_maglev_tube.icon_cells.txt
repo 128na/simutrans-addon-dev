@@ -1,3 +1,0 @@
-# 物 icon|cursor 行 列 sha256（blender/icons.py が書いたセル。check_icons.py が今のシートと比べる。#330）
-ami_maglev_tube cursor 0 1 b63cf3c5723e726553a087425141804a5141cc420bb16372b8a742210dca4c8c
-ami_maglev_tube icon 0 0 a04282acc5b3ab34fe40b7b65c9783744b50cee9c22637f14fa92fcf45420bc7

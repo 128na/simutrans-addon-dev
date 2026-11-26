@@ -1,13 +1,14 @@
-"""リニア（maglev）の部品（超電導の床・ガイド、常電導の T 字の桁、チューブ式の溝の桁とチューブの骨組み。#371）。
+"""リニア（maglev）の部品（超電導の床・ガイド、常電導の T 字の桁、チューブ式の床とチューブの骨組み。#371）。
 TRACK_PROFILES の "track_parts"・"cell_fills"・"snow_skin" に渡す（共通の描画の道具 sheetlib の一部。tools/README.md）。
 
-手本は iss のリニア（refs の iss/src/way/maglev/・way-object/maglev/linear_guide.dat と、配布物の合成済みの絵）。寸法は配布物の
-東西のセルを縦に走査して測った（#371 の案の表。部品の 1 単位 ≈ 9px、高さ 1 単位 ≈ 7.8px）:
-    - 超電導（guideway）: 床と防音壁（幅はタイルの半分、壁の高さ 1.9）は way の絵。U 字の側壁（厚さ 0.3、高さ 0.4、壁の中心の間 1.56）は
+手本は iss のリニア（refs の iss/src/way/maglev/・way-object/maglev/linear_guide.dat と、配布物の合成済みの絵）と、チューブ式は
+marine_express（refs の marine_express_1.1。ユーザーのアドオン、WTFPL）。超電導の寸法は配布物の東西のセルを縦に走査して測り、
+常電導の桁とチューブの太さは、AMI のシートを手本と同じ倍率で並べて合わせた（タイルの 1 辺は 10 単位）:
+    - 超電導（guideway）: 床と防音壁（壁の高さ 1.9）は way の絵。U 字の側壁（厚さ 0.3、高さ 0.4、壁の中心の間 1.56）は
       ガイドの way-object（電化を兼ねる）。AMI では床を線路の基盤の版の上に置き、防音壁は線路の側壁の位置で高さだけ変える（render.py）
-    - 常電導（beam）: T 字の桁（上の幅 0.6、高さ 0.4）。高架の版は桁を下へ深くし、柱と腕は跨座式モノレールと同じ並び（monorail_parts）
-    - チューブ式（tube）: 上面に溝のある桁（幅 0.75、高さ 0.45）。高架の版はチューブ（径 2.3）を足す。iss のチューブは半透明のガラスだが、
-      AMI のシートは 2 値（cells.make_sheet の alpha=False）なので、輪と縦の線の骨組みで描く
+    - 常電導（beam）: T 字の桁（上の幅 1.2、高さ 0.4）。高架の版は桁を下へ深くし、柱と腕は跨座式モノレールと同じ並び（monorail_parts）
+    - チューブ式（tube）: 床と中央の溝の way（版と側壁は線路の基盤の版と同じ）と、重ねるチューブの way-object（径 6.4）。
+      手本のチューブは透ける輪だが、AMI のシートは 2 値（cells.make_sheet の alpha=False）なので、輪と縦の線の骨組みで描く
 """
 import math
 
@@ -108,49 +109,37 @@ def beam_parts(z0=0.0):
 
 BEAM_SNOW_SKIN = {"mag_beam_top": MAG_SNOW}
 
-# ---------------------------------------------------------------- チューブ式（溝の桁とチューブ）
-TUBE_BEAM_U = 0.6         # 桁の半幅（幅 1.2）
-TUBE_BEAM_TOP = 0.45      # 桁の上面（溝の縁）の高さ
-TUBE_GROOVE_U = 0.26      # 溝の半幅
-TUBE_GROOVE_D = 0.12      # 溝の深さ
-TUBE_R = 2.8              # チューブの半径（径 5.6。iss の C2・C3 と同じ倍率で並べて合わせた。タイルの 1 辺は 10）
-TUBE_ZC = 2.3             # チューブの中心の高さ（way の高さから。輪は桁の上面より上だけを描く）
+# ---------------------------------------------------------------- チューブ式（床と溝の軌道、チューブの way-object）
+# 手本は marine_express（ユーザーのアドオン。WTFPL）: 軌道は広い床と中央の溝 1 本で、版（single・back・center・front）は線路と同じ側壁。
+# チューブは軌道に重ねる way-object（輪の骨組み）。高架の躯体と側壁は超電導・線路の基盤の版と同じ（render.py）
+TUBE_GROOVE_U = 0.22      # 中央の溝の半幅
+TUBE_R = 3.2              # チューブの半径（径 6.4。側壁（線路の側壁と同じ位置・高さ 1.2）を包む）
+TUBE_ZC = 1.2             # チューブの中心の高さ（床の上面から。輪は床の上面より上だけを描く）
 TUBE_RING_T = 0.22        # 輪の太さ（半径の向き）
 TUBE_RING_W = 0.24       # 輪の太さ（経路に沿う向き）
 TUBE_PITCH = 2.5          # 輪の間隔（タイルの辺から TUBE_PITCH/2 ずらし、タイルの辺に乗せない）
 TUBE_STRINGER = 35.0      # 横の縦の線の角度（水平から。度）
-TUBE_SEG = 8              # 輪の 1 側（水平より下の端から頂点まで）の分け数
-TUBE_RISE = 54 * SCALE    # 持ち分を上へ広げる行数（チューブの頂点 約 42px と余り）
+TUBE_SEG = 8              # 輪の 1 側（床の上面の端から頂点まで）の分け数
+TUBE_RISE = 48 * SCALE    # 持ち分を上へ広げる行数（チューブの頂点 約 35px と余り）
 
-_M_TUBE_BEAM = mono_concrete("mag_tbeam", MAG_BEAM_RGB)
-_M_TUBE_TOP = mono_concrete("mag_tbeam_top", MAG_BEAM_RGB)
-_M_TUBE_GROOVE = mono_concrete("mag_groove", (0.42, 0.42, 0.41))
+_M_TUBE_GROOVE = _M_MAG_TROUGH
 _M_TUBE_FRAME = ("mag_tube_frame", (0.78, 0.80, 0.82), 0.4, 0.6)   # チューブの骨組み（明るい鋼）
 
 
-def tube_beam_parts(z0=0.0):
-    """チューブ式の桁（上面に溝）。z0 は桁の下面の高さ（地上は 0、高架は TUBE_BEAM_TOP − BEAM_ELEV_D）"""
-    gz = TUBE_BEAM_TOP - TUBE_GROOVE_D
-
-    def lips(z_a, z_b):
-        def shape(path, k):
-            return merge([sweep(path, [(g * TUBE_GROOVE_U * k, z_a), (g * TUBE_BEAM_U * k, z_a), (g * TUBE_BEAM_U * k, z_b),
-                                       (g * TUBE_GROOVE_U * k, z_b)][::g]) for g in (1, -1)])
-        return shape
+def tube_track_parts():
+    """チューブ式の way の床: 側壁の間の板と、中央の溝の暗い帯。路盤の面（bed）の基準面に乗せる（超電導の床と同じ）"""
     return (
-        Part("mag_tbeam", "rail", "gauge", _M_TUBE_BEAM, _mag_slab(TUBE_BEAM_U, z0, gz)),
-        Part("mag_tbeam_lip", "rail", "gauge", _M_TUBE_BEAM, lips(gz, TUBE_BEAM_TOP)),
-        Part("mag_tbeam_top", "rail", "gauge", _M_TUBE_TOP, lips(TUBE_BEAM_TOP, TUBE_BEAM_TOP + TOP_T)),
-        Part("mag_groove", "rail", "gauge", _M_TUBE_GROOVE, _mag_slab(TUBE_GROOVE_U, gz, gz + 0.004)),
+        Part("mag_floor", "bed", "bed", _M_MAG_FLOOR, to_edge_shape(_mag_slab(MAG_FLOOR_U, 0.0, MAG_FLOOR_T))),
+        Part("mag_tgroove", "bed", "bed", _M_TUBE_GROOVE, to_edge_shape(_mag_slab(TUBE_GROOVE_U, MAG_FLOOR_T, MAG_FLOOR_T + 0.004))),
     )
 
 
-TUBE_SNOW_SKIN = {"mag_tbeam_top": MAG_SNOW, "mag_groove": ("mag_snow_groove", (0.80, 0.84, 0.90), 0.9)}
+TUBE_SNOW_SKIN = {"mag_floor": MAG_SNOW, "mag_tgroove": ("mag_snow_groove", (0.80, 0.84, 0.90), 0.9)}
 
 
 def _ring_angles():
-    """輪の 1 側の角（水平から。下の端は桁の上面の高さ、上の端は頂点 90°）"""
-    a0 = math.degrees(math.asin(max(-1.0, (TUBE_BEAM_TOP - TUBE_ZC) / TUBE_R)))
+    """輪の 1 側の角（水平から。下の端は床の上面の高さ、上の端は頂点 90°）"""
+    a0 = math.degrees(math.asin(max(-1.0, -TUBE_ZC / TUBE_R)))
     return [a0 + (90.0 - a0) * i / TUBE_SEG for i in range(TUBE_SEG + 1)]
 
 
@@ -158,7 +147,7 @@ def _ring_half(p, ang, g, k):
     """経路の点 p（向き ang）の、側 g（1 は sweep の u の正）の半分の輪。断面は TUBE_RING_W × TUBE_RING_T の四角を、円に沿って押し出す"""
     d = Vector((math.cos(ang), math.sin(ang), 0.0))
     n = Vector((d.y, -d.x, 0.0))
-    c = Vector((p.x, p.y, TUBE_ZC))
+    c = Vector((p.x, p.y, MAG_FLOOR_T + TUBE_ZC))
     rings = []
     for a in _ring_angles():
         r = math.radians(a)
@@ -208,17 +197,17 @@ def _tube_lines(near):
     def shape(path, k):
         geo = []
         for g in _sides(path, near):
-            u, z = g * TUBE_R * math.cos(r) * k, TUBE_ZC + TUBE_R * math.sin(r)
+            u, z = g * TUBE_R * math.cos(r) * k, MAG_FLOOR_T + TUBE_ZC + TUBE_R * math.sin(r)
             geo.append(sweep(path, [(u - h, z - h), (u + h, z - h), (u + h, z + h), (u - h, z + h)]))
         if not near:
-            zt = TUBE_ZC + TUBE_R
+            zt = MAG_FLOOR_T + TUBE_ZC + TUBE_R
             geo.append(sweep(path, [(-h, zt - h), (h, zt - h), (h, zt + h), (-h, zt + h)]))
         return merge(geo) if geo else None
     return shape
 
 
 def tube_frame_parts():
-    """高架のチューブの骨組み（TRACK_PROFILES の "track_parts" に桁と並べて足す）。高さのある部品で、手前の側の半分は手前の絵"""
-    return tuple(Part(f"mag_tube_{kind}_{'front' if near else 'back'}", "rail", "gauge", _M_TUBE_FRAME, make(near),
+    """チューブの way-object の部品: 輪と縦の線の骨組み。手前の側の半分は手前の絵（frontimage）、奥の側は奥の絵。床の上面から立てる（ガイドと同じ）"""
+    return tuple(Part(f"mag_tube_{kind}_{'front' if near else 'back'}", "bed", "bed", _M_TUBE_FRAME, make(near),
                       tall=True, front=near, thin=True)
                  for near in (False, True) for kind, make in (("ring", _tube_rings), ("line", _tube_lines)))

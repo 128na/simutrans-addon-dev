@@ -36,9 +36,10 @@ beam_elev_front 89 3
 beam_elev_center 89 13
 beam_elev_back 89 23
 beam_elev_r 103 3
-tube_elev_front 129 3
-tube_elev_center 129 13
-tube_elev_back 129 23
+tube_elev_single 129 3
+tube_elev_back 129 13
+tube_elev_center 129 23
+tube_elev_front 129 33
 tube_elev_r 143 3"
 
 if [ "$STOP" = 1 ]; then game_stop; echo "[maglev] stopped"; exit 0; fi

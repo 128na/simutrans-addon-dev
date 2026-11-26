@@ -94,7 +94,7 @@ VALUES = {
 # リニア（#371）。値はユーザーの判断 75（案 a）: 速さは iss と同じ 1200 km/h、費用・維持費は高速線（40000・800）の 1.5 倍（iss の 500000・10000 は
 # AMI の値から離れすぎるので寄せた）。超電導・常電導・チューブ式で同じ。版・高架は下で写す
 MAGLEV_VALUES = dict(waytype="maglev_track", speed=1200, cost=60000, maintenance=1200, intro_year=1900)
-for _n in (*catalog.MAGLEV_GUIDEWAYS, *catalog.MAGLEV_BEAMS):
+for _n in (*catalog.MAGLEV_GUIDEWAYS, *catalog.MAGLEV_BEAMS, *catalog.MAGLEV_TUBES):
     VALUES[_n] = dict(MAGLEV_VALUES)
 
 # 旧描画位置（#26）の線路の値は新と同じ（速さ・費用・維持費・登場年）。名前が違うだけ
@@ -166,7 +166,8 @@ for _v in catalog.MONORAIL_SUSPENDED_VARIANTS:
         _base = VALUES[catalog.MONORAIL_SUSPENDED]
         VALUES[_n] = dict(_base, cost=_base["cost"] * _k, maintenance=_base["maintenance"] * _k)
 # リニアの高架（#371）: 地上の 2 倍（ELEV_COST_K。線路・モノレールと同じ）
-for _n in (*catalog.MAGLEV_GUIDEWAY_ELEVS, *(_e for _w in catalog.MAGLEV_BEAMS for _e in catalog.MAGLEV_BEAM_ELEVS[_w])):
+for _n in (*catalog.MAGLEV_GUIDEWAY_ELEVS, *catalog.MAGLEV_TUBE_ELEVS,
+           *(_e for _w in catalog.MAGLEV_BEAMS for _e in catalog.MAGLEV_BEAM_ELEVS[_w])):
     VALUES[_n] = dict(MAGLEV_VALUES, cost=MAGLEV_VALUES["cost"] * ELEV_COST_K, maintenance=MAGLEV_VALUES["maintenance"] * ELEV_COST_K)
 
 # ---------------------------------------------------------------- 運河（#114）
@@ -410,16 +411,20 @@ MONORAIL_POWER_VALUES = dict(CATENARY_VALUES)
 # リニアのガイド（ami_maglev_guide。#371）: waytype=maglev_track・own_waytype=electrified_track（iss の linear_guide と同じく電化を兼ねる）。
 # 値は架線と同じ費用・維持費（ユーザーの判断 75）。topspeed は電化した編成の速さを縛るので、way（1200 km/h）より大きくする
 MAGLEV_GUIDE_VALUES = dict(CATENARY_VALUES, topspeed=1300)
+# チューブ式のチューブ（ami_maglev_tube_cover。#371）: waytype・own_waytype とも maglev_track（電化しない。手本の marine_express の
+# marine_express_tube と同じ）。費用・維持費は手本の比（軌道の 4 倍）で、地上の way の 4 倍。topspeed は way より大きくして縛らない
+MAGLEV_TUBE_COVER_VALUES = dict(cost=MAGLEV_VALUES["cost"] * 4, maintenance=MAGLEV_VALUES["maintenance"] * 4, topspeed=1300,
+                                intro_year=MAGLEV_VALUES["intro_year"])
 
 
-def monorail_power_dat_text(name, suspended, waytype="monorail_track", values=None, kind=None):
+def monorail_power_dat_text(name, suspended, waytype="monorail_track", values=None, kind=None, own_waytype="electrified_track"):
     """モノレールの電化の way-object の dat。シートは way-object の並び（奥の絵 0〜3 行・手前の絵 WALL_FRONT_ROW 下）で、
     セルは跨座式の way と同じ位置。カーブは斜めのセル（跨座式と同じ）。分岐の絵・近い斜めは持たない。
-    リニアのガイド（#371）も同じ並びで、waytype・values・kind（注記の物の説明）を渡す"""
+    リニアのガイドとチューブ（#371）も同じ並びで、waytype・values・kind（注記の物の説明）・own_waytype を渡す"""
     v = values or MONORAIL_POWER_VALUES
     kind = kind or ("懸垂式モノレールの電化（桁の下面の給電レールと碍子）" if suspended else "跨座式モノレールの電化（桁の側面の給電レールと碍子）")
     out = _head(f"# AMI: {name}（CC BY 4.0）。{kind}の way-object。シートは blender/render.py が描く", "way-object", name, v["intro_year"],
-                after=[f"waytype={waytype}", "own_waytype=electrified_track", f"cost={v['cost']}", f"maintenance={v['maintenance']}",
+                after=[f"waytype={waytype}", f"own_waytype={own_waytype}", f"cost={v['cost']}", f"maintenance={v['maintenance']}",
                        f"topspeed={v['topspeed']}", f"icon=> {name}.0.0", f"cursor={name}.0.1,{OFFSET}"])
     for key, idx, row, col in IMAGES:
         if key not in WAYOBJ_KEYS or idx.startswith("[close") or (key == "image" and idx in SWITCH_IDX):
@@ -756,6 +761,8 @@ def write_all():
         put(name, monorail_power_dat_text(name, suspended))
     put(catalog.MAGLEV_GUIDE, monorail_power_dat_text(catalog.MAGLEV_GUIDE, False, "maglev_track", MAGLEV_GUIDE_VALUES,
                                                       "超電導リニアのガイド（U 字の側壁とコイル。電化を兼ねる）"))
+    put(catalog.MAGLEV_TUBE_COVER, monorail_power_dat_text(catalog.MAGLEV_TUBE_COVER, False, "maglev_track", MAGLEV_TUBE_COVER_VALUES,
+                                                           "チューブ式リニアのチューブ（輪の骨組み。電化しない）", "maglev_track"))
     for _o in (False, True):  # 新と旧（#26）
         _tw = f"ami_wall_rail_{'old_' if _o else ''}twin_catenary"
         put(_tw, wall_dat_text(_tw, _tw + "_back", twin=True, catenary=True, old=_o))

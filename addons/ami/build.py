@@ -5,6 +5,7 @@ src/ の dat から、全部入りのまとめ（dist/ami.pak）と、種類別�
     dist/ami_tram.pak   路面軌道（ami_tram*）
     dist/ami_road.pak   道路（ami_road_*。多車線と交差点の路面表示 ami_mark_* も入る）
     dist/ami_monorail.pak モノレール（ami_monorail*。跨座式の way・高架・トンネル、懸垂式の way・高架、電化と車庫 ami_monorail_depot）
+    dist/ami_maglev.pak   リニア（ami_maglev*。超電導・常電導・チューブ式の way・高架・トンネル、ガイド・チューブと車庫 ami_maglev_depot）
     dist/ami_canal.pak    運河（ami_canal*。地上の way と船の車庫 ami_canal_depot）
     dist/ami_extra.pak  付属（壁・橋脚・歩道・歩道の柵・踏切: ami_wall_*（歩道の柵 ami_wall_sidewalk_* と柵つきの電柱を含む）・ami_pier_*・ami_sidewalk*（電柱 ami_sidewalk_pole_* を含む）・ami_crossing_*）
     dist/ami_scenery.pak 景観（盛土・道路標識: ami_embankment_*・ami_sign_*）
