@@ -61,7 +61,7 @@ description: Simutrans の way 系アドオン（AMI・blender-poc の線路・�
 | `render_layers` | 高さのある部品を別の層として描き、奥と手前の絵に分ける |
 | `TRACK_PROFILES` のキー | シート名・基準面・`groups`・`walls`・`snow`・`skin`・`snow_skin`・`replace`・`track_parts`・`parts`・`bed_fills` など。意味は `tools/README.md` と `track_sheet` の説明 |
 
-- AMI の軌道の種類を足すときは、`catalog.py` の `TRACKS`、`render.py` の `TRACK_SETTINGS`（部品と材質は上のキーで渡す）、`ami_dat.py` の `VALUES` に足す。共有の壁・架線・橋脚は足さない。旧描画位置の版（`OLD_TRACKS`。`TRACK_SETTINGS` が新の設定から導き、壁・架線・橋脚も旧用が別にある）も要るので、`TRACKS` に足したら `OLD_TRACKS` の分も増える（ADR 0011）
+- AMI の軌道の種類を足すときは、`catalog.py` の `TRACKS`、`render.py` の `TRACK_SETTINGS`（部品と材質は上のキーで渡す）、`ami_dat.py` の `VALUES` に足す。共有の壁・架線・橋脚は足さない。旧描画位置の版（`OLD_TRACKS`。`TRACK_SETTINGS` が新の設定から導き、壁・架線・橋脚も旧用が別にある）も要るので、`TRACKS` に足したら `OLD_TRACKS` の分も増える（ADR 0011）。waytype が `track` でない軌道（狭軌）は `TRACKS` に入れず別に持つ（[AMI の「狭軌の作り」](../../../addons/ami/docs/objects/narrow.md)）
 - 部品を足すときは、乗る基準面を選ぶ。部品ごとに位置を足し引きしない
 - 寸法・色は名前の付いた定数にする（ADR 0005）
 - 共通部分を直したら、既存のアドオンのシートが変わらないことを確かめる
