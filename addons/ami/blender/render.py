@@ -509,6 +509,9 @@ for _t in catalog.ALL_TRACKS:
 # ---------------------------------------------------------------- 線路の基盤・高架の面のコンクリート（#78）
 # 基盤の板（材質の名前 base）と高架の躯体（elev_body）を、一色から打ち放しのコンクリートにする: 元の色を中心に ±12% のまだら（粒は約 4px。
 # 道路一式のコンクリート ROAD_CONCRETE と同じ振れ幅）に、約 30px の大きなしみで最大 15% 暗くする。模様はタイルの 1 辺を周期にしてあり、
+# pak128 より大きいとき（256）は、粒を画素で 128 の半分の大きさにし（grain 2.5 → 5.0。#355 の「画素で 128 と同じ大きさの粒」はここでは使わない）、
+# しみの濃さを最大 7% にする（しみの大きさはタイルに対して 128 と同じ）。128 と同じ粒としみでは、道路のコンクリートよりまだらが目立った
+# （ユーザーの決定、2026-11-27。判断 82、#379。記録 docs/records/2026-11-27_ami-256-concrete-mottle.md）。
 # タイルの辺で切れない（sheetlib の tiled_concrete_material）。継ぎ目の線は描かない。段 0〜3 と継ぎ目の案を見比べ、ユーザーが段 2・継ぎ目なしに
 # 決めた（2026-11-21。橋もそろえることも同じ日にユーザーが決めた。比べた案は blender/surface_calib.py、記録 docs/records/2026-11-21_ami-surface-detail.md）。
 # 線路の基盤・高架の版と橋（床と桁。高架の single と同じ作りで、高架とつながる）に渡す。雪の絵では基盤の上面は雪の材質のまま。
@@ -516,7 +519,7 @@ for _t in catalog.ALL_TRACKS:
 # （#83。今の絵と並べて見比べ、ユーザーがそろえると決めた。2026-11-21。比べた案の道具 blender/wallpier_calib.py は #336 で消した、
 # 記録 docs/records/2026-11-21_ami-wall-pier-surface.md）。壁の way-object のシートは基盤の版の対象が書くので、基盤の版の表に wall を入れる
 # （way のシートの壁は基盤を削るためだけに置くので、way の絵は変わらない）。道路の壁・橋脚は道路一式のコンクリート（ROAD_MAT_SKIN）のまま
-TRACK_SURFACE = dict(amp=0.12, grain=2.5, stain=0.15, stain_scale=0.35)
+TRACK_SURFACE = dict(amp=0.12, grain=2.5 if R.SCALE == 1 else 5.0, stain=0.15 if R.SCALE == 1 else 0.07, stain_scale=0.35)
 
 
 def _track_concrete(nm, rgb):
