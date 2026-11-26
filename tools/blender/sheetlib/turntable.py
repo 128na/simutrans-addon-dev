@@ -28,6 +28,7 @@ from sheet_rows import WAY_SNOW_ROWS  # 雪の絵の行のずらし。dat を書
 from . import sheetlib as _s
 from .cells import GROUND_CY, _ground_mask, exits_of, make_sheet, render_cell, save_rgba
 from .core import SCALE, TILE, _SNOW, box, clear_models, datum_move, make_material, merge, mesh_object, set_anchor
+from .deck_track import deck_top, deck_track
 
 # ---- 寸法（タイル 1 辺 = 10。高さ 1 段は H ≈ 2.04 で、画面の 16px。1px ≈ 0.13）
 PIT_D = 0.5              # ピットの深さ（約 4px）
@@ -54,10 +55,6 @@ TT_BRIDGE_END = TT_R - 0.12  # 桁の端（中心から）
 TT_HUT = (0.9, 0.9, 1.0)    # 運転室（桁に沿う向きの長さ・横切る向きの長さ・高さ）
 TT_APRON_W = 0.9         # まわりのコンクリートの輪の幅（ピットの縁から。#331 の 2ringd。タイルいっぱいの四角は草の中で浮いたので、角は地面を見せる）
 HUT_WINDOW = (0.25, 0.55)  # 運転室の窓の暗い帯（高さ、帯の下の端の高さ ÷ 運転室の高さ。#331 の 2win。転車台・遷車台の両方）
-# 線路（桁・台車の上）: まくらぎ（長さ・幅・高さ）と間隔。canal_crossing の線路の床と同じ作り
-SLEEPER = (2.4, 0.22, 0.14)
-SLEEPER_STEP = 0.65
-DECK_UNDER = 0.12        # 線路のまくらぎの下面から、桁・台車の上面までの下げ（まくらぎを載せる板の厚み）
 # 持ち分を上へ広げる行数（運転室の高さ 約 8px と屋根・まくらぎ・レールに余り）
 TURNTABLE_RISE = 14 * SCALE
 
@@ -98,28 +95,13 @@ def _obj(name, parts, spec):
 
 # ---------------------------------------------------------------- 線路（桁・台車の上）
 def _track(axis, a, b, top, snow, rail):
-    """axis（"x" か "y"）に沿って a〜b の範囲に、まくらぎとレールを置く。top はまくらぎの下面の高さ。
-    rail は AMI の線路のレール (内側, 外側, 上面)。部品（頂点, 面）の組を材質ごとに返す"""
-    sleepers, webs, heads = [], [], []
-    n = max(1, round(abs(b - a) / SLEEPER_STEP))
-    for i in range(n):
-        s = a + (b - a) * (i + 0.5) / n
-        if axis == "x":
-            sleepers.append(box(s, 0, top + SLEEPER[2] / 2, SLEEPER[1], SLEEPER[0], SLEEPER[2]))
-        else:
-            sleepers.append(box(0, s, top + SLEEPER[2] / 2, SLEEPER[0], SLEEPER[1], SLEEPER[2]))
-    r_in, r_out, r_top = rail
-    z_web0, z_head0 = top + SLEEPER[2], r_top - 0.02
-    for sgn in (-1, 1):
-        u = sgn * (r_in + r_out) / 2
-        w = r_out - r_in
-        mid, ln = (a + b) / 2, abs(b - a)
-        for lst, z0, z1 in ((webs, z_web0, z_head0), (heads, z_head0, r_top)):
-            if axis == "x":
-                lst.append(box(mid, u, (z0 + z1) / 2, ln, w, z1 - z0))
-            else:
-                lst.append(box(u, mid, (z0 + z1) / 2, w, ln, z1 - z0))
-    return {"sleeper": sleepers, "web": webs, "head": heads}
+    """axis（"x" か "y"）に沿って a〜b の範囲に、まくらぎとレール（deck_track の部品。水路の踏切と共通）を置く。
+    top はまくらぎの下面の高さ。rail は AMI の線路のレール (内側, 外側, 上面)。部品（頂点, 面）の組を材質ごとに返す"""
+    def place(c):  # 経路の座標 (u, s, z) の中心と寸法 → タイルの座標
+        cu, cs, cz, su, ss, sz = c
+        return box(cs, cu, cz, ss, su, sz) if axis == "x" else box(cu, cs, cz, su, ss, sz)
+    sleepers, rails = deck_track(a, b, top, rail)
+    return {"sleeper": [place(c) for c in sleepers], "web": [place(w) for w, _ in rails], "head": [place(h) for _, h in rails]}
 
 
 def _track_objs(prefix, parts, snow):
@@ -131,8 +113,8 @@ def _track_objs(prefix, parts, snow):
 
 
 def _deck_top(rail):
-    """桁・台車の上面の高さ（まくらぎの下面から DECK_UNDER 下）"""
-    return rail[2] - 0.02 - SLEEPER[2] - DECK_UNDER
+    """桁・台車の上面の高さ（deck_track.deck_top。水路の踏切と共通）"""
+    return deck_top(rail)
 
 
 def _hut(cx, cy, sx, sy, sz, z0, snow):
