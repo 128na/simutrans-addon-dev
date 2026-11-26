@@ -28,7 +28,7 @@ MONO_ARM_EMBED = 0.1      # 腕の上面を桁の下面より上へ食い込ま�
 
 # ---------------------------------------------------------------- 色（打ち放しのコンクリートのまだらと汚し）
 # 第 1 弾の高架の躯体・橋脚・壁（中性の灰 0.56〜0.60）と見分けるため、汚し（#154）を掛ける。ユーザーが案 A＋C を選んだ（2026-11-22。
-# 見比べた案は addons/ami/blender/weather_calib.py）:
+# 見比べた案の絵は addons/ami/rounds/ami_weather_calib.pak。案を描いた道具 weather_calib.py は #351 で消した。a15b576 にある）:
 #   A 色味: 桁と柱を少し暖かい灰（MONO_TINT）にし、柱を桁より 8% 暗くする
 #   C 地際の汚れ: 柱・腕を、柱の下端（地面より PIER_FOOT 下）から MONO_GRIME_SPAN の高さまで、下ほど暗くする（下端で 1 − MONO_GRIME 倍）
 # まだら（±MONO_AMP、粒 MONO_GRAIN）は sheetlib の tiled_concrete_material（タイルの 1 辺を周期にした模様）で作る

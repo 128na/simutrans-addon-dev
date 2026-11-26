@@ -1,8 +1,8 @@
 """精細化のラウンド（#56 の流れ。#256）の、第 4 弾の物（幹線道路・円弧と L 字の一般道路・生活道路・Y 字と三方分岐の絵）の描き分け。
 blender/round.py が AMI_FAMILY=road4 のときに読む。
 
-土台は今の本番（render.py の道路一式の質感。ラウンド 3 まで入れ済み）。round_road.py の apply は入れる前の本番に重ねる作りで、
-今の本番に重ねると質感が二重になるので使わない。ここは本番の描き分け（R.ROAD_PROFILES の skin）には触らず、部品の追加と材質の差し替えだけをする。
+土台は今の本番（render.py の道路一式の質感。ラウンド 3 まで入れ済み）。round_road.py の apply（入れる前の本番に重ねる作りで、
+今の本番に重ねると質感が二重になる）は使わなかった（#351 で外した）。ここは本番の描き分け（R.ROAD_PROFILES の skin）には触らず、部品の追加と材質の差し替えだけをする。
 
 ROUND_SETTINGS: ラウンドの鍵（"1"・葉の試しの "1xxx"）→ 設定。値の決め方は docs/records/ の記録。
 設定のキー（どれも無くてよい）:
@@ -52,7 +52,7 @@ def apply(cfg, n, R, render):
     import sheetlib.road_parts as RP  # noqa: E402
     import sys
     import sheetlib.sheetlib as S  # noqa: E402
-    K = sys.modules["sheetlib.core"]  # sweep・Part（sheetlib が再輸出していない。round_road.py と同じ取り方）
+    K = sys.modules["sheetlib.core"]  # sweep・Part（sheetlib が再輸出していない）
 
     if "shoulder" in cfg:
         parts = [p for p in S.ROAD_PARTS if p.name != "shoulder"]  # 本番に入った部品と二重にしない
