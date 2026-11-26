@@ -103,6 +103,7 @@ from .road_parts import (  # noqa: F401
     ROAD_DIAG,
     ROAD_HW,
     ROAD_PARTS,
+    ROAD_SNOW_ASPHALT_RECESS,
     ROAD_SNOW_GROUPS,
     ROAD_SNOW_SKIN,
     STOP_LINE_D,
@@ -591,20 +592,30 @@ def _road_sheet(style="street"):
             # 型の柱は坂の高さまで伸ばす（ROAD_CUT_Z）。路面は坂を当てた後なので、-2〜2 では橋の端の坂（高さ H〜2H）の
             # 上の方が削れずに残り、壁の手前に路面が出て躯体にかぶさった（2026-11-15、ゲームで確認）
             beyond = _beyond_prisms(kept, paths, kl, EXPWY_WALL_U, EXPWY_WALL_W, ROAD_CUT_Z)
+            # 地上の雪の絵だけ、路面の板（asphalt）は ROAD_SNOW_ASPHALT_RECESS だけ内で切る（#360）。同じ所で切ると、路肩の雪の板
+            # （厚み 0.0115）の下に路面の板（厚み 0.04）の切り口の縦の面が影の色で出て、タイルの手前の縁に暗い 1 行（256）ができた。
+            # 内へ寄せると雪の板が張り出して切り口を隠す（その下は透明）。温帯・高架・橋は変えない
+            recess = (row0 == block and not (prof.get("elevated") or prof.get("bridge")))
+            # 寄せるのは壁の厚みの側（ww）: 横の壁の外の面（wu + ww）と、行き止まりの端の壁の外の面（経路の端から ww）が両方とも内へ寄る
+            inner = _beyond_prisms(kept, paths, kl, EXPWY_WALL_U, EXPWY_WALL_W - ROAD_SNOW_ASPHALT_RECESS, ROAD_CUT_Z) if recess else None
             if beyond:
-                # 抜く形（壁の外側の角柱）は 1 つずつ順に抜く（まとめると自己交差して use_self が要り遅い。assemble._carve と同じ）
-                cutters = []
-                for piece in beyond:
-                    c = mesh_object("roadcut", *merge([piece]), material(*_M_BASE))
-                    recalc_normals(c)
-                    cutters.append(c)
+                def cutters_of(pieces):
+                    # 抜く形（壁の外側の角柱）は 1 つずつ順に抜く（まとめると自己交差して use_self が要り遅い。assemble._carve と同じ）
+                    out = []
+                    for piece in pieces:
+                        c = mesh_object("roadcut", *merge([piece]), material(*_M_BASE))
+                        recalc_normals(c)
+                        out.append(c)
+                    return out
+                cutters = cutters_of(beyond)
+                inner_cutters = cutters_of(inner) if inner else []
                 for ob in [ob for ob in obs if not ob.get("tall") and not ob.get("pname", "").startswith("pier")]:
-                    for cutter in cutters:
+                    for cutter in (inner_cutters if inner_cutters and ob.get("pname") == "asphalt" else cutters):
                         boolean(ob, cutter, use_self=False)
                     if not ob.data.polygons:
                         obs.remove(ob)
                         bpy.data.objects.remove(ob, do_unlink=True)
-                for c in cutters:
+                for c in cutters + inner_cutters:
                     bpy.data.objects.remove(c, do_unlink=True)
             if slope and prof.get("bridge"):
                 # 端の坂の躯体は、assemble が上面を地面より少し上（0.02）に止めるので、坂の下の端で路面（上面 0）より上に出て
