@@ -1186,7 +1186,10 @@ def _track_sheet(profile="new"):
                 if front:
                     cells[(pos[0] + row0 + prof["front_row"], pos[1])] = front
             else:
-                cells[(pos[0] + row0, pos[1])] = render_cell(cname, exits_of(name), slope=mask_slope, cy=cy, spill=prof["spill"],
+                # prof["fill_back_band"]: つながる奥の辺の上の帯も塗る（exits を空で渡す。cells._ground_mask_direct の #354 の分岐を通さない）。
+                # 路面軌道は道路と同じタイルに重なり、道路がつながらない辺で塗った道路の端を、軌道の帯で覆う（#365）
+                own_exits = "" if prof.get("fill_back_band") else exits_of(name)
+                cells[(pos[0] + row0, pos[1])] = render_cell(cname, own_exits, slope=mask_slope, cy=cy, spill=prof["spill"],
                                                              solid=prof.get("solid", False), lower=lower)
 
     if prof.get("piers"):
