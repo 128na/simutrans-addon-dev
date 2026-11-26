@@ -596,7 +596,8 @@ for _r in catalog.ROADS:
         R.ROAD_PROFILES[_p(_r.base(_v))] = dict(
             R.ROAD_PROFILES[_r.key], sheet=_r.base(_v), prefix=_r.base(_v) + "_", walls=_walls,
             groups=R.ROAD_PROFILES[_r.key]["groups"] + ("wall",), wall_sheet=f"ami_wall_road_{_v}", write_walls=False,
-            curve_cells=_r.key not in catalog.ROAD_CURVE_SHAPES, curve=catalog.ROAD_CURVE_SHAPES.get(_r.key))
+            curve_cells=_r.key not in catalog.ROAD_CURVE_SHAPES, curve=catalog.ROAD_CURVE_SHAPES.get(_r.key),
+            snow_recess=True)  # 雪の絵で路面の板の切り口を雪の板で隠す（sheetlib の road_sheet。#360）
 
 # 高架の 4 版（<道路>_elev_<版>、dat は system_type=1）: 床（路面と基盤）と躯体だけ。橋脚は描かない（道路用の橋脚の way が描く）。
 # 基盤は壁の外の面で止まり、壁の無い側はタイルの端まで（線路の高架と同じ）。躯体は壁のある側で壁の外の面から ELEV_BODY_INSET 内で止める。

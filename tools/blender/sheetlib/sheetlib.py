@@ -103,6 +103,7 @@ from .road_parts import (  # noqa: F401
     ROAD_DIAG,
     ROAD_HW,
     ROAD_PARTS,
+    ROAD_SNOW_ASPHALT_RECESS,
     ROAD_SNOW_GROUPS,
     ROAD_SNOW_SKIN,
     STOP_LINE_D,
@@ -221,6 +222,8 @@ def _road_sheet(style="street"):
     elev_body: 基盤の下に躯体を足す（深さ body_d、壁のある側は壁の外の面から body_inset 内で止める、材質 body_mat。
         既定は高架の ELEV_BODY_D・ELEV_BODY_INSET・_M_ELEV_BODY。橋の桁は body_inset=0 と桁の材質）
     curve_cells: カーブのセル（2, 5〜8）も斜めの形で描き、タイルの半分で切らない（壁の無い側をタイルの端まで。地上の基盤の版・高架）
+    snow_recess: 真なら雪の絵だけ、路面の板（asphalt）を壁の外の面より ROAD_SNOW_ASPHALT_RECESS 内で切り、切り口を路肩の雪の板で隠す
+        （AMI の道路の地上の基盤の版。#360）
     lower と solid を両方持つ橋は、平らなセルだけ持ち分を下へ広げる（端の坂と坂から始まる端は広げない。track_sheet と同じ）"""
     prof = ROAD_PROFILES[style]
     expwy = prof.get("expressway", False)
@@ -591,20 +594,31 @@ def _road_sheet(style="street"):
             # 型の柱は坂の高さまで伸ばす（ROAD_CUT_Z）。路面は坂を当てた後なので、-2〜2 では橋の端の坂（高さ H〜2H）の
             # 上の方が削れずに残り、壁の手前に路面が出て躯体にかぶさった（2026-11-15、ゲームで確認）
             beyond = _beyond_prisms(kept, paths, kl, EXPWY_WALL_U, EXPWY_WALL_W, ROAD_CUT_Z)
+            # prof["snow_recess"]（無くてよい。AMI の道路の地上の基盤の版）: 雪の絵だけ、路面の板（asphalt）を ROAD_SNOW_ASPHALT_RECESS
+            # だけ内で切る（#360）。同じ所で切ると、路肩の雪の板（厚み 0.0115）の下に路面の板（厚み 0.04）の切り口の縦の面が影の色で出て、
+            # タイルの手前の縁に暗い 1 行（256）ができた。内へ寄せると雪の板が張り出して切り口を隠す（その下は透明）。温帯の絵は変えない
+            recess = row0 == block and prof.get("snow_recess", False)
+            # 寄せるのは壁の厚みの側（ww）: 横の壁の外の面（wu + ww。斜めは倍率 kl が掛かり 0.1 × kl）と、行き止まりの端の壁（endw）の
+            # 外の面（経路の端から ww）が両方とも内へ寄る。タイルの端に立つ端の壁（endw_edge。線路だけ）は ww を使わないので寄らない
+            inner = _beyond_prisms(kept, paths, kl, EXPWY_WALL_U, EXPWY_WALL_W - ROAD_SNOW_ASPHALT_RECESS, ROAD_CUT_Z) if recess else None
             if beyond:
-                # 抜く形（壁の外側の角柱）は 1 つずつ順に抜く（まとめると自己交差して use_self が要り遅い。assemble._carve と同じ）
-                cutters = []
-                for piece in beyond:
-                    c = mesh_object("roadcut", *merge([piece]), material(*_M_BASE))
-                    recalc_normals(c)
-                    cutters.append(c)
+                def cutters_of(pieces):
+                    # 抜く形（壁の外側の角柱）は 1 つずつ順に抜く（まとめると自己交差して use_self が要り遅い。assemble._carve と同じ）
+                    out = []
+                    for piece in pieces:
+                        c = mesh_object("roadcut", *merge([piece]), material(*_M_BASE))
+                        recalc_normals(c)
+                        out.append(c)
+                    return out
+                cutters = cutters_of(beyond)
+                inner_cutters = cutters_of(inner) if inner else []
                 for ob in [ob for ob in obs if not ob.get("tall") and not ob.get("pname", "").startswith("pier")]:
-                    for cutter in cutters:
+                    for cutter in (inner_cutters if inner_cutters and ob.get("pname") == "asphalt" else cutters):
                         boolean(ob, cutter, use_self=False)
                     if not ob.data.polygons:
                         obs.remove(ob)
                         bpy.data.objects.remove(ob, do_unlink=True)
-                for c in cutters:
+                for c in cutters + inner_cutters:
                     bpy.data.objects.remove(c, do_unlink=True)
             if slope and prof.get("bridge"):
                 # 端の坂の躯体は、assemble が上面を地面より少し上（0.02）に止めるので、坂の下の端で路面（上面 0）より上に出て
