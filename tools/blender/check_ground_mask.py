@@ -7,7 +7,8 @@ bpy などを差し替えて cells を読み、SHEET_PAK_SIZE=256 で次を確�
 - 四隅の高さ 0〜2（最低 0）の 65 形すべてで、マスクが地面のマスをセルの (128, 62 + GROUND_PHASE) に置いた形と同じ
 - 平らのマスクを格子に並べたとき、隙間も重なりも無い
 - side の上下・左右が重ならず、合わせると全体になる（既定の引数のとき）
-- 広げたマスク（線路の spill、道路の cy = ROAD_CY、高架の lower、橋の端の solid）が、平らと坂で素のマスクを含み、
+- 広げたマスク（線路の spill、道路の cy = ROAD_CY、高架の lower、橋の端の solid）が、平らと坂で素のマスク
+  （道路は地面の位置の菱形も。#333）を含み、
   平らの spill・道路のマスクを格子に並べて隙間が無い
 - 広げたマスクの列に途中の穴が無い（65 形。#333）
 - 1 段の台の上の十字と四方の坂の道路（pak256 の scene.py の slope_road）を並べて、台の地面に道路の穴が無い（#333）
@@ -88,8 +89,10 @@ WIDENED = {"spill": dict(spill=2), "road": dict(cy=cells.ROAD_CY), "lower": dict
 for s in [(0, 0, 0, 0), (1, 1, 0, 0), (0, 0, 2, 2), (1, 0, 0, 0)]:
     sl = slope_of(*s)
     for name, kw in list(WIDENED.items()) + ([("solid", dict(solid=True))] if sl else []):
-        # 素のマスクは同じ cy の菱形だけ（道路は地面より下の ROAD_CY に描くので、地面の位置の菱形は含まない）
+        # 素のマスクは同じ cy の菱形。道路（ROAD_CY）は、平らでも地面の位置の菱形も含む（坂と平らの境で奥の縁が跳ばない。#333）
         base = cells._column_mask(sl, None, kw.get("cy", cells.GROUND_CY))
+        if kw.get("cy", cells.GROUND_CY) != cells.GROUND_CY:
+            base = base | cells._column_mask(sl, None, cells.GROUND_CY)
         m = cells._ground_mask(sl, **kw)
         if (base & ~m).any():
             fails.append(f"{name} の形 {s}: 素のマスクを含まない（{int((base & ~m).sum())} 画素）")
