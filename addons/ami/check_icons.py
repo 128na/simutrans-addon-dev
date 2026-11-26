@@ -2,7 +2,7 @@
 
     python -X utf8 check_icons.py [src のディレクトリ]
 
-#25 で、次の 1〜3 の誤りを目で見て見つけた。同じ種類の誤りを機械的に見つける（4 は #141、5 は #287 で足した）。
+#25 で、次の 1〜3 の誤りを目で見て見つけた。同じ種類の誤りを機械的に見つける（4 は #141、5 は #287、6 は #330 で足した）。
 
 1. セルの重なり: 各 dat の icon・cursor が指すセルを、ほかの dat のキーや、同じ dat のほかのキーが指していないか。
    blender/icons.py はセルを空けてから書くので、重なると相手の絵が消えるか、2 つの物が同じアイコンになる
@@ -18,6 +18,11 @@
 5. カーソルの offset: cursor= の offset（`cell,x,y` の x,y）が、同じ dat のほかの絵のキー（image・backimage など）の offset と同じか（#287）。
    置く前のカーソルはタイルの上に出る絵で、offset が絵と違うとタイルからずれる。ゲームでは撮れないので、ここで守る
    （#282 の前、車庫・操車場・停留所・道路標識の cursor= に offset が無く、ずれていた）。展開後の dat を全部読むので、way 系も同じに見る
+
+6. 仮の絵: icon・cursor のセルが、icons.py が書いた物のままか（#330）。描画（sheetlib の render_icon）はアイコンのセルに仮の絵を描き、
+   icons.py が描き直す。icons.py が書いたセルの sha256 を <シート>.icon_cells.txt に控え、ここで今のシートと比べる。
+   控えが無いか違えば、icons.py を流さずに描いたシート（#318 で ami_mark_junction4_c が仮の「M」のアイコンのままマージされた）。
+   仮の絵は背景色も字の置き方も icons.py の絵に近く（線路・道路・高速道路の背景色は同じ）、画素からは見分けられないので、控えで見る
 
 意図して共有・借用するものは、下の SHARE_SUFFIX と BG_BORROW に書く。意図して offset が違うものは CURSOR_OFFSET_ALLOW に書く。
 """
@@ -179,6 +184,57 @@ def expected_sources(objs):
     return out
 
 
+CELLS_SUFFIX = ".icon_cells.txt"  # blender/icons.py と同じ
+
+
+def check_written(src, targets, skipped_names=()):
+    """icons.py が <シート>.icon_cells.txt に控えた、書いたアイコン・カーソルのセルの sha256 を、今のシートと比べる（#330）。
+    targets は (物, キー, セル) の並び。どの物にも控えの行があり、行のセルが dat の指すセルで、sha256 が今のセルと同じでなければならない。
+    控えの無い物・違う物は、icons.py を流さずに描いたシート（render_icon の仮のアイコン・仮のカーソルのまま）か、描き直した後に流し忘れた物。
+    提供用の物（<物><SHARE_SUFFIX>。icons.py は書かない）は <物> の行で見る"""
+    errors, rows_of, cache = [], {}, {}
+    for path in sorted(glob.glob(os.path.join(src, "*" + CELLS_SUFFIX))):
+        sheet = os.path.basename(path)[:-len(CELLS_SUFFIX)]
+        for line in open(path, encoding="utf8"):
+            if line.startswith("#") or not line.strip():
+                continue
+            t = line.split()
+            if len(t) != 5 or t[1] not in ("icon", "cursor") or not t[2].isdigit() or not t[3].isdigit():
+                errors.append(f"{sheet}{CELLS_SUFFIX}: 控えの行の形が違う（物 icon|cursor 行 列 sha256）: {line.strip()}")
+                continue
+            rows_of[(t[0], t[1])] = (sheet, int(t[2]), int(t[3]), t[4])
+    want = {}
+    for o, key, cell in targets:
+        name = o["name"][:-len(SHARE_SUFFIX)] if o["name"].endswith(SHARE_SUFFIX) else o["name"]
+        want[(name, key)] = cell
+    for (name, key), (sheet, r, c, _) in sorted(rows_of.items()):
+        if (name, key) not in want and name not in skipped_names:
+            errors.append(f"{sheet}{CELLS_SUFFIX}: dat に無い物 {name} の {key} の行がある。blender/icons.py を流し直す")
+    for (name, key), cell in sorted(want.items()):
+        got = rows_of.get((name, key))
+        if got is None:
+            errors.append(f"{name}: {key} を icons.py が書いた控え（<シート>{CELLS_SUFFIX}）が無い。描画の仮の絵のままか、"
+                          f"icons.py を流していない。blender -b --factory-startup --python blender/icons.py -- {cell[0]}")
+            continue
+        sheet, r, c, digest = got
+        if (sheet, r, c) != cell:
+            errors.append(f"{name}: {key} の控えのセル {fmt((sheet, r, c))} が、今の dat の指すセル {fmt(cell)} と違う。blender/icons.py を流し直す")
+            continue
+        need = (r + 1) * CELL
+        if sheet not in cache or len(cache[sheet][2]) < need:
+            png = os.path.join(src, sheet + ".png")
+            if not os.path.exists(png):
+                continue  # シートが無いことは 2 で数える
+            cache[sheet] = read_rows(png, need)
+        w, h, rows = cache[sheet]
+        if h < need or w < (c + 1) * CELL:
+            continue  # シートの外は 2 で数える
+        if cell_digest(rows, r, c) != digest:
+            errors.append(f"{name}: {key} のセル {fmt(cell)} が、icons.py が書いた物と違う（描き直して描画の仮の絵に戻ったか、"
+                          f"手で書き換えた）。blender -b --factory-startup --python blender/icons.py -- {sheet}")
+    return errors
+
+
 def check_cursor_offsets(objs):
     """cursor= の offset が、同じ dat のほかの絵のキー（icon 以外のセルの参照）の offset と同じか（#287）"""
     errors = []
@@ -295,6 +351,9 @@ def main(src):
 
     # 5. cursor= の offset が絵と同じか（#287。シートの有無に関わらないので、飛ばした物も含めた全部を見る）
     errors += check_cursor_offsets(all_objs)
+
+    # 6. アイコン・カーソルのセルが、icons.py が書いた物のままか（#330。描画の仮の絵のままの物を見つける）
+    errors += check_written(src, targets, skipped_names)
 
     n = len(objs)
     if skipped and not n:  # 絵のある物が 1 つも無い（dat の綴りやシートの名前が崩れて、全部飛ばされた）なら、通さない

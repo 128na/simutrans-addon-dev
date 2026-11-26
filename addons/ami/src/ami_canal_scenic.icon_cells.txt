@@ -1,0 +1,3 @@
+# 物 icon|cursor 行 列 sha256（blender/icons.py が書いたセル。check_icons.py が今のシートと比べる。#330）
+ami_canal_scenic cursor 0 1 6a5ccce7e60bac42b50ffaef143c1e63adfbd08cde2ca361265a94d9def28120
+ami_canal_scenic icon 0 0 39c4ff19868c2dfcc81b6fb15d38e33a2ce1e59e69002325e6236ee5fb19e0d3

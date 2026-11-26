@@ -1,0 +1,3 @@
+# 物 icon|cursor 行 列 sha256（blender/icons.py が書いたセル。check_icons.py が今のシートと比べる。#330）
+ami_mark_diverge_ramp cursor 0 1 d9ea39de1c515b563fa52a0fafc6cc4d716fdf866ba15769fd4af8a529be4e0b
+ami_mark_diverge_ramp icon 0 0 33b548e448d6ae6cc0eec6b054ed7ec08203643e39034d8098e8c737923170aa
