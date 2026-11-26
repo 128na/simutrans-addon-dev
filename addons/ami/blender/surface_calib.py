@@ -1,4 +1,7 @@
-"""基盤・高架の面の描き込みの量を、段に分けて見比べる試作（#78）。
+"""基盤・高架の面の描き込みの量を、段に分けて見比べる試作（#78）。決定済みの履歴で、今は流さない。
+
+流すと、コミット済みの rounds/ami_surface_calib.pak（決める前の段 0 の絵を持つ記録）を、段 2 を入れた後の絵で上書きする（下の説明）。
+流すと止まる（描く入口も pak を作る入口も）。それでも流すときは SURFACE_CALIB_FORCE=1 を付ける（#351）。
 
 在来線の基盤の 4 版・高架の 4 版（ami_rail_ballast_base_<版>・_elev_<版>）だけを、段ごとに別の名前で描く。変えるのは、
 基盤の板（材質の名前 base）と高架の躯体（elev_body）の材質だけで、道床・まくらぎ・レール・壁・橋脚は今の絵のまま。
@@ -113,6 +116,8 @@ def _pack():
 
 
 if __name__ == "__main__":
+    if os.environ.get("SURFACE_CALIB_FORCE") != "1":
+        sys.exit("[surface] 決定済みの履歴で、流すと rounds/ami_surface_calib.pak を上書きする（先頭の説明）。流すときは SURFACE_CALIB_FORCE=1 を付ける")
     try:
         import bpy  # noqa: F401
     except ImportError:

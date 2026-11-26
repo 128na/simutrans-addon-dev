@@ -36,7 +36,7 @@ description: できあがった way アドオン（線路・道路と、その�
 
 ### 3. 葉ごとに試す
 
-1. ラウンドの版の設定に、葉ごとの試しの鍵（例: `7snow3`・`7endtrim3`）を足す。AMI は系統（`AMI_FAMILY`。`rail_ballast`・`rail_slab`・`tram`・`road`）ごとに分かれ、在来線は `addons/ami/blender/round.py` の `ROUND_SETTINGS`、ほかは `blender/round_<系統>.py` の `ROUND_SETTINGS` と `apply`。**土台は今の本番の `render.py`。** 本番に入れ済みのラウンドの設定を重ねると二重にかかる（`round.py` の冒頭に書いてある）。共有の `sheetlib` の値をモジュールごと書き換えない
+1. ラウンドの版の設定に、葉ごとの試しの鍵（例: `1chip`・`1sh3`）を足す。AMI は系統（`AMI_FAMILY`。`addons/ami/blender/round.py` の `FAMILIES`）ごとに分かれ、`blender/round_<系統>.py` の `ROUND_SETTINGS` と `apply`。**土台は今の本番の `render.py`。** 本番に入れ済みのラウンドの設定を重ねると二重にかかるので、本番に入れたら、その鍵と `apply` の中身を外す（決めた値は記録に残っている。#351）。在来線（`rail_ballast`）は今は鍵を持たないので、回すときは `round_<系統>.py` を足す（`round.py` の冒頭）。共有の `sheetlib` の値をモジュールごと書き換えない
 2. 鍵を指定して、その葉に関係するシートだけ描く（AMI は `AMI_FAMILY=<系統> AMI_ROUND=<鍵> python -X utf8 ../../tools/blender/render_parallel.py --entry blender/round.py <対象>`。系統の対象は `AMI_FAMILY=<系統> python -X utf8 blender/round.py --targets`）
 3. 前の版と同じセルを並べ、最近傍で 4〜10 倍に拡大して比べる（`zoom.py`、`hcat.py`）。地面の色の背景（雪なら地面の雪の色）に置いて見る
 4. 葉ごとに「採る／採らない」と理由を一言で決める。採らない試しも記録に残す（寸法で直らないと分かったことも知見）
@@ -73,8 +73,8 @@ description: できあがった way アドオン（線路・道路と、その�
 3. 変えていないはずのシート（ほかの種類・壁・橋脚、blender-poc）を描き直し、前とバイト単位で同じことを確かめる
 4. `sheet_audit.py` を前と比べ、増えた印が新しい欠陥でないことを確かめる
 5. 見本をゲームで撮り直す（種類違いも）。行き止まり・壁のある版・坂は必ず見る
-6. 本番の絵をラウンドの版と並べて測るときは、描かずに pak だけ作る（AMI は `python -X utf8 blender/round.py <n>`）。検証環境に入っているユーザーの pak を上書きしない
-7. 物の作りの文書（AMI は `addons/ami/docs/objects/` の、その物の節。README に段ごとの節を作らない。#350）と、ラウンドの版の作りの注記（二重にかからないこと）を直す。記録を書き、ローカルでコミットする
+6. 本番の絵をラウンドの版と並べて測るときは、描かずに pak だけ作る（AMI は `AMI_FAMILY=<系統> python -X utf8 blender/round.py 0`。今の `src/` の絵を `_round0` の名前で入れる。鍵を外した後は `round.py <n>` が断るので、ラウンド 0 を使う）。検証環境に入っているユーザーの pak を上書きしない
+7. 物の作りの文書（AMI は `addons/ami/docs/objects/` の、その物の節。README に段ごとの節を作らない。#350）を直す。本番に入れたラウンドの鍵と `apply` の中身は外し、ラウンドの版の冒頭に、入れたことと記録・外す前のコミットを書く（重ねると二重にかかる鍵を残さない。#351）。記録を書き、ローカルでコミットする
 
 ## ゲームを動かすときの決まり
 

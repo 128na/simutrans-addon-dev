@@ -1,7 +1,7 @@
 #!/bin/bash
 # 基盤・高架の面の描き込みの段（#78。blender/surface_calib.py）の見本（ingame/surface_sample.nut）を敷いて撮る。
-# 使い方（アドオンのディレクトリで。先に python -X utf8 build.py で dist/ami.pak、python -X utf8 blender/surface_calib.py で
-# rounds/ami_surface_calib.pak を作っておく）:
+# 使い方（アドオンのディレクトリで。先に python -X utf8 build.py で dist/ami.pak を作っておく。段の pak はコミット済みの
+# rounds/ami_surface_calib.pak を使う。surface_calib.py は決定済みの履歴で、流すとこの pak を上書きするので止まる。#351）:
 #   GAME_DIR=<検証用のフォルダ> PORT=47400 bash ingame/surface_capture.sh
 # ゲームは work/calib_game/<PORT>/ の写し（calib_capture.sh と同じ作り）で起動し、撮り終えたら閉じて写しも消す。GAME_DIR には書き込まない。
 # 画像は OUT（既定 work/surface/shots）に <気候>_<区画>_surf<段>.png。区画は G（地上の基盤の版。3 線と 1 本）・V（高架の版）、
