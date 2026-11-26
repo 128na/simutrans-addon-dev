@@ -457,7 +457,7 @@ for _t in catalog.ALL_TRACKS:
 # 決めた（2026-11-21。橋もそろえることも同じ日にユーザーが決めた。比べた案は blender/surface_calib.py、記録 docs/records/2026-11-21_ami-surface-detail.md）。
 # 線路の基盤・高架の版と橋（床と桁。高架の single と同じ作りで、高架とつながる）に渡す。雪の絵では基盤の上面は雪の材質のまま。
 # 線路の壁（材質 wall）・橋脚（pier。門型は柱 pier_post_<角>・梁 pier_beam_<辺>）・橋の柱（pier）・坑口の躯体（wall）も同じ段 2 にする
-# （#83。今の絵と並べて見比べ、ユーザーがそろえると決めた。2026-11-21。比べた案は blender/wallpier_calib.py、
+# （#83。今の絵と並べて見比べ、ユーザーがそろえると決めた。2026-11-21。比べた案の道具 blender/wallpier_calib.py は #336 で消した、
 # 記録 docs/records/2026-11-21_ami-wall-pier-surface.md）。壁の way-object のシートは基盤の版の対象が書くので、基盤の版の表に wall を入れる
 # （way のシートの壁は基盤を削るためだけに置くので、way の絵は変わらない）。道路の壁・橋脚は道路一式のコンクリート（ROAD_MAT_SKIN）のまま
 TRACK_SURFACE = dict(amp=0.12, grain=2.5, stain=0.15, stain_scale=0.35)
