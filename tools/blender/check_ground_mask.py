@@ -100,6 +100,19 @@ for name in ("spill", "road"):
     if (tiled(cells._ground_mask(None, **WIDENED[name])) == 0).any():
         fails.append(f"{name} の平らの並びに隙間がある")
 
+# 平らな道路（ROAD_CY）の奥の辺の上の帯（地面の菱形の中で、道路の位置の菱形より上）: つながる辺（北・西）は空ける（奥のタイルの絵が埋める。
+# 塗ると、白線が向きを変える所で奥の線の端を覆った。#354）。つながらない辺は地面の位置まで塗る（坂と平らの境の跳び。#333）
+_band = cells._column_mask(None, None, cells.GROUND_CY) & ~cells._column_mask(None, None, cells.ROAD_CY)
+_west = np.arange(CELL) < CELL // 2  # 菱形の上の角は北西の角。左の半分の列が西の辺、右の半分の列が北の辺
+for exits in ("", "ns", "ew", "nsew", "ne", "sw", "nw", "se"):
+    m = cells._ground_mask(None, cy=cells.ROAD_CY, exits=exits)
+    for d, cols in (("w", _west), ("n", ~_west)):
+        band = _band & cols[None, :]
+        if d in exits and (m & band).any():
+            fails.append(f"平らな道路（つながる辺 {exits!r}）: つながる {d} の辺の上の帯を塗る（{int((m & band).sum())} 画素）")
+        if d not in exits and (band & ~m).any():
+            fails.append(f"平らな道路（つながる辺 {exits!r}）: つながらない {d} の辺の上の帯を塗らない（{int((band & ~m).sum())} 画素）")
+
 def gaps(mask):
     """列ごとに、一番上と一番下の行の間で抜けている画素の数"""
     n = 0

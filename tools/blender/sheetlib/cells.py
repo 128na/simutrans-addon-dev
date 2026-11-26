@@ -132,17 +132,18 @@ _ROAD_CY_1 = 128
 ROAD_CY = _ROAD_CY_1 * SCALE
 
 
-def _ground_mask(slope, side=None, cy=GROUND_CY, spill=0, solid=False, lower=0):
+def _ground_mask(slope, side=None, cy=GROUND_CY, spill=0, solid=False, lower=0, exits=None):
     """持ち分マスク（地面の範囲。下の _ground_mask_1x の説明）。cy・spill・lower は SCALE 倍の画素で受け取る。
     pak128 は _ground_mask_1x（画素の中心が四角形の中か）。pak128 より大きいときは _ground_mask_direct（列ごとの判定。pak256 の地面と同じ決まり）。
     以前（#266）は pak128 の大きさで作って最近傍で拡大していた。地面が pak128 を 2 倍にした pak256poc（縁の段が 4×2）のときはそれで合ったが、
-    pak256 の地面（段が 2×1）では道路の縁が 4×2 の階段になった（#321）"""
+    pak256 の地面（段が 2×1）では道路の縁が 4×2 の階段になった（#321）。
+    exits はタイルのつながる辺（exits_of。大きいほうの平らなタイルで、つながる奥の辺の上の帯を空ける。_ground_mask_direct）"""
     if SCALE == 1:
         return _ground_mask_1x(slope, side, cy, spill, solid, lower)
-    return _ground_mask_direct(slope, side, cy, spill, solid, lower)
+    return _ground_mask_direct(slope, side, cy, spill, solid, lower, exits)
 
 
-def _ground_mask_direct(slope, side=None, cy=GROUND_CY, spill=0, solid=False, lower=0):
+def _ground_mask_direct(slope, side=None, cy=GROUND_CY, spill=0, solid=False, lower=0, exits=None):
     """pak128 より大きいときの持ち分マスク。広げ方は _ground_mask_1x と同じ意味で、pak128 の半行は SCALE // 2 画素にあたる。
     地面の形は列ごとの判定（_column_mask）なので、行をずらすと形はそのまま動く。広げるのは、ずらした形の和で作る"""
     half_row = SCALE // 2
@@ -167,8 +168,22 @@ def _ground_mask_direct(slope, side=None, cy=GROUND_CY, spill=0, solid=False, lo
         # _ground_mask_1x は坂だけ地面の位置を足し、平らは奥の 2 辺を 1 行空けて奥のタイルのはみ出しに任せる（pak128 標準の道路とそろえる。ROAD_CY の注）。
         # 大きいほうは平らも足す: 坂と平らの境で奥の縁が SCALE 行跳び、256 で出っ張りに見えた（#333）。
         # pak256 には pak128 標準の道路が無いので空ける理由が無く、平らな道路・路面軌道・運河・踏板の奥の縁が地面の菱形の縁とそろう
+        band = np.zeros_like(m)
         for k in range(min(GROUND_CY, cy), max(GROUND_CY, cy)):
-            m |= _column_mask(slope, side, k)
+            band |= _column_mask(slope, side, k)
+        if not slope and exits:
+            # ただし平らなタイルの、つながる奥の辺（北・西）の上の帯は空ける（#354）。帯は地面の菱形の中でも自分のタイルの外の絵
+            # （絵全体を cy まで下げたので、奥の隣のタイルの手前の端の絵にあたる所）で、つながる辺の先は同じ way のタイルが
+            # 自分の本当の絵で埋める。手前のタイルは後から描かれるので、塗ると奥の絵を自分の絵の延長で覆い、
+            # 白線が向きを変える所（坂・橋の端・斜め・高架）で線の端が欠け、延長した線が飛び出した。
+            # つながらない辺（先は草など）は塗る（坂と平らの境の跳びを防ぐ、上の #333 の直し）。
+            # 菱形の上の角は北西の角で、左の半分の列が西の辺、右の半分の列が北の辺の上
+            left = np.arange(CELL) < CELL // 2
+            if "w" in exits:
+                band[:, left] = False
+            if "n" in exits:
+                band[:, ~left] = False
+        m |= band
     if lower:
         base = m.copy()
         for k in range(1, lower + 1):
@@ -252,9 +267,9 @@ def _ground_mask_at(slope, side, cy):
     return inside
 
 
-def _render_ground(slope, path, side=None, cy=GROUND_CY, spill=0, solid=False, lower=0):
+def _render_ground(slope, path, side=None, cy=GROUND_CY, spill=0, solid=False, lower=0, exits=None):
     """持ち分マスク（地面の範囲）を PNG に書く。"""
-    m = _ground_mask(slope, side, cy, spill, solid, lower).astype(np.uint8) * 255
+    m = _ground_mask(slope, side, cy, spill, solid, lower, exits).astype(np.uint8) * 255
     save_rgba(path, np.dstack([m, m, m, np.full_like(m, 255)]))
 
 
@@ -273,7 +288,7 @@ def render_cell(name, exits=None, slope=None, side=None, cy=GROUND_CY, spill=0, 
         if os.path.exists(p):
             os.remove(p)
     if exits is not None:
-        _render_ground(slope, own_path, side, cy, spill, solid, lower)
+        _render_ground(slope, own_path, side, cy, spill, solid, lower, exits)
     meshes = [ob for ob in scene.objects if ob.type == "MESH"]
     if not any(s.material and s.material.get("special") for ob in meshes for s in ob.material_slots):
         return path
