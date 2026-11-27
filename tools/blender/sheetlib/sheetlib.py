@@ -1084,7 +1084,7 @@ def _track_sheet(profile="new"):
                 # 上がった側の端の最後の列が欠けて、隣の平らなタイルの壁との間に 1px のすき間が出た（持ち分は render_layers で 1 列広げる）
                 kw["tall_pad"] = SLOPE_WALL_PAD
             elif "tall_pad" in prof:
-                # prof["tall_pad"]（無くてよい）: 高さのある部品を辺より長く残す余白（既定 TALL_PAD。跨座式の桁は 0: 角で端面が外へ出ないように。#375）
+                # prof["tall_pad"]（無くてよい）: 高さのある部品を辺より長く残す余白（既定 TALL_PAD。跨座式の桁は 0.05: 角で端面が外へ出ないように。#375）
                 kw["tall_pad"] = prof["tall_pad"]
 
             def build(ps, pths):
