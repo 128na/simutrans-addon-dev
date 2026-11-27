@@ -589,14 +589,15 @@ for _v, _walls in BASE_VARIANTS.items():
     for _elev in (False, True):
         _n = f"{catalog.MAGLEV_GUIDEWAY}_{'elev_' if _elev else ''}{_v}"
         R.TRACK_PROFILES[_p(_n)] = dict(_MAG_GUIDEWAY, sheet=_n, walls=_walls, **_way_flags(_n),
-                                        **(dict(elev_body=True, lower=R.ELEV_BODY_LOWER, band="elevated") if _elev else {}))
+                                        **(dict(elev_body=True, lower=R.ELEV_BODY_LOWER, band="elevated") if _elev
+                                           else dict(ends_behind=True)))  # 地上の行き止まりには車庫が建つ（#394）
 # トンネルの坑口に描く床（壁・基盤の無い描き分け。坑口の中に防音壁が立たないように）
 MAGLEV_TUNNEL_KEY = _p(catalog.MAGLEV_GUIDEWAY_TUNNEL) + "_floor"
 R.TRACK_PROFILES[MAGLEV_TUNNEL_KEY] = dict(_MAG_GUIDEWAY, sheet=catalog.MAGLEV_GUIDEWAY_TUNNEL, groups=("body",), replace={})
 R.TRACK_PROFILES[_p(catalog.MAGLEV_GUIDE)] = {
     "sheet": catalog.MAGLEV_GUIDE, "label": "E", "spill": 1 * R.SCALE, "datums": _DATUMS, "snow": False, "groups": ("body",),
     "track_parts": R.guide_parts(), "front_row": sheet_rows.WALL_FRONT_ROW, "rise": R.GUIDE_RISE,
-    "diag_curves": True, "close": False, "ex_switches": False}
+    "diag_curves": True, "close": False, "ex_switches": False, "ends_behind": True}  # 車庫の上に手前の側壁が重ならない（#394）
 _TUBE_WALLS = {n: dataclasses.replace(p, shape=R.to_edge_shape(R._wall_shape(s)))
                for p in R.TRACK_EXTRAS for n, s in (("wallL", -1), ("wallR", 1)) if p.name == n}
 _TUBE_WALLS["endw"] = dataclasses.replace(next(p for p in R.TRACK_EXTRAS if p.name == "endw"), name="endw_edge",
@@ -606,7 +607,8 @@ for _v, _walls in BASE_VARIANTS.items():
     for _elev in (False, True):
         _n = f"{catalog.MAGLEV_TUBE}_{'elev_' if _elev else ''}{_v}"
         R.TRACK_PROFILES[_p(_n)] = dict(_MAG_TUBE, sheet=_n, walls=_walls, **_way_flags(_n),
-                                        **(dict(elev_body=True, lower=R.ELEV_BODY_LOWER, band="elevated") if _elev else {}))
+                                        **(dict(elev_body=True, lower=R.ELEV_BODY_LOWER, band="elevated") if _elev
+                                           else dict(ends_behind=True)))
 MAGLEV_TUBE_TUNNEL_KEY = _p(catalog.MAGLEV_TUBE) + "_tunnel_floor"
 R.TRACK_PROFILES[MAGLEV_TUBE_TUNNEL_KEY] = dict(_MAG_TUBE, sheet=f"{catalog.MAGLEV_TUBE}_tunnel", groups=("body",), replace={})
 R.TRACK_PROFILES[_p(catalog.MAGLEV_TUBE_COVER)] = dict(

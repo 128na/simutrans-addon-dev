@@ -1196,7 +1196,10 @@ def _track_sheet(profile="new"):
                     wcells[(pos[0] + WALL_FRONT_ROW, pos[1])] = wfront
             elif any(ob.get("tall") for ob in obs):
                 # 手前の絵を持たない物（front_row が無い）は、高さのある部品を手前と奥に分けず、奥の絵に重ねる（跨座式の桁。#375）
-                cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, "front_row" in prof, own_exits, mask_slope, cy,
+                # prof["ends_behind"]（無くてよい）: 行き止まりのセルも分けない。車庫は行き止まりのタイルに建ち、way の手前の絵は建物の
+                # 手前の絵より後に描かれるので、手前の壁が車庫の上に重なる（AMI のリニア。#394）
+                split = "front_row" in prof and not (prof.get("ends_behind") and name in ("s", "w", "n", "e"))
+                cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, split, own_exits, mask_slope, cy,
                                                                       prof["spill"], prof.get("rise", WALL_RISE), prof.get("solid", False),
                                                                       lower, frame=near_frame(name, paths, origin))
                 if front:
