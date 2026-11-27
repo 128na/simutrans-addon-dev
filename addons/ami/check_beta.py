@@ -22,7 +22,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 NUT = os.path.join(HERE, "ingame", "beta_check.nut")
 SKIP = "ex_donors.dat"
 KEYS = ("obj", "name", "waytype", "type", "own_waytype")
-ELECTRIC_NAME = re.compile(r"_(catenary|power|guide)(_|$)")
+ELECTRIC_NAME = re.compile(r"_(catenary|power|guide)")  # way-object だけに当てる
 NEEDS = {  # 敷き方（obj、building は obj と type） → waytype が要る表
     "way": ("WT",),
     "way-object": ("WT", "CARRIER"),
