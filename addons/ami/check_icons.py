@@ -219,7 +219,7 @@ def check_written(src, targets, skipped_names=()):
         if got is None:
             errors.append(f"{name}: {key} を icons.py が書いた控え（<シート>{CELLS_SUFFIX}）が無い。描画の仮の絵のままか、"
                           f"icons.py を流していない（順番は、描く → icons.py → check.sh。render.py は描いた対象のシートの控えしか書かない）。"
-                          f"blender -b --factory-startup --python blender/icons.py -- {cell[0]}")
+                          f"blender -b --factory-startup --python-exit-code 1 --python blender/icons.py -- {cell[0]}")
             continue
         sheet, r, c, digest = got
         if (sheet, r, c) != cell:
@@ -236,7 +236,7 @@ def check_written(src, targets, skipped_names=()):
             continue  # シートの外は 2 で数える
         if cell_digest(rows, r, c) != digest:
             errors.append(f"{name}: {key} のセル {fmt(cell)} が、icons.py が書いた物と違う（描き直して描画の仮の絵に戻ったか、"
-                          f"手で書き換えた）。blender -b --factory-startup --python blender/icons.py -- {sheet}")
+                          f"手で書き換えた）。blender -b --factory-startup --python-exit-code 1 --python blender/icons.py -- {sheet}")
     return errors
 
 

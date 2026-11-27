@@ -29,7 +29,7 @@ GAME_ARGS="${GAME_ARGS:-} -log 1 -debug 3"  # 警告と読み込みの行まで 
 game_start $PAKS || exit 1
 sleep 3
 
-# 敷く物の一覧: [名前, obj, waytype, system_type]。PAKS の pak に入る物だけ（build.py の belongs。旧描画位置の物は ami_rail_old.pak だけに入る。#26）
+# 敷く物の一覧: [名前, obj, waytype, system_type, type, own_waytype]。PAKS の pak に入る物だけ（build.py の belongs。旧描画位置の物は ami_rail_old.pak だけに入る。#26）
 KEEP=" $(python -X utf8 -c "
 import os, sys
 sys.path.insert(0, '.')
@@ -42,8 +42,8 @@ for f in sorted(os.listdir('src')):
 ITEMS=$(for f in src/*.dat; do
   case $f in *ex_donors.dat) continue ;; esac
   case $KEEP in *" $(basename "$f" .dat) "*) ;; *) continue ;; esac
-  awk -F= 'tolower($1)=="obj"{o=$2} tolower($1)=="name"{n=$2} tolower($1)=="waytype"{w=$2} tolower($1)=="system_type"{s=$2} tolower($1)=="type"{t=$2}
-    END{gsub(/\r/,"",o); gsub(/\r/,"",n); gsub(/\r/,"",w); gsub(/\r/,"",s); gsub(/\r/,"",t); if (s=="") s=0; printf "[\"%s\",\"%s\",\"%s\",%s,\"%s\"],", n, o, w, s, t}' "$f"
+  awk -F= 'tolower($1)=="obj"{o=$2} tolower($1)=="name"{n=$2} tolower($1)=="waytype"{w=$2} tolower($1)=="system_type"{s=$2} tolower($1)=="type"{t=$2} tolower($1)=="own_waytype"{ow=$2}
+    END{gsub(/\r/,"",o); gsub(/\r/,"",n); gsub(/\r/,"",w); gsub(/\r/,"",s); gsub(/\r/,"",t); gsub(/\r/,"",ow); if (s=="") s=0; printf "[\"%s\",\"%s\",\"%s\",%s,\"%s\",\"%s\"],", n, o, w, s, t, ow}' "$f"
 done | sed 's/,$//')
 SQ=$(sed -e '/^[[:space:]]*\/\//d' -e '/^[[:space:]]*$/d' -e "s/^local ITEMS = .*/local ITEMS = [$ITEMS];/" "$NUT")
 RESULT=$(python -X utf8 -c "import json,sys; print(json.load(sys.stdin).get('result'))" <<< "$($M --timeout 300 --run-squirrel "$SQ")")

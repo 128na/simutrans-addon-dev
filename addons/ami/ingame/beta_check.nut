@@ -1,9 +1,10 @@
 // 配る pak の読み込みの確認（#91）: pak に入っている全部の物（way・way-object・橋・トンネル）を、1 つずつ道具で敷けるかを確かめる。
 // ingame/beta_check.sh が src/*.dat から ITEMS の行を作って差し替え、flat_512_left_v64 の温暖側に敷く。見た目は見ない（敷けたかと、敷いた物の名前だけ）。
-// ITEMS: [名前, obj（way・way-object・bridge・tunnel・crossing・building・roadsign）, waytype（dat の値）, system_type（way だけ。1 は高架）, type（building だけ。depot・stop・cur）]
+// ITEMS: [名前, obj（way・way-object・bridge・tunnel・crossing・building・roadsign）, waytype（dat の値）, system_type（way だけ。1 は高架）, type（building だけ。depot・stop・cur）, own_waytype（way-object だけ。electrified_track は電化）]
 // 並べ方（原点 (OX, OY)。1 つの物に 1 行、ROW タイルずつ南へ）:
 //   way: (0)-(5) を東西に敷き、(2) のタイル（高架は 2 段上）の way の名前を読む
-//   way-object: 同じ waytype の運び手の way（CARRIER）を (0)-(5) に敷いてから重ね、(2) のタイルの way-object の名前を読む。架線つきは電化も読む
+//   way-object: 同じ waytype の運び手の way（CARRIER。名前で差し替える物は OVERRIDE と _old）を (0)-(5) に敷いてから重ね、(2) のタイルの way-object の名前を読む。
+//     電化（own_waytype=electrified_track）の物は way が電化し、ほかは電化しないことも読む
 //   橋: 平地の (1)-(7) に架け、(1) の端のタイルの橋の名前を読む
 //   車庫（building の depot）: 同じ waytype の運び手の way を (0)-(5) に敷き、(0) に建てる。(0) の車庫の名前を読む
 //   操車場（building の stop）: 在来線の運び手を (0)-(5) に敷き、(2) に建てる。(2) の建物の名前を読む
@@ -18,9 +19,12 @@ local OX = 20, OY = 20, ROW = 4;
 local MAX_Y = 500, COL_DX = 12;
 local TUNNEL_DX = 40, TUNNEL_ROW = 8;
 local ELEV_UP = 2;  // 高架の床の高さ（段。pak128 の既定）
-// dat の waytype を足したら、下の 3 つの表にも足す（足し忘れは check_beta.py が CI で落とす）
+// dat の waytype を足したら、下の CARRIER・DEPOT_OBJ・WT にも足す（足し忘れは check_beta.py が CI で落とす）
 local CARRIER = {track = "ami_rail_ballast", road = "ami_road_general", tram_track = "ami_tram", monorail_track = "ami_monorail_straddle", water = "ami_canal", maglev_track = "ami_maglev_guideway_single", narrowgauge_track = "ami_narrow_ballast"};
 local DEPOT_OBJ = {track = mo_depot_rail, road = mo_depot_road, tram_track = mo_depot_tram, monorail_track = mo_depot_monorail, water = mo_depot_water, maglev_track = mo_depot_maglev, narrowgauge_track = mo_depot_narrowgauge};
+// CARRIER の代わりの運び手 [waytype, way-object の名前に含む語, 運び手の way]。歩道の壁・柵は歩道（water の way）、懸垂式の電化は懸垂式の way、
+// チューブの覆いはチューブ式の way に重ねる。check_beta.py もこの表を読むので 1 行で書く
+local OVERRIDE = [["water", "sidewalk", "ami_sidewalk"], ["monorail_track", "suspended", "ami_monorail_suspended_center"], ["maglev_track", "tube", "ami_maglev_tube_single"]];
 // 路面軌道（橋脚も）の way は、タイルの上では track の way として読む（本体の tram_track は track_wt の system_type 7）
 local WT = {track = wt_rail, road = wt_road, tram_track = wt_rail, water = wt_water, monorail_track = wt_monorail, maglev_track = wt_maglev, narrowgauge_track = wt_narrowgauge};
 local pl = player_x(0);
@@ -42,14 +46,12 @@ function check_way(n, wt, st, x, y) {
   return got == n ? null : "tile has " + got;
 }
 
-function check_wayobj(n, wt, x, y) {
+function check_wayobj(n, wt, own, x, y) {
   local d = wayobj_desc_x(n);
   if (!d.is_valid()) return "desc missing";
-  // 旧描画位置の壁（名前に _old。#26）は、旧の way（ami_rail_old.pak）に重ねる。歩道の壁・柵は歩道（water の way）、懸垂式の電化は懸垂式の way に重ねる
+  // 旧描画位置の壁（名前に _old。#26）は、旧の way（ami_rail_old.pak）に重ねる。ほかの差し替えは OVERRIDE
   local carrier = CARRIER[wt] + (n.find("_old") != null ? "_old" : "");
-  if (wt == "water" && n.find("sidewalk") != null) carrier = "ami_sidewalk";
-  if (wt == "monorail_track" && n.find("suspended") != null) carrier = "ami_monorail_suspended_center";
-  if (wt == "maglev_track" && n.find("tube") != null) carrier = "ami_maglev_tube_single";  // チューブの覆いはチューブ式の way に重ねる
+  foreach (o in OVERRIDE) if (wt == o[0] && n.find(o[1]) != null) carrier = o[2];
   local cd = way_desc_x(carrier);
   if (!cd.is_valid()) return "carrier desc missing: " + carrier;
   local e = err(command_x.build_way(pl, c(x, y), c(x + 5, y), cd, true));
@@ -59,8 +61,8 @@ function check_wayobj(n, wt, x, y) {
   local t = at(x + 2, y);
   local got = name_of(t.find_object(mo_wayobj));
   if (got != n) return "tile has " + got;
-  // 電化する way-object（own_waytype=electrified_track）。リニアのガイド（_guide）は名前に _catenary・_power が無い
-  if ((n.find("_catenary") != null || n.find("_power") != null || n.find("_guide") != null) && !t.get_way(WT[wt]).is_electrified()) return "not electrified";
+  local el = t.get_way(WT[wt]).is_electrified(), want = own == "electrified_track";
+  if (el != want) return want ? "not electrified" : "unexpectedly electrified";
   return null;
 }
 
@@ -165,7 +167,7 @@ foreach (it in ITEMS) {
       local y = OY + row * ROW, ox = OX + col * COL_DX;
       row++;
       if (obj == "way") r = check_way(n, wt, st, ox, y);
-      else if (obj == "way-object") r = check_wayobj(n, wt, ox, y);
+      else if (obj == "way-object") r = check_wayobj(n, wt, it[5], ox, y);
       else if (obj == "bridge") r = check_bridge(n, ox, y);
       else if (obj == "crossing") r = check_crossing(n, ox, y);
       else if (obj == "building" && it[4] == "depot") r = check_depot(n, wt, ox, y);
