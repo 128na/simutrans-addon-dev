@@ -394,7 +394,7 @@ function lay_bt(bx, by) {
   if (pr.is_valid()) {
     s += r("B4 pierW", command_x.build_way(pl, c(0, 38), c(4, 38), pr, true));
     s += r("B4 pierE", command_x.build_way(pl, c(12, 38), c(15, 38), pr, true));
-  }
+  } else s += PIER + " desc=[missing]\n";  // 橋とトンネルの区画だけを敷くときは、ほかに記録する所が無い
   s += r("B4 wall", command_x.build_wayobj(pl, c(0, 38, ELEV_UP), c(15, 38, ELEV_UP), od["single"]));
   // T1〜T3: トンネル（pak128 の坑口は 2 段の坂だけ）。尾根を 2 段上げ、両端を 2 段の坂にして掘り、前後に地上の基盤の版を敷き、
   // 壁の way-object を坑口とトンネルの中を通して 1 本で敷く（坑口のタイルに壁が無いと、隣のタイルが行き止まりの絵になる）
