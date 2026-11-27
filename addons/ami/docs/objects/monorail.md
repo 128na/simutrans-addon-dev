@@ -14,6 +14,7 @@
 - アイコン: 背景は紫（モノレール。`blender/icons.py` の `WAY_BG`）。高架の版は右下に版の札（前・中・後）と下の帯
 - 値: 150 km/h、地上 30000・600、高架 60000・1200（地上の 2 倍）、トンネル 120000・2400（4 倍）、登場 1900（#110 の一覧。`blender/ami_dat.py` の `VALUES`）
 - pak は `ami_monorail.pak`（`build.py` の `KINDS`。車庫も入る）
+- 直角の曲がりの前後の画像（#375。2026-11-27、OTRPv64、`flat_512_left_v64`、pak128 と pak256。左が直す前）: [`375_corner_128.png`](../375_corner_128.png)・[`375_corner_256.png`](../375_corner_256.png)（地上。nw は電化つき）、[`375_corner_elev_128.png`](../375_corner_elev_128.png)・[`375_corner_elev_256.png`](../375_corner_elev_256.png)（高架の center）。残る斜めの走りの端の出は [`375_diag_run_end_128.png`](../375_diag_run_end_128.png)
 - 見本は `ingame/monorail.sh`（`ingame/monorail.nut`）。ゲームの写し（`work/monorail_game/<PORT>/`）を起動し、地上（車庫と輪・十字・斜め・行き止まり）、高架の 3 版（直線・L 字・T字・斜め・行き止まり）、複線、トンネルを敷き、電化の要らない車両の編成を輪で走らせる。`EXTRA_PAKS` で、借りた車両の pak を写しの中にだけ入れられる。`SNOW=1` で降雪側、`CAPTURE=1` で撮る。使い方はスクリプトの冒頭
   - 確認画像（2026-11-22、`OTRPv64_3.exe`、`flat_512.sve`）: `docs/monorail_ground_temperate.png`（地上の輪・十字・車庫の口の T字）、`monorail_elev_front.png`・`monorail_elev_center.png`・`monorail_elev_back.png`・`monorail_elev_pair.png`、`monorail_tunnel_diag.png`（左がトンネル、右が地上の斜め）、`monorail_snow.png`（降雪側の地上と高架 `front`）、`monorail_vehicle.png`・`monorail_vehicle_zoom.png`（地上を走る編成）、`monorail_depot_vehicle.png`（車庫から出る編成）
   - 車両は、ユーザーが動作の確かめに渡した pak128.japan の跨座式の車両（玉野の 4 両編成。battery）を、写しの中にだけ入れて走らせた。リポジトリには入れていない。高架の上を走る編成は見ていない（地上から高架へ上がる坂を敷いていない）
