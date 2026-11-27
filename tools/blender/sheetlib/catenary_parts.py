@@ -235,7 +235,7 @@ def _tram_straight(path):
 
 def _tram_curve_support(path):
     """曲線のカーブの柱: (弧の中点, そこでの向き, 弧の外側の単位ベクトル, 柱までの距離, 手前の角か)。
-    弧の外側（弦の中点から弧の中点へ向かう側）のタイルの角に立てる"""
+    弧の外側（弦の中点から弧の中点へ向かう側）のタイルの角に立てる。タイルの角を中心にした左右対称の弧が前提（外側の向きが対角になる）"""
     p, d = _anchor(path)
     chord = (path[0] + path[-1]) / 2
     out = (p - Vector((chord.x, chord.y))).normalized()
