@@ -23,6 +23,7 @@
 ### 行き止まりの手前の絵（車庫の上に出さない。#394）
 
 - 地上の超電導・チューブ式の way と、ガイド・チューブの way-object は、行き止まりのセル（`s`・`w`・`n`・`e`）の手前の側壁・端の壁・輪を、手前の絵（`frontimage`）に分けず奥の絵に描く（`render.py` の `ends_behind`）。車庫は行き止まりのタイルに建ち、way と way-object の手前の絵は建物の手前の絵より後に描かれて、車庫の上に重なったため（本体の決まりは [way-addon.md](../../../../docs/reference/way-addon.md) の 5 章）
+- 確認画像（2026-11-27、`sim-WinGDI64-OTRPv64.exe`、`flat_512_left_v64.sve`。4 つの向きの車庫を超電導+ガイド・チューブ式+チューブ・ガイド無し・チューブ無しで建てた）: `docs/maglev394_depot_before.png`・`maglev394_depot_after.png`（128）、`maglev394_256_depot_before.png`・`maglev394_256_depot_after.png`（pak256poc）
 - 代わりに、車庫の無い行き止まり（線の端・終点の駅）に車両がいるとき、車両は手前の側壁・端の壁より手前に描かれる（`docs/maglev394_dead_end.png`）。直線・曲がり・T 字・十字・坂は今までどおり。高架の way は変えていない（車庫は高架に建てない）
 - チューブの輪は半径が車庫の入口より大きく、入口の隣のタイルの手前の輪は車庫に少し重なって見える（隣のタイルの絵。変えていない）
 
