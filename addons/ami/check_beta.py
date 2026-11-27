@@ -7,7 +7,7 @@
     - 1 つの dat は 1 つの物（beta_check.sh の awk は 1 ファイルに 1 物しか読まない）
     - obj（building は type）に、beta_check.nut の敷き方の分岐がある
     - way・way-object の waytype が WT に、way-object・車庫・操車場の waytype が CARRIER に、車庫の waytype が DEPOT_OBJ にある
-    - beta_check.nut の運び手の名前（"ami_…"）が dat にある
+    - beta_check.nut の運び手の名前（"ami_…"）が dat にある。CARRIER の運び手は、キーの waytype の way
 実際に敷けるかは beta_check.sh をゲームで流して見る。
 """
 import argparse
@@ -24,7 +24,7 @@ NEEDS = {  # 敷き方（obj、building は obj と type） → waytype が要�
     "way": ("WT",),
     "way-object": ("WT", "CARRIER"),
     "building depot": ("CARRIER", "DEPOT_OBJ"),
-    "building stop": ("CARRIER", "WT"),
+    "building stop": ("CARRIER",),
 }
 
 
@@ -50,12 +50,12 @@ def dat_items():
 
 
 def parse_nut(text):
-    """beta_check.nut の (表の名前 → キーの集合, 敷き方の集合, 運び手の名前の集合)"""
+    """beta_check.nut の (表の名前 → {キー: 値}, 敷き方の集合, 運び手の名前の集合)"""
     code = "\n".join(line.split("//")[0] for line in text.splitlines())
     tables = {}
     for name in ("CARRIER", "DEPOT_OBJ", "WT"):
         m = re.search(rf"^local {name} = \{{(.*?)\}};", code, re.M)
-        tables[name] = set(re.findall(r"(\w+)\s*=", m[1])) if m else set()
+        tables[name] = dict(re.findall(r'(\w+)\s*=\s*"?(\w+)', m[1])) if m else {}
     kinds = set()
     for m in re.finditer(r'obj == "([\w-]+)"(?: && it\[4\] == "(\w+)")?', code):
         kinds.add(f"{m[1]} {m[2]}" if m[2] else m[1])
@@ -80,20 +80,30 @@ def check(items, nut):
             errors += [f"{name}: beta_check.nut の {t} に waytype={o.get('waytype')} が無い"
                        for t in NEEDS.get(kind, ()) if o.get("waytype") not in tables[t]]
     errors += [f"beta_check.nut の運び手が dat に無い: {n}" for n in sorted(carriers - names)]
+    ways = {(o.get("name"), o.get("waytype")) for _, objs in items for o in objs if o["obj"] == "way"}
+    errors += [f"beta_check.nut の CARRIER の {wt} の運び手が、その waytype の way でない: {n}"
+               for wt, n in tables["CARRIER"].items() if (n, wt) not in ways]
     return errors
 
 
 def self_test():
     nut = ('local CARRIER = {track = "ami_a"};\nlocal DEPOT_OBJ = {track = mo_depot_rail};\nlocal WT = {track = wt_rail};\n'
-           'if (obj == "way") r = 1;\nelse if (obj == "building" && it[4] == "depot") r = 2;\n')
+           'if (obj == "way") r = 1;\nelse if (obj == "way-object") r = 2;\n'
+           'else if (obj == "building" && it[4] == "depot") r = 3;\nelse if (obj == "building" && it[4] == "stop") r = 4;\n')
 
     def items(*objs):
         return [(f"{o['name']}.dat", [o]) for o in objs]
 
     way = {"obj": "way", "name": "ami_a", "waytype": "track"}
     depot = {"obj": "building", "name": "d", "type": "depot", "waytype": "track"}
+    wayobj = {"obj": "way-object", "name": "o", "waytype": "track"}
+    stop = {"obj": "building", "name": "s", "type": "stop", "waytype": "track"}
     bad = {
         "知らない waytype の way": (items(way, {**way, "name": "m", "waytype": "maglev_track"}), nut),
+        "運び手の無い way-object": (items(way, {**wayobj, "waytype": "maglev_track"}), nut),
+        "運び手の無い操車場": (items(way, {**stop, "waytype": "maglev_track"}), nut),
+        "DEPOT_OBJ だけの抜け": (items(way, depot), nut.replace("DEPOT_OBJ = {track", "DEPOT_OBJ = {road")),
+        "運び手の waytype が表のキーと違う": (items({**way, "waytype": "road"}), nut.replace("WT = {track", "WT = {road = wt_road, track")),
         "運び手の無い車庫": (items(way, {**depot, "waytype": "maglev_track"}), nut),
         "知らない type の建物": (items(way, {**depot, "type": "cur"}), nut),
         "知らない obj": (items(way, {"obj": "tunnel", "name": "t", "waytype": "track"}), nut),
@@ -101,7 +111,7 @@ def self_test():
         "1 ファイルに 2 物": ([("two.dat", [way, {**way, "name": "ami_c"}])], nut),
         "表が読めない": (items(way), nut.replace("local WT = ", "local WT2 = ")),
     }
-    errors = [f"正しい物で誤り: {e}" for e in check(items(way, depot), nut)]
+    errors = [f"正しい物で誤り: {e}" for e in check(items(way, wayobj, depot, stop), nut)]
     errors += [f"見逃した: {label}" for label, args in bad.items() if not check(*args)]
     if errors:
         sys.exit("[check_beta] self-test 失敗: " + " / ".join(errors))
