@@ -588,9 +588,8 @@ _MAG_GUIDEWAY = {"spill": 1 * R.SCALE, "datums": _DATUMS, "snow": True, "label":
 for _v, _walls in BASE_VARIANTS.items():
     for _elev in (False, True):
         _n = f"{catalog.MAGLEV_GUIDEWAY}_{'elev_' if _elev else ''}{_v}"
-        R.TRACK_PROFILES[_p(_n)] = dict(_MAG_GUIDEWAY, sheet=_n, walls=_walls, **_way_flags(_n),
-                                        **(dict(elev_body=True, lower=R.ELEV_BODY_LOWER, band="elevated") if _elev
-                                           else dict(ends_behind=True)))  # 地上の行き止まりには車庫が建つ（#394）
+        R.TRACK_PROFILES[_p(_n)] = dict(_MAG_GUIDEWAY, sheet=_n, walls=_walls, ends_behind=True, **_way_flags(_n),  # 行き止まりには車庫が建つ（#394）
+                                        **(dict(elev_body=True, lower=R.ELEV_BODY_LOWER, band="elevated") if _elev else {}))
 # トンネルの坑口に描く床（壁・基盤の無い描き分け。坑口の中に防音壁が立たないように）
 MAGLEV_TUNNEL_KEY = _p(catalog.MAGLEV_GUIDEWAY_TUNNEL) + "_floor"
 R.TRACK_PROFILES[MAGLEV_TUNNEL_KEY] = dict(_MAG_GUIDEWAY, sheet=catalog.MAGLEV_GUIDEWAY_TUNNEL, groups=("body",), replace={})
@@ -606,9 +605,8 @@ _MAG_TUBE = dict(_MAG_GUIDEWAY, track_parts=R.tube_track_parts(), snow_skin=R.TU
 for _v, _walls in BASE_VARIANTS.items():
     for _elev in (False, True):
         _n = f"{catalog.MAGLEV_TUBE}_{'elev_' if _elev else ''}{_v}"
-        R.TRACK_PROFILES[_p(_n)] = dict(_MAG_TUBE, sheet=_n, walls=_walls, **_way_flags(_n),
-                                        **(dict(elev_body=True, lower=R.ELEV_BODY_LOWER, band="elevated") if _elev
-                                           else dict(ends_behind=True)))
+        R.TRACK_PROFILES[_p(_n)] = dict(_MAG_TUBE, sheet=_n, walls=_walls, ends_behind=True, **_way_flags(_n),
+                                        **(dict(elev_body=True, lower=R.ELEV_BODY_LOWER, band="elevated") if _elev else {}))
 MAGLEV_TUBE_TUNNEL_KEY = _p(catalog.MAGLEV_TUBE) + "_tunnel_floor"
 R.TRACK_PROFILES[MAGLEV_TUBE_TUNNEL_KEY] = dict(_MAG_TUBE, sheet=f"{catalog.MAGLEV_TUBE}_tunnel", groups=("body",), replace={})
 R.TRACK_PROFILES[_p(catalog.MAGLEV_TUBE_COVER)] = dict(
