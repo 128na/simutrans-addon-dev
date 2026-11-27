@@ -380,6 +380,10 @@ for _n, _susp in catalog.MONORAIL_POWERS.items():
     R.TRACK_PROFILES[catalog.profile(_n)] = dict(
         R.TRACK_PROFILES[MONORAIL_KEY], sheet=_n, track_parts=R.power_parts(_susp), cell_fills=R.power_insulator_fills(_susp),
         front_row=sheet_rows.WALL_FRONT_ROW, rise=R.POWER_RISE, snow=False, snow_skin={}, label="E", badge="S" if _susp else None)
+# 跨座式の直角の曲がりの角は、辺の中点から軸向きに少し進んでから斜めに曲がる形（#375。sheetlib の "corner_stub"）。
+# 懸垂式は上の dict(R.TRACK_PROFILES[MONORAIL_KEY], ...) が写すので、写し終えた後に跨座式の分だけに足す。dat のセルは catalog.CORNER_STUB_WAYS
+for _n in catalog.CORNER_STUB_WAYS:
+    R.TRACK_PROFILES[catalog.profile(_n)]["corner_stub"] = R.MONO_CORNER_STUB
 
 # ---------------------------------------------------------------- 基盤の版と壁の way-object（ADR 0003。#16）
 # 基盤の版の way（ami_rail_ballast_base_<版>）は、通常の版の道床の下に基盤を敷き、基盤は壁の位置で止まる（壁の無い側はタイルの端まで）。

@@ -136,6 +136,9 @@ MONORAIL_SUSPENDED_ELEVS = tuple(monorail_suspended(_v, True) for _v in MONORAIL
 # モノレールの電化の way-object（own_waytype=electrified_track。#116）: 電車のモノレールの車両を走らせる。方式ごとに 2 つ
 # （2026-11-22、進捗管理の決定）。名前 → 懸垂式用か（絵の作りは sheetlib の monorail_parts の power_*）
 MONORAIL_POWERS = {f"{PREFIX}monorail_power": False, f"{PREFIX}monorail_suspended_power": True}
+# 直角の曲がりの角を、軸向きに少し進んでから斜めに曲がる形にする物（#375。跨座式の地上・高架と、その桁に付く電化）。
+# 角の絵はシートの行 2 の列 5〜8（dat の image[sw]・[nw]・[ne]・[se]）、斜めの走りの diagonal[...] は列 0〜3。render.py の "corner_stub"
+CORNER_STUB_WAYS = (MONORAIL, *MONORAIL_ELEVS, *(_n for _n, _susp in MONORAIL_POWERS.items() if not _susp))
 
 # リニア（1200 km/h、maglev_track。#371。範囲は ADR 0017）。iss のリニア 3 種を、形で名前を付けて作る（2026-11-26、ユーザーの判断 75・案 a）。
 # 橋・留置線は作らない。トンネルの中の way は地上の way（超電導は center の版）。docs/objects/maglev.md の「リニアの作り」

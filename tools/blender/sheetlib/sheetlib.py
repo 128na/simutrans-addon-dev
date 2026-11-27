@@ -1033,6 +1033,16 @@ def _track_sheet(profile="new"):
                     (v[0], swap(v[1]), v[2], *[swap(r) for r in v[3:]]))
                 for k, v in jobs.items() if prof.get("curve_cells") or not v[0].startswith("curve_")}
         diag_of = {id(p): n for n, p in diag_paths.values()}
+    # prof["corner_stub"]（無くてよい）: 直角の曲がりのセル（2, 5〜8）を、辺の中点から軸向きにこの長さだけ進んでから斜めに曲がる折れ線にする
+    # （dat の image[sw] などがこのセルを指し、斜めの走りの diagonal[...] は 2, 0〜3 のまま）。直線のタイルの絵は、高さのある桁ではタイルの外へ
+    # 伸ばした分が角の先に見えるので、角の絵がその分を軸向きの形で受ける（跨座式モノレール。#375）。幅は直線と同じ
+    stub = prof.get("corner_stub")
+    if stub:
+        for k, (name, ends) in enumerate((("sw", (S, W)), ("nw", (N, W)), ("ne", (N, E)), ("se", (S, E)))):
+            a, b = (Vector(v) for v in ends)
+            da, db = a.normalized(), b.normalized()
+            path = MiterPath([a + da * PATH_EXT, a - da * stub, b - db * stub, b + db * PATH_EXT])
+            jobs[(2, 5 + k)] = (f"corner_{name}", [path], None)
     if "only" in prof:
         jobs = {k: v for k, v in jobs.items() if v[0] in prof["only"]}
     if ONLY:

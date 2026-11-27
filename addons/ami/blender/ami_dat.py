@@ -108,6 +108,13 @@ for _t in catalog.OLD_TRACKS:
 # シートのカーブのセル（行 2 の列 5〜8）は描かない。render.py の diag_curves と同じにする）
 DIAG_CURVES = catalog.DIAG_CURVE_WAYS  # 唯一の定義は catalog.py（addon_config.py の DIAG_CURVE_SHEETS と同じ集まり）
 CURVE_TO_DIAG = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
+# catalog.CORNER_STUB_WAYS の物は、image[sw] などが斜めのセルでなく角のセルを指す（diagonal[...] は斜めのセルのまま。#375）
+CURVE_TO_CORNER = {"[sw]": (2, 5), "[nw]": (2, 6), "[ne]": (2, 7), "[se]": (2, 8)}
+
+
+def curve_cell(name, idx):
+    """カーブを斜めの絵で表す物の image[idx]（sw などの曲がり）が指すセル"""
+    return (CURVE_TO_CORNER if name in catalog.CORNER_STUB_WAYS else CURVE_TO_DIAG)[idx]
 
 # 手前の絵（frontimage など）を持つ way: シートは 奥の絵 4 行 → 手前の絵 4 行 → 雪の奥の絵 4 行 → 雪の手前の絵 4 行
 # （sheetlib の track_sheet の front_row。懸垂式モノレールの柱・梁。#116）。名前の集まり
@@ -355,7 +362,7 @@ def dat_text(name, sheet, donor=False):
             if key == "image" and idx in SWITCH_IDX and name in NO_SWITCH:
                 continue
             if key == "image" and sheet in DIAG_CURVES and idx in CURVE_TO_DIAG:
-                row, col = CURVE_TO_DIAG[idx]
+                row, col = curve_cell(name, idx)
             if donor and key == "image" and idx in EX_CELLS:
                 row, col = EX_CELLS[idx]
             out.append(f"{key}{idx}[{season}]={sheet}.{row + season * snow_rows}.{col},{OFFSET}")
@@ -435,7 +442,7 @@ def monorail_power_dat_text(name, suspended, waytype="monorail_track", values=No
         if key not in WAYOBJ_KEYS or idx.startswith("[close") or (key == "image" and idx in SWITCH_IDX):
             continue
         if key == "image" and idx in CURVE_TO_DIAG:
-            row, col = CURVE_TO_DIAG[idx]
+            row, col = curve_cell(name, idx)
         for side, dr in (("back", 0), ("front", WALL_FRONT_ROW)):
             out.append(f"{side}{WAYOBJ_KEYS[key]}{idx}={name}.{row + dr}.{col},{OFFSET}")
     return NL.join(out) + NL
