@@ -106,13 +106,16 @@ game_unlink() {
 }
 
 # game_unlink_all <置き場>: 置き場の下の 2 段まで（<置き場>/*/<PAKSET> など）にあるジャンクションを、すべて外す。
-# 台ごとの写しを持つ置き場（sample_parallel.sh）の rm -rf の前に呼ぶ。MSYS ではジャンクションは -L で見分けられる
+# 台ごとの写しを持つ置き場（sample_parallel.sh）の rm -rf の前に呼ぶ。MSYS ではジャンクションは -L で見分けられる。
+# 外せずに残った物があれば 1（そのときは rm -rf しない。元の pak を守る）
 game_unlink_all() {
-  local d
+  local d left=0
   for d in "$1"/* "$1"/*/*; do
-    [ -L "$d" ] && MSYS2_ARG_CONV_EXCL="*" cmd.exe /c rmdir "$(cygpath -w "$d")" > /dev/null 2>&1
+    [ -L "$d" ] || continue
+    MSYS2_ARG_CONV_EXCL="*" cmd.exe /c rmdir "$(cygpath -w "$d")" > /dev/null 2>&1
+    [ -L "$d" ] && { echo "[${GAME_TAG:-game}] ジャンクションを外せない: $d" >&2; left=1; }
   done
-  return 0
+  return $left
 }
 
 # game_start [pak …]: PORT のゲームを WORK の写しで起動する。同じポートで別のゲームが動いていたら何もせず 1

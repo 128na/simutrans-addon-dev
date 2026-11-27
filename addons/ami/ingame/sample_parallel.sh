@@ -33,8 +33,7 @@ stop_games() {
   [ "${#pids_w[@]}" -eq 0 ] || kill "${pids_w[@]}" 2> /dev/null
   game_kill "$WORK"
   sleep 1
-  game_unlink_all "$WORK"  # PAKSET_SRC のジャンクションを先に外す
-  rm -rf "$WORK"
+  game_unlink_all "$WORK" && rm -rf "$WORK"  # PAKSET_SRC のジャンクションを先に外す。外せなければ残す
 }
 
 for ((i = 0; i < JOBS; i++)); do
@@ -43,7 +42,7 @@ done
 [ -f "$PAK" ] || { echo "[parallel] $PAK が無い"; exit 1; }
 
 # 写しの元を毎回作り直す（GAME_DIR の今の状態で撮る）。台ごとのフォルダはハードリンクなので容量も時間もほとんど使わない
-game_unlink_all "$WORK"  # 前の実行が残したジャンクションは、先に外す
+game_unlink_all "$WORK" || exit 1  # 前の実行が残したジャンクションは、先に外す
 rm -rf "$WORK"
 BASE="$WORK/base"
 mkdir -p "$BASE/save" "$OUT"
@@ -56,7 +55,7 @@ for ((i = 0; i < JOBS; i++)); do
   for e in "$BASE"/*; do
     [ "$(basename "$e")" = config ] && continue
     # PAKSET_SRC のジャンクションは cp -al できないので、台ごとに作り直す（元の pak は読むだけ）
-    if [ -L "$e" ]; then game_junction "$D/$(basename "$e")" "$PAKSET_SRC" || exit 1; else cp -al "$e" "$D/" || exit 1; fi
+    if [ -n "$PAKSET_SRC" ] && [ "$(basename "$e")" = "${PAKSET:-pak128}" ]; then game_junction "$D/$(basename "$e")" "$PAKSET_SRC" || exit 1; else cp -al "$e" "$D/" || exit 1; fi
   done
   cp -r "$BASE/config" "$D/config"  # 昼夜を止めた設定（game_copy）。台ごとに書かれるので共有しない
   game_settings "$D" || exit 1  # 送信用の記録を外した設定（#235）
