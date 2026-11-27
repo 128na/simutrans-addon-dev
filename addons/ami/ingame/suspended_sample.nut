@@ -147,7 +147,7 @@ report += expect_obj("E power ew", 8, 51, 2, "ami_monorail_suspended_power");
 report += expect_obj("S power", 2, 84, 1, "ami_monorail_suspended_power");
 report += expect_obj("W power L", 20, 102, 0, "ami_monorail_power");
 report += expect_obj("W power elev", 8, 111, 2, "ami_monorail_power");
-if (OX > 200)
+if (OX >= 256)  // 降雪側は OX=276 以上。カタログは温暖側を x=212 に置くので、200 では温暖側も塗られる（#392）
   report += r("climate", command_x(tool_set_climate).work(pl, c(-2, -6), c(34, 114), "7"));
 gui.close_all_windows();
 return (report == "" ? "ok\n" : "check\n" + report) + checks;

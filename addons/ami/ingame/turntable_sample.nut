@@ -71,7 +71,7 @@ function lay() {
   local rw = t.get_way(wt_rail);
   infos += "[info] VC rail across (56,3): " + (e == null ? "built" : e) + " crossing=" + (rw == null ? "-" : rw.is_crossing()) + "\n";
   // TI（iss と並べる）
-  local iss = way_desc_x(ISS_TT) != null;
+  local iss = way_desc_x(ISS_TT).is_valid();  // 無い名前でも null にならない（way-addon.md の 8.2）
   if (!iss) infos += "[info] TI " + ISS_TT + " desc=[missing]\n";
   foreach (i, n in iss ? [TT, ISS_TT] : [TT]) {
     local y = 2 + 4 * i, x = 71 + 2 * i;
