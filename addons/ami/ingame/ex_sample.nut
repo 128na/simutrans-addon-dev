@@ -102,7 +102,7 @@ foreach (i, pair in WAYS) {
   local wo = pair[1] == null ? null : wayobj_desc_x(pair[1]);
   local z = pair[0].find("_elev_") != null ? ELEV_UP : 0;
   G.wt = pair[0].find("ami_road_") == 0 ? wt_road : wt_rail;
-  if (w == null || (pair[1] != null && wo == null)) { report += pair[0] + " desc=[missing]\n"; continue; }
+  if (!w.is_valid() || (pair[1] != null && !wo.is_valid())) { report += pair[0] + " desc=[missing]\n"; continue; }
   foreach (snow in [false, true]) {
     local ox = OX + (snow ? SNOW_DX : 0);
     local oy = OY + i * SPACING;

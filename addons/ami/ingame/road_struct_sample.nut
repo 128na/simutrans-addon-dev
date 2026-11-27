@@ -155,22 +155,22 @@ function lay(name, ox, oy) {
   local multi = !(name == "ami_road_local" || name == "ami_road_general");
   foreach (v in ["single", "back", "center", "front", "twin"]) {
     od[v] <- wodx("ami_wall_road_" + v);
-    if (od[v] == null) return "ami_wall_road_" + v + " desc=[missing]\n";
+    if (!od[v].is_valid()) return "ami_wall_road_" + v + " desc=[missing]\n";
   }
   foreach (v in (multi ? ["single", "back", "center", "front"] : ["single"])) {
     ev[v] <- wdx(name + "_elev_" + v);
-    if (ev[v] == null) return name + "_elev_" + v + " desc=[missing]\n";
+    if (!ev[v].is_valid()) return name + "_elev_" + v + " desc=[missing]\n";
     bd[v] <- wdx(name + "_base_" + v);
-    if (bd[v] == null) return name + "_base_" + v + " desc=[missing]\n";
+    if (!bd[v].is_valid()) return name + "_base_" + v + " desc=[missing]\n";
   }
   // 一般道路は円弧、生活道路は L 字のカーブの single の壁を重ねる（#260）。幹線・高速道路は斜めの ami_wall_road_single
   local curved = {ami_road_general = "ami_wall_road_single_arc", ami_road_local = "ami_wall_road_single_ell"};
   if (name in curved) {
     od["single"] = wodx(curved[name]);
-    if (od["single"] == null) return curved[name] + " desc=[missing]\n";
+    if (!od["single"].is_valid()) return curved[name] + " desc=[missing]\n";
   }
   local br = bdx(name + "_bridge");
-  if (w == null || br == null || pier == null) return name + " desc=[missing]\n";
+  if (!w.is_valid() || !br.is_valid() || !pier.is_valid()) return name + " desc=[missing]\n";
   local c = function(x, y, z = 0) { return coord3d(ox + x, oy + y, z); };
   local s = r(name + " label", marker.work(pl, c(0, -3), name));
   // 地上の壁
@@ -346,7 +346,7 @@ function lay(name, ox, oy) {
   s += r("P3 elev", way2(ev["single"], od["single"], q(22, 0), q(22, 10)));
   mode.z = 0;
   mode.pier = null;
-  if (rail != null) s += r("P3 rail", command_x.build_way(pl, q(19, 5), q(25, 5), rail, true));
+  if (rail.is_valid()) s += r("P3 rail", command_x.build_way(pl, q(19, 5), q(25, 5), rail, true));
   foreach (p in [[2, 3], [2, 5], [11, 2], [13, 2], [22, 3], [22, 5], [21, 5], [23, 5]])
     checks += "[check] " + name + " P (" + p[0] + "," + p[1] + ") " + names(ox + qx + p[0], oy + p[1], ELEV_UP) + "\n";
   return s;

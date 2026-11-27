@@ -36,7 +36,7 @@ function lay(ox, oy) {
   local re = way_desc_x(RAIL_ELEV), rw = wayobj_desc_x(RAIL_WALL), de = way_desc_x(ROAD_ELEV), dw = wayobj_desc_x(ROAD_WALL);
   local pd = way_desc_x(PIER);
   foreach (n, d in {front = fd, back = bd, rail_elev = re, rail_wall = rw, road_elev = de, road_wall = dw, pier = pd})
-    if (d == null) return n + " desc=[missing]\n";
+    if (!d.is_valid()) return n + " desc=[missing]\n";
   local wt = fd.get_waytype();
   local c = function(x, y, z = 0) { return coord3d(ox + x, oy + y, z); };
   local way = function(d, x0, y0, x1, y1) { return command_x.build_way(pl, c(x0, y0), c(x1, y1), d, true); };

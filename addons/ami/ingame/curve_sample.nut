@@ -57,7 +57,7 @@ function stair(w, c, x, y, n) {
 
 function lay(name, ox, oy) {
   local w = way_desc_x(WALLED ? name + "_base_single" : name);
-  if (w == null) return name + " desc=[missing]\n";
+  if (!w.is_valid()) return name + " desc=[missing]\n";
   if (WALLED) {
     local shape = name == "ami_road_local" ? "ell" : "arc";
     // 名前から引く（無い名前を直に引くと例外になる）。無い物（#260 より前の pak。前後の比べ用）は ami_wall_road_single にする

@@ -12,7 +12,7 @@ function r(name, v) { return name + "=" + (v == null ? "ok" : "[" + v + "]") + "
 function line(variant, y, wall, track = TRACK) {
   local w = way_desc_x(track + "_base_" + variant);
   local o = wayobj_desc_x(wall);
-  if (w == null || o == null) return variant + " " + y + " missing\n";
+  if (!w.is_valid() || !o.is_valid()) return variant + " " + y + " missing\n";
   local s = "";
   s += r(variant + " way y=" + y, command_x.build_way(pl, coord3d(20, y, 0), coord3d(32, y, 0), w, true));
   s += r(variant + " wall y=" + y, command_x.build_wayobj(pl, coord3d(20, y, 0), coord3d(32, y, 0), o));

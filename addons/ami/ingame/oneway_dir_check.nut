@@ -21,7 +21,7 @@ foreach (v in vehicle_desc_x.get_available_vehicles(wt_road))
   if (v.get_power() > 0 && v.can_be_first() && v.can_be_last() && v.get_freight().get_name() == "Passagiere" && (veh == null || v.get_topspeed() < veh.get_topspeed())) veh = v;
 local st = null;
 foreach (d in building_desc_x.get_available_stations(building_desc_x.station, wt_road, good_desc_x.passenger)) { st = d; break; }
-if (road == null || sg == null || depot_desc == null || veh == null || st == null) return "missing road=" + road + " sign=" + sg + " depot=" + depot_desc + " veh=" + veh + " stop=" + st + "\n";
+if (!road.is_valid() || sg == null || depot_desc == null || veh == null || st == null) return "missing road=" + road + " sign=" + sg + " depot=" + depot_desc + " veh=" + veh + " stop=" + st + "\n";
 // 道路 i: [名前, 始点, 終点, 標識の場所, 標識を置く回数, 車庫の場所, 行き先]
 local tests = [];
 for (local i = 0; i < 4; i++) {

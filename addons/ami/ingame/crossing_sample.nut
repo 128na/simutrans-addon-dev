@@ -48,7 +48,7 @@ function lay_line(tag, p, q, road_first) {
   for (local k = 0; k < 16; k++) {
     local i = START + k * SP;
     local td = way_desc_x(TRACKS[k % 4]), rd = way_desc_x(ROADS[k / 4]);
-    if (td == null || rd == null) { s += tag + " desc=[missing " + TRACKS[k % 4] + " " + ROADS[k / 4] + "]\n"; continue; }
+    if (!td.is_valid() || !rd.is_valid()) { s += tag + " desc=[missing " + TRACKS[k % 4] + " " + ROADS[k / 4] + "]\n"; continue; }
     s += r(tag + " track " + k, command_x.build_way(pl, p(i - 3), p(k == 15 ? LEN : i + 3), td, true));
     if (!road_first) s += r(tag + " road " + k, command_x.build_way(pl, q(i, -2), q(i, 2), rd, true));
   }
@@ -84,7 +84,7 @@ function lay_mixed(ox, oy) {
   foreach (j, m in MIXED) {
     local x = ox + MX + j * 8, y = oy + 2;
     local td = way_desc_x(m[0]), rd = way_desc_x(m[1]);
-    if (td == null || rd == null) { s += "M " + j + " desc=[missing " + m[0] + " " + m[1] + "]\n"; continue; }
+    if (!td.is_valid() || !rd.is_valid()) { s += "M " + j + " desc=[missing " + m[0] + " " + m[1] + "]\n"; continue; }
     s += r("M track " + j, command_x.build_way(pl, coord3d(x - 3, y, 0), coord3d(x + 3, y, 0), td, true));
     s += r("M road " + j, command_x.build_way(pl, coord3d(x, y - 2, 0), coord3d(x, y + 2, 0), rd, true));
     s += r("label M " + j, marker.work(pl, coord3d(x, y - 4, 0), m[0] + "/" + m[1]));

@@ -43,9 +43,9 @@ function lay(step, kind, ox, oy) {
   foreach (v in ["single", "back", "center", "front"]) {
     local n = TRACK + "_" + kind + "_" + v + "_surf" + step;
     wd[v] <- way_desc_x(n);
-    if (wd[v] == null) return n + " desc=[missing]\n";
+    if (!wd[v].is_valid()) return n + " desc=[missing]\n";
     od[v] <- wayobj_desc_x("ami_wall_rail_" + v);
-    if (od[v] == null) return "ami_wall_rail_" + v + " desc=[missing]\n";
+    if (!od[v].is_valid()) return "ami_wall_rail_" + v + " desc=[missing]\n";
   }
   local c = function(x, y) { return coord3d(ox + x, oy + y, 0); };
   local tag = kind + step;
@@ -70,7 +70,7 @@ foreach (n, o in ORIGINS) {
     report += lay(step, "base", o[0] + i * DX, o[1]);
     mode.z = ELEV_UP;
     mode.pier = way_desc_x(PIER);
-    if (mode.pier == null) report += PIER + " desc=[missing]\n";
+    if (!mode.pier.is_valid()) { report += PIER + " desc=[missing]\n"; mode.pier = null; }
     report += lay(step, "elev", o[0] + i * DX, o[1] + VY);
   }
   mode.z = 0;

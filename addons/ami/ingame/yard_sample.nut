@@ -48,7 +48,7 @@ function lay(ox, oy) {
   local bw = way_desc_x("ami_rail_ballast_base_back");
   local elev = way_desc_x("ami_rail_ballast_elev_single");
   local wall = wayobj_desc_x("ami_wall_rail_back");
-  if (rail == null || yard == null || bw == null || elev == null || wall == null) return "desc=[missing]\n";
+  if (!rail.is_valid() || !yard.is_valid() || !bw.is_valid() || !elev.is_valid() || !wall.is_valid()) return "desc=[missing]\n";
   local st = null;
   foreach (d in building_desc_x.get_available_stations(building_desc_x.station, wt_rail, good_desc_x.passenger)) { st = d; break; }
   local depot_desc = null;

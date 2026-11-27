@@ -21,7 +21,7 @@ function r(name, v) { if (v == null) return ""; return name + "=[" + v + "]\n"; 
 
 local wo = wayobj_desc_x(CAT);
 local w = way_desc_x(TRAM);
-if (wo == null || w == null) return "missing desc";
+if (!wo.is_valid() || !w.is_valid()) return "missing desc";
 local depots = {};
 foreach (d in building_desc_x.get_building_list(building_desc_x.depot)) depots[d.get_name()] <- d;
 

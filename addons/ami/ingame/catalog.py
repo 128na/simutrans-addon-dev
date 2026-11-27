@@ -21,8 +21,8 @@ PRELUDE = r"""
 local pl = player_x(0);
 local report = "";
 function r(n, v) { return v == null ? "" : n + "=[" + v + "]\n"; }
-function wy(n) { local d = way_desc_x(n); if (d == null) report += "missing way " + n + "\n"; return d; }
-function wo(n) { local d = wayobj_desc_x(n); if (d == null) report += "missing wayobj " + n + "\n"; return d; }
+function wy(n) { local d = way_desc_x(n); if (!d.is_valid()) { report += "missing way " + n + "\n"; return null; } return d; }
+function wo(n) { local d = wayobj_desc_x(n); if (!d.is_valid()) { report += "missing wayobj " + n + "\n"; return null; } return d; }
 local SNOW = %(snow)d;
 local OX = %(ox)d, OY = %(oy)d;
 function c(x, y, z = 0) { return coord3d(OX + x, OY + y, z); }
@@ -40,7 +40,7 @@ function line(w, wall, n = 10, z = 0, pier = null, y = 4) {
 # 棚の 1 マスの中身（Squirrel）。変数: w… は way_desc_x、wl… は way-object。
 BRIDGE_NUT = r"""
 local br = bridge_desc_x("%(bridge)s");
-if (br == null) report += "missing bridge %(bridge)s\n";
+if (!br.is_valid()) report += "missing bridge %(bridge)s\n";
 else {
   report += r("bridge", command_x.build_bridge(pl, c(3, 4), c(9, 4), br));
   line(wy("%(way)s"), wo("%(wall)s"), 13);
@@ -56,7 +56,8 @@ local d = wy("%(way)s");
 if (d != null) {
   report += r("wayW", command_x.build_way(pl, c(0, 4), c(2, 4), d, true));
   report += r("wayE", command_x.build_way(pl, c(6, 4), c(8, 4), d, true));
-  report += r("wall", command_x.build_wayobj(pl, c(0, 4), c(8, 4), wo("%(wall)s")));
+  local wl = wo("%(wall)s");
+  if (wl != null) report += r("wall", command_x.build_wayobj(pl, c(0, 4), c(8, 4), wl));
 }
 """
 

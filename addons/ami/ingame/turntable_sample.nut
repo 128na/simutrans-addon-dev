@@ -30,7 +30,7 @@ function r(name, v) { return v == null ? "" : name + "=[" + v + "]\n"; }
 function c(x, y) { return coord3d(OX + x, OY + y, 0); }
 function way(tag, n, x0, y0, x1, y1) {
   local w = way_desc_x(n);
-  if (w == null) { report += n + " desc=[missing]\n"; return; }
+  if (!w.is_valid()) { report += n + " desc=[missing]\n"; return; }
   report += r(tag + " " + n, command_x.build_way(pl, c(x0, y0), c(x1, y1), w, true));
 }
 // タイルの転車台の向き（get_dirs）が dirs で、絵が空でないか。違えば返り値に足す

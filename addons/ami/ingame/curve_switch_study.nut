@@ -20,7 +20,7 @@ foreach (i, set in SETS) {
   local oy = OY + i * SPACING;
   local ws = [];
   local missing = false;
-  for (local k = 1; k <= 4; k++) { local d = way_desc_x(set[k]); if (d == null) missing = true; ws.append(d); }
+  for (local k = 1; k <= 4; k++) { local d = way_desc_x(set[k]); if (!d.is_valid()) missing = true; ws.append(d); }
   if (missing) { report += set[0] + " desc=[missing]\n"; continue; }
   local single = ws[0];
   local back = ws[1];

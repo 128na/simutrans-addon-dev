@@ -30,7 +30,7 @@ function name_of(o) { return o == null ? "-" : o.get_desc().get_name(); }
 
 function check_way(n, wt, st, x, y) {
   local d = way_desc_x(n);
-  if (d == null) return "desc missing";
+  if (!d.is_valid()) return "desc missing";
   local e = err(command_x.build_way(pl, c(x, y), c(x + 5, y), d, true));
   if (e != null) return "build_way: " + e;
   local t = at(x + 2, y, st == 1 ? ELEV_UP : 0);
@@ -41,13 +41,13 @@ function check_way(n, wt, st, x, y) {
 
 function check_wayobj(n, wt, x, y) {
   local d = wayobj_desc_x(n);
-  if (d == null) return "desc missing";
+  if (!d.is_valid()) return "desc missing";
   // 旧描画位置の壁（名前に _old。#26）は、旧の way（ami_rail_old.pak）に重ねる。歩道の壁・柵は歩道（water の way）、懸垂式の電化は懸垂式の way に重ねる
   local carrier = CARRIER[wt] + (n.find("_old") != null ? "_old" : "");
   if (wt == "water" && n.find("sidewalk") != null) carrier = "ami_sidewalk";
   if (wt == "monorail_track" && n.find("suspended") != null) carrier = "ami_monorail_suspended_center";
   local cd = way_desc_x(carrier);
-  if (cd == null) return "carrier desc missing: " + carrier;
+  if (!cd.is_valid()) return "carrier desc missing: " + carrier;
   local e = err(command_x.build_way(pl, c(x, y), c(x + 5, y), cd, true));
   if (e != null) return "carrier: " + e;
   e = err(command_x.build_wayobj(pl, c(x, y), c(x + 5, y), d));
@@ -61,7 +61,7 @@ function check_wayobj(n, wt, x, y) {
 
 function check_bridge(n, x, y) {
   local d = bridge_desc_x(n);
-  if (d == null) return "desc missing";
+  if (!d.is_valid()) return "desc missing";
   local e = err(command_x.build_bridge(pl, c(x + 1, y), c(x + 7, y), d));
   if (e != null) return "build_bridge: " + e;
   local got = name_of(at(x + 1, y).find_object(mo_bridge));
@@ -78,7 +78,7 @@ function check_crossing(n, x, y) {
   if (cut == null) return "name not ami_crossing_<track>_<road> or ami_crossing_<way>_canal";
   local td = way_desc_x(canal ? "ami_canal" : "ami_" + rest.slice(0, cut));
   local rd = way_desc_x("ami_" + (canal ? rest.slice(0, cut) : rest.slice(cut + 1)));
-  if (td == null || rd == null) return "way desc missing";
+  if (!td.is_valid() || !rd.is_valid()) return "way desc missing";
   local e = err(command_x.build_way(pl, c(x, y), c(x + 5, y), td, true));
   if (e == null) e = err(command_x.build_way(pl, c(x + 2, y - 1), c(x + 2, y + 1), rd, true));
   if (e != null) return "build_way: " + e;
@@ -91,7 +91,7 @@ function check_crossing(n, x, y) {
 // 車庫（#112 ほか）: 運び手の way の端に建てる。建てた所の車庫の名前を読む
 function check_depot(n, wt, x, y) {
   local d = building_desc_x(n);
-  if (d == null) return "desc missing";
+  if (!d.is_valid()) return "desc missing";
   if (!(wt in CARRIER)) return "no carrier for " + wt;
   local e = err(command_x.build_way(pl, c(x, y), c(x + 5, y), way_desc_x(CARRIER[wt]), true));
   if (e != null) return "build_way: " + e;
@@ -104,7 +104,7 @@ function check_depot(n, wt, x, y) {
 // 操車場（#115。在来線の上に建てる駅の建物）
 function check_stop(n, wt, x, y) {
   local d = building_desc_x(n);
-  if (d == null) return "desc missing";
+  if (!d.is_valid()) return "desc missing";
   local e = err(command_x.build_way(pl, c(x, y), c(x + 5, y), way_desc_x(CARRIER[wt]), true));
   if (e != null) return "build_way: " + e;
   e = err(command_x.build_station(pl, c(x + 2, y), d));
@@ -127,7 +127,7 @@ function check_sign(n, x, y) {
 }
 
 function check_tunnel(n, x, y) {
-  if (tunnel_desc_x(n) == null) return "desc missing";
+  if (!tunnel_desc_x(n).is_valid()) return "desc missing";
   for (local k = 3; k <= 5; k++) for (local h = 0; h < 2; h++) {
     local e = err(command_x.set_slope(pl, c(x + k, y, h), slope.all_up_slope));
     if (e != null) return "raise: " + e;

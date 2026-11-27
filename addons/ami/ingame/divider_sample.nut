@@ -82,16 +82,16 @@ function stair_wo(wo, x, y, n) {
 
 function lay(name, ox, oy) {
   local w = way_desc_x(name);
-  if (w == null) return name + " desc=[missing]\n";
+  if (!w.is_valid()) return name + " desc=[missing]\n";
   local bd = {}, ed = {}, od = {};
   foreach (v in ["back", "center", "front"]) {
     bd[v] <- way_desc_x(name + "_base_" + v);
     ed[v] <- way_desc_x(name + "_elev_" + v);
-    if (bd[v] == null || ed[v] == null) return name + "_base/elev_" + v + " desc=[missing]\n";
+    if (!bd[v].is_valid() || !ed[v].is_valid()) return name + "_base/elev_" + v + " desc=[missing]\n";
   }
   foreach (v in ["back", "front_divider", "center_divider", "twin_divider"]) {
     od[v] <- wayobj_desc_x("ami_wall_road_" + v);
-    if (od[v] == null) return "ami_wall_road_" + v + " desc=[missing]\n";
+    if (!od[v].is_valid()) return "ami_wall_road_" + v + " desc=[missing]\n";
   }
   local c = function(x, y, z = 0) { return coord3d(ox + x, oy + y, z); };
   local s = r(name + " label", marker.work(pl, c(0, -3), name + ": P2 ew / PN ns slope / P0 no walls / P3 6 lanes / PE elevated / R ring / PD close diagonal"));

@@ -31,9 +31,9 @@ function road_state(x, y) { local w = way_at(x, y, wt_road); return w == null ? 
 
 function lay(under, ox, oy) {
   local sd = wdx(SIDE);
-  if (sd == null) return SIDE + " desc=[missing]\n";
+  if (!sd.is_valid()) return SIDE + " desc=[missing]\n";
   local rd = wdx(under);
-  if (rd == null) return under + " desc=[missing]\n";
+  if (!rd.is_valid()) return under + " desc=[missing]\n";
   local swt = sd.get_waytype();
   local c = function(x, y, z = 0) { return coord3d(ox + x, oy + y, z); };
   local road = function(x0, y0, x1, y1) { return command_x.build_way(pl, c(x0, y0), c(x1, y1), rd, true); };
@@ -86,7 +86,7 @@ function lay(under, ox, oy) {
   s += r("X side", side(40, 2, 48, 2));
   s += r("X road", road(42, 0, 42, 4));
   local canal = way_desc_x("canal_020");
-  if (canal != null) s += r("X canal", command_x.build_way(pl, c(46, 0), c(46, 4), canal, true));
+  if (canal.is_valid()) s += r("X canal", command_x.build_way(pl, c(46, 0), c(46, 4), canal, true));
   s += r("X label", marker.work(pl, c(40, -2), "x road / canal"));
   local xr = square_x(ox + 42, oy + 2).get_ground_tile(), xc = way_at(ox + 46, oy + 2, swt), xs = way_at(ox + 44, oy + 2, swt);
   local objs = "";
