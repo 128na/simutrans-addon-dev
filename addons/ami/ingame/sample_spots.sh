@@ -114,7 +114,22 @@ YARD_SPOTS="Y1:2:3 YP:6:4 YE:3:13 YG:11:4 YW:15:3 YT:19:5 YX:30:4"
 TURNTABLE_SPOTS="TT:6:2 VN:17:3 VE:4:11 VX:32:4 VX2:46:3 VC:56:3 TIT:66:4 TIV:72:3"
 # 景観の補助の見本（ingame/scenic_sample.nut。#372）: ラウンドアバウト・説明用の線（地上と高架）・盛土の建物
 SCENIC_SPOTS="RA:6:6 DG:23:6 DE:21:19 MB:40:8 EW:45:8"
+# 跨座式モノレールの見本（ingame/monorail.nut。#113）: 地上の輪と斜め、高架の 3 版、複線、トンネル。monorail.sh の CAPTURE=1 も同じ一覧を読む
+MONORAIL_SPOTS="ground:8:5 ground_diag:21:5 elev_front:9:16 elev_front_r:23:16 elev_center:9:26 elev_center_r:23:26 elev_back:9:36 elev_back_r:23:36 pair:8:46 tunnel:4:52"
+# 懸垂式モノレールの見本（ingame/suspended_sample.nut。#116）: G・E は地上・高架の版（0〜2 = front・center・back）の直線・L 字と T字・斜め、
+#   P 複線、S 坂、V 車両の輪、W 跨座式用の電化
+SUSPENDED_SPOTS=""
+for i in 0 1 2; do
+  for v in G:0 E:36; do
+    IFS=: read n dy <<< "$v"; y=$((12 * i + dy + 3))
+    SUSPENDED_SPOTS="$SUSPENDED_SPOTS ${n}${i}_ew:8:$y ${n}${i}_LT:18:$y ${n}${i}_diag:27:$y"
+  done
+done
+SUSPENDED_SPOTS="$SUSPENDED_SPOTS P:6:75 S:4:84 V:8:95 W_ew:8:105 W_LT:18:105 W_diag:27:105 W_elev:8:111"
 case "${NUT:-}" in
+  # モノレールの見本は原点が 1 つなので、sample_parallel.sh は原点ごとに敷く（PER_SEASON）。懸垂式の原点の y は 24
+  *monorail.nut) SPOTS=${SPOTS:-$MONORAIL_SPOTS}; PER_SEASON=1 ;;
+  *suspended_sample.nut) SPOTS=${SPOTS:-$SUSPENDED_SPOTS}; PER_SEASON=1; SEASONS=${SEASONS:-temperate:20:24 snow:276:24} ;;
   *scenic_sample.nut) SPOTS=${SPOTS:-$SCENIC_SPOTS} ;;
   *tram_sample.nut) SPOTS=${SPOTS:-$TRAM_SPOTS} ;;
   *road_sample.nut) SPOTS=${SPOTS:-$ROAD_SPOTS} ;;
