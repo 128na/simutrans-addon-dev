@@ -239,7 +239,7 @@ Remove-Item Env:SHEET_PAK_SIZE, Env:BUILD_SKIP_MISSING
 ```
 
   - 一部の対象だけを描いた手元で `BUILD_SKIP_MISSING=1` を付けないと、`build.py` は描いていないシートで makeobj の `cannot open <シート>.png` になって止まる（#385）。付けると、シートの無い dat を組まない。配る zip を作るときは、全部を描いて付けずに組む。
-  - 順番は、描く → `icons.py` → `check.sh`。`render_parallel.py` は描いた対象のシートの控えしか書かないので、基盤の対象が一緒に書く壁のシートなどは、`icons.py` を流す前に `check.sh` を流すと「控え（`<シート>.icon_cells.txt`）が無い」で落ちる。全部を描いたときは `icons.py`（Blender で、引数なし）を流す。一部だけを描いたときは、引数なしだと読むシートが無くて止まることがあるので、落ちた文が挙げるシートを `icons.py -- <シート>` で流す。
+  - 順番は、描く → `icons.py` → `check.sh`。`render_parallel.py` は描いた対象のシートの控えしか書かないので、基盤の対象が一緒に書く壁のシートなどは、`icons.py` を流す前に `check.sh` を流すと「控え（`<シート>.icon_cells.txt`）が無い」で落ちる。全部を描いたときは `icons.py`（Blender で、引数なし）を流す。一部だけを描いたときも `icons.py` を流せる（引数なしか `-- <シート>`）。読むシートが無い物は飛ばし、無いシートと飛ばした物を `[icon]` の行で知らせる（#409。控えは変えない）。
   - 256 の描き残しの消し方: `src256/` は、git が追跡する物（dat と、生活道路の `ami_road_local.png`・`ami_road_local.icon_cells.txt`）と、手元で描いた一時の物（`.gitignore` のほかの `*.png`・`*.txt`）が同じフォルダに混ざる。`rm src256/*.png` は追跡している絵も消すので使わない。一時の物はリポジトリの根元で `git clean -Xfq addons/ami/src256`（無視している物だけを消す。何が消えるかは `-Xn` で先に見る）で消し、描き直した追跡している物は `git checkout -- addons/ami/src256` で戻す（未コミットの dat の変更も戻るので、残す物は先にコミットする）。残っていると、次の `check.sh` の 256 の検査と組みがその絵を読む（`check.sh` は追跡していない絵があると知らせる。全部が追跡外の絵になる `CHECK_256_FULL=1` では知らせない）。
 
   zip は 256 の pak（`ami_road.pak`）だけを直下に入れる（readme・許諾・一覧は入れない。pak256 の `tools/fetch_ami.py` は zip の中の `.pak` を全部取る）。許諾の文は `release/license.txt`（CC BY 4.0）で、pak256 が写しを持つ。pak128 の zip（`ami-<版>.zip`）とは名前が違い、混ざらない。
