@@ -1,0 +1,575 @@
+§# English names of AMI objects (#396). Keys are the same as ja_ami.tab (checked by check_texts.py). The leading section sign marks UTF-8; lines starting with # are ignored. Then key and name lines alternate (no blank lines).
+ami_canal
+Canal (AMI)
+ami_canal_depot
+Canal ship depot (AMI)
+ami_canal_scenic
+Scenic canal (AMI)
+ami_crossing_rail_ballast_canal
+Drawbridge crossing: ballasted track and canal (AMI)
+ami_crossing_rail_ballast_road_expressway
+Level crossing: ballasted track and expressway (AMI)
+ami_crossing_rail_ballast_road_general
+Level crossing: ballasted track and general road (AMI)
+ami_crossing_rail_ballast_road_local
+Level crossing: ballasted track and local street (AMI)
+ami_crossing_rail_ballast_road_trunk
+Level crossing: ballasted track and trunk road (AMI)
+ami_crossing_rail_concrete_canal
+Drawbridge crossing: resilient sleeper track and canal (AMI)
+ami_crossing_rail_concrete_road_expressway
+Level crossing: resilient sleeper track and expressway (AMI)
+ami_crossing_rail_concrete_road_general
+Level crossing: resilient sleeper track and general road (AMI)
+ami_crossing_rail_concrete_road_local
+Level crossing: resilient sleeper track and local street (AMI)
+ami_crossing_rail_concrete_road_trunk
+Level crossing: resilient sleeper track and trunk road (AMI)
+ami_crossing_rail_ladder_canal
+Drawbridge crossing: floating ladder track and canal (AMI)
+ami_crossing_rail_ladder_road_expressway
+Level crossing: floating ladder track and expressway (AMI)
+ami_crossing_rail_ladder_road_general
+Level crossing: floating ladder track and general road (AMI)
+ami_crossing_rail_ladder_road_local
+Level crossing: floating ladder track and local street (AMI)
+ami_crossing_rail_ladder_road_trunk
+Level crossing: floating ladder track and trunk road (AMI)
+ami_crossing_rail_slab_canal
+Drawbridge crossing: high-speed slab track and canal (AMI)
+ami_crossing_rail_slab_road_expressway
+Level crossing: high-speed slab track and expressway (AMI)
+ami_crossing_rail_slab_road_general
+Level crossing: high-speed slab track and general road (AMI)
+ami_crossing_rail_slab_road_local
+Level crossing: high-speed slab track and local street (AMI)
+ami_crossing_rail_slab_road_trunk
+Level crossing: high-speed slab track and trunk road (AMI)
+ami_crossing_road_expressway_canal
+Drawbridge crossing: expressway and canal (AMI)
+ami_crossing_road_general_canal
+Drawbridge crossing: general road and canal (AMI)
+ami_crossing_road_local_canal
+Drawbridge crossing: local street and canal (AMI)
+ami_describe_blue
+Annotation line (blue) (AMI)
+ami_describe_blue_elev
+Annotation line (blue, elevated) (AMI)
+ami_describe_green
+Annotation line (green) (AMI)
+ami_describe_green_elev
+Annotation line (green, elevated) (AMI)
+ami_describe_red
+Annotation line (red) (AMI)
+ami_describe_red_elev
+Annotation line (red, elevated) (AMI)
+ami_describe_yellow
+Annotation line (yellow) (AMI)
+ami_describe_yellow_elev
+Annotation line (yellow, elevated) (AMI)
+ami_embankment_back
+Embankment (back) (AMI)
+ami_embankment_building
+Embankment building (slope) (AMI)
+ami_embankment_building_corner
+Embankment building (corner) (AMI)
+ami_embankment_front
+Embankment (front) (AMI)
+ami_maglev_beam
+EMS maglev track (AMI)
+ami_maglev_beam_elev_back
+Elevated EMS maglev track (pillar at back) (AMI)
+ami_maglev_beam_elev_center
+Elevated EMS maglev track (pillars on both sides) (AMI)
+ami_maglev_beam_elev_front
+Elevated EMS maglev track (pillar in front) (AMI)
+ami_maglev_beam_tunnel
+EMS maglev tunnel (AMI)
+ami_maglev_depot
+Maglev depot (AMI)
+ami_maglev_guide
+Superconducting maglev guide (electrification) (AMI)
+ami_maglev_guideway_back
+Superconducting maglev (wall at back) (AMI)
+ami_maglev_guideway_center
+Superconducting maglev (no walls) (AMI)
+ami_maglev_guideway_elev_back
+Elevated superconducting maglev (wall at back) (AMI)
+ami_maglev_guideway_elev_center
+Elevated superconducting maglev (no walls) (AMI)
+ami_maglev_guideway_elev_front
+Elevated superconducting maglev (wall in front) (AMI)
+ami_maglev_guideway_elev_single
+Elevated superconducting maglev (single track) (AMI)
+ami_maglev_guideway_front
+Superconducting maglev (wall in front) (AMI)
+ami_maglev_guideway_single
+Superconducting maglev (single track) (AMI)
+ami_maglev_guideway_tunnel
+Superconducting maglev tunnel (AMI)
+ami_maglev_tube_back
+Tube maglev (wall at back) (AMI)
+ami_maglev_tube_center
+Tube maglev (no walls) (AMI)
+ami_maglev_tube_cover
+Maglev tube cover (AMI)
+ami_maglev_tube_elev_back
+Elevated tube maglev (wall at back) (AMI)
+ami_maglev_tube_elev_center
+Elevated tube maglev (no walls) (AMI)
+ami_maglev_tube_elev_front
+Elevated tube maglev (wall in front) (AMI)
+ami_maglev_tube_elev_single
+Elevated tube maglev (single track) (AMI)
+ami_maglev_tube_front
+Tube maglev (wall in front) (AMI)
+ami_maglev_tube_single
+Tube maglev (single track) (AMI)
+ami_maglev_tube_tunnel
+Tube maglev tunnel (AMI)
+ami_mark_center_yellow
+Road marking: yellow center line (AMI)
+ami_mark_diverge_main
+Road marking: diverge, main line (AMI)
+ami_mark_diverge_ramp
+Road marking: diverge, ramp (AMI)
+ami_mark_junction2
+Road marking: 2-lane junction (AMI)
+ami_mark_junction2_t
+Road marking: 2-lane T-junction (AMI)
+ami_mark_junction4_in
+Road marking: 4-lane junction, entry (AMI)
+ami_mark_junction4_out
+Road marking: 4-lane junction, exit (AMI)
+ami_mark_junction4_c
+Road marking: 4-lane junction, center (AMI)
+ami_mark_junction6_c
+Road marking: 6-lane junction, crossing point (AMI)
+ami_mark_junction6_in
+Road marking: 6-lane junction, entry (AMI)
+ami_mark_junction6_m
+Road marking: 6-lane junction, middle (AMI)
+ami_mark_junction6_out
+Road marking: 6-lane junction, exit (AMI)
+ami_mark_lane4
+Road marking: 4 lanes (AMI)
+ami_mark_lane6_a
+Road marking: 6 lanes, outer lane (AMI)
+ami_mark_lane6_b
+Road marking: 6 lanes, inner lane (AMI)
+ami_mark_lane6_m
+Road marking: 6 lanes, middle (AMI)
+ami_mark_merge_main
+Road marking: merge, main line (AMI)
+ami_mark_merge_ramp
+Road marking: merge, ramp (AMI)
+ami_mark_paving_blue
+Road marking: blue paving (AMI)
+ami_mark_paving_green
+Road marking: green paving (AMI)
+ami_mark_paving_red
+Road marking: red paving (AMI)
+ami_mark_paving_red_striped
+Road marking: red striped paving (AMI)
+ami_mark_roundabout
+Road marking: roundabout (AMI)
+ami_monorail_depot
+Monorail depot (AMI)
+ami_monorail_power
+Monorail power rail (straddle) (AMI)
+ami_monorail_straddle
+Straddle monorail (AMI)
+ami_monorail_straddle_elev_back
+Elevated straddle monorail (pillar at back) (AMI)
+ami_monorail_straddle_elev_center
+Elevated straddle monorail (pillars on both sides) (AMI)
+ami_monorail_straddle_elev_front
+Elevated straddle monorail (pillar in front) (AMI)
+ami_monorail_straddle_tunnel
+Straddle monorail tunnel (AMI)
+ami_monorail_suspended_back
+Suspended monorail (pillar at back) (AMI)
+ami_monorail_suspended_center
+Suspended monorail (pillars on both sides) (AMI)
+ami_monorail_suspended_elev_back
+Elevated suspended monorail (pillar at back) (AMI)
+ami_monorail_suspended_elev_center
+Elevated suspended monorail (pillars on both sides) (AMI)
+ami_monorail_suspended_elev_front
+Elevated suspended monorail (pillar in front) (AMI)
+ami_monorail_suspended_front
+Suspended monorail (pillar in front) (AMI)
+ami_monorail_suspended_power
+Monorail power rail (suspended) (AMI)
+ami_narrow_ballast
+Narrow gauge track (60 km/h, ballast) (AMI)
+ami_narrow_ballast_tunnel
+Narrow gauge tunnel (AMI)
+ami_narrow_depot
+Narrow gauge depot (AMI)
+ami_narrow_wood
+Narrow gauge track (30 km/h, wooden sleepers) (AMI)
+ami_pier_rail
+Rail pier (AMI)
+ami_pier_rail_gate
+Rail pier (portal) (AMI)
+ami_pier_rail_old
+Rail pier (old position) (AMI)
+ami_pier_rail_old_gate
+Rail pier (portal, old position) (AMI)
+ami_pier_road
+Road pier (AMI)
+ami_rail_ballast
+Ballasted track (AMI)
+ami_rail_ballast_base_back
+Ballasted track base (back) (AMI)
+ami_rail_ballast_base_center
+Ballasted track base (center) (AMI)
+ami_rail_ballast_base_front
+Ballasted track base (front) (AMI)
+ami_rail_ballast_base_single
+Ballasted track base (AMI)
+ami_rail_ballast_bridge
+Ballasted track bridge (AMI)
+ami_rail_ballast_elev_back
+Elevated ballasted track (back) (AMI)
+ami_rail_ballast_elev_center
+Elevated ballasted track (center) (AMI)
+ami_rail_ballast_elev_front
+Elevated ballasted track (front) (AMI)
+ami_rail_ballast_elev_single
+Elevated ballasted track (AMI)
+ami_rail_ballast_old
+Ballasted track (old position) (AMI)
+ami_rail_ballast_old_base_back
+Ballasted track base (back, old position) (AMI)
+ami_rail_ballast_old_base_center
+Ballasted track base (center, old position) (AMI)
+ami_rail_ballast_old_base_front
+Ballasted track base (front, old position) (AMI)
+ami_rail_ballast_old_base_single
+Ballasted track base (old position) (AMI)
+ami_rail_ballast_old_bridge
+Ballasted track bridge (old position) (AMI)
+ami_rail_ballast_old_elev_back
+Elevated ballasted track (back, old position) (AMI)
+ami_rail_ballast_old_elev_center
+Elevated ballasted track (center, old position) (AMI)
+ami_rail_ballast_old_elev_front
+Elevated ballasted track (front, old position) (AMI)
+ami_rail_ballast_old_elev_single
+Elevated ballasted track (old position) (AMI)
+ami_rail_ballast_old_tunnel
+Ballasted track tunnel (old position) (AMI)
+ami_rail_ballast_tunnel
+Ballasted track tunnel (AMI)
+ami_rail_concrete
+Resilient sleeper track (AMI)
+ami_rail_concrete_base_back
+Resilient sleeper track base (back) (AMI)
+ami_rail_concrete_base_center
+Resilient sleeper track base (center) (AMI)
+ami_rail_concrete_base_front
+Resilient sleeper track base (front) (AMI)
+ami_rail_concrete_base_single
+Resilient sleeper track base (AMI)
+ami_rail_concrete_bridge
+Resilient sleeper track bridge (AMI)
+ami_rail_concrete_elev_back
+Elevated resilient sleeper track (back) (AMI)
+ami_rail_concrete_elev_center
+Elevated resilient sleeper track (center) (AMI)
+ami_rail_concrete_elev_front
+Elevated resilient sleeper track (front) (AMI)
+ami_rail_concrete_elev_single
+Elevated resilient sleeper track (AMI)
+ami_rail_concrete_old
+Resilient sleeper track (old position) (AMI)
+ami_rail_concrete_old_base_back
+Resilient sleeper track base (back, old position) (AMI)
+ami_rail_concrete_old_base_center
+Resilient sleeper track base (center, old position) (AMI)
+ami_rail_concrete_old_base_front
+Resilient sleeper track base (front, old position) (AMI)
+ami_rail_concrete_old_base_single
+Resilient sleeper track base (old position) (AMI)
+ami_rail_concrete_old_bridge
+Resilient sleeper track bridge (old position) (AMI)
+ami_rail_concrete_old_elev_back
+Elevated resilient sleeper track (back, old position) (AMI)
+ami_rail_concrete_old_elev_center
+Elevated resilient sleeper track (center, old position) (AMI)
+ami_rail_concrete_old_elev_front
+Elevated resilient sleeper track (front, old position) (AMI)
+ami_rail_concrete_old_elev_single
+Elevated resilient sleeper track (old position) (AMI)
+ami_rail_concrete_old_tunnel
+Resilient sleeper track tunnel (old position) (AMI)
+ami_rail_concrete_tunnel
+Resilient sleeper track tunnel (AMI)
+ami_rail_depot
+Train depot (AMI)
+ami_rail_ladder
+Floating ladder track (AMI)
+ami_rail_ladder_base_back
+Floating ladder track base (back) (AMI)
+ami_rail_ladder_base_center
+Floating ladder track base (center) (AMI)
+ami_rail_ladder_base_front
+Floating ladder track base (front) (AMI)
+ami_rail_ladder_base_single
+Floating ladder track base (AMI)
+ami_rail_ladder_bridge
+Floating ladder track bridge (AMI)
+ami_rail_ladder_elev_back
+Elevated floating ladder track (back) (AMI)
+ami_rail_ladder_elev_center
+Elevated floating ladder track (center) (AMI)
+ami_rail_ladder_elev_front
+Elevated floating ladder track (front) (AMI)
+ami_rail_ladder_elev_single
+Elevated floating ladder track (AMI)
+ami_rail_ladder_old
+Floating ladder track (old position) (AMI)
+ami_rail_ladder_old_base_back
+Floating ladder track base (back, old position) (AMI)
+ami_rail_ladder_old_base_center
+Floating ladder track base (center, old position) (AMI)
+ami_rail_ladder_old_base_front
+Floating ladder track base (front, old position) (AMI)
+ami_rail_ladder_old_base_single
+Floating ladder track base (old position) (AMI)
+ami_rail_ladder_old_bridge
+Floating ladder track bridge (old position) (AMI)
+ami_rail_ladder_old_elev_back
+Elevated floating ladder track (back, old position) (AMI)
+ami_rail_ladder_old_elev_center
+Elevated floating ladder track (center, old position) (AMI)
+ami_rail_ladder_old_elev_front
+Elevated floating ladder track (front, old position) (AMI)
+ami_rail_ladder_old_elev_single
+Elevated floating ladder track (old position) (AMI)
+ami_rail_ladder_old_tunnel
+Floating ladder track tunnel (old position) (AMI)
+ami_rail_ladder_tunnel
+Floating ladder track tunnel (AMI)
+ami_rail_slab
+High-speed slab track (AMI)
+ami_rail_slab_base_back
+High-speed slab track base (back) (AMI)
+ami_rail_slab_base_center
+High-speed slab track base (center) (AMI)
+ami_rail_slab_base_front
+High-speed slab track base (front) (AMI)
+ami_rail_slab_base_single
+High-speed slab track base (AMI)
+ami_rail_slab_bridge
+High-speed slab track bridge (AMI)
+ami_rail_slab_elev_back
+Elevated high-speed slab track (back) (AMI)
+ami_rail_slab_elev_center
+Elevated high-speed slab track (center) (AMI)
+ami_rail_slab_elev_front
+Elevated high-speed slab track (front) (AMI)
+ami_rail_slab_elev_single
+Elevated high-speed slab track (AMI)
+ami_rail_slab_old
+High-speed slab track (old position) (AMI)
+ami_rail_slab_old_base_back
+High-speed slab track base (back, old position) (AMI)
+ami_rail_slab_old_base_center
+High-speed slab track base (center, old position) (AMI)
+ami_rail_slab_old_base_front
+High-speed slab track base (front, old position) (AMI)
+ami_rail_slab_old_base_single
+High-speed slab track base (old position) (AMI)
+ami_rail_slab_old_bridge
+High-speed slab track bridge (old position) (AMI)
+ami_rail_slab_old_elev_back
+Elevated high-speed slab track (back, old position) (AMI)
+ami_rail_slab_old_elev_center
+Elevated high-speed slab track (center, old position) (AMI)
+ami_rail_slab_old_elev_front
+Elevated high-speed slab track (front, old position) (AMI)
+ami_rail_slab_old_elev_single
+Elevated high-speed slab track (old position) (AMI)
+ami_rail_slab_old_tunnel
+High-speed slab track tunnel (old position) (AMI)
+ami_rail_slab_tunnel
+High-speed slab track tunnel (AMI)
+ami_rail_turntable
+Turntable / traverser (AMI)
+ami_rail_yard
+Rail yard (AMI)
+ami_road_depot
+Road depot (AMI)
+ami_road_expressway
+Expressway (AMI)
+ami_road_expressway_base_back
+Expressway base (back) (AMI)
+ami_road_expressway_base_center
+Expressway base (center) (AMI)
+ami_road_expressway_base_front
+Expressway base (front) (AMI)
+ami_road_expressway_base_single
+Expressway base (AMI)
+ami_road_expressway_bridge
+Expressway bridge (AMI)
+ami_road_expressway_elev_back
+Elevated expressway (back) (AMI)
+ami_road_expressway_elev_center
+Elevated expressway (center) (AMI)
+ami_road_expressway_elev_front
+Elevated expressway (front) (AMI)
+ami_road_expressway_elev_single
+Elevated expressway (AMI)
+ami_road_expressway_tunnel
+Expressway tunnel (AMI)
+ami_road_general
+General road (AMI)
+ami_road_general_base_single
+General road base (AMI)
+ami_road_general_bridge
+General road bridge (AMI)
+ami_road_general_elev_single
+Elevated general road (AMI)
+ami_road_general_tunnel
+General road tunnel (AMI)
+ami_road_local
+Local street (AMI)
+ami_road_local_base_single
+Local street base (AMI)
+ami_road_local_bridge
+Local street bridge (AMI)
+ami_road_local_elev_single
+Elevated local street (AMI)
+ami_road_local_tunnel
+Local street tunnel (AMI)
+ami_road_trunk
+Trunk road (AMI)
+ami_road_trunk_base_back
+Trunk road base (back) (AMI)
+ami_road_trunk_base_center
+Trunk road base (center) (AMI)
+ami_road_trunk_base_front
+Trunk road base (front) (AMI)
+ami_road_trunk_base_single
+Trunk road base (AMI)
+ami_road_trunk_bridge
+Trunk road bridge (AMI)
+ami_road_trunk_elev_back
+Elevated trunk road (back) (AMI)
+ami_road_trunk_elev_center
+Elevated trunk road (center) (AMI)
+ami_road_trunk_elev_front
+Elevated trunk road (front) (AMI)
+ami_road_trunk_elev_single
+Elevated trunk road (AMI)
+ami_road_trunk_tunnel
+Trunk road tunnel (AMI)
+ami_sidewalk
+Sidewalk (AMI)
+ami_sidewalk_asphalt
+Sidewalk (asphalt) (AMI)
+ami_sidewalk_brick
+Sidewalk (brick) (AMI)
+ami_sidewalk_elev
+Elevated sidewalk (AMI)
+ami_sidewalk_pole_back
+Utility pole (back) (AMI)
+ami_sidewalk_pole_front
+Utility pole (front) (AMI)
+ami_sidewalk_tile
+Sidewalk (tile) (AMI)
+ami_sign_crosswalk
+Crosswalk sign (AMI, paints stripes and stop lines; decoration only)
+ami_sign_crosswalk_one_way
+One-way crosswalk sign (AMI, paints stripes and stop lines; makes the road one-way)
+ami_sign_min_50
+Minimum speed 50 km/h sign (AMI, vehicles slower than 50 km/h cannot pass)
+ami_sign_one_way
+One-way sign (AMI)
+ami_sign_speed_40
+Speed limit 40 km/h sign (AMI, decoration only; no effect on speed)
+ami_sign_speed_60
+Speed limit 60 km/h sign (AMI, decoration only; no effect on speed)
+ami_sign_speed_80
+Speed limit 80 km/h sign (AMI, decoration only; no effect on speed)
+ami_sign_stop
+Stop sign (AMI, decoration only)
+ami_tram
+Tram track (AMI)
+ami_tram_catenary
+Tram catenary (AMI)
+ami_tram_depot
+Tram depot (AMI)
+ami_wall_rail_back
+Track wall (back) (AMI)
+ami_wall_rail_back_catenary
+Track wall (back, with catenary) (AMI)
+ami_wall_rail_center
+Track wall (dead end) (AMI)
+ami_wall_rail_center_catenary
+Track wall (dead end, with catenary) (AMI)
+ami_wall_rail_front
+Track wall (front) (AMI)
+ami_wall_rail_front_catenary
+Track wall (front, with catenary) (AMI)
+ami_wall_rail_old_back
+Track wall (back, old position) (AMI)
+ami_wall_rail_old_back_catenary
+Track wall (back, with catenary, old position) (AMI)
+ami_wall_rail_old_center
+Track wall (dead end, old position) (AMI)
+ami_wall_rail_old_center_catenary
+Track wall (dead end, with catenary, old position) (AMI)
+ami_wall_rail_old_front
+Track wall (front, old position) (AMI)
+ami_wall_rail_old_front_catenary
+Track wall (front, with catenary, old position) (AMI)
+ami_wall_rail_old_single
+Track wall (old position) (AMI)
+ami_wall_rail_old_single_catenary
+Track wall (with catenary, old position) (AMI)
+ami_wall_rail_old_twin
+Track wall (twin diagonal, old position) (AMI)
+ami_wall_rail_old_twin_catenary
+Track wall (twin diagonal, with catenary, old position) (AMI)
+ami_wall_rail_single
+Track wall (AMI)
+ami_wall_rail_single_catenary
+Track wall (with catenary) (AMI)
+ami_wall_rail_twin
+Track wall (twin diagonal) (AMI)
+ami_wall_rail_twin_catenary
+Track wall (twin diagonal, with catenary) (AMI)
+ami_wall_road_back
+Road wall (back) (AMI)
+ami_wall_road_center
+Road wall (dead end) (AMI)
+ami_wall_road_center_divider
+Road wall (dead end, with median) (AMI)
+ami_wall_road_front
+Road wall (front) (AMI)
+ami_wall_road_front_divider
+Road wall (front, with median) (AMI)
+ami_wall_road_single
+Road wall (AMI)
+ami_wall_road_single_arc
+Road wall (arc curve for general road) (AMI)
+ami_wall_road_single_ell
+Road wall (L-shaped curve for local street) (AMI)
+ami_wall_road_twin
+Road wall (twin diagonal) (AMI)
+ami_wall_road_twin_divider
+Road wall (twin diagonal, with median) (AMI)
+ami_wall_sidewalk_back
+Sidewalk fence (back) (AMI)
+ami_wall_sidewalk_back_pole
+Sidewalk fence (back, with utility pole) (AMI)
+ami_wall_sidewalk_front
+Sidewalk fence (front) (AMI)
+ami_wall_sidewalk_front_pole
+Sidewalk fence (front, with utility pole) (AMI)
+ami_wall_sidewalk_single
+Sidewalk fence (AMI)

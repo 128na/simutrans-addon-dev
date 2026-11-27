@@ -1,4 +1,4 @@
-§# AMI の日本語の名前（#122・#162・#263。道路標識・路面の横断歩道・way・橋・トンネル・踏切・車庫など）。先頭の § は UTF-8 の印、# で始まる行は読まれない（OTRP の dataobj/translator.cc）。後は名前と訳の行が交互
+§# AMI の日本語の名前（#122・#162・#263・#396）。dat の物の name= の全部を入れる（check_texts.py が en_ami.tab と一緒に確かめる）。先頭の § は UTF-8 の印、# で始まる行は読まれない（OTRP の dataobj/translator.cc）。後は名前と訳の行が交互（空行は入れない）
 ami_canal
 運河（AMI）
 ami_canal_depot
@@ -481,6 +481,22 @@ ami_sidewalk_pole_front
 電柱（手前）（AMI）
 ami_sidewalk_tile
 歩道（タイル）（AMI）
+ami_sign_crosswalk
+横断歩道の標識（AMI。路面に縞と停止線を描く。飾り）
+ami_sign_crosswalk_one_way
+横断歩道の標識・一方通行（AMI。路面に縞と停止線を描き、一方通行にする）
+ami_sign_min_50
+最低速度 50 km/h の標識（AMI。50 km/h 未満の車は通れない）
+ami_sign_one_way
+一方通行の標識（AMI）
+ami_sign_speed_40
+最高速度 40 km/h の標識（AMI。飾りで、速度は変わらない）
+ami_sign_speed_60
+最高速度 60 km/h の標識（AMI。飾りで、速度は変わらない）
+ami_sign_speed_80
+最高速度 80 km/h の標識（AMI。飾りで、速度は変わらない）
+ami_sign_stop
+一時停止の標識（AMI。飾り）
 ami_tram
 路面軌道（AMI）
 ami_tram_catenary
