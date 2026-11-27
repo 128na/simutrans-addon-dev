@@ -17,6 +17,8 @@
 - シート名を渡すと、そのシートに書くアイコン・カーソルと、そのシートの絵から作るアイコン・カーソル（トンネルは中の way の絵、
   twin の壁は front の版の斜め）を書き直す（#141）。render.py は --own を付けて呼び、描いたシートにだけ書く（並べて描くとき、
   ほかのプロセスが描いている途中のシートを上書きしないように）。ほかのシートにある分は、描き終えてから流す命令を出す
+- 読むシート（書くシートと、絵にするシート）が無い物は飛ばし、その物の控えも変えない。何が無くて何を飛ばしたかを最後に知らせる（#409。
+  一部の対象だけ描いた 256 など）
 - ほかのシートの絵から作った物は、絵のセルの sha256 を、書いたシートの横の <シート>.icon_sources.txt に控える。check_icons.py が比べる
 - 書いたアイコン・カーソルのセルの sha256 を、書いたシートの横の <シート>.icon_cells.txt に控える。check_icons.py が比べ、
   icons.py を流していないシート（描画の仮のアイコンのまま）に気づく（#330）
@@ -478,6 +480,7 @@ def main(targets=None, own_only=False):
         d = read_dat(p)
         dats[d["name"]] = d
     touched, skipped = set(), set()
+    gone, gone_names, gone_sheets = set(), [], set()  # 読むシートが無くて飛ばした物（#409）: 無いシート、物の名前、物が書くシート
     written = {}  # シート → {(物, icon|cursor): (行, 列)}。書いたセルの控え（write_cells）に使う
     targets = set(targets or ())
     for name, d in dats.items():
@@ -496,6 +499,14 @@ def main(targets=None, own_only=False):
             if own_only:
                 skipped.add(name)
                 continue
+        # 一部の対象だけ描いた手元（256 の描き残しなど）では、読むシートが無い物がある。物ごと飛ばし、控えも変えない（#409）
+        need = {isheet, csheet} | key_sheets(pd, pkeys) | key_sheets(d, ckeys)
+        missing = sorted(s for s in need if not os.path.exists(os.path.join(SRC, s + ".png")))
+        if missing:
+            gone.update(missing)
+            gone_names.append(name)
+            gone_sheets |= {isheet, csheet}
+            continue
         icells = used_cells(pd, pkeys)
         ccells = used_cells(d, ckeys)
         stamp = {isheet: [], csheet: []}
@@ -523,12 +534,16 @@ def main(targets=None, own_only=False):
     if not targets:  # 全部を書いたときは、アイコンを書かなくなったシートの控えを消す
         for suffix in (STAMP_SUFFIX, CELLS_SUFFIX):
             for path in glob.glob(os.path.join(SRC, "*" + suffix)):
-                if os.path.basename(path)[:-len(suffix)] not in touched:
+                if os.path.basename(path)[:-len(suffix)] not in touched | gone_sheets:  # 飛ばした物のシートの控えは残す
                     os.remove(path)
                     print(f"[icon] removed {os.path.basename(path)}")
     if skipped:
         print("[icon] 描いたシートの絵から作るアイコン・カーソルが、ほかのシートにある（書いていない）。描き終えたら作り直す: "
               "blender -b --factory-startup --python blender/icons.py -- " + " ".join(sorted(targets)))
+    if gone_names:  # run_in_new_blender は [icon] の行だけを出す
+        print(f"[icon] 読むシートが無いので {len(gone_names)} 物を飛ばした（アイコン・カーソルを書いていない）。要るなら描いてから流し直す")
+        print(f"[icon] 無いシート（{len(gone)} 枚）: " + " ".join(sorted(gone)))
+        print("[icon] 飛ばした物: " +" ".join(sorted(gone_names)))
 
 
 # ---------------------------------------------------------------- ほかのシートの絵の控え（#141）
