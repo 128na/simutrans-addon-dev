@@ -431,7 +431,7 @@ MAGLEV_TUBE_COVER_VALUES = dict(cost=MAGLEV_VALUES["cost"] * 4, maintenance=MAGL
 
 def monorail_power_dat_text(name, suspended, waytype="monorail_track", values=None, kind=None, own_waytype="electrified_track"):
     """モノレールの電化の way-object の dat。シートは way-object の並び（奥の絵 0〜3 行・手前の絵 WALL_FRONT_ROW 下）で、
-    セルは跨座式の way と同じ位置。カーブは斜めのセル（跨座式と同じ）。分岐の絵・近い斜めは持たない。
+    セルは跨座式の way と同じ位置。カーブは curve_cell（跨座式は角のセル、懸垂式・リニアは斜めのセル）。分岐の絵・近い斜めは持たない。
     リニアのガイドとチューブ（#371）も同じ並びで、waytype・values・kind（注記の物の説明）・own_waytype を渡す"""
     v = values or MONORAIL_POWER_VALUES
     kind = kind or ("懸垂式モノレールの電化（桁の下面の給電レールと碍子）" if suspended else "跨座式モノレールの電化（桁の側面の給電レールと碍子）")
