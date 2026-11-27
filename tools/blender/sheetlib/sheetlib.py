@@ -1083,6 +1083,9 @@ def _track_sheet(profile="new"):
                 # 壁を way-object に分ける版の坂: 壁をタイルの外へ長めに残す。坂では基準面の動きが平地と違い、
                 # 上がった側の端の最後の列が欠けて、隣の平らなタイルの壁との間に 1px のすき間が出た（持ち分は render_layers で 1 列広げる）
                 kw["tall_pad"] = SLOPE_WALL_PAD
+            elif "tall_pad" in prof:
+                # prof["tall_pad"]（無くてよい）: 高さのある部品を辺より長く残す余白（既定 TALL_PAD。跨座式の桁は 0.05: 角で端面が外へ出ないように。#375）
+                kw["tall_pad"] = prof["tall_pad"]
 
             def build(ps, pths):
                 # diag_curves の斜めの部分は、斜めのセルと同じ幅・下げ幅で組む（同じ assemble の中で、経路ごとに変える）
@@ -1192,7 +1195,8 @@ def _track_sheet(profile="new"):
                 if wfront:
                     wcells[(pos[0] + WALL_FRONT_ROW, pos[1])] = wfront
             elif any(ob.get("tall") for ob in obs):
-                cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, True, own_exits, mask_slope, cy,
+                # 手前の絵を持たない物（front_row が無い）は、高さのある部品を手前と奥に分けず、奥の絵に重ねる（跨座式の桁。#375）
+                cells[(pos[0] + row0, pos[1])], front = render_layers(cname, obs, "front_row" in prof, own_exits, mask_slope, cy,
                                                                       prof["spill"], prof.get("rise", WALL_RISE), prof.get("solid", False),
                                                                       lower, frame=near_frame(name, paths, origin))
                 if front:
