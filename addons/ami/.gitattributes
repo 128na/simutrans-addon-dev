@@ -1,0 +1,6 @@
+# AMI の道具（blender/ami_dat.py・blender/icons.py・踏切の描画・check_cells.py --update）が LF で書く文字のファイルは、
+# 持ち出しも LF にする（#385）。core.autocrlf=true の手元では CRLF で持ち出され、描き直すたびに改行だけの「変更あり」が数百件出た。
+# PNG に当たる形（*）は書かない（eol を付けると文字の扱いになり、絵が壊れる）。
+src*/*.dat text eol=lf
+src*/*.txt text eol=lf
+check_cells.allow.txt text eol=lf

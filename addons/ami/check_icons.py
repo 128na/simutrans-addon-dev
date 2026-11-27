@@ -218,7 +218,8 @@ def check_written(src, targets, skipped_names=()):
         got = rows_of.get((name, key))
         if got is None:
             errors.append(f"{name}: {key} を icons.py が書いた控え（<シート>{CELLS_SUFFIX}）が無い。描画の仮の絵のままか、"
-                          f"icons.py を流していない。blender -b --factory-startup --python blender/icons.py -- {cell[0]}")
+                          f"icons.py を流していない（順番は、描く → icons.py → check.sh。render.py は描いた対象のシートの控えしか書かない）。"
+                          f"blender -b --factory-startup --python blender/icons.py -- {cell[0]}")
             continue
         sheet, r, c, digest = got
         if (sheet, r, c) != cell:
