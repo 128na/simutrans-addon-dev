@@ -369,25 +369,28 @@ PORT=47300 bash ingame/game.sh STOP
 - 作り方（アドオンのディレクトリで。`python -X utf8 build.py` で `dist/` に pak を作っておく）:
   `GAME_DIR=<検証用のフォルダ> PORT=47500 bash ingame/catalog.sh ALL`
   写し（`work/catalog_game/<PORT>/`）を `settings.xml.v64` で起動し、AMI の pak（`ami.pak` と `ami_rail_old.pak`）だけを入れて、[`ingame/catalog.py`](ingame/catalog.py) で棚を敷き、`world.save_game` で保存して `GAME_DIR/save/ami_catalog.sve` に置く（読み取り専用。既にあれば止まる）。終わったら `PORT=47500 STOP=1 bash ingame/catalog.sh` で閉じる。
-- 置き方: 温暖側は x=8〜、降雪側は同じ配置を x+512。棚の 1 マスは 14×10 マスで、東西 10 マスの直線に 1 つの物（と、重ねる壁・橋脚・橋・トンネル）を置く。`python -X utf8 ingame/catalog.py --list` で、棚の 1 マスごとの座標と名前の一覧が出る。`--coverage` は、`src/` の名前が棚に出てくるか確かめる（路面の色の 5 個（#313）を除いて、今は 266 個）。
-- 新しい物を足したら、`catalog.py` の棚（`rail_cells`・`road_cells`・`misc_cells`・`REUSE`）に足して、流し直す。
+- 置き方: 温暖側は x=8〜、降雪側は同じ配置を x+512。棚の 1 マスは 14×10 マスで、東西 10 マスの直線に 1 つの物（と、重ねる壁・橋脚・橋・トンネル）を置く。`python -X utf8 ingame/catalog.py --list` で、棚の 1 マスごとの座標と名前の一覧が出る。`--coverage`（ゲームは要らない）は、`src/` の dat の名前（提供用の `ex_donors.dat` を除いて、今は 287 個）が全部棚に出てくるか確かめ、抜けがあれば終了コード 1 で止まる。`check.sh`（CI）でも流す（#398）。見るのは敷くコードの中の名前で、実際に敷けたかは見ない（敷けなかった区画は `catalog.sh ALL` が止まる）。
+- 新しい物を足したら、`catalog.py` の棚（`rail_cells`・`road_cells`・`misc_cells`・`REUSE`）に足して、流し直す。見本が名前を組み立てて敷く物（`"ami_…_" + 版`）は、`catalog.py` の `BUILT` にも書く。踏切は、踏切の見本の way の一覧（`TRACKS`・`ROADS`・`WAYS`）から数える。
 
 | 区画 | y（原点） | x の並び（温暖側。1 マス 14 ごと） |
 |---|---|---|
 | 線路 新（ballast・concrete・ladder・slab） | 8, 22, 36, 50 | way、基盤 4 版（single・back・center・front）＋同じ版の壁、同じ 4 版＋架線つきの壁、高架 4 版（壁・橋脚つき）、橋、トンネル、複線の壁（single の上に twin・twin 架線） |
 | 線路 旧描画位置（`_old`。同じ 4 種） | 64, 78, 92, 106 | 同上 |
 | 道路（local・general・trunk・expressway） | 120, 134, 148, 162 | way、基盤 4 版＋壁、基盤＋複線の壁、中央分離帯つきの壁 3 種、高架 4 版、橋、トンネル |
-| 路面軌道・橋脚・歩道 | 190 | `ami_tram`（土・道路 3 種の上）、橋脚 5 種（門型・旧を含む）、歩道 4 種と歩道の柵 |
+| 路面軌道・橋脚・歩道 | 190 | `ami_tram`（土・道路 3 種の上）、橋脚 5 種（門型・旧を含む）、歩道 4 種と歩道の柵 3 版（single・back・front） |
 | 景観の見本（既存の見本を原点を替えて流す） | 206 | 歩道（x=8）、盛土（110）、電柱（212）、道路標識（314）、横断歩道の標識（416） |
 | 路面表示・操車場・運河 | 300 | 6 車線の路面表示（8）、交差点の路面表示（110）、高速道路の分岐・合流（212）、操車場（314）、運河（416） |
 | 車庫・モノレール・景観の運河 | 390 | 車庫（8）、跨座式モノレール（110）、懸垂式モノレール（212）、景観の運河（314） |
 | 踏切・リニア | 480・520 | 踏切の線路 4 種×道路 4 種と pak128 との組（x=8、y=480。東西の線は x=167 まで、南北の線は x=12 を y=602 まで）、リニア 3 種とガイド・チューブ（x=110、y=520。約 152×58 マスなので 2 区画ぶん） |
+| 水路の踏切・狭軌・架線・色と景観の補助 | 720 | 水路の踏切（8）、狭軌（110）、路面軌道の架線（212）、路面の色と黄色の中央線（314）、ラウンドアバウト・説明用の色の way・盛土の建物（416） |
+
+y=618〜704 には区画を置かない（`before_after.sh` の `CANAL=1` が、空き地として運河を敷く）。
 
 - 前後を撮る: [`ingame/before_after.sh`](ingame/before_after.sh)（#197）。カタログの保存データを、前と後の pak の組で別々に起動し、同じ座標を等倍で撮る（`SPOTS_FILE` で座標を渡す。`CANAL=1` で運河・景観の運河を空き地に敷いて、温暖・降雪の両方を撮る）。使い方はスクリプトの冒頭。
   - 複数か所を前後一度に撮る（#227）: `PAKDIR_BEFORE`・`PAKDIR_AFTER` を渡すと、同じ `PORT` で順に 2 回起動して `OUT/before`・`OUT/after` に撮り、`OUT/pairs/` に横に並べる。敷き方は `LAYOUTS_FILE`（NUT と原点・降雪かを 1 行ずつ）、撮る場所は `SPOTS_FILE`（`名前 x y [cx0 cy0 cx1 cy1]`。後ろ 4 つは切り抜きの画素の座標で、最近傍で拡大する。差分から自動では探さない）。書式はスクリプトの冒頭。
 - **地図の大きさに注意**: `ingame/game.sh` の既定の地図（`flat_512_left_v64` など。512 四方）と、`before_after.sh` の地図（`ami_catalog.sve`。1024 四方）は大きさが違う。降雪側は `game.sh` が x=256〜、カタログが x=512〜。見本の座標（`SPOTS` など）を一方から他方へ流用すると、範囲外で止まるか別の所を撮る。座標は、撮る地図で決め直す
 - 運河の見本（`canal.nut`）は、以前は `OX >= 256` で降雪に塗っていたので、カタログの温暖側（x=416）の運河も降雪に塗られていた。降雪に塗るかを `local SNOW`（0 で塗る。`canal.sh` は `SNOW=1`、`catalog.py` は降雪側で 0 に書き換える）で決めるように直した。`ami_catalog.sve` は 2026-11-27 に作り直し、温暖側の運河・懸垂式モノレール・電柱が雪でないことを確かめた（#392。懸垂式と電柱の見本は `OX > 200` で温暖側の x=212 も塗っていたので、`OX >= 256` にした）。
-- 流用した見本は `sidewalk_sample.nut`・`embankment_sample.nut`・`pole_sample.nut`・`roadsign_sample.nut`・`crosswalk_sign_sample.nut`・`marking6_sample.nut`・`marking_sample.nut`・`expwy_marking_sample.nut`・`yard_sample.nut`・`canal.nut`・`depot.nut`・`monorail.nut`・`suspended_sample.nut`・`crossing_sample.nut`・`maglev.nut`。原点（`ORIGINS`・`OX`・`OY`）を `catalog.py` が書き換えて流す。
+- 流用した見本は `sidewalk_sample.nut`・`embankment_sample.nut`・`pole_sample.nut`・`roadsign_sample.nut`・`crosswalk_sign_sample.nut`・`marking6_sample.nut`・`marking_sample.nut`・`expwy_marking_sample.nut`・`yard_sample.nut`・`canal.nut`・`depot.nut`・`monorail.nut`・`suspended_sample.nut`・`crossing_sample.nut`・`maglev.nut`・`turntable_sample.nut`・`canal_crossing.nut`・`narrow.nut`・`tram_catenary.nut`・`color_marking_sample.nut`・`scenic_sample.nut`。原点（`ORIGINS`・`OX`・`OY`）を `catalog.py` が書き換えて流す。`OX >= 256` で降雪に塗る見本は、温暖側の原点の x を 256 未満に置く。
 - 分岐の絵の網羅（全方位・近い斜め・坂）は入れていない（撮影用の見本の役目）。ゲーム内の見た目はユーザーが確かめる。
 
 ## 今の決まりごと

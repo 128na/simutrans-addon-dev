@@ -57,7 +57,8 @@ function run(tag, depot_name, at, wt, a, b) {
   local e1 = schedule_entry_x(a, 0, 0);
   if (e1.x != a.x) { report += "schedule_entry_x is broken: the game's script/ folder is not OTRP's\n"; return; }
   cnv.change_schedule(pl, schedule_x(wt, [e1, schedule_entry_x(b, 0, 0)]));
-  r(tag + " start", d.start_convoy(pl, cnv));
+  local started = d.start_convoy(pl, cnv);  // 出せれば true。name=[…] の行はカタログが失敗と数える（#398）
+  if (started != true) r(tag + " start", started);
   report += "[v] " + tag + " " + veh.get_name() + "\n";
 }
 

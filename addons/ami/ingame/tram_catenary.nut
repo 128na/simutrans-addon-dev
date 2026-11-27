@@ -12,6 +12,7 @@ local DEPOT = "ami_tram_depot";
 local UNDER = ["ami_road_general", null, "ami_road_local"];  // 座標を引く文書があるので、組は後ろに足す
 local OX = 20;
 local OY = 20;
+local SNOW = 9;  // 0 で一帯を降雪に塗る（catalog.py の降雪側が書き換える。坂を作ると気候が戻る）
 local SPACING = 26;
 local pl = player_x(0);
 local report = "";
@@ -127,5 +128,7 @@ foreach (ui, under in UNDER) {
   checks += "[check] " + tag + elec + "\n";
 }
 checks += "[check] vehicle=" + (veh == null ? "-" : veh.get_name()) + "\n";
+if (SNOW == 0)
+  report += r("climate", command_x(tool_set_climate).work(pl, coord3d(OX - 2, OY - 2, 0), coord3d(OX + 34, OY + 3 * SPACING + 2, 0), "7"));
 gui.close_all_windows();
 return (report == "" ? "ok\n" : "check\n" + report) + checks;

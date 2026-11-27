@@ -4,7 +4,7 @@
 # 検証用のフォルダ GAME_DIR には書き込まない。addons/pak128 には AMI の pak だけを入れる（他のアドオンが入ると、カタログが読めなくなる）。
 # 使い方（アドオンのディレクトリで。python -X utf8 build.py で dist/ami.pak を作っておく）:
 #   GAME_DIR=<検証用のフォルダ> PORT=47500 bash ingame/catalog.sh           … 起動して catalog.nut を流す
-#   python -X utf8 ingame/catalog.py --port 47500 [--only 帯の名前] [--side temperate|snow]                       … 動いているゲームに敷く（--coverage は src/ の名前が棚に有るかの確認）
+#   python -X utf8 ingame/catalog.py --port 47500 [--only 帯の名前] [--side temperate|snow]                       … 動いているゲームに敷く（--coverage は src/ の名前が棚に有るかの確認で、--port もゲームも要らない）
 #   GAME_DIR=<検証用のフォルダ> PORT=47500 bash ingame/catalog.sh ALL                                                                       … 起動して catalog.py で全部敷き、保存する（SAVE_AS の既定は ami_catalog）
 #   GAME_DIR=<検証用のフォルダ> PORT=47500 SAVE_AS=ami_catalog bash ingame/catalog.sh                                                        … 保存して GAME_DIR/save/ に置く（既にあれば止まる）
 #   PORT=47500 STOP=1 bash ingame/catalog.sh                                                                     … このスクリプトが起動したゲームだけ閉じて写しを消す

@@ -2,7 +2,7 @@
 
 使い方（アドオンのディレクトリで。MCP_CLIENT は ingame/mcp_client.sh が決める）:
     python -X utf8 ingame/catalog.py --port 47500 [--only rail_new,road] [--side temperate|snow] [--list]
-区画の割り付けは docs/reference/ami-catalog.md。温暖側は x=8〜、降雪側は同じ配置を x+512（土台の降雪側は x≥512）。
+区画の割り付けは README.md の「カタログ」。温暖側は x=8〜、降雪側は同じ配置を x+512（土台の降雪側は x≥512）。
 Squirrel のコードは長くなるので、MCP のクライアントの関数を直接呼び、棚の 1 マスずつ別の呼び出しで流す。
 """
 import argparse
@@ -138,7 +138,8 @@ def misc_cells():
     for n in ("ami_pier_rail", "ami_pier_rail_gate", "ami_pier_rail_old", "ami_pier_rail_old_gate", "ami_pier_road",
               "ami_sidewalk", "ami_sidewalk_asphalt", "ami_sidewalk_brick", "ami_sidewalk_tile"):
         cells.append((n, line_nut(n)))
-    cells.append(("ami_sidewalk+ami_wall_sidewalk_single", line_nut("ami_sidewalk", "ami_wall_sidewalk_single")))
+    for v in ("single", "back", "front"):  # 棚の並びを変えないため、足す版は後ろに置く
+        cells.append((f"ami_sidewalk+ami_wall_sidewalk_{v}", line_nut("ami_sidewalk", f"ami_wall_sidewalk_{v}")))
     return cells
 
 
@@ -162,6 +163,13 @@ REUSE = [
     ("crossing", "crossing_sample.nut", 8, 480, {}),
     # 約 152×58 マスなので 2 区画ぶん（x 110〜310）を使う。踏切の見本は y=480 の列を x=167 まで使うので、y は 520（#392）
     ("maglev", "maglev.nut", 110, 520, {}),
+    # y=720 の列（#398）。y=618〜704 は before_after.sh の CANAL=1 が空き地として運河を敷くので空ける。canal_crossing.nut と
+    # narrow.nut は OX >= 256 で降雪に塗るので、温暖側の x は 256 未満に置く
+    ("canal_crossing", "canal_crossing.nut", 8, 720, {}),
+    ("narrow", "narrow.nut", 110, 720, {}),
+    ("tram_catenary", "tram_catenary.nut", 212, 720, {}),
+    ("color_marking", "color_marking_sample.nut", 314, 720, {}),
+    ("scenic", "scenic_sample.nut", 416, 720, {}),
 ]
 
 
@@ -209,27 +217,59 @@ def src_names():
     return out
 
 
+# 見本が名前を組み立てて敷く物（ソースに名前がそのまま出ないもの）: 見本 → [(組み立てる前半の文字列, 後半を回す配列)]。
+# 後半はこの配列の文字列から取る。前半か配列が見本のコードにこのままの形で無ければ、数えない（版を減らしたら抜けとして出る）
+VERSIONS = '["single", "back", "center", "front"]'
+THREE = '["front", "center", "back"]'
+BUILT = {
+    "maglev.nut": [("ami_maglev_guideway_elev_", VERSIONS), ("ami_maglev_tube_elev_", VERSIONS), ("ami_maglev_beam_elev_", THREE)],
+    "suspended_sample.nut": [("ami_monorail_suspended_elev_", THREE)],
+    "scenic_sample.nut": [("ami_describe_", '["red", "blue", "green", "yellow"]')],
+}
+
+
+def nut_array(src, key):
+    """Squirrel の「local KEY = ["a", "b"];」の中の文字列"""
+    m = re.search(r"\b%s\s*=\s*\[(.*?)\]" % key, src, flags=re.S)
+    return re.findall(r'"([^"]+)"', m.group(1)) if m else []
+
+
 def coverage():
-    """src/ の名前が、棚（catalog.py の棚と流用する見本）のどこにも出てこないものを返す。名前の一部（接頭辞）で選ばれる物は、
-    見本の文字列に前後の名前が含まれていればよい（踏切 ami_crossing_* は way の組で自動に選ばれる）"""
+    """src/ の名前が、棚（catalog.py の棚と流用する見本）のどこにも出てこないものを返す。コメントを除いたコードに、名前が
+    そのまま（前後に名前の文字が続かない形で）出るか、BUILT の組み立てで出るかを見る。踏切は way の組で本体が選ぶので、
+    踏切の見本が両方の way を敷くかを見る"""
     here = os.path.dirname(os.path.abspath(__file__))
-    text = " ".join(body for _, (_, cells) in bands().items() for _, body in cells)
-    text += " ".join(open(os.path.join(here, nut), encoding="utf-8").read() for _, nut, *_ in REUSE)
-    text += " ".join(b for _, _, _, _, repl in REUSE for b in repl.values())
+    codes = [body for _, (_, cells) in bands().items() for _, body in cells]
+    built = set()
+    pairs = set()  # 踏切の名前
+    for _, nut, _x, _y, repl in REUSE:
+        src = compact(open(os.path.join(here, nut), encoding="utf-8").read())
+        src = re.sub(r"\s//.*$", "", src, flags=re.M)  # 行の後ろのコメントに名前を書いただけの物を数えない
+        for a, b in repl.items():
+            src = src.replace(a, b)
+        codes.append(src)
+        for head, array in BUILT.get(nut, []):
+            if '"%s"' % head in src and array in src:
+                built.update(head + t for t in re.findall(r'"([^"]+)"', array))
+        if nut == "crossing_sample.nut":
+            pairs.update("ami_crossing_%s_%s" % (a[4:], b[4:]) for a in nut_array(src, "TRACKS") for b in nut_array(src, "ROADS"))
+        if nut == "canal_crossing.nut":
+            pairs.update("ami_crossing_%s_canal" % a[4:] for a in nut_array(src, "WAYS"))
+    text = "\n".join(codes)
     missing = []
     for n, kind in src_names().items():
-        if n in text or n.rsplit("_", 1)[0] + '_"' in text:  # 名前の末尾を組み立てる見本（"…_elev_" + 版）
-            continue
         if kind == "crossing":
-            continue  # way の組（線路 4 種 × 道路 4 種・運河）で自動に選ばれる
-        missing.append((kind, n))
+            if n not in pairs:
+                missing.append((kind, n))
+        elif n not in built and not re.search(r"(?<![A-Za-z0-9_])%s(?![A-Za-z0-9_])" % re.escape(n), text):
+            missing.append((kind, n))
     return missing
 
 
 def draw_map(path, scale=1.5):
     """区画の見取り図（1 マス = scale px。左が温暖側、右が降雪側）を PNG に書く"""
     from PIL import Image, ImageDraw, ImageFont
-    W, H = 1024, 580
+    W, H = 1024, 820
     im = Image.new("RGB", (int(W * scale), int(H * scale)), (250, 250, 250))
     d = ImageDraw.Draw(im)
     try:
@@ -281,7 +321,7 @@ def compact(code):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--port", type=int, required=True)
+    ap.add_argument("--port", type=int, help="ゲームの MCP のポート（敷くときに要る）")
     ap.add_argument("--only", default="", help="帯の名前の前方一致（カンマ区切り）")
     ap.add_argument("--side", default="both", choices=["both", "temperate", "snow"])
     ap.add_argument("--map", help="区画の見取り図の PNG を書く")
@@ -303,6 +343,8 @@ def main():
             for i, (cn, _) in enumerate(cells):
                 print(f"{name}\ty={y}\tx={X0 + i * PITCH}\t{cn}")
         return 0
+    if a.port is None:
+        ap.error("敷くには --port が要る")
     only = [s for s in a.only.split(",") if s]
     m = load_client()
     fails = 0
