@@ -42,11 +42,11 @@ local AUTO = [["nse2", "ns", 1, 0, 0, -1], ["nse1", "ns", 1, 0, 0, 1], ["nsw2", 
 
 function lay(under, ox, oy) {
   local w = way_desc_x(TRAM + SUFFIX);
-  if (w == null) return TRAM + " desc=[missing]\n";
+  if (!w.is_valid()) return TRAM + " desc=[missing]\n";
   local u = null;
   if (under != null) {
     u = way_desc_x(under);
-    if (u == null) return under + " desc=[missing]\n";
+    if (!u.is_valid()) return under + " desc=[missing]\n";
   }
   local c = function(x, y, z = 0) { return coord3d(ox + x, oy + y, z); };
   // 道路を先に敷き、同じ経路に路面軌道を重ねる
@@ -137,7 +137,7 @@ function lay(under, ox, oy) {
   if (under == null) {
     // P: 橋脚とのつながり
     local pd = way_desc_x(PIER);
-    if (pd == null) s += PIER + " desc=[missing]\n";
+    if (!pd.is_valid()) s += PIER + " desc=[missing]\n";
     else {
       s += r("P pier", command_x.build_way(pl, c(40, 0), c(44, 0), pd, true));
       s += r("P tram", command_x.build_way(pl, c(42, -1), c(42, 2), w, true));

@@ -19,8 +19,8 @@ local report = "";
 local checks = "";
 function r(name, v) { return v == null ? "" : name + "=[" + v + "]\n"; }
 function c(x, y, z = 0) { return coord3d(OX + x, OY + y, z); }
-function wd(n) { local d = way_desc_x(n); if (d == null) report += n + " desc=[missing]\n"; return d; }
-function way(tag, d, x0, y0, x1, y1) { report += r(tag, command_x.build_way(pl, c(x0, y0), c(x1, y1), d, true)); }
+function wd(n) { local d = way_desc_x(n); if (!d.is_valid()) { report += n + " desc=[missing]\n"; return null; } return d; }
+function way(tag, d, x0, y0, x1, y1) { if (d != null) report += r(tag, command_x.build_way(pl, c(x0, y0), c(x1, y1), d, true)); }
 local VARIANTS = ["front", "center", "back"];
 local marker = command_x(tool_set_marker);
 report += r("label", marker.work(pl, c(0, -3), "suspended: G ground / E elev / P pair / S slope"));

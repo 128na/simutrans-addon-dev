@@ -159,11 +159,11 @@ local AUTO = [["nse2", "ns", 1, 0, 0, -1], ["nse1", "ns", 1, 0, 0, 1], ["nsw2", 
 
 function lay(name, wall, ox, oy) {
   local w = wdx(name);
-  if (w == null) return name + " desc=[missing]\n";
+  if (!w.is_valid()) return name + " desc=[missing]\n";
   local wo = null;
   if (wall != null) {
     wo = wodx(wall);
-    if (wo == null) return wall + " desc=[missing]\n";
+    if (!wo.is_valid()) return wall + " desc=[missing]\n";
   }
   local is_base = name.find("_base_") != null || name.find("_elev_") != null;  // 近い斜めの絵を持たない（区画 G を敷かない）
   local c = function(x, y, z = 0) { return coord3d(ox + x, oy + y, z); };
@@ -237,7 +237,7 @@ function lay_pairs(ox, oy, suffix = "", kind = "base") {
   foreach (v in VARIANTS) wd[v] <- wdx(TRACK + "_" + kind + "_" + v);
   foreach (v in ["single", "back", "center", "front", "twin"]) {
     od[v] <- wodx(WALL + v + suffix);
-    if (od[v] == null) return WALL + v + suffix + " desc=[missing]\n";
+    if (!od[v].is_valid()) return WALL + v + suffix + " desc=[missing]\n";
   }
   local c = function(x, y) { return coord3d(ox + x, oy + y, 0); };
   local way = function(v, x0, y0, x1, y1) { return way2(wd[v], null, c(x0, y0), c(x1, y1)); };
@@ -295,11 +295,11 @@ function lay_join(ox, oy) {
     for (local y = 0; y <= 6; y++)
       for (local k = 0; k < ELEV_UP; k++) s += r("J raise", set_slope_kept(c(x, y, k), slope.all_up_slope));
   s += r("J ew elev", command_x.build_way(pl, c(0, 1), c(7, 1), e, true));
-  s += r("J ew pier", command_x.build_way(pl, c(0, 1), c(7, 1), p, true));
+  if (p.is_valid()) s += r("J ew pier", command_x.build_way(pl, c(0, 1), c(7, 1), p, true));  // 無い橋脚は敷かない（missing は呼び出し側が記録する）
   s += r("J ew ground", command_x.build_way(pl, c(7, 1, ELEV_UP), c(12, 1, ELEV_UP), g, true));
   s += r("J ew wall", command_x.build_wayobj(pl, c(0, 1, ELEV_UP), c(12, 1, ELEV_UP), wo));
   s += r("J ns elev", command_x.build_way(pl, c(10, 12), c(10, 7), e, true));
-  s += r("J ns pier", command_x.build_way(pl, c(10, 12), c(10, 7), p, true));
+  if (p.is_valid()) s += r("J ns pier", command_x.build_way(pl, c(10, 12), c(10, 7), p, true));
   s += r("J ns ground", command_x.build_way(pl, c(10, 7, ELEV_UP), c(10, 2, ELEV_UP), g, true));
   s += r("J ns wall", command_x.build_wayobj(pl, c(10, 12, ELEV_UP), c(10, 2, ELEV_UP), wo));
   foreach (q in [[7, 1], [8, 1], [10, 7], [10, 6]]) checks += "[check] J (" + q[0] + "," + q[1] + ") " + names(ox + q[0], oy + q[1], ELEV_UP) + "\n";
@@ -333,7 +333,7 @@ function lay_roads(ox, oy) {
 function lay_gate(gx, gy) {
   mode.z = ELEV_UP;
   mode.pier = wdx(PIER_GATE);
-  if (mode.pier == null) { mode.z = 0; return PIER_GATE + " desc=[missing]\n"; }
+  if (!mode.pier.is_valid()) { mode.z = 0; mode.pier = null; return PIER_GATE + " desc=[missing]\n"; }
   local s = lay(ELEVATED[0][0], ELEVATED[0][1], gx, gy);
   s += lay_pairs(gx, gy + SPACING, "", "elev");
   s += lay_roads(gx + 4, gy + 2 * SPACING + 3);
@@ -345,7 +345,7 @@ function lay_gate(gx, gy) {
 // 橋とトンネルの区画（冒頭の表の「橋とトンネル」）。原点 (bx, by) は門型の橋脚の区画の南
 function lay_bt(bx, by) {
   local br = bridge_desc_x(BRIDGE + SUFFIX), tn = TUNNEL + SUFFIX;
-  if (br == null) return BRIDGE + " desc=[missing]\n";
+  if (!br.is_valid()) return BRIDGE + " desc=[missing]\n";
   local wd = {}, od = {};
   foreach (v in VARIANTS) {
     wd[v] <- wdx(TRACK + "_base_" + v);
@@ -391,8 +391,10 @@ function lay_bt(bx, by) {
   s += r("B4 elevW", command_x.build_way(pl, c(0, 38), c(4, 38), ev, true));
   s += r("B4 elevE", command_x.build_way(pl, c(12, 38), c(15, 38), ev, true));
   s += r("B4 bridge", command_x.build_bridge(pl, c(5, 38), c(11, 38), br));
-  s += r("B4 pierW", command_x.build_way(pl, c(0, 38), c(4, 38), pr, true));
-  s += r("B4 pierE", command_x.build_way(pl, c(12, 38), c(15, 38), pr, true));
+  if (pr.is_valid()) {
+    s += r("B4 pierW", command_x.build_way(pl, c(0, 38), c(4, 38), pr, true));
+    s += r("B4 pierE", command_x.build_way(pl, c(12, 38), c(15, 38), pr, true));
+  } else s += PIER + " desc=[missing]\n";  // 橋とトンネルの区画だけを敷くときは、ほかに記録する所が無い
   s += r("B4 wall", command_x.build_wayobj(pl, c(0, 38, ELEV_UP), c(15, 38, ELEV_UP), od["single"]));
   // T1〜T3: トンネル（pak128 の坑口は 2 段の坂だけ）。尾根を 2 段上げ、両端を 2 段の坂にして掘り、前後に地上の基盤の版を敷き、
   // 壁の way-object を坑口とトンネルの中を通して 1 本で敷く（坑口のタイルに壁が無いと、隣のタイルが行き止まりの絵になる）
@@ -465,7 +467,7 @@ foreach (n, o in ORIGINS) {
   local ex = o[0] + ELEV_DX;
   mode.z = ELEV_UP;
   mode.pier = wdx(PIER);
-  if (mode.pier == null) report += PIER + " desc=[missing]\n";
+  if (!mode.pier.is_valid()) { report += PIER + " desc=[missing]\n"; mode.pier = null; }
   foreach (i, pr in ELEVATED) report += lay(pr[0], pr[1], ex, o[1] + i * SPACING);
   local vy = o[1] + ELEVATED.len() * SPACING;
   report += lay_pairs(ex, vy, "", "elev");

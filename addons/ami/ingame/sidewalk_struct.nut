@@ -14,12 +14,12 @@ local report = "";
 local checks = "";
 function r(name, v) { return v == null ? "" : name + "=[" + v + "]\n"; }
 function c(x, y, z = 0) { return coord3d(OX + x, OY + y, z); }
-function wd(n) { local d = way_desc_x(n); if (d == null) report += n + " desc=[missing]\n"; return d; }
+function wd(n) { local d = way_desc_x(n); if (!d.is_valid()) { report += n + " desc=[missing]\n"; return null; } return d; }
 local OBJS = {};
 foreach (d in wayobj_desc_x.get_available_wayobjs(wt_water)) OBJS[d.get_name()] <- d;
 function od(n) { if (!(n in OBJS)) { report += n + " wayobj=[missing]\n"; return null; } return OBJS[n]; }
-function way(d, x0, y0, x1, y1) { return command_x.build_way(pl, c(x0, y0), c(x1, y1), d, true); }
-function fence(d, x0, y0, x1, y1, z = 0) { return command_x.build_wayobj(pl, c(x0, y0, z), c(x1, y1, z), d); }
+function way(d, x0, y0, x1, y1) { return d == null ? null : command_x.build_way(pl, c(x0, y0), c(x1, y1), d, true); }
+function fence(d, x0, y0, x1, y1, z = 0) { return d == null ? null : command_x.build_wayobj(pl, c(x0, y0, z), c(x1, y1, z), d); }
 local road = wd("ami_road_general");
 local relev = wd("ami_road_general_elev_single");
 local pier = wd("ami_pier_road");

@@ -22,7 +22,7 @@ function r(name, v) { return v == null ? "" : name + "=[" + v + "]\n"; }
 
 function lay(ox, oy) {
   local road = way_desc_x(ROAD);
-  if (road == null) return "road desc=[missing]\n";
+  if (!road.is_valid()) return "road desc=[missing]\n";
   local desc = {};
   foreach (d in sign_desc_x.get_available_signs(wt_road)) desc[d.get_name()] <- d;
   foreach (n in SIGNS) if (!(n in desc)) return n + " desc=[missing]\n";

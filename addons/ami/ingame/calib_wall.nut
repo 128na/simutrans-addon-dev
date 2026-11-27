@@ -19,14 +19,14 @@ function r(name, v) { return v == null ? "" : name + "=[" + v + "]\n"; }
 local LINES = [[0, 0, 9, 0], [0, 1, 9, 1], [0, 3, 6, 3], [6, 3, 6, 9], [6, 9, 0, 9], [0, 9, 0, 3], [3, 3, 3, 9], [0, 6, 6, 6]];
 function lay(name, ox, oy) {
   local w = way_desc_x(name);
-  if (w == null) return name + " desc=[missing]\n";
+  if (!w.is_valid()) return name + " desc=[missing]\n";
   local elev = name.find("_elev_") != null, onbase = name.find("_base_") != null;
   local kindw = name.find("ami_road_") == 0 ? "road" : "rail";
   local v = (elev || onbase) ? name.slice(name.find(elev ? "_elev_" : "_base_") + 6) : null;
   local wo = v == null ? null : wayobj_desc_x("ami_wall_" + kindw + "_" + v);
   local pier = elev ? way_desc_x("ami_pier_" + kindw) : null;
-  if (v != null && wo == null) return name + " wall desc=[missing]\n";
-  if (elev && pier == null) return name + " pier desc=[missing]\n";
+  if (v != null && !wo.is_valid()) return name + " wall desc=[missing]\n";
+  if (elev && !pier.is_valid()) return name + " pier desc=[missing]\n";
   local c = function(x, y, z = 0) { return coord3d(ox + x, oy + y, z); };
   local s = "";
   foreach (q in LINES) {

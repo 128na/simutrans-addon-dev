@@ -21,7 +21,7 @@ local pl = player_x(0);
 local report = "";
 function r(name, v) { if (v != null) report += name + "=[" + v + "]\n"; }
 function c(x, y, z = 0) { return coord3d(OX + x, OY + y, z); }
-function wd(n) { local d = way_desc_x(n); if (d == null) report += n + " desc=[missing]\n"; return d; }
+function wd(n) { local d = way_desc_x(n); if (!d.is_valid()) { report += n + " desc=[missing]\n"; return null; } return d; }
 local WO = {};
 foreach (d in wayobj_desc_x.get_available_wayobjs(wt_maglev)) WO[d.get_name()] <- d;
 function wod(n) { if (!(n in WO)) { report += n + " wayobj=[missing]\n"; return null; } return WO[n]; }

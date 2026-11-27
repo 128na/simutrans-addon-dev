@@ -26,12 +26,12 @@ local pl = player_x(0);
 local report = "";
 function r(name, v) { if (v != null) report += name + "=[" + v + "]\n"; }
 function c(x, y, z = 0) { return coord3d(C[0] + x, C[1] + y, z); }
-function W(n) { local d = way_desc_x(n); if (d == null) report += n + " desc=[missing]\n"; return d; }
-function O(n) { local d = wayobj_desc_x(n); if (d == null) report += n + " desc=[missing]\n"; return d; }
-function way(tag, n, a, b) { r(tag, command_x.build_way(pl, a, b, W(n), true)); }
-function obj(tag, n, a, b) { r(tag, command_x.build_wayobj(pl, a, b, O(n))); }
+function W(n) { local d = way_desc_x(n); if (!d.is_valid()) { report += n + " desc=[missing]\n"; return null; } return d; }
+function O(n) { local d = wayobj_desc_x(n); if (!d.is_valid()) { report += n + " desc=[missing]\n"; return null; } return d; }
+function way(tag, n, a, b) { local d = W(n); if (d != null) r(tag, command_x.build_way(pl, a, b, d, true)); }
+function obj(tag, n, a, b) { local d = O(n); if (d != null) r(tag, command_x.build_wayobj(pl, a, b, d)); }
 function slope_at(tag, p, s) { r(tag, command_x.set_slope(pl, p, s)); }
-function bridge(tag, n, a, b) { r(tag, command_x.build_bridge(pl, a, b, bridge_desc_x(n))); }
+function bridge(tag, n, a, b) { local d = bridge_desc_x(n); if (!d.is_valid()) { report += n + " desc=[missing]\n"; return; } r(tag, command_x.build_bridge(pl, a, b, d)); }
 // 東西の歩道を x0..x1 に敷く。道路を横切ると踏切が立つので、skip の dx（南北の道路）は空ける
 function walk_ew(y, x0, x1, skip) {
   local a = x0;

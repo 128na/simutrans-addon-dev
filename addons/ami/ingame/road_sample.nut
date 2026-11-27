@@ -63,7 +63,7 @@ local PINS = [["nse", "ns", 1, 0], ["new", "ew", 0, -1], ["nsw", "ns", -1, 0], [
 
 function lay(name, ox, oy) {
   local w = wdx(name);
-  if (w == null) return name + " desc=[missing]\n";
+  if (!w.is_valid()) return name + " desc=[missing]\n";
   local c = function(x, y, z = 0) { return coord3d(ox + x, oy + y, z); };
   local line = function(x0, y0, x1, y1) { return command_x.build_way(pl, c(x0, y0), c(x1, y1), w, true); };
   local s = r(name + " label", marker.work(pl, c(0, -2), name));
@@ -127,7 +127,7 @@ function lay(name, ox, oy) {
   }
   // K: pak128 標準の道路とのつなぎ目
   local std = way_desc_x(STANDARD);
-  if (std == null) s += STANDARD + " desc=[missing]\n";
+  if (!std.is_valid()) s += STANDARD + " desc=[missing]\n";
   else {
     s += r("K ew std", command_x.build_way(pl, c(44, 1), c(49, 1), std, true));
     s += r("K ew ami", line(49, 1, 55, 1));

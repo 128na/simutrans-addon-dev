@@ -20,7 +20,7 @@ local report = "";
 function r(name, v) { return v == null ? "" : name + "=[" + v + "]\n"; }
 function lay(name, ox, oy) {
   local w = way_desc_x(name);
-  if (w == null) return name + " desc=[missing]\n";
+  if (!w.is_valid()) return name + " desc=[missing]\n";
   local c = function(x, y) { return coord3d(ox + x, oy + y, 0); };
   local line = function(x0, y0, x1, y1) { return command_x.build_way(pl, c(x0, y0), c(x1, y1), w, true); };
   local s = "";

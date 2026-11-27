@@ -30,7 +30,7 @@ function r(name, v) { return v == null ? "" : name + "=[" + v + "]\n"; }
 function c(x, y) { return coord3d(OX + x, OY + y, 0); }
 function way(tag, n, p0, p1) {
   local w = way_desc_x(n.find("ami_mark_") == 0 ? n + SUFFIX : n);
-  if (w == null) { report += n + " desc=[missing]\n"; return; }
+  if (!w.is_valid()) { report += n + " desc=[missing]\n"; return; }
   report += r(tag + " " + n, command_x.build_way(pl, c(p0[0], p0[1]), c(p1[0], p1[1]), w, true));
 }
 // 向き（地図の座標の単位ベクトル）を ribi（n=1, e=2, s=4, w=8）に

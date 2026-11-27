@@ -63,7 +63,7 @@ function lay(name, ox, oy) {
     return s;
   }
   local w = way_desc_x(name);
-  if (w == null) return name + " desc=[missing]\n";
+  if (!w.is_valid()) return name + " desc=[missing]\n";
   foreach (q in LINES) s += r(name + " line", command_x.build_way(pl, c(q[0], q[1]), c(q[2], q[3]), w, true));
   local t = square_x(ox + 4, oy + 4).get_ground_tile().get_way(w.get_waytype());
   if (t == null || t.get_desc().get_name() != name) s += name + " check=[" + (t == null ? "none" : t.get_desc().get_name()) + "]\n";

@@ -19,7 +19,7 @@ foreach (i, set in SETS) {
   local oy = OY + i * SPACING;
   local back = way_desc_x(set[1]);
   local front = way_desc_x(set[2]);
-  if (back == null || front == null) { s += set[0] + " desc=[missing]\n"; continue; }
+  if (!back.is_valid() || !front.is_valid()) { s += set[0] + " desc=[missing]\n"; continue; }
   local c = function(x, y) { return coord3d(OX + x, oy + y, 0); };
   s += r("back", command_x.build_way(pl, c(0, 5), c(14, 5), back, true));
   s += r("front", command_x.build_way(pl, c(3, 6), c(14, 6), front, true));

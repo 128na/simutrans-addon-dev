@@ -71,7 +71,7 @@ foreach (k, name in WAYS) {
   way("H " + name, c(x, 0), c(x, 8), way_desc_x(name));
 }
 foreach (m in MIXED) {
-  if (way_desc_x(m[1]) == null) { report += "no way " + m[1] + "\n"; continue; }
+  if (!way_desc_x(m[1]).is_valid()) { report += "no way " + m[1] + "\n"; continue; }
   way("H " + m[1], c(m[0], 0), c(m[0], 8), way_desc_x(m[1]));
 }
 // ---- V: 南北の運河を、東西の線路・道路が横切る

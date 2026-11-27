@@ -38,7 +38,7 @@ foreach (si, set in SETS) {
   local wf = way_desc_x(set[2]);
   local ob = set[3] == null ? null : wayobj_desc_x(set[3]);
   local of = set[4] == null ? null : wayobj_desc_x(set[4]);
-  if (wb == null || wf == null || (set[3] != null && (ob == null || of == null))) { report += set[0] + " desc=[missing]\n"; continue; }
+  if (!wb.is_valid() || !wf.is_valid() || (set[3] != null && (!ob.is_valid() || of == null || !of.is_valid()))) { report += set[0] + " desc=[missing]\n"; continue; }
   foreach (li, lay in LAYOUTS) {
     local ox = OX + li * LDX;
     local oy = OY + si * SDY;
