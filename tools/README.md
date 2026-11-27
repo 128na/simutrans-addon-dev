@@ -100,6 +100,8 @@ D:\bin\blender\blender.exe -b --factory-startup --python ..\..\tools\blender\com
 
 blender-poc の `src/` のシート 28 枚（描画対象 29 個からアイコンの一覧を除いたもの）を 16 並列で描いて約 2 分（117 秒）。時間のほとんどは Boolean（Exact ソルバー）の演算で、描画と後処理は 1 割に満たない（[記録](../docs/records/2026-11-17_sheet-render-speed.md)）。
 
+これは 2026-11-17 の blender-poc の値。2026-11-27 に AMI の長い対象を単独で測ると、セルの描画が 3〜5 割、タイルの切り抜き（`clip_to_tile`）が 3〜4 割、壁などのほかの Boolean は 1 割前後だった。全描き直しで 1 対象が 2 分を超えるのは、16 本を並べて 1 本が遅くなるためで、単独なら 22〜41 秒（[記録](../docs/records/2026-11-27_sheet-render-long-targets.md)）。
+
 - Boolean は `sheetlib/core.py` の `boolean()`・`clip_to_tile()`（中で `_apply_modifier`）を通す。`bpy.ops.object.modifier_apply` を直接呼ぶと、呼ぶたびにシーン全体の更新が走って 2 倍近く遅くなる
 - `boolean()` の `use_self`（既定 True）は、削る形が自分自身と重なるときに要る。外すだけだと、分岐・十字で重なり合う帯が正しく抜けず絵が壊れる（2026-11-17 に確認）。重ならない形（帯 1 本）を 1 つずつ削るなら `use_self=False` でよく、同じ絵で速い（`assemble._place` の通り道の切り抜き）。道路の車道の型（`assemble._carve`）と壁の外側の切り抜き（`sheetlib.road_sheet` の `roadcut`）も 1 つずつ削る（絵は路面のざらつきが最大 5 ほど変わるだけ）。基盤の切り抜き（`build_base`）は `use_self` が要る（外すと絵が変わる）。新しく Boolean を足すときは、削る形が自己交差しないよう 1 つずつに分けられないかを先に考える
 - 時間は、削る側の形の面数で決まる。新しい分岐の形（通り道）を足して遅くなったら、`profile_sheet.py` で測る（アドオンのディレクトリで `SHEET_ONLY=ns,diag_nw,up12 blender -b --factory-startup --python ../../tools/blender/profile_sheet.py -- 対象名`。内訳は `work/profile_<対象>.txt`）
