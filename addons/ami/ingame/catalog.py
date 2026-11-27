@@ -217,16 +217,14 @@ def src_names():
     return out
 
 
-# 見本が名前を組み立てて敷く物（ソースに名前がそのまま出ないもの）: 見本 → [(組み立てる前半の文字列, 後半の一覧)]。
-# 前半の文字列が見本のコードから消えたら、数えない。後半を変えたら、この表も直す
+# 見本が名前を組み立てて敷く物（ソースに名前がそのまま出ないもの）: 見本 → [(組み立てる前半の文字列, 後半を回す配列)]。
+# 後半はこの配列の文字列から取る。前半か配列が見本のコードにこのままの形で無ければ、数えない（版を減らしたら抜けとして出る）
+VERSIONS = '["single", "back", "center", "front"]'
+THREE = '["front", "center", "back"]'
 BUILT = {
-    "maglev.nut": [
-        ("ami_maglev_guideway_elev_", ("single", "back", "center", "front")),
-        ("ami_maglev_tube_elev_", ("single", "back", "center", "front")),
-        ("ami_maglev_beam_elev_", ("front", "center", "back")),
-    ],
-    "suspended_sample.nut": [("ami_monorail_suspended_elev_", ("front", "center", "back"))],
-    "scenic_sample.nut": [("ami_describe_", ("red", "blue", "green", "yellow"))],
+    "maglev.nut": [("ami_maglev_guideway_elev_", VERSIONS), ("ami_maglev_tube_elev_", VERSIONS), ("ami_maglev_beam_elev_", THREE)],
+    "suspended_sample.nut": [("ami_monorail_suspended_elev_", THREE)],
+    "scenic_sample.nut": [("ami_describe_", '["red", "blue", "green", "yellow"]')],
 }
 
 
@@ -246,12 +244,13 @@ def coverage():
     pairs = set()  # 踏切の名前
     for _, nut, _x, _y, repl in REUSE:
         src = compact(open(os.path.join(here, nut), encoding="utf-8").read())
+        src = re.sub(r"\s//.*$", "", src, flags=re.M)  # 行の後ろのコメントに名前を書いただけの物を数えない
         for a, b in repl.items():
             src = src.replace(a, b)
         codes.append(src)
-        for head, tails in BUILT.get(nut, []):
-            if '"%s"' % head in src:
-                built.update(head + t for t in tails)
+        for head, array in BUILT.get(nut, []):
+            if '"%s"' % head in src and array in src:
+                built.update(head + t for t in re.findall(r'"([^"]+)"', array))
         if nut == "crossing_sample.nut":
             pairs.update("ami_crossing_%s_%s" % (a[4:], b[4:]) for a in nut_array(src, "TRACKS") for b in nut_array(src, "ROADS"))
         if nut == "canal_crossing.nut":
