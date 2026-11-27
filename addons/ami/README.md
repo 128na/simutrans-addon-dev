@@ -179,10 +179,16 @@ python -X utf8 build.py                                                        #
   - `render_parallel.py` は `render.py` を `--own` で描くので、描いたシートの外にあるアイコン・カーソル（トンネルのアイコンなど）は書かない（[アイコン・カーソル](docs/objects/icons.md)）。シートを描き直して前後で比べるときは、描いた後に `icons.py`（全部）を流してから比べる（流さないと、アイコンだけの違いが描画のずれに見える）
   - `icons.py` は Blender で流す（`D:/bin/blender/blender.exe -b --factory-startup --python blender/icons.py`）。`python` で流すと `bpy` が無く終了コード 1 で終わり、出力をログに向けていると見落とす
   - シートの PNG をコミットするときは、`icons.py` が書いたセルの控え `src/<シート>.icon_cells.txt` も一緒にコミットする（#330）。描画はアイコン・カーソルのセルに仮の絵を描き、`icons.py` がそれを描き直して、書いたセルの sha256 をこの控えに書く（`render.py` は描いたシートの分だけ `icons.py --own` を自分で呼ぶ。ほかのシートにある分は、上のとおり描き終えてから `icons.py` を流す）。`check.sh` の `check_icons.py` が控えと今のシートを比べるので、仮の絵のままのセルや、控えをコミットし忘れたシートは落ちる
-  - 描き直すと `src/*.road_cells.txt`・`*.icon_sources.txt`・`*.icon_cells.txt` の改行（LF/CRLF）だけが変わることがある。比べるためだけに描いたときは、比べた後に `git checkout -- addons/ami/src` で戻す
+  - 比べるためだけに描いたときは、比べた後に `git checkout -- addons/ami/src` で戻す（256 は下の「256 の描き残しの消し方」）
+  - 道具が LF で書く文字のファイル（`src*/` の dat と控え、`check_cells.allow.txt`）は、`.gitattributes` が持ち出しも LF にするので、改行だけの「変更あり」は出ない（#385）。この属性が入る前に持ち出した作業ツリーは CRLF のままなので、描き直す前に一度持ち出し直す。リポジトリの根元の Git Bash で、1 行目が何も出さないことを確かめてから流す（2・3 行目は、対象のファイルの未コミットの変更を消す）:
+
+```bash
+git status --short -- addons/ami
+git ls-files -z -- ':(glob)addons/ami/src*/*.dat' ':(glob)addons/ami/src*/*.txt' addons/ami/check_cells.allow.txt | xargs -0 rm
+git checkout -- ':(glob)addons/ami/src*/*.dat' ':(glob)addons/ami/src*/*.txt' addons/ami/check_cells.allow.txt
+```
 - `build.py`・`blender/ami_dat.py`・`check.sh` は、1 つの作業ツリーの中で同時に 1 つしか動かない（`blender/src_lock.py` のロック。`work/src.lock`。#326）。先に動いている物があれば、その持ち主を 1 行出して終わるまで待つ（上限は環境変数 `SRC_LOCK_WAIT` の秒数。既定 1800。超えたら止まる）。ロックは OS のファイルロックなので、強制終了しても残らない。`check.sh` が中で呼ぶ `ami_dat.py`・`build.py` は取り直さない。シートの描画（`render.py`・`render_parallel.py`・`icons.py`）はロックを取らない
   - `check.sh` は dat の書き忘れを、`src/` の dat を消さずに、`ami_dat.py --out <一時のフォルダ>` の出力と比べて見る
-- `ami_dat.py` は dat を LF で書くので、CRLF で取り出した作業ツリーでは改行だけの差分が出る。`git add -A src` でステージすると、本当に変わった物だけが残る
 - レイアウト検証用モードの pak は `SHEET_LAYOUT=1` で描いた後、`SHEET_LAYOUT=1 python -X utf8 build.py`（`work/layout/dist/` に作る）
 - 同じシートの通常の描画とレイアウト検証用の描画を同時に動かさない。セルごとの生の絵（`work/<シート>_<セル>.png`）の名前が同じで、互いのセルを取り込んだシートができた（2026-11-17）
 - `src/`（dat とシート）はコミットする。`dist/` と `work/` はコミットしない
@@ -223,10 +229,15 @@ pak の大きさは、環境変数 `SHEET_PAK_SIZE`（タイルの幅の画素�
 $env:SHEET_PAK_SIZE = "256"
 python -X utf8 blender/ami_dat.py                                           # src256/ に dat
 python -X utf8 ..\..\tools\blender\render_parallel.py ami_road_local      # src256/ にシート（アイコン・カーソルも。約 2 分）
+$env:BUILD_SKIP_MISSING = "1"                                              # 一部の対象だけ描いたとき（全部描いたら付けない）
 python -X utf8 build.py                                                    # dist256/ に pak（makeobj pak512。警告があれば止まる）
 python -X utf8 release.py --version alpha.1 --paks ami_road               # work/release/ami-256-alpha.1.zip
-Remove-Item Env:SHEET_PAK_SIZE
+Remove-Item Env:SHEET_PAK_SIZE, Env:BUILD_SKIP_MISSING
 ```
+
+  - 一部の対象だけを描いた手元で `BUILD_SKIP_MISSING=1` を付けないと、`build.py` は描いていないシートで makeobj の `cannot open <シート>.png` になって止まる（#385）。付けると、シートの無い dat を組まない。配る zip を作るときは、全部を描いて付けずに組む。
+  - 順番は、描く → `icons.py` → `check.sh`。`render_parallel.py` は描いた対象のシートの控えしか書かないので、基盤の対象が一緒に書く壁のシートなどは、`icons.py` を流す前に `check.sh` を流すと「控え（`<シート>.icon_cells.txt`）が無い」で落ちる。全部を描いたときは `icons.py`（Blender で、引数なし）を流す。一部だけを描いたときは、引数なしだと読むシートが無くて止まることがあるので、落ちた文が挙げるシートを `icons.py -- <シート>` で流す。
+  - 256 の描き残しの消し方: `src256/` は、git が追跡する物（dat と、生活道路の `ami_road_local.png`・`ami_road_local.icon_cells.txt`）と、手元で描いた一時の物（`.gitignore` のほかの `*.png`・`*.txt`）が同じフォルダに混ざる。`rm src256/*.png` は追跡している絵も消すので使わない。一時の物はリポジトリの根元で `git clean -Xfq addons/ami/src256`（無視している物だけを消す。何が消えるかは `-Xn` で先に見る）で消し、描き直した追跡している物は `git checkout -- addons/ami/src256` で戻す（未コミットの dat の変更も戻るので、残す物は先にコミットする）。残っていると、次の `check.sh` の 256 の検査と組みがその絵を読む（`check.sh` は追跡していない絵があると知らせる）。
 
   zip は 256 の pak（`ami_road.pak`）だけを直下に入れる（readme・許諾・一覧は入れない。pak256 の `tools/fetch_ami.py` は zip の中の `.pak` を全部取る）。許諾の文は `release/license.txt`（CC BY 4.0）で、pak256 が写しを持つ。pak128 の zip（`ami-<版>.zip`）とは名前が違い、混ざらない。
 - 256 のシートの検査（#261）: 256 の PNG は、dat と生活道路だけをコミットする（生活道路はシートと一緒に `icons.py` が書いたセルの控え `ami_road_local.icon_cells.txt` もコミットする。#330。全部を描くと約 3.5 倍の大きさで、描き直すたびにリポジトリが増える。ユーザーの決定、2026-11-25）。ほかの物の 256 のシートは、手元で描いて検査し、結果を PR に書く。`check_icons.py`・`check_cells.py`・`check_crossing.py`・`check_depot.py`・`check_embankment.py` は、環境変数 `SHEET_PAK_SIZE=256` を付けると、`src256/` を 256 のセル（512px）・座標で見る（引数にフォルダを渡せば、ほかの場所のシートも見る）。`check_cells.py` は、シートの大きさがセルの倍数でないとき（128 のシートを 256 で見たなど）も落ちる。`CHECK_SKIP_MISSING=1` を付けると、`check_icons.py`・`check_cells.py`・`check_snow_edge.py` は絵のシートが無い物を飛ばす（CI の 256 の検査はこれで生活道路だけを見る）。全部のシートを描いた後は、`CHECK_256_FULL=1 bash check.sh` で、5 つの検査（と `check_snow_edge.py`）を全部の物に厳しく流す（`check.sh` の「256 のシートの検査」）。検査の道具の確かめは、128 の `src/` を最近傍で 2 倍にして（dat の位置合わせも 2 倍に）256 で流し、128 と同じ結果になることで行った（車庫の六角形だけは、2 倍の縁の階段で外の画素が出るので半画素の許しを付けて確かめたが、本物の 256 のシートでは許し無しで 96 枚とも通った。#261 の D）。

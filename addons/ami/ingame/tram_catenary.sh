@@ -34,6 +34,17 @@ if [ "$CAPTURE" = 1 ]; then
     shot 44 $((oy + 12)) "${n}_depot_after"
     shot 26 $((oy + 18)) "${n}_depot"
     [ "$n" = ground ] || shot 45 $((oy + 8)) "${n}_junction"
+    # 曲がりの角を中心にした区画（#385）。B の輪の 4 つの角と、道路の組は I の路面軌道だけが曲がる交差点 2 つ。
+    # 跳び先のタイルは画面の中心より下に出るので、角のタイルが中ほどに来るよう (+1,+1) へ跳ぶ
+    corner() { shot $(($1 + 1)) $(($2 + 1)) "$3"; }
+    corner 20 $((oy + 5)) "${n}_corner_nw"
+    corner 26 $((oy + 5)) "${n}_corner_ne"
+    corner 26 $((oy + 11)) "${n}_corner_se"
+    corner 20 $((oy + 11)) "${n}_corner_sw"
+    if [ "$n" != ground ]; then
+      corner 42 $((oy + 8)) "${n}_turn_w"
+      corner 48 $((oy + 8)) "${n}_turn_e"
+    fi
   done
   # 電車: 車庫（西の端）から出して、続けて撮る
   sq "local d = depot_x(20, 38, 0); local l = d.get_convoy_list(); if (l.len() > 0) d.start_convoy(player_x(0), l[0]); return 1;"

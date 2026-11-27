@@ -135,6 +135,13 @@ step "道路のカーブと隣の直線をつないだとき、タイルの辺�
 # （CHECK_SKIP_MISSING=1: シートの無い物は飛ばす）。全部のシートを描いた手元では CHECK_256_FULL=1 を付けて、全部を厳しく見る
 # （絵の無い物があると落ちる。踏切・車庫・盛土のシートの検査も含む）
 export SHEET_PAK_SIZE=256
+if [ "${CHECK_256_FULL:-}" != "1" ]; then
+  # 手元で描いて残った、追跡していない src256/ の絵も、この後の 256 の検査・dat_linter・組みが読む。古い絵で落ちたと分かるように知らせる（#385）
+  left="$(cd "$AMI" && git ls-files --others -- 'src256/*.png' 2> /dev/null || true)"
+  if [ -n "$left" ]; then
+    echo "注意: src256/ に追跡していない絵が $(printf '%s\n' "$left" | wc -l) 枚ある。この後の 256 の検査と組みはそれも読む。描き残しなら、リポジトリの根元で git clean -Xfq addons/ami/src256 で消す（README の「256 の描き残しの消し方」）"
+  fi
+fi
 if [ "${CHECK_256_FULL:-}" = "1" ]; then
   step "256 のシートの検査（全部。アイコン・カーソル・空のセル・踏切・車庫・盛土・雪の基盤の版の下の端。SHEET_PAK_SIZE=256。#261）"
   "$PY" -X utf8 "$AMI/check_icons.py"
