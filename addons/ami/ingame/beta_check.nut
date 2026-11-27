@@ -1,12 +1,13 @@
 // 配る pak の読み込みの確認（#91）: pak に入っている全部の物（way・way-object・橋・トンネル）を、1 つずつ道具で敷けるかを確かめる。
 // ingame/beta_check.sh が src/*.dat から ITEMS の行を作って差し替え、flat_512_left_v64 の温暖側に敷く。見た目は見ない（敷けたかと、敷いた物の名前だけ）。
-// ITEMS: [名前, obj（way・way-object・bridge・tunnel・crossing・building・roadsign）, waytype（dat の値）, system_type（way だけ。1 は高架）, type（building だけ。depot・stop）]
+// ITEMS: [名前, obj（way・way-object・bridge・tunnel・crossing・building・roadsign）, waytype（dat の値）, system_type（way だけ。1 は高架）, type（building だけ。depot・stop・cur）]
 // 並べ方（原点 (OX, OY)。1 つの物に 1 行、ROW タイルずつ南へ）:
 //   way: (0)-(5) を東西に敷き、(2) のタイル（高架は 2 段上）の way の名前を読む
 //   way-object: 同じ waytype の運び手の way（CARRIER）を (0)-(5) に敷いてから重ね、(2) のタイルの way-object の名前を読む。架線つきは電化も読む
 //   橋: 平地の (1)-(7) に架け、(1) の端のタイルの橋の名前を読む
 //   車庫（building の depot）: 同じ waytype の運び手の way を (0)-(5) に敷き、(0) に建てる。(0) の車庫の名前を読む
 //   操車場（building の stop）: 在来線の運び手を (0)-(5) に敷き、(2) に建てる。(2) の建物の名前を読む
+//   名所の建物（building の cur。盛土の建物）: 平地の (0) に公共事業者で建てる。(0) の建物の名前を読む
 //   道路標識: 一般道路を (0)-(5) に敷き、(2) に置く。(2) の標識の名前を読む
 //   水路の踏切（ami_crossing_<線路・道路>_canal）: 運河を (0)-(5) に東西に、線路・道路を (2) の南北に横切らせる
 //   トンネル: 別の列（原点 (OX + TUNNEL_DX, OY)。TUNNEL_ROW タイルずつ南へ）で、(3)-(5) を 2 段上げて両端を 2 段の坂にし、(2) から掘る。(2) の坑口のトンネルの名前を読む
@@ -17,11 +18,13 @@ local OX = 20, OY = 20, ROW = 4;
 local MAX_Y = 500, COL_DX = 12;
 local TUNNEL_DX = 40, TUNNEL_ROW = 8;
 local ELEV_UP = 2;  // 高架の床の高さ（段。pak128 の既定）
-local CARRIER = {track = "ami_rail_ballast", road = "ami_road_general", tram_track = "ami_tram", monorail_track = "ami_monorail_straddle", water = "ami_canal"};
-local DEPOT_OBJ = {track = mo_depot_rail, road = mo_depot_road, tram_track = mo_depot_tram, monorail_track = mo_depot_monorail, water = mo_depot_water};
+// dat の waytype を足したら、下の 3 つの表にも足す（足し忘れは check_beta.py が CI で落とす）
+local CARRIER = {track = "ami_rail_ballast", road = "ami_road_general", tram_track = "ami_tram", monorail_track = "ami_monorail_straddle", water = "ami_canal", maglev_track = "ami_maglev_guideway_single", narrowgauge_track = "ami_narrow_ballast"};
+local DEPOT_OBJ = {track = mo_depot_rail, road = mo_depot_road, tram_track = mo_depot_tram, monorail_track = mo_depot_monorail, water = mo_depot_water, maglev_track = mo_depot_maglev, narrowgauge_track = mo_depot_narrowgauge};
 // 路面軌道（橋脚も）の way は、タイルの上では track の way として読む（本体の tram_track は track_wt の system_type 7）
-local WT = {track = wt_rail, road = wt_road, tram_track = wt_rail, water = wt_water, monorail_track = wt_monorail};
+local WT = {track = wt_rail, road = wt_road, tram_track = wt_rail, water = wt_water, monorail_track = wt_monorail, maglev_track = wt_maglev, narrowgauge_track = wt_narrowgauge};
 local pl = player_x(0);
+local pub = player_x(1);  // 名所の建物は公共事業者で建てる
 
 function c(x, y, z = 0) { return coord3d(x, y, z); }
 function err(v) { return v == null ? null : "" + v; }
@@ -46,6 +49,7 @@ function check_wayobj(n, wt, x, y) {
   local carrier = CARRIER[wt] + (n.find("_old") != null ? "_old" : "");
   if (wt == "water" && n.find("sidewalk") != null) carrier = "ami_sidewalk";
   if (wt == "monorail_track" && n.find("suspended") != null) carrier = "ami_monorail_suspended_center";
+  if (wt == "maglev_track" && n.find("tube") != null) carrier = "ami_maglev_tube_single";  // チューブの覆いはチューブ式の way に重ねる
   local cd = way_desc_x(carrier);
   if (!cd.is_valid()) return "carrier desc missing: " + carrier;
   local e = err(command_x.build_way(pl, c(x, y), c(x + 5, y), cd, true));
@@ -55,7 +59,8 @@ function check_wayobj(n, wt, x, y) {
   local t = at(x + 2, y);
   local got = name_of(t.find_object(mo_wayobj));
   if (got != n) return "tile has " + got;
-  if ((n.find("_catenary") != null || n.find("_power") != null) && !t.get_way(WT[wt]).is_electrified()) return "not electrified";
+  // 電化する way-object（own_waytype=electrified_track）。リニアのガイド（_guide）は名前に _catenary・_power が無い
+  if ((n.find("_catenary") != null || n.find("_power") != null || n.find("_guide") != null) && !t.get_way(WT[wt]).is_electrified()) return "not electrified";
   return null;
 }
 
@@ -113,6 +118,14 @@ function check_stop(n, wt, x, y) {
   return got == n ? null : "tile has " + got;
 }
 
+// 名所の建物（盛土の建物。#372）: 道具の引数は "1"（気候を見ない）+ 向き（0）+ 名前。平地の (0) に建て、(0) の建物の名前を読む
+function check_cur(n, x, y) {
+  local e = err(command_x(tool_build_house).work(pub, c(x, y), "10" + n));
+  if (e != null) return "build_house: " + e;
+  local got = name_of(at(x, y).find_object(mo_building));
+  return got == n ? null : "tile has " + got;
+}
+
 // 道路標識（#122）: 一般道路の上に置く
 function check_sign(n, x, y) {
   local sd = null;
@@ -157,8 +170,9 @@ foreach (it in ITEMS) {
       else if (obj == "crossing") r = check_crossing(n, ox, y);
       else if (obj == "building" && it[4] == "depot") r = check_depot(n, wt, ox, y);
       else if (obj == "building" && it[4] == "stop") r = check_stop(n, wt, ox, y);
+      else if (obj == "building" && it[4] == "cur") r = check_cur(n, ox, y);
       else if (obj == "roadsign") r = check_sign(n, ox, y);
-      else r = "unknown obj " + obj;
+      else r = "unknown obj " + obj + " " + it[4];
     }
   } catch (ex) { r = "exception: " + ex; }
   count++;
