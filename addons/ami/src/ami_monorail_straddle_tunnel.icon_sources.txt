@@ -1,2 +1,2 @@
 # 物 icon|cursor 絵のシート 行 列 sha256（blender/icons.py が書き、check_icons.py が今のシートと比べる。#141）
-ami_monorail_straddle_tunnel icon ami_monorail_straddle 0 2 ba0da952fc2c85b6aaa5e698b9e1f87be97e426b7fa214143b2709193282dece
+ami_monorail_straddle_tunnel icon ami_monorail_straddle 0 2 c059a377baf87899dcc2283317dca4200ecddc46dc303f9ff5fd8e1407cfffc1
