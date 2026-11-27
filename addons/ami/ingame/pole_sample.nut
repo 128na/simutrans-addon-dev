@@ -106,7 +106,7 @@ report += expect("C X", 51, 3, 0, "ami_sidewalk_pole_front");
 report += expect("D slope", 60, 3, 0, "ami_sidewalk_pole_front");
 report += expect("E N", 6, 9, 2, "ami_wall_sidewalk_front_pole");
 report += expect("E S", 6, 11, 2, "ami_sidewalk_pole_back");
-if (OX > 200)
+if (OX >= 256)  // 降雪側は OX=276 以上。カタログは温暖側を x=212 に置くので、200 では温暖側も塗られる（#392）
   report += r("climate", command_x(tool_set_climate).work(pl, c(-2, -6), c(72, 18), "7"));
 gui.close_all_windows();
 return (report == "" ? "ok\n" : "check\n" + report) + checks;
