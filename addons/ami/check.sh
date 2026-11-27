@@ -120,6 +120,10 @@ step "名前の訳（ja・en）と dat の name= がそろっているか（chec
 "$PY" -X utf8 "$AMI/check_texts.py" --self-test
 "$PY" -X utf8 "$AMI/check_texts.py"
 
+step "配る pak の読み込みの確認（ingame/beta_check.nut）の敷き方と表が dat の物の種類にそろっているか（check_beta.py。#408）"
+"$PY" -X utf8 "$AMI/check_beta.py" --self-test
+"$PY" -X utf8 "$AMI/check_beta.py"
+
 step "盛土の絵の形と割り当て（向き・角・T字・十字・1 タイル・坂が期待のセルと形か。check_embankment.py）"
 "$PY" -X utf8 "$AMI/check_embankment.py"
 
