@@ -112,7 +112,7 @@ Tube maglev (wall at back) (AMI)
 ami_maglev_tube_center
 Tube maglev (no walls) (AMI)
 ami_maglev_tube_cover
-Tube for tube maglev (AMI)
+Maglev tube cover (AMI)
 ami_maglev_tube_elev_back
 Elevated tube maglev (wall at back) (AMI)
 ami_maglev_tube_elev_center
