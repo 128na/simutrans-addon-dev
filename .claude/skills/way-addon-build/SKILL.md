@@ -77,7 +77,7 @@ description: Simutrans の way 系アドオン（AMI・blender-poc の線路・�
 | 既存の絵が変わらない | `git status` の `src/` の差分と `tools/blender/sheet_diff.py` |
 | 描画の道具を直して絵が変わらない（AMI） | 基準はコミット済みの PNG にせず、変更前のコードで描いた絵にする（コミット済みの絵が今の描画とずれていることがある）。`origin/main` の別の worktree で、直す作業と並べて描いておくと待ちが減る（同じ worktree で作るなら、新しい版を一時のコミットで退避し、変更前に戻して描き、新しい版に戻して描く）。描いた後は `icons.py`（全部）まで流してから比べる（[AMI の「ビルド」](../../../addons/ami/README.md#ビルド)）。全シートの比較は `sheet_diff.py` を `xargs -P8` で 1 組ずつ回す（約 1.5 分）。比べた後は `src/` を戻す |
 | 描く対象の集まりの前後（AMI） | `bpy` を差し替えると、Blender なしで `render.py` を import して `render.SHEETS` を読める（やり方は PR #309 の本文） |
-| ゲームでの前後（AMI） | 撮影の手順を自分で作らず、`ingame/before_after.sh` を使う。前の pak は `git worktree add <一時の場所> <前のコミット>` で別の worktree を作ってビルドし（使い終えたら `git worktree remove`）、`before_after.sh` の `PAKDIR_BEFORE` か `sample_parallel.sh` の `PAK=` で渡す。拡大の切り抜きは座標で決める（差分から位置を探すと片方が外れる）。`game.sh` の既定の地図（512 四方）と `before_after.sh` のカタログ（1024 四方）は座標が違うので、流用するときは地図を確かめる |
+| ゲームでの前後（AMI） | 撮影の手順を自分で作らず、`ingame/before_after.sh` を使う（見本の全区画をまとめて撮るのは `ingame/sample_parallel.sh`。モノレールと 256 も同じ道具。[AMI の「導入と検証」](../../../addons/ami/README.md#導入と検証)）。前の pak は `git worktree add <一時の場所> <前のコミット>` で別の worktree を作ってビルドし（使い終えたら `git worktree remove`）、`before_after.sh` の `PAKDIR_BEFORE` か `sample_parallel.sh` の `PAK=` で渡す。拡大の切り抜きは座標で決める（差分から位置を探すと片方が外れる）。`game.sh` の既定の地図（512 四方）と `before_after.sh` のカタログ（1024 四方）は座標が違うので、流用するときは地図を確かめる |
 | AMI の全体 | README の「導入と検証」の順に `blender/ami_dat.py`・`build.py`・`ingame/sample_check.sh`・`ingame/sample_capture.sh`。全区画をまとめて撮るだけなら `ingame/sample_parallel.sh`（8 台） |
 | blender-poc の全体 | README の手順と `addons/blender-poc/ingame/` の各スクリプト |
 | シート全体の欠陥の候補 | `tools/blender/sheet_audit.py`（参照先の空セル、端の切れ、小さな穴と点、つないだときのすき間）。同じ作りの軌道は `--compare` で塗りの範囲を比べる |
@@ -86,6 +86,15 @@ description: Simutrans の way 系アドオン（AMI・blender-poc の線路・�
 | アイコン・カーソル（AMI） | 書き込みは `addons/ami/blender/icons.py`、ゲームのメニュー・カーソルの撮影は `addons/ami/ingame/icon_capture.sh`。流し方・札の字などの決まりは [AMI の「アイコン・カーソル」](../../../addons/ami/docs/objects/icons.md#アイコンカーソル25)。シートを描き直した後の流し直しの条件もそこにある |
 | 雪 | 検証の地図（リファレンスの 8.1）の降雪側（x=256〜）に同じ見本を敷く |
 | 車両との重なり | スクリプトで走らせられるものは走らせ、最後の見た目はユーザーが見る |
+
+### 順番（長い所を繰り返さない。AMI）
+
+全部の描き直し、ゲームの撮影、256 の描画は時間がかかる。次の順で、形が変わるたびにやり直す範囲を小さくする。
+
+1. **変えた対象だけを描いて、撮影と調整を進める。** `render_parallel.py <変えた対象>...` → `build.py` → 撮影。セルだけを見る `SHEET_ONLY` は `work/only/` に書くので、ゲームの撮影には使えない。撮影は `ingame/sample_parallel.sh`・`before_after.sh` を使い、1 台ずつ撮る手順を自分で作らない
+2. **変えていない物の確かめは、形が決まった後に 1 回。** 全部の描き直しと比べ（上の表の「描画の道具を直して絵が変わらない」）は、共通の描画のコードを触ったときに要る。方針が変わるうちに流さない
+3. **256 は、128 で形が決まってから 1 回。**
+4. **`check.sh` は撮影の後に 1 回。** `check.sh` は中で `build.py` を呼ぶので、直後に `build.py` を流さない
 
 ### 分岐（switch・ex）の絵を直すとき
 

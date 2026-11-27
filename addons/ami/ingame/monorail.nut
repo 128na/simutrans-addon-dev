@@ -6,11 +6,13 @@
 //   T（y +50）: トンネル（東西）。丘の両側に地上の版をつなぐ
 // 車両は、電化の要らない monorail の車両（ユーザーが渡した玉野の編成。無ければ 1 両で走れる物）を輪で回す。
 // 降雪側（x=256〜）に敷くときは monorail.sh が OX に 256 を足し、敷いた後に一帯を降雪に塗る。
-// 返り値: 失敗した所と、車両の名前（[v] の行）
+// 返り値: 先頭が ok なら全部敷けた。違えば先頭が check で「名前=[…]」が続く。最後に車両の名前（[v] の行）
+// 使い方: monorail.sh か、sample_parallel.sh に NUT=ingame/monorail.nut（撮る場所は sample_spots.sh の MONORAIL_SPOTS）
 local OX = 20;
 local OY = 20;
 local pl = player_x(0);
 local report = "";
+local info = "";
 function r(name, v) { if (v != null) report += name + "=[" + v + "]\n"; }
 function c(x, y, z = 0) { return coord3d(OX + x, OY + y, z); }
 local G = way_desc_x("ami_monorail_straddle");
@@ -29,7 +31,7 @@ way("G diag", G, c(16, 2), c(22, 8));
 way("G dead", G, c(25, 2), c(25, 6));
 local depot = null;
 foreach (d in building_desc_x.get_building_list(building_desc_x.depot)) if (d.get_name() == "ami_monorail_depot") depot = d;
-if (depot == null) return report + "no ami_monorail_depot\n";
+if (depot == null) return "check\n" + report + "no ami_monorail_depot\n";
 r("G depot", command_x.build_depot(pl, c(1, 2), depot));
 
 // ---- E: 高架の 3 版
@@ -71,9 +73,9 @@ if (set.len() < 4) {
   foreach (n, e in avail) if (e.can_be_first() && e.can_be_last() && !e.needs_electrification()) { set = [e]; break; }
 }
 if (set.len() == 0) {
-  report += "no monorail vehicle:";
-  foreach (n, e in avail) report += " " + n + (e.needs_electrification() ? "(e)" : "");
-  report += "\n";
+  info += "no monorail vehicle:";
+  foreach (n, e in avail) info += " " + n + (e.needs_electrification() ? "(e)" : "");
+  info += "\n";
 } else {
   local d = depot_x(OX + 1, OY + 2, 0);
   d.append_vehicle(pl, convoy_x(0), set[0]);  // convoy_x(0) は新しい編成。2 両目からはその編成に足す
@@ -81,9 +83,10 @@ if (set.len() == 0) {
   local cnv = list[list.len() - 1];
   for (local k = 1; k < set.len(); k++) d.append_vehicle(pl, cnv, set[k]);
   cnv.change_schedule(pl, schedule_x(wt_monorail, [schedule_entry_x(c(12, 8), 0, 0), schedule_entry_x(c(3, 8), 0, 0)]));
-  r("start", d.start_convoy(pl, cnv));
-  foreach (e in set) report += "[v] " + e.get_name() + "\n";
+  local started = d.start_convoy(pl, cnv);
+  if (started != true) r("start", started);
+  foreach (e in set) info += "[v] " + e.get_name() + "\n";
 }
 if (OX >= 256) r("climate", command_x(tool_set_climate).work(pl, c(-2, -2), c(34, 56), "7"));
 gui.close_all_windows();
-return report;
+return (report == "" ? "ok\n" : "check\n" + report) + info;

@@ -16,18 +16,8 @@ OX=20; OY=20
 [ "$SNOW" = 1 ] && OX=$((OX + 256))
 NUT_SED="s/^local OX = 20;/local OX = $OX;/"
 PRE=""; [ "$SNOW" = 1 ] && PRE="snow_"
-# 撮る所: 名前 x y（monorail.nut の区画の原点からのずれ）
-SPOTS="ground 8 5
-ground_diag 21 5
-elev_front 9 16
-elev_front_r 23 16
-elev_center 9 26
-elev_center_r 23 26
-elev_back 9 36
-elev_back_r 23 36
-pair 8 46
-tunnel 4 52"
-
+# 撮る所（monorail.nut の区画の原点からのずれ）は sample_spots.sh の MONORAIL_SPOTS（sample_parallel.sh と共通）
+source "$(dirname "$0")/sample_spots.sh"
 
 if [ "$STOP" = 1 ]; then game_stop; echo "[monorail] stopped"; exit 0; fi
 
@@ -38,7 +28,8 @@ if [ "$SNOW" = 1 ] && [ "$CAPTURE" != 1 ]; then run_nut; exit 0; fi
 if [ "$CAPTURE" = 1 ]; then
   OUT=${OUT:-work/monorail/shots}
   mkdir -p "$OUT"
-  echo "$SPOTS" | while read -r name dx dy; do
+  for spot in $MONORAIL_SPOTS; do
+    IFS=: read -r name dx dy <<< "$spot"
     if [ -z "$ONLY" ] || [[ " $ONLY " == *" $name "* ]]; then
       $M --run-squirrel "gui.close_all_windows(); gui.set_zoom(${ZOOM:-3}); gui.jump(coord3d($((OX + dx)),$((OY + dy)),0)); return 1;" > /dev/null 2>&1
       sleep 1
