@@ -83,8 +83,9 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 `ami_tram_catenary`（way-object。`waytype=tram_track`・`own_waytype=electrified_track`）を、路面軌道を敷いた経路にそのまま張ると、電化の路面電車が走れる。車庫のタイルにも張る（建てる前でも後でもよい）。橋・トンネル・高架は無い（2026-11-26、ユーザーの決定。[#376](https://github.com/128na/simutrans-addon-dev/issues/376)）。
 
 - **張る場所**: **鉄道のツールバー**の way-object（架線）に並ぶ。路面軌道のツールバーには出ない（本体が `tram_track` の way-object を `track` として読む。[reference](../../../../docs/reference/way-addon.md) の 10 章）。路面軌道のツールバーには、路面軌道のほか、同じ `tram_track` の way として作っている路面表示（`ami_mark_*`）・盛土・橋脚・説明用の色の線も並ぶ（iss も同じ）
-- 形: 車道の外（歩道）に柱を片側 1 本だけ立て、軌道の中心を少し越える腕を出す。柱の横位置は経路の中心から `TRAM_CAT_POLE_U` = 4.2（AMI の道路の縁石の外 3.85 より外。斜めは 1/√2）。柱は地面から立ち、上端の高さは線路の架線と同じ
-- 柱の側: 奥（東西の線は北、南北の線は西。画面で縦向きの斜めは画面の左）。T字でその側へ枝が出るときは反対側。十字は両側に枝があるので柱を立てず、線だけ。並べた 2 本の線では、手前の線の柱が 2 本の線のあいだに立つ
+- 形: 車道の外（歩道）に柱を片側 1 本だけ立て、軌道の中心を少し越える腕を出す。直線の柱の横位置は経路の中心から `TRAM_CAT_POLE_U` = 4.2（AMI の道路の縁石の外 3.85 より外。斜めは 1/√2）。柱は地面から立ち、上端の高さは線路の架線と同じ
+- 柱の側（直線・分岐）: 奥（東西の線は北、南北の線は西。画面で縦向きの斜めは画面の左）。T字でその側へ枝が出るときは反対側。十字は両側に枝があるので柱を立てず、線だけ。並べた 2 本の線では、手前の線の柱が 2 本の線のあいだに立つ
+- 曲線のカーブの柱（[#393](https://github.com/128na/simutrans-addon-dev/issues/393)）: 弧の**外側のタイルの角**（タイルの中心から東西・南北それぞれ 4.2）に立て、長い腕（約 8）を弧の中点へ出す。way-object は下の道路の形を知らないので、どの形でも車道の外になる所にした。直線と同じ「経路から横へ 4.2」では、弧の外側に立つ向きで、生活道路の L 字の角の車道の中になった。手前の角（手前へ張り出すカーブ）の柱は手前の絵に描く。専用の軌道（土の上）のカーブも同じ絵なので、同じく外側の角に立つ。前後は `docs/tram_catenary_pole_local_128.png`・`_general_128.png`・`_ground_128.png`・`_junction_128.png`（道路の丁字・十字で路面軌道だけが曲がる）と `_local_256.png`・`_general_256.png`（左が前）
 - 線: 線路の架線の部品（ちょう架線・トロリ線・ハンガー・吊り金具）をそのまま使い、高さの定数も同じ（路面軌道は基準面を下げないので、画面では線路の架線より 1px 高い）。曲線のカーブは、ハンガーを経路の上に下ろす。色だけは線路の架線の暗い茶より明るい灰色（`render.py` の `TRAM_CAT_WIRE`）: 暗い線は暗いアスファルトに溶けて見えなかった（`docs/tram_catenary_wire_color.png` の左が暗い線、右が今）
 - 部品: `tools/blender/sheetlib/catenary_parts.py` の `TRAM_CAT_FILLS`（柱・腕・吊り金具）と `TRAM_CAT_DROPPER`。柱と腕は経路の全部から側を決めるので、`TRACK_PROFILES` の `cell_fills` に渡す（`sheetlib.py` は変えていない）。描く対象は `ami_tram_catenary`（way のシートは書かない）
 - 値（仮）: 費用 4000・維持費 100・登場 1900（架線つきの壁と同じ）、速さ 500。AMI の線路でいちばん速い 480 より上で電化した編成の速さを縛らず、壁（1000）・架線つきの壁（1100）より下（`blender/ami_dat.py` の `TRAM_CATENARY_VALUES`）。1 タイルの way-object は 1 つなので、壁・架線つきの壁を重ねると置き換わる
@@ -92,7 +93,7 @@ AMI として変えた点（2026-11-17。後半はユーザーの見た目の指
 - 近い斜めの分け合うタイル: way-object には近い斜めの絵のキーが無い（[reference](../../../../docs/reference/way-addon.md) の 10 章）。路面軌道は近い斜めの絵を持つので、分け合うタイルの架線は十字の絵（線だけ。直線 2 本と曲線の全部の線）になり、並べると線が輪のように重なって見える（`docs/tram_catenary_close.png`）。分け合うタイル用の way-object は作っていない
 - 雪: way-object に雪の絵は無いので、降雪側も同じ絵
 - 見た手本: pak128 の `tramway_classic`（`../refs/pak128/infrastructure/catenary_all/tramway_classic.dat`。`waytype=tram_track` と速さ 70、上下 2 本の線とハンガー。取り入れた。柱の置き方（線の端に細い柱）は取り入れず、歩道の片側の柱と腕にした）。iss の路面軌道の架線は無い（`../refs/iss/src/way-object/rail/` は `waytype=track` だけ）
-- 確かめ方: `ingame/tram_catenary.sh`（`ingame/tram_catenary.nut`）。一般道路の上と土の上に路面軌道と架線を敷き、電化されたことと、電化の路面電車が走ることを見る。画像は `docs/tram_catenary_*.png`（`loop`: 輪と十字・T字（道路の上と土の上）、`diag_hill`: 斜めと坂、`double`: 並べた 2 本と直線、`train`: 走る電車（4 倍）、`menu`: 鉄道と路面軌道のツールバー、`wire_color`: 線の色の比べ、`close`: 近い斜め（道路の上と土の上）、`ex`: Y字と三方分岐（土の上。2 倍。`ingame/ex_check.sh` に `WAYS='[["ami_tram", "ami_tram_catenary"]]'`））
+- 確かめ方: `ingame/tram_catenary.sh`（`ingame/tram_catenary.nut`）。一般道路の上・土の上・生活道路の上に路面軌道と架線を敷き（道路の組には、路面軌道だけが曲がる丁字・十字の区画 I もある）、電化されたことと、電化の路面電車が走ることを見る。画像は `docs/tram_catenary_*.png`（`loop`: 輪と十字・T字（道路の上と土の上）、`diag_hill`: 斜めと坂、`double`: 並べた 2 本と直線、`train`: 走る電車（4 倍）、`menu`: 鉄道と路面軌道のツールバー、`wire_color`: 線の色の比べ、`close`: 近い斜め（道路の上と土の上）、`ex`: Y字と三方分岐（土の上。2 倍。`ingame/ex_check.sh` に `WAYS='[["ami_tram", "ami_tram_catenary"]]'`））
 
 ## 高速線の作り（スラブ軌道、#20）
 

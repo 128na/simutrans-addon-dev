@@ -23,7 +23,7 @@ shot() {  # shot <x> <y> <名前>
 if [ "$CAPTURE" = 1 ]; then
   mkdir -p "$OUT"
   # tram_catenary.nut の OX・OY・SPACING と区画の場所に合わせる
-  for g in road:20 ground:46; do
+  for g in road:20 ground:46 local:72; do
     n=${g%:*}; oy=${g#*:}
     shot 23 $((oy + 2)) "${n}_a"
     shot 31 $((oy + 2)) "${n}_diag"
@@ -33,6 +33,7 @@ if [ "$CAPTURE" = 1 ]; then
     shot 44 $((oy + 3)) "${n}_close"
     shot 44 $((oy + 12)) "${n}_depot_after"
     shot 26 $((oy + 18)) "${n}_depot"
+    [ "$n" = ground ] || shot 45 $((oy + 8)) "${n}_junction"
   done
   # 電車: 車庫（西の端）から出して、続けて撮る
   sq "local d = depot_x(20, 38, 0); local l = d.get_convoy_list(); if (l.len() > 0) d.start_convoy(player_x(0), l[0]); return 1;"

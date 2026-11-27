@@ -1,14 +1,15 @@
 // 路面軌道の架線（#376）の見本。ingame/tram_catenary.sh が流す。路面軌道を敷いた経路にそのまま架線を張る。
-// 2 つの組（UNDER の順に SPACING タイルずつ南へ）: AMI の一般道路の上と、土の上。原点 (ox,oy) から:
+// 3 つの組（UNDER の順に SPACING タイルずつ南へ）: AMI の一般道路（角は円弧）の上、土の上、生活道路（角は L 字）の上。原点 (ox,oy) から:
 //   A 直線の行き止まり（東西・南北）・B 輪と十字（カーブ・T字）・C 斜めの階段 2 本（se・ne）・D 坂の十字・E 急坂の十字
 //   F 並べた 2 本の直線（柱が線の間に立つ）
 //   G 近い斜め（分け合うタイル）・H 車庫を建てた後に車庫のタイルまで架線を張る
+//   I 道路の丁字・十字の上で、路面軌道だけが曲がる（道路の組だけ。#393）
 // 電車（V）: 輪の外の直線の西の端に路面軌道の車庫を建て、電化の要る路面電車を 1 編成入れて、東の端と車庫の前を往復させる（出すのは .sh の CAPTURE）。
 // 返り値の先頭が ok なら全部敷けた。[check] の行は、電化されたか（elec）と、使った車両
 local TRAM = "ami_tram";
 local CAT = "ami_tram_catenary";
 local DEPOT = "ami_tram_depot";
-local UNDER = ["ami_road_general", null];
+local UNDER = ["ami_road_general", null, "ami_road_local"];  // 座標を引く文書があるので、組は後ろに足す
 local OX = 20;
 local OY = 20;
 local SPACING = 26;
@@ -85,6 +86,19 @@ foreach (ui, under in UNDER) {
   report += r("H catenary", command_x.build_wayobj(pl, c(22, 12), c(27, 12), wo));
   local hway = square_x(ox + 22, oy + 12).get_ground_tile().get_way(wt_rail);
   checks += "[check] depot-after (" + (ox + 22) + "," + (oy + 12) + ")=" + (hway == null ? "-" : (hway.is_electrified() ? "elec" : "NG")) + "\n";
+
+  // I 路面軌道だけが曲がる交差点: 道路は丁字（西側の組）と十字（東側の組）
+  if (u != null) {
+    foreach (i in [[22, false], [28, true]]) {
+      local ix = i[0], iy = 8;
+      report += r("I road ew", command_x.build_way(pl, c(ix - 2, iy), c(ix + 2, iy), u, true));
+      report += r("I road ns", command_x.build_way(pl, c(ix, i[1] ? iy - 2 : iy), c(ix, iy + 2), u, true));
+      report += r("I way w", command_x.build_way(pl, c(ix - 2, iy), c(ix, iy), w, true));
+      report += r("I way s", command_x.build_way(pl, c(ix, iy), c(ix, iy + 2), w, true));
+      report += r("I catenary w", command_x.build_wayobj(pl, c(ix - 2, iy), c(ix, iy), wo));
+      report += r("I catenary s", command_x.build_wayobj(pl, c(ix, iy), c(ix, iy + 2), wo));
+    }
+  }
 
   // V: 車庫と電車
   local y = 18;

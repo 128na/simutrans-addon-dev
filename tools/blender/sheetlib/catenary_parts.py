@@ -210,8 +210,10 @@ def beam_part(reach_diag):
 
 # ---------------------------------------------------------------- 路面の架線（AMI #376。路面軌道 ami_tram の電化の way-object）
 # 道路に重ねる軌道なので、柱は車道の外（歩道）に片側 1 本だけ立て、軌道の中心を少し越える腕を出す。線（ちょう架線・トロリ線・ハンガー）と
-# 吊り金具は線路の架線の部品をそのまま使い、高さも同じ。柱の側は奥（東西は北、南北は西。画面で縦向きの斜めは画面の左）で、
-# 分岐でその側へ枝が出るときは反対側、両側に出る十字では柱を立てず線だけにする。
+# 吊り金具は線路の架線の部品をそのまま使い、高さも同じ。直線の柱の側は奥（東西は北、南北は西。画面で縦向きの斜めは画面の左）で、
+# 分岐でその側へ枝が出るときは反対側、両側に出る十字では柱を立てず線だけにする。曲線のカーブは、弧の外側のタイルの角
+# （中心から各軸 TRAM_CAT_POLE_U）に立て、長い腕を弧の中点へ出す（AMI #393）: 下に敷く道路の曲がりは円弧・L 字・斜めのどれもあり、
+# 経路から横へ TRAM_CAT_POLE_U の位置は、L 字の道路では車道の中になる。角は、各軸が車道の半幅より外なので、どの形でも交差点でも車道の外
 # 柱・腕・吊り金具は経路の全部から側を決めるので、TRACK_PROFILES の "cell_fills" に渡す（TRAM_CAT_FILLS）。
 # 基準面は "tram_bed"（路面軌道の床と同じ）: cell_fills は、部品の基準面の部品を持つ組にだけ作られるので、分岐の絵の走行面（rail）の組で
 # 二重に作らない
@@ -231,9 +233,21 @@ def _tram_straight(path):
     return all(abs((p.x - a.x) * d.y - (p.y - a.y) * d.x) < 1e-3 for p in path)
 
 
+def _tram_curve_support(path):
+    """曲線のカーブの柱: (弧の中点, そこでの向き, 弧の外側の単位ベクトル, 柱までの距離, 手前の角か)。
+    弧の外側（弦の中点から弧の中点へ向かう側）のタイルの角に立てる"""
+    p, d = _anchor(path)
+    chord = (path[0] + path[-1]) / 2
+    out = (p - Vector((chord.x, chord.y))).normalized()
+    corner = Vector((math.copysign(TRAM_CAT_POLE_U, out.x), math.copysign(TRAM_CAT_POLE_U, out.y)))
+    return p, d, out, (corner - p).length, out.dot(_VIEWER) > 0.5
+
+
 def _tram_supports(paths):
-    """セルで柱を立てる所の一覧: (経路の上の点, 経路の向き, 柱の側の単位ベクトル)。
+    """セルで柱を立てる所の一覧: (経路の上の点, 経路の向き, 柱の側の単位ベクトル, 点から柱までの距離, 手前の柱か)。
     経路が 1 本ならその経路、分岐・十字は通り抜ける直線（南北・東西）にだけ立てる"""
+    if len(paths) == 1 and not _tram_straight(paths[0]):
+        return [_tram_curve_support(paths[0])]
     through = paths if len(paths) == 1 else [
         p for p in paths if all(abs(v.x) < 1e-6 for v in p) or all(abs(v.y) < 1e-6 for v in p)]
     out = []
@@ -247,19 +261,20 @@ def _tram_supports(paths):
                                 for other in paths if other is not path for q in other)
         side = next((s for s in (n, -n) if not blocked(s)), None)
         if side is not None:
-            out.append((p, d, side))
+            out.append((p, d, side, None, False))
     return out
 
 
-def _tram_support_make(build):
-    """cell_fills の make: 経路の一覧から、柱を立てる所ごとの形 build(p, d, n, path, k) をまとめた形の関数を返す（無ければ None）"""
+def _tram_support_make(build, front=None):
+    """cell_fills の make: 経路の一覧から、柱を立てる所ごとの形 build(p, d, n, u, k) をまとめた形の関数を返す（無ければ None）。
+    u は点から柱までの距離（None は直線の _tram_u）。front を渡すと、手前の柱（真）か、それ以外（偽）の所だけを作る"""
     def make(paths):
-        spots = _tram_supports(paths)
+        spots = [s for s in _tram_supports(paths) if front is None or s[4] == front]
         if not spots:
             return None
 
         def shape(path, k):
-            geos = [build(p, d, n, k) for p, d, n in spots]
+            geos = [build(p, d, n, _tram_u(k) if u is None else u, k) for p, d, n, u, _ in spots]
             return merge(geos)
         return shape
     return make
@@ -269,28 +284,29 @@ def _tram_u(k):
     return TRAM_CAT_POLE_U * (math.sqrt(0.5) if _diag(k) else 1.0)  # 斜めの道路の横幅は直線の 1/√2
 
 
-def _tram_pole(p, d, n, k):
-    c = p + n * _tram_u(k)
+def _tram_pole(p, d, n, u, k):
+    c = p + n * u
     return box(c.x, c.y, CAT_POLE_TOP / 2, CAT_POLE_S, CAT_POLE_S, CAT_POLE_TOP, rot=math.atan2(d.y, d.x))
 
 
-def _tram_arm(p, d, n, k):
-    u = _tram_u(k)
+def _tram_arm(p, d, n, u, k):
     c = p + n * ((u - TRAM_CAT_ARM_OVER) / 2)
     return box(c.x, c.y, CAT_POLE_TOP - CAT_BEAM_H / 2, CAT_BEAM_T, u + TRAM_CAT_ARM_OVER, CAT_BEAM_H, rot=math.atan2(d.y, d.x))
 
 
-def _tram_hanger(p, d, n, k):
+def _tram_hanger(p, d, n, u, k):
     path = [p - d, p + d]  # 画面で横向きの斜めの線の上げ幅（_line_z）を、経路の向きから決める
     return _thin_post(p, d, _line_z(path, k, CAT_MESSENGER_Z), CAT_POLE_TOP - CAT_BEAM_H)
 
 
 TRAM_CAT_FILLS = tuple(
-    (Part(name, "tram_bed", "bed", mat, None, "catenary", tall=True, **flags), _tram_support_make(build))
-    for name, mat, build, flags in (
-        ("cat_pole_tram", _M_POLE, _tram_pole, {}),
-        ("cat_arm_tram", _M_BEAM, _tram_arm, dict(front=True, widen=True)),
-        ("cat_hanger", _M_WIRE, _tram_hanger, dict(front=True, thin=True)),
+    (Part(name, "tram_bed", "bed", mat, None, "catenary", tall=True, **flags), _tram_support_make(build, front))
+    for name, mat, build, front, flags in (
+        ("cat_pole_tram", _M_POLE, _tram_pole, False, {}),
+        # 手前の角の柱（手前へ張り出すカーブ）は車両より手前の絵にする
+        ("cat_pole_tram", _M_POLE, _tram_pole, True, dict(front=True)),
+        ("cat_arm_tram", _M_BEAM, _tram_arm, None, dict(front=True, widen=True)),
+        ("cat_hanger", _M_WIRE, _tram_hanger, None, dict(front=True, thin=True)),
     ))
 
 
