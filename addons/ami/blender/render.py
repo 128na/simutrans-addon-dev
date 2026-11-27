@@ -26,6 +26,7 @@
     src/ami_road_<種類>_bridge.png  道路の橋（欄干なし。床の縁の下に青い桁を見せる）
     src/ami_road_<種類>_tunnel.png  道路のトンネルの坑口（覆いは blender-poc の高速道路のトンネル、路面・白線は道路の種類ごと）
     src/ami_pier_road.png     道路の高架の真下の地面に敷く橋脚の way
+    src/ami_tram_catenary.png  路面軌道の架線の way-object（#376。上 4 行が奥、下 4 行が手前。片側の柱と腕・線）
     src/ami_tram.png          路面軌道（tram_track）の通常の版。道路の上に重ねて敷く想定で、コンクリートの床・縁の帯・レールの頭・溝だけ（段も壁も無い）
     src/ami_sidewalk.png      歩道の way（道路の隣のタイルに敷く。敷石と、つながらない辺の縁石）
     src/ami_embankment_<front|back>.png  盛土の way（高架の脇の地面に敷く芝の法面の楔。#123）
@@ -461,6 +462,18 @@ for _w, _wold in _WALL_TRACKS:
             groups=_base["groups"] + ("catenary", "catenary_support"), snow=False, wall_only=True, rise=R.CAT_RISE,
             wall_label=CATENARY_LABEL)
 
+# 路面軌道の架線の way-object（ami_tram_catenary。#376。docs/objects/rail.md の「路面軌道の架線」）: 路面軌道の経路に、路面の架線の
+# 柱・腕（cell_fills。TRAM_CAT_FILLS）と、線路の架線の線を張る。路面軌道の本体は描くが、way のシートは書かない（wall_only。way-object のシートだけ）。
+# 路面軌道の T字のすき間埋め（TRAM_CELL_FILLS）と、道路の端を覆う帯（fill_back_band）は way の絵のためのものなので外す。
+# 線の色は、線路の架線の暗い茶より明るい灰色（線は路面の道路の上に重なり、暗い色は暗いアスファルトに溶けて見えなかった。#376）
+TRAM_CAT_WIRE = ("ami_tram_cat_wire", (0.55, 0.52, 0.48), 0.5, 0.5)
+R.TRACK_PROFILES[f"{TRAM_KEY}_catenary"] = dict(
+    R.TRACK_PROFILES[TRAM_KEY], sheet="ami_tram_cat", wall_sheet=catalog.TRAM_CATENARY, wall_only=True, snow=False,
+    groups=R.TRACK_PROFILES[TRAM_KEY]["groups"] + ("catenary",), replace=dict(R.TRAM_WEAR_REPLACE, cat_dropper=R.TRAM_CAT_DROPPER),
+    cell_fills=R.TRAM_CAT_FILLS, fill_back_band=False, rise=R.CAT_RISE, wall_label=CATENARY_LABEL,
+    close=False,  # way-object には近い斜めの絵のキーが無い（makeobj の way_obj_writer）
+    skin={n: TRAM_CAT_WIRE for n in ("cat_wire", "cat_messenger", "cat_dropper", "cat_hanger")})
+
 # 近い斜めの分け合うタイル用の架線つきの壁（ami_wall_rail_twin_catenary）の絵。壁だけの twin と同じく、nw・sw の線は back、ne・se の線は
 # front の版の斜めのセルを使う。斜めの梁だけを短くした（CAT_BEAM_REACH_TWIN。分け合うタイルの隣の線の外の壁からはみ出さない）。
 # 通常の 4 版の梁は変えない（斜めの線を隣のタイルに並べた複線・3 本並びで、梁をタイルの角でつなぐため）。dat は斜めのキーだけを指す
@@ -768,6 +781,7 @@ def _tunnel_target(track):
 
 SHEETS = {_t.way: _track_target(_t.key) for _t in catalog.ALL_TRACKS}
 SHEETS[catalog.TRAM] = _track_target(TRAM_KEY)
+SHEETS[catalog.TRAM_CATENARY] = _track_target(f"{TRAM_KEY}_catenary")
 SHEETS[catalog.MONORAIL] = _track_target(MONORAIL_KEY)
 for _n in catalog.MONORAIL_ELEVS:
     SHEETS[_n] = _track_target(catalog.profile(_n))

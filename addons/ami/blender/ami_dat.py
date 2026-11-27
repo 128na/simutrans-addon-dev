@@ -240,6 +240,11 @@ CATENARY_VALUES = dict(cost=4000, maintenance=100, intro_year=1900, topspeed=110
 CATENARY_TWIN_TOPSPEED = CATENARY_VALUES["topspeed"] + 1
 CATENARY = {f"{catalog.wall_rail(_v, _o)}_catenary": f"{catalog.wall_rail(_v, _o)}_catenary" for _o in (False, True) for _v in BASE_VARIANTS}
 TWIN_FROM_CATENARY = {k: v.replace("ami_wall_rail_", "ami_wall_rail_twin_catenary_") for k, v in TWIN_FROM.items()}
+# 路面軌道の架線（#376）: 費用・維持費は架線つきの壁と同じ（仮）。本体は読み込むときに tram_track の way-object を track にする
+# （descriptor/reader/way_obj_reader.cc）ので、道具は線路の way-object の一覧に並び、1 タイルの way-object は線路の壁・架線と 1 つを分け合う。
+# topspeed は、AMI の線路でいちばん速い 480 より上（電化した編成の速さを縛らない）で、壁（1000）・架線つきの壁（1100）より下
+# （壁・架線は敷けば置き換わり、本体が古い保存データ用に選ぶ既定の架線（いちばん速い物）を変えない）
+TRAM_CATENARY_VALUES = dict(CATENARY_VALUES, topspeed=500)
 
 # ---------------------------------------------------------------- 分岐の追加画像を継ぎ足す物（#57）
 # 線路（線路・基盤・高架の版）・路面軌道・道路（通常・基盤・高架の版）の way: 本体（OTRP v64）が Y字分岐・三方分岐で ex 画像を自動で選ぶのは
@@ -248,7 +253,7 @@ EX_WAYS = [_n for _n in BUILT if VALUES[_n]["waytype"] in ("track", "tram_track"
 # 架線つきの壁の way-object（twin を除く）: トロリ線を Y字・三方分岐の走行面に合わせた絵を持つ（壁だけの版は絵が T字・十字と同じなので持たない）。
 # 本体（obj/wayobj.cc）は、way-object の 26 番の絵があると、隣のタイルの way-object の向きから way と同じ条件で ex 画像を選ぶ。
 # 分岐の絵（16 番）が無いとその処理に入らないので、1・2 の 10 枚は T字・十字と同じセルを指す
-EX_WAYOBJS = list(CATENARY)
+EX_WAYOBJS = list(CATENARY) + [catalog.TRAM_CATENARY]  # 路面軌道の架線（#376）も、路面軌道の Y字・三方分岐の走行面に合わせた線を持つ
 
 
 # ---------------------------------------------------------------- 橋とトンネル（#19）
@@ -371,15 +376,16 @@ def dat_text(name, sheet, donor=False):
     return NL.join(out) + NL
 
 
-def wall_dat_text(name, sheet, twin=False, catenary=False, road=False, donor=False, divider=False, old=False):
+def wall_dat_text(name, sheet, twin=False, catenary=False, road=False, donor=False, divider=False, old=False, tram=False):
     """壁の way-object の dat。セルは way と同じ位置（分岐の絵・近い斜めは持たない。壁は通常の T字・十字と同じ）。
     カーブは way と同じく斜めのセルを指す。twin は近い斜めの分け合うタイル用（斜めとカーブのキーだけ、TWIN_FROM のシートを指す）。
     catenary は架線つき（電化。own_waytype=electrified_track、値は CATENARY_VALUES。twin は TWIN_FROM_CATENARY のシート）。
     road は道路の壁（waytype=road・own_waytype=road。twin は ROAD_TWIN_FROM のシート）。divider は道路の中央分離帯つきの壁（road と一緒に
     渡す。値は DIVIDER_VALUES、twin は ROAD_DIVIDER_TWIN_FROM のシート）。
     架線つき（twin を除く）は、分岐の追加画像（EX_WAYOBJS）のために 1・2 の 10 枚のキーも書く: 通常は T字・十字と同じセル（本体が way-object の
-    分岐の絵を選ぶ処理に入るが、絵は変わらない）、donor（提供用の物。名前 + DONOR_SUFFIX）は EX_CELLS"""
-    v = CATENARY_VALUES if catenary else DIVIDER_VALUES if divider else WALL_VALUES
+    分岐の絵を選ぶ処理に入るが、絵は変わらない）、donor（提供用の物。名前 + DONOR_SUFFIX）は EX_CELLS。
+    tram は路面軌道の架線（#376。waytype=tram_track。catenary と一緒に渡す。値は TRAM_CATENARY_VALUES、カーブは自分のセル（曲線））"""
+    v = TRAM_CATENARY_VALUES if tram else CATENARY_VALUES if catenary else DIVIDER_VALUES if divider else WALL_VALUES
     # 壁だけの twin は back の版のシートを借りるので、アイコン・カーソルは back の版のセル（0.0・0.1）でなく、使っていないセルに置く（#25）
     icon_cell, cursor_cell = TWIN_ICON_CELLS if twin and not catenary else ("0.0", "0.1")
     twin_from = (TWIN_FROM_CATENARY if catenary else ROAD_DIVIDER_TWIN_FROM if divider else ROAD_TWIN_FROM if road
@@ -387,7 +393,9 @@ def wall_dat_text(name, sheet, twin=False, catenary=False, road=False, donor=Fal
     if old:  # 旧描画位置（#26）の壁: twin が借りるシートも旧の物
         twin_from = {k: s.replace("ami_wall_rail_", "ami_wall_rail_old_") for k, s in twin_from.items()}
     kind = "道路の中央分離帯つきの壁" if divider else "道路の壁" if road else "線路の壁の way-object（架線つき（電化））" if catenary else "線路の壁の way-object（壁だけ、架線なし）"
-    wt = "road" if road else "track"
+    wt = "road" if road else "tram_track" if tram else "track"
+    if tram:
+        kind = "路面軌道の架線の way-object（電化）"
     out = _head(
         f"# AMI: {name}（CC BY 4.0）。{kind}。シートは blender/render.py が描く"
         + ("。分岐の追加画像の提供用（build.py が ex_graft.py で写す。ゲームには入れない）" if donor else ""),
@@ -405,7 +413,7 @@ def wall_dat_text(name, sheet, twin=False, catenary=False, road=False, donor=Fal
             if not ex:
                 continue
             row, col = EX_CELLS[idx] if donor else cell[("image", PIER_SWITCH[idx])]
-        if key == "image" and idx in CURVE_TO_DIAG and name not in catalog.ROAD_WALL_CURVED:  # カーブの形ごとの壁（#260）は、カーブのセルが自分の絵
+        if key == "image" and idx in CURVE_TO_DIAG and name not in catalog.ROAD_WALL_CURVED and not tram:  # カーブの形ごとの壁（#260）と路面軌道の架線（曲線）は、カーブのセルが自分の絵
             row, col = CURVE_TO_DIAG[idx]
         src = sheet
         if twin:
@@ -814,6 +822,7 @@ def write_all():
         put(_tw, wall_dat_text(_tw, catalog.wall_rail("back", _o), twin=True, old=_o))
     for name, sheet in CATENARY.items():
         put(name, wall_dat_text(name, sheet, catenary=True, old=catalog.is_old(name)))
+    put(catalog.TRAM_CATENARY, wall_dat_text(catalog.TRAM_CATENARY, catalog.TRAM_CATENARY, catenary=True, tram=True))
     for name, suspended in catalog.MONORAIL_POWERS.items():
         put(name, monorail_power_dat_text(name, suspended))
     put(catalog.MAGLEV_GUIDE, monorail_power_dat_text(catalog.MAGLEV_GUIDE, False, "maglev_track", MAGLEV_GUIDE_VALUES,
@@ -849,7 +858,7 @@ def write_all():
         put(name, describe_dat_text(name, color, elevated))
     # 分岐の追加画像の提供用の物（build.py が別の pak に作り、ex_graft.py で写す）。1 つの dat に --- で区切って並べる
     donors = [dat_text(n, BUILT[n], donor=True) for n in EX_WAYS]
-    donors += [wall_dat_text(n, CATENARY[n], catenary=True, donor=True) for n in EX_WAYOBJS]
+    donors += [wall_dat_text(n, CATENARY.get(n, n), catenary=True, donor=True, tram=n == catalog.TRAM_CATENARY) for n in EX_WAYOBJS]
     with open(os.path.join(SRC, EX_DONORS_DAT), "w", encoding="utf8", newline=NL) as f:
         f.write(("---" + NL).join(donors))
     print(f"[dat] {EX_DONORS_DAT}（{len(donors)} 個）")
