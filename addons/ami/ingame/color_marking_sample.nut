@@ -67,7 +67,7 @@ foreach (n, o in ORIGINS) {
     way("PI", G, 62, y, 78, y);
     way("PI", k, 64, y, 69, y);
     expect("PI", 66, y, G, k);
-    if (way_desc_x(ISS[i]) == null) { infos += "[info] PI " + ISS[i] + " desc=[missing]\n"; continue; }
+    if (!way_desc_x(ISS[i]).is_valid()) { infos += "[info] PI " + ISS[i] + " desc=[missing]\n"; continue; }
     way("PI iss", ISS[i], 71, y, 76, y);
     expect("PI iss", 73, y, G, ISS[i]);
   }

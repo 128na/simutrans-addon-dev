@@ -110,7 +110,7 @@ foreach (p in [[3, 15], [1, 15], [14, 12], [27, 15]]) {
   local w = g.get_way(wt_water);
   checks += "[check] (" + p[0] + "," + p[1] + ") ground=" + (w == null ? "-" : w.get_desc().get_name() + "/d" + w.get_dirs()) + " fence=" + wayobj_name(g) + "\n";
 }
-if (OX > 200)
+if (OX >= 256)  // 降雪側は OX=276。200 で比べると温暖側の x=200〜255 に置いたときに雪になる（#398）
   report += r("climate", command_x(tool_set_climate).work(pl, c(-2, -6), c(50, 36), "7"));
 gui.close_all_windows();
 return (report == "" ? "ok\n" : "check\n" + report) + checks;
