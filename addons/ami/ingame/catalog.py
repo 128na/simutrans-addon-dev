@@ -163,13 +163,13 @@ REUSE = [
     ("crossing", "crossing_sample.nut", 8, 480, {}),
     # 約 152×58 マスなので 2 区画ぶん（x 110〜310）を使う。踏切の見本は y=480 の列を x=167 まで使うので、y は 520（#392）
     ("maglev", "maglev.nut", 110, 520, {}),
-    # y=620 の列: 踏切の見本の南北の線が y=602 まで伸びるので、その下に置く（#398）。canal_crossing.nut と narrow.nut は
-    # OX >= 256 で降雪に塗るので、温暖側の x は 256 未満に置く
-    ("canal_crossing", "canal_crossing.nut", 8, 620, {}),
-    ("narrow", "narrow.nut", 110, 620, {}),
-    ("tram_catenary", "tram_catenary.nut", 212, 620, {}),
-    ("color_marking", "color_marking_sample.nut", 314, 620, {}),
-    ("scenic", "scenic_sample.nut", 416, 620, {}),
+    # y=720 の列（#398）。y=618〜704 は before_after.sh の CANAL=1 が空き地として運河を敷くので空ける。canal_crossing.nut と
+    # narrow.nut は OX >= 256 で降雪に塗るので、温暖側の x は 256 未満に置く
+    ("canal_crossing", "canal_crossing.nut", 8, 720, {}),
+    ("narrow", "narrow.nut", 110, 720, {}),
+    ("tram_catenary", "tram_catenary.nut", 212, 720, {}),
+    ("color_marking", "color_marking_sample.nut", 314, 720, {}),
+    ("scenic", "scenic_sample.nut", 416, 720, {}),
 ]
 
 
@@ -269,7 +269,7 @@ def coverage():
 def draw_map(path, scale=1.5):
     """区画の見取り図（1 マス = scale px。左が温暖側、右が降雪側）を PNG に書く"""
     from PIL import Image, ImageDraw, ImageFont
-    W, H = 1024, 720
+    W, H = 1024, 820
     im = Image.new("RGB", (int(W * scale), int(H * scale)), (250, 250, 250))
     d = ImageDraw.Draw(im)
     try:
