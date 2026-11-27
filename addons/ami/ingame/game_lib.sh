@@ -47,6 +47,11 @@ game_settings() {
   bash "$_GL_DIR/strip_usage_log.sh" "$1/settings.xml" || return 1
 }
 
+# game_junction <リンク> <元>: ディレクトリのジャンクションを作る
+game_junction() {
+  MSYS2_ARG_CONV_EXCL="*" cmd.exe /c mklink /J "$(cygpath -w "$1")" "$(cygpath -w "$2")" > /dev/null
+}
+
 # game_copy <写し> [pak …]: 写しを作る（起動はしない）。pak は「元」か「元=入れる名前」
 game_copy() {
   local dir=${1:?写しの場所を渡す} p src dest d; shift
@@ -56,7 +61,7 @@ game_copy() {
   for d in ${COPY_DIRS:-config font themes text script music ${PAKSET:-pak128} addons}; do
     if [ -n "$PAKSET_SRC" ] && [ "$d" = "${PAKSET:-pak128}" ]; then
       [ -d "$PAKSET_SRC" ] || { echo "[${GAME_TAG:-game}] PAKSET_SRC が無い: $PAKSET_SRC" >&2; return 1; }
-      MSYS2_ARG_CONV_EXCL="*" cmd.exe /c mklink /J "$(cygpath -w "$dir/$d")" "$(cygpath -w "$PAKSET_SRC")" > /dev/null || return 1
+      game_junction "$dir/$d" "$PAKSET_SRC" || return 1
       continue
     fi
     [ -d "$GAME_DIR/$d" ] && { cp -r "$GAME_DIR/$d" "$dir/" || return 1; }
@@ -98,6 +103,19 @@ game_kill() {
 game_unlink() {
   [ -e "$1/${PAKSET:-pak128}" ] && MSYS2_ARG_CONV_EXCL="*" cmd.exe /c rmdir "$(cygpath -w "$1/${PAKSET:-pak128}")" > /dev/null 2>&1
   return 0
+}
+
+# game_unlink_all <置き場>: 置き場の下の 2 段まで（<置き場>/*/<PAKSET> など）にあるジャンクションを、すべて外す。
+# 台ごとの写しを持つ置き場（sample_parallel.sh）の rm -rf の前に呼ぶ。MSYS ではジャンクションは -L で見分けられる。
+# 外せずに残った物があれば 1（そのときは rm -rf しない。元の pak を守る）
+game_unlink_all() {
+  local d left=0
+  for d in "$1"/* "$1"/*/*; do
+    [ -L "$d" ] || continue
+    MSYS2_ARG_CONV_EXCL="*" cmd.exe /c rmdir "$(cygpath -w "$d")" > /dev/null 2>&1
+    [ -L "$d" ] && { echo "[${GAME_TAG:-game}] ジャンクションを外せない: $d" >&2; left=1; }
+  done
+  return $left
 }
 
 # game_start [pak …]: PORT のゲームを WORK の写しで起動する。同じポートで別のゲームが動いていたら何もせず 1
