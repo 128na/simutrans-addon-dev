@@ -100,12 +100,12 @@ D:\bin\blender\blender.exe -b --factory-startup --python ..\..\tools\blender\com
 
 blender-poc の `src/` のシート 28 枚（描画対象 29 個からアイコンの一覧を除いたもの）を 16 並列で描いて約 2 分（117 秒）。時間のほとんどは Boolean（Exact ソルバー）の演算で、描画と後処理は 1 割に満たない（[記録](../docs/records/2026-11-17_sheet-render-speed.md)）。
 
-これは 2026-11-17 の blender-poc の値。2026-11-27 に AMI の長い対象を単独で測ると、セルの描画が 3〜5 割、タイルの切り抜き（`clip_to_tile`）が 3〜4 割、壁などのほかの Boolean は 1 割前後だった。全描き直しで 1 対象が 2 分を超えるのは、16 本を並べて 1 本が遅くなるためで、単独なら 22〜41 秒（[記録](../docs/records/2026-11-27_sheet-render-long-targets.md)）。
+上の内訳は 2026-11-17 の blender-poc の値で、今は違う。2026-11-27 に単独で測ると（AMI の 4 対象と blender-poc の 1 対象）、セルの描画が 33〜50%、タイルの切り抜き（`clip_to_tile`）が 28〜44%、壁などのほかの Boolean は 14% 以下だった。全描き直しで 2 分を超える対象も、単独なら 22〜41 秒（16 本を並べると 1 本が遅くなる。理由は未確認。[記録](../docs/records/2026-11-27_sheet-render-long-targets.md)）。
 
 - Boolean は `sheetlib/core.py` の `boolean()`・`clip_to_tile()`（中で `_apply_modifier`）を通す。`bpy.ops.object.modifier_apply` を直接呼ぶと、呼ぶたびにシーン全体の更新が走って 2 倍近く遅くなる
 - `boolean()` の `use_self`（既定 True）は、削る形が自分自身と重なるときに要る。外すだけだと、分岐・十字で重なり合う帯が正しく抜けず絵が壊れる（2026-11-17 に確認）。重ならない形（帯 1 本）を 1 つずつ削るなら `use_self=False` でよく、同じ絵で速い（`assemble._place` の通り道の切り抜き）。道路の車道の型（`assemble._carve`）と壁の外側の切り抜き（`sheetlib.road_sheet` の `roadcut`）も 1 つずつ削る（絵は路面のざらつきが最大 5 ほど変わるだけ）。基盤の切り抜き（`build_base`）は `use_self` が要る（外すと絵が変わる）。新しく Boolean を足すときは、削る形が自己交差しないよう 1 つずつに分けられないかを先に考える
 - 時間は、削る側の形の面数で決まる。新しい分岐の形（通り道）を足して遅くなったら、`profile_sheet.py` で測る（アドオンのディレクトリで `SHEET_ONLY=ns,diag_nw,up12 blender -b --factory-startup --python ../../tools/blender/profile_sheet.py -- 対象名`。内訳は `work/profile_<対象>.txt`）
-- 並列数は 16 が最速だった（12・24・28 は遅い）。PC を替えたときだけ `SHEET_JOBS` を測り直す
+- 並列数は 16 が最速だった（12・24・28 は遅い。2026-11-27 の 32 対象では 20 が約 6% 速かったが、1 回の測りなので既定は 16 のまま）。PC を替えたときだけ `SHEET_JOBS` を測り直す
 - 複数の作業者（別の worktree・セッション）が同時に描いても、マシン全体で動く Blender の数は描画の枠の合計（`SHEET_SLOTS`。既定は論理コア数 − 4、このマシンで 20）を超えない（#74）。`render_parallel.py` は Blender を 1 本起こす前に共有の場所（既定は `%LOCALAPPDATA%\simutrans-addon-dev\render-slots`、`SHEET_SLOT_DIR`）の枠を 1 つ取り、終わったら返す。空きが無ければ待ち、待っている本数を `[render] 枠待ち` で出す。`--jobs` はその回だけの上限として今までどおり効く
   - 止めたり落ちたりした回の枠は OS が返す（ロックファイルのロックで数えるので、プロセスが消えれば外れる）。Windows では、強制終了した回の Blender も道連れに止まる（Job Object）
   - `SHEET_SLOTS` を変えるときは、同時に描く全員で同じ値にする（値が違うと、大きいほうが実効の上限になる）。今どれだけ使われているかは `python -X utf8 tools/blender/render_slots.py`
