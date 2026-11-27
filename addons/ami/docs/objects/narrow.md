@@ -27,7 +27,7 @@
 | `ami_narrow_depot` | – | 850000 | 1800 | 1900 |
 
 - pak は `ami_narrow.pak`（`build.py` の `KINDS`。名前の頭 `ami_narrow_`。トンネル・車庫も入る）。全部入りの `ami.pak` にも入る
-- 名前の表示（日本語）は `release/text/ja_ami.tab`
+- 名前の表示は `release/text/ja_ami.tab`（日本語）・`en_ami.tab`（英語）
 - 見本は `ingame/narrow.sh`（`ingame/narrow.nut`）。ゲームの写し（`work/narrow_game/<PORT>/`）を起動し、30 と 60 のそれぞれに、車庫と輪（北の辺に車庫の口の T字と輪を横切る十字）・斜め・行き止まり・1 段の坂を敷き、60 にはトンネルを敷く。30・60・在来線を平行に並べた比べも敷く。狭軌の車両があれば、両方の輪で 1 両ずつ走らせる。`SNOW=1` で降雪側、`CAPTURE=1` で撮る。使い方はスクリプトの冒頭
   - pak128 には狭軌の車両が無い。動作の確かめには、pak128 の気動車（`620_Railcar_Addon`）の dat を写して waytype を `narrowgauge_track`・速さを 60 にした試しの車両を作り、`EXTRA_PAKS` でゲームの写しの中にだけ入れた（リポジトリには入れていない）。30 と 60 の輪を、それぞれ 30 km/h・60 km/h で回った
   - 確認画像（2026-11-26、`OTRPv64_3.exe`、`flat_512_left_v64.sve`）: `docs/narrow_wood_ground.png`（30 の車庫と輪・十字）、`narrow_ballast_ground.png`（60）、`narrow_diag.png`（斜め）、`narrow_slope.png`（坂）、`narrow_tunnel.png`（トンネル）、`narrow_snow.png`（降雪側）、`narrow_compare.png`・`narrow_compare_snow.png`（30・60・在来線を並べた所。雪の側は走る試しの車両も写る）、`narrow_256_cells.png`（256 で描いたシートのセル。上が 30、下が 60）、`narrow_menu.png`（pak128 の狭軌の道具の窓に 30・60・トンネル・車庫が並び、30 の道具で地図を押して敷いた所。2026-11-27）

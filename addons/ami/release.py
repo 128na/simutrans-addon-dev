@@ -9,8 +9,9 @@ zip（work/release/ami-<版>.zip）の中身:
     ami_license.txt    release/license.txt（CC BY 4.0 と帰属）
     ami_lineup.txt     --paks で選んだ pak に入る物の一覧。src/ の dat から lineup.py が作る（#138）
     thumbnail.png      docs/thumbnail/thumbnail.png があれば入れる（#96）
-    pak128/text/ja_ami.tab  release/text/ja_ami.tab（日本語の名前。今は道路標識の 6 種。#122）。ゲームの addons/pak128/text/ に入り、
-                       本体はファイル名の先頭 2 文字で言語を決める（dataobj/translator.cc）。読んでいない pak の物の訳は使われないだけ
+    pak128/text/ja_ami.tab・en_ami.tab  release/text/ の日本語・英語の名前（#122・#396。check_texts.py が dat の名前と突き合わせる）。
+                       ゲームの addons/pak128/text/ に入り、本体はファイル名の先頭 2 文字で言語を決める（dataobj/translator.cc）。
+                       読んでいない pak の物の訳は使われないだけ
 pak の名前が dist/ に無いとき、--paks に ami（全部入り）と種類別を混ぜたとき（同じ物を二重に読む）は止まる。
 展開した中身を ingame/beta_check.sh の PAKS に渡すと、配る形のままゲームで確かめられる（--extract で work/release/ami-<版>/ にも展開する）。
 
