@@ -310,11 +310,10 @@ def power_parts(suspended):
                    for g in sides]
             return merge(geo) if geo else None
         return shape
-    w = "gauge" if suspended else "bed"   # 跨座式は桁の斜めの幅に合わせる（monorail_parts）。懸垂式は変えない（#375）
     return (
-        Part("power_beam_hold", "rail", w, _holdout, beam, tall=True),
-        Part("power_rail_back", "rail", w, _M_POWER_RAIL, rail(False), tall=True, thin=True),
-        Part("power_rail_front", "rail", w, _M_POWER_RAIL, rail(True), tall=True, thin=True, front=True),
+        Part("power_beam_hold", "rail", "gauge", _holdout, beam, tall=True),
+        Part("power_rail_back", "rail", "gauge", _M_POWER_RAIL, rail(False), tall=True, thin=True),
+        Part("power_rail_front", "rail", "gauge", _M_POWER_RAIL, rail(True), tall=True, thin=True, front=True),
     )
 
 
