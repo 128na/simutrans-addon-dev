@@ -71,7 +71,9 @@ function lay() {
   local rw = t.get_way(wt_rail);
   infos += "[info] VC rail across (56,3): " + (e == null ? "built" : e) + " crossing=" + (rw == null ? "-" : rw.is_crossing()) + "\n";
   // TI（iss と並べる）
-  local iss = way_desc_x(ISS_TT) != null;
+  // 無い名前の way_desc_x は null にならず、呼ぶと失敗する（OTRP v64。#392）
+  local iss = false;
+  try { iss = way_desc_x(ISS_TT).get_name() == ISS_TT; } catch (e) { iss = false; }
   if (!iss) infos += "[info] TI " + ISS_TT + " desc=[missing]\n";
   foreach (i, n in iss ? [TT, ISS_TT] : [TT]) {
     local y = 2 + 4 * i, x = 71 + 2 * i;
