@@ -25,9 +25,8 @@ MONO_TOP_T = 0.02         # 桁の上面の板（雪の絵で雪にする面）�
 MONO_POST = 0.7           # 高架の柱の太さ（正方形の 1 辺）。隣のタイルの柱と背中合わせになる
 MONO_ARM_D = 0.6          # 腕（柱の頭から桁の下へ渡す梁）の深さ
 MONO_ARM_EMBED = 0.1      # 腕の上面を桁の下面より上へ食い込ませる高さ（桁に隠れる）
-# 直角の曲がりの角（TRACK_PROFILES の "corner_stub"）: 辺の中点から軸向きに進む長さ。直線のタイルの絵がタイルの外へ伸ばした分は、
-# 桁の高さ（0.72）では辺から約 0.87 まで角の先に見えるので、それより長くする（#375。判断 86）
-MONO_CORNER_STUB = 1.0
+# 跨座式の桁の持ち分を上へ広げる行数（桁の上面は地面から 0.72 = 画面で約 6px。余りを含む。#375）
+MONO_RISE = 24 * SCALE
 
 # ---------------------------------------------------------------- 色（打ち放しのコンクリートのまだらと汚し）
 # 第 1 弾の高架の躯体・橋脚・壁（中性の灰 0.56〜0.60）と見分けるため、汚し（#154）を掛ける。ユーザーが案 A＋C を選んだ（2026-11-22。
@@ -72,10 +71,13 @@ def _top_shape(path, k):
 
 def monorail_parts(z0=0.0):
     """桁の部品。z0 は桁の下面の高さ（地上の版は 0、高架の版は MONO_BEAM_TOP − MONO_ELEV_BEAM_D）。
-    どれも走行面（rail）の基準面に乗せる（分岐の絵で、分岐の経路の桁が描かれる）"""
+    どれも走行面（rail）の基準面に乗せる（分岐の絵で、分岐の経路の桁が描かれる）。
+    高さのある部品（tall）にして、タイルの辺で切り、各タイルが自分の桁を地面より上まで描く（#375）。地面より高い桁を、奥のタイルが
+    手前の隣の分まで延ばして描くと、隣との向きが違う並び（直角の曲がりの角、曲がりが続く所、T字・十字の隣）で、桁の端が出たり段が
+    できたりする。横幅の扱いは "bed"（斜めは 1/√2）: 斜めと直線がタイルの辺で同じ幅の断面になる。thin は、半分だけ覆われた縁の画素を残す"""
     return (
-        Part("mono_beam", "rail", "gauge", _M_MONO_BEAM, _beam_shape(z0)),
-        Part("mono_top", "rail", "gauge", _M_MONO_TOP, _top_shape),
+        Part("mono_beam", "rail", "bed", _M_MONO_BEAM, _beam_shape(z0), tall=True, thin=True),
+        Part("mono_top", "rail", "bed", _M_MONO_TOP, _top_shape, tall=True, thin=True),
     )
 
 
@@ -308,10 +310,11 @@ def power_parts(suspended):
                    for g in sides]
             return merge(geo) if geo else None
         return shape
+    w = "gauge" if suspended else "bed"   # 跨座式は桁の斜めの幅に合わせる（monorail_parts）。懸垂式は変えない（#375）
     return (
-        Part("power_beam_hold", "rail", "gauge", _holdout, beam, tall=True),
-        Part("power_rail_back", "rail", "gauge", _M_POWER_RAIL, rail(False), tall=True, thin=True),
-        Part("power_rail_front", "rail", "gauge", _M_POWER_RAIL, rail(True), tall=True, thin=True, front=True),
+        Part("power_beam_hold", "rail", w, _holdout, beam, tall=True),
+        Part("power_rail_back", "rail", w, _M_POWER_RAIL, rail(False), tall=True, thin=True),
+        Part("power_rail_front", "rail", w, _M_POWER_RAIL, rail(True), tall=True, thin=True, front=True),
     )
 
 

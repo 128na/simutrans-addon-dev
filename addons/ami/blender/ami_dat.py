@@ -108,13 +108,6 @@ for _t in catalog.OLD_TRACKS:
 # シートのカーブのセル（行 2 の列 5〜8）は描かない。render.py の diag_curves と同じにする）
 DIAG_CURVES = catalog.DIAG_CURVE_WAYS  # 唯一の定義は catalog.py（addon_config.py の DIAG_CURVE_SHEETS と同じ集まり）
 CURVE_TO_DIAG = {"[sw]": (2, 0), "[nw]": (2, 1), "[ne]": (2, 2), "[se]": (2, 3)}
-# catalog.CORNER_STUB_WAYS の物は、image[sw] などが斜めのセルでなく角のセルを指す（diagonal[...] は斜めのセルのまま。#375）
-CURVE_TO_CORNER = {"[sw]": (2, 5), "[nw]": (2, 6), "[ne]": (2, 7), "[se]": (2, 8)}
-
-
-def curve_cell(name, idx):
-    """カーブを斜めの絵で表す物の image[idx]（sw などの曲がり）が指すセル"""
-    return (CURVE_TO_CORNER if name in catalog.CORNER_STUB_WAYS else CURVE_TO_DIAG)[idx]
 
 # 手前の絵（frontimage など）を持つ way: シートは 奥の絵 4 行 → 手前の絵 4 行 → 雪の奥の絵 4 行 → 雪の手前の絵 4 行
 # （sheetlib の track_sheet の front_row。懸垂式モノレールの柱・梁。#116）。名前の集まり
@@ -367,7 +360,7 @@ def dat_text(name, sheet, donor=False):
             if key == "image" and idx in SWITCH_IDX and name in NO_SWITCH:
                 continue
             if key == "image" and sheet in DIAG_CURVES and idx in CURVE_TO_DIAG:
-                row, col = curve_cell(name, idx)
+                row, col = CURVE_TO_DIAG[idx]
             if donor and key == "image" and idx in EX_CELLS:
                 row, col = EX_CELLS[idx]
             out.append(f"{key}{idx}[{season}]={sheet}.{row + season * snow_rows}.{col},{OFFSET}")
@@ -439,7 +432,7 @@ MAGLEV_TUBE_COVER_VALUES = dict(cost=MAGLEV_VALUES["cost"] * 4, maintenance=MAGL
 
 def monorail_power_dat_text(name, suspended, waytype="monorail_track", values=None, kind=None, own_waytype="electrified_track"):
     """モノレールの電化の way-object の dat。シートは way-object の並び（奥の絵 0〜3 行・手前の絵 WALL_FRONT_ROW 下）で、
-    セルは跨座式の way と同じ位置。カーブは curve_cell（跨座式は角のセル、懸垂式・リニアは斜めのセル）。分岐の絵・近い斜めは持たない。
+    セルは跨座式の way と同じ位置。カーブは斜めのセル（跨座式と同じ）。分岐の絵・近い斜めは持たない。
     リニアのガイドとチューブ（#371）も同じ並びで、waytype・values・kind（注記の物の説明）・own_waytype を渡す"""
     v = values or MONORAIL_POWER_VALUES
     kind = kind or ("懸垂式モノレールの電化（桁の下面の給電レールと碍子）" if suspended else "跨座式モノレールの電化（桁の側面の給電レールと碍子）")
@@ -450,7 +443,7 @@ def monorail_power_dat_text(name, suspended, waytype="monorail_track", values=No
         if key not in WAYOBJ_KEYS or idx.startswith("[close") or (key == "image" and idx in SWITCH_IDX):
             continue
         if key == "image" and idx in CURVE_TO_DIAG:
-            row, col = curve_cell(name, idx)
+            row, col = CURVE_TO_DIAG[idx]
         for side, dr in (("back", 0), ("front", WALL_FRONT_ROW)):
             out.append(f"{side}{WAYOBJ_KEYS[key]}{idx}={name}.{row + dr}.{col},{OFFSET}")
     return NL.join(out) + NL

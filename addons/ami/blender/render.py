@@ -344,8 +344,7 @@ R.TRACK_PROFILES[TRAM_KEY] = {
 
 # ---------------------------------------------------------------- 跨座式モノレール（ami_monorail。#113）
 # 物の並びは iss の跨座式（地上・高架の 3 版・トンネル）に合わせる（2026-11-21、ユーザーの決定）。部品は sheetlib の monorail_parts（桁と、高架の柱・腕）。
-# 桁は走行面（rail）の基準面に乗せ、分岐の絵は分岐の経路の桁を描く。T字・十字・分岐は斜めの直線（iss と同じ）。直角の曲がりは、下の
-# "corner_stub" の角の絵（跨座式。懸垂式は斜めのセルのまま）、
+# 桁は走行面（rail）の基準面に乗せ、分岐の絵は分岐の経路の桁を描く。カーブは斜めの絵（iss と同じく dat の image[sw] などが斜めのセルを指す）、
 # 近い斜めの絵は描かない（iss の dat にキーが無い）。基準面は動かさない（FLAT）ので、絵の基準位置は地面の高さ（128）。
 # 雪の絵は桁の上面だけを雪にする（iss の跨座式は雪の絵を持たない。AMI のほかの way にそろえて足した）
 MONORAIL_KEY = catalog.profile(catalog.MONORAIL)
@@ -382,10 +381,10 @@ for _n, _susp in catalog.MONORAIL_POWERS.items():
     R.TRACK_PROFILES[catalog.profile(_n)] = dict(
         R.TRACK_PROFILES[MONORAIL_KEY], sheet=_n, track_parts=R.power_parts(_susp), cell_fills=R.power_insulator_fills(_susp),
         front_row=sheet_rows.WALL_FRONT_ROW, rise=R.POWER_RISE, snow=False, snow_skin={}, label="E", badge="S" if _susp else None)
-# 跨座式の直角の曲がりの角は、辺の中点から軸向きに少し進んでから斜めに曲がる形（#375。sheetlib の "corner_stub"）。
-# 懸垂式は上の dict(R.TRACK_PROFILES[MONORAIL_KEY], ...) が写すので、写し終えた後に跨座式の分だけに足す。dat のセルは catalog.CORNER_STUB_WAYS
-for _n in catalog.CORNER_STUB_WAYS:
-    R.TRACK_PROFILES[catalog.profile(_n)]["corner_stub"] = R.MONO_CORNER_STUB
+# 跨座式の桁は高さのある部品（monorail_parts の tall）で、持ち分を上へ MONO_RISE 行広げる（#375）。
+# 懸垂式は上の dict(R.TRACK_PROFILES[MONORAIL_KEY], ...) が写すので、写し終えた後に跨座式の地上・高架だけに足す（電化は自分の rise を持つ）
+for _n in (catalog.MONORAIL, *catalog.MONORAIL_ELEVS):
+    R.TRACK_PROFILES[catalog.profile(_n)]["rise"] = R.MONO_RISE
 
 # ---------------------------------------------------------------- 基盤の版と壁の way-object（ADR 0003。#16）
 # 基盤の版の way（ami_rail_ballast_base_<版>）は、通常の版の道床の下に基盤を敷き、基盤は壁の位置で止まる（壁の無い側はタイルの端まで）。
