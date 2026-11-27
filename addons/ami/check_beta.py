@@ -8,6 +8,8 @@
     - obj（building は type）に、beta_check.nut の敷き方の分岐がある
     - way・way-object の waytype が WT に、way-object・車庫・操車場の waytype が CARRIER に、車庫の waytype が DEPOT_OBJ にある
     - beta_check.nut の運び手の名前（"ami_…"）が dat にある。CARRIER の運び手は、キーの waytype の way
+    - way-object ごとに beta_check.nut が選ぶ運び手（CARRIER、名前に _old があれば _old を付けた物、OVERRIDE の差し替え）が、その waytype の way
+    - 電化の名前（_catenary・_power・_guide）の way-object は own_waytype=electrified_track（beta_check.nut は電化を own_waytype で判定する）
 実際に敷けるかは beta_check.sh をゲームで流して見る。
 """
 import argparse
@@ -19,7 +21,8 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 NUT = os.path.join(HERE, "ingame", "beta_check.nut")
 SKIP = "ex_donors.dat"
-KEYS = ("obj", "name", "waytype", "type")
+KEYS = ("obj", "name", "waytype", "type", "own_waytype")
+ELECTRIC_NAME = re.compile(r"_(catenary|power|guide)(_|$)")
 NEEDS = {  # 敷き方（obj、building は obj と type） → waytype が要る表
     "way": ("WT",),
     "way-object": ("WT", "CARRIER"),
@@ -50,12 +53,14 @@ def dat_items():
 
 
 def parse_nut(text):
-    """beta_check.nut の (表の名前 → {キー: 値}, 敷き方の集合, 運び手の名前の集合)"""
+    """beta_check.nut の (表の名前 → {キー: 値}、OVERRIDE は [(waytype, 語, 運び手)], 敷き方の集合, 運び手の名前の集合)"""
     code = "\n".join(line.split("//")[0] for line in text.splitlines())
     tables = {}
     for name in ("CARRIER", "DEPOT_OBJ", "WT"):
         m = re.search(rf"^local {name} = \{{(.*?)\}};", code, re.M)
         tables[name] = dict(re.findall(r'(\w+)\s*=\s*"?(\w+)', m[1])) if m else {}
+    m = re.search(r"^local OVERRIDE = \[(.*)\];", code, re.M)
+    tables["OVERRIDE"] = re.findall(r'\["(\w+)", "(\w+)", "(\w+)"\]', m[1]) if m else []
     kinds = set()
     for m in re.finditer(r'obj == "([\w-]+)"(?: && it\[4\] == "(\w+)")?', code):
         kinds.add(f"{m[1]} {m[2]}" if m[2] else m[1])
@@ -83,13 +88,30 @@ def check(items, nut):
     ways = {(o.get("name"), o.get("waytype")) for _, objs in items for o in objs if o["obj"] == "way"}
     errors += [f"beta_check.nut の CARRIER の {wt} の運び手が、その waytype の way でない: {n}"
                for wt, n in tables["CARRIER"].items() if (n, wt) not in ways]
+    for _, objs in items:
+        for o in objs:
+            if o["obj"] != "way-object":
+                continue
+            name, wt = o.get("name", ""), o.get("waytype")
+            if ELECTRIC_NAME.search(name) and o.get("own_waytype") != "electrified_track":
+                errors.append(f"{name}: 電化の名前だが own_waytype={o.get('own_waytype')}（electrified_track でない）")
+            if wt not in tables["CARRIER"]:
+                continue  # 上で出している
+            # beta_check.nut の check_wayobj と同じ順で運び手を選ぶ
+            carrier = tables["CARRIER"][wt] + ("_old" if "_old" in name else "")
+            for owt, word, other in tables["OVERRIDE"]:
+                if wt == owt and word in name:
+                    carrier = other
+            if (carrier, wt) not in ways:
+                errors.append(f"{name}: beta_check.nut の運び手 {carrier} が waytype={wt} の way でない")
     return errors
 
 
 def self_test():
     nut = ('local CARRIER = {track = "ami_a"};\nlocal DEPOT_OBJ = {track = mo_depot_rail};\nlocal WT = {track = wt_rail};\n'
            'if (obj == "way") r = 1;\nelse if (obj == "way-object") r = 2;\n'
-           'else if (obj == "building" && it[4] == "depot") r = 3;\nelse if (obj == "building" && it[4] == "stop") r = 4;\n')
+           'else if (obj == "building" && it[4] == "depot") r = 3;\nelse if (obj == "building" && it[4] == "stop") r = 4;\n'
+           'local OVERRIDE = [["track", "sub", "ami_a"]];\n')
 
     def items(*objs):
         return [(f"{o['name']}.dat", [o]) for o in objs]
@@ -110,12 +132,25 @@ def self_test():
         "運び手の名前が dat に無い": (items({**way, "name": "ami_b"}), nut),
         "1 ファイルに 2 物": ([("two.dat", [way, {**way, "name": "ami_c"}])], nut),
         "表が読めない": (items(way), nut.replace("local WT = ", "local WT2 = ")),
+        "OVERRIDE が読めない": (items(way), nut.replace("local OVERRIDE = ", "local OVERRIDE2 = ")),
     }
-    errors = [f"正しい物で誤り: {e}" for e in check(items(way, wayobj, depot, stop), nut)]
+    # 別の理由の誤りで通らないように、出る誤りの文も見る
+    road = {**way, "name": "ami_r", "waytype": "road"}
+    old = {**way, "name": "ami_a_old"}
+    catenary = {**wayobj, "name": "o_catenary", "own_waytype": "electrified_track"}
+    expected = {
+        "差し替えの運び手の waytype が違う": ("運び手 ami_r が", items(way, road, {**wayobj, "name": "o_sub"}),
+                                    nut.replace('"sub", "ami_a"', '"sub", "ami_r"').replace("WT = {track", "WT = {road = wt_road, track")),
+        "_old の運び手が無い": ("運び手 ami_a_old が", items(way, {**wayobj, "name": "o_old"}), nut),
+        "電化の名前で own_waytype が違う": ("電化の名前", items(way, {**catenary, "own_waytype": "track"}), nut),
+    }
+    good = items(way, old, wayobj, catenary, {**wayobj, "name": "o_sub"}, {**wayobj, "name": "o_old"}, depot, stop)
+    errors = [f"正しい物で誤り: {e}" for e in check(good, nut)]
     errors += [f"見逃した: {label}" for label, args in bad.items() if not check(*args)]
+    errors += [f"見逃した: {label}" for label, (text, *args) in expected.items() if not any(text in e for e in check(*args))]
     if errors:
         sys.exit("[check_beta] self-test 失敗: " + " / ".join(errors))
-    print(f"[check_beta] self-test ok（見つける {len(bad)}）")
+    print(f"[check_beta] self-test ok（見つける {len(bad) + len(expected)}）")
 
 
 def main():

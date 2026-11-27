@@ -1,7 +1,8 @@
 """AMI のアイコン・カーソル（#25）。描いたシートの絵から作り、シートのアイコンとカーソルのセルに書き込む。
 
-    blender -b --factory-startup --python blender/icons.py [-- シート名 ...]
+    blender -b --factory-startup --python-exit-code 1 --python blender/icons.py [-- シート名 ...]
 
+--python-exit-code 1 は --python より前に置く（無いと、中で例外が出ても Blender の終了コードは 0。#412）。
 アドオンのディレクトリで動かす。シート名を渡さなければ全部。render.py は描いたシートについて、最後にこれを別の Blender で動かす
 （文字を描く場面を、シートの場面と分けるため）。決まり（2026-11-21、ユーザーの決定。#25 の案 A・版の字は漢字）:
 
@@ -539,7 +540,7 @@ def main(targets=None, own_only=False):
                     print(f"[icon] removed {os.path.basename(path)}")
     if skipped:
         print("[icon] 描いたシートの絵から作るアイコン・カーソルが、ほかのシートにある（書いていない）。描き終えたら作り直す: "
-              "blender -b --factory-startup --python blender/icons.py -- " + " ".join(sorted(targets)))
+              "blender -b --factory-startup --python-exit-code 1 --python blender/icons.py -- " + " ".join(sorted(targets)))
     if gone_names:  # run_in_new_blender は [icon] の行だけを出す
         print(f"[icon] 読むシートが無いので {len(gone_names)} 物を飛ばした（アイコン・カーソルを書いていない）。要るなら描いてから流し直す")
         print(f"[icon] 無いシート（{len(gone)} 枚）: " + " ".join(sorted(gone)))
